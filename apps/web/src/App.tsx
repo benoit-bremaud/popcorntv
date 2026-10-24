@@ -70,10 +70,8 @@ export function App({ load = loadProfiles, profileApi, storage }: Props): React.
             onClick={() => setView({ kind: 'picking' })}
           >
             <Avatar profile={view.profile} size="sm" />
-            <span>
-              {view.profile.name}
-              <span className="visually-hidden">, switch profile</span>
-            </span>
+            <span className="switch-name">{view.profile.name}</span>
+            <span className="visually-hidden">, switch profile</span>
           </button>
         )}
       </header>

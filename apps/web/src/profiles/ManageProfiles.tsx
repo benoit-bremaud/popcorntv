@@ -88,6 +88,7 @@ export function ManageProfiles({
       <ProfileForm
         legend="Add a profile"
         submit="Add"
+        className="profile-form profile-form-add"
         onSubmit={(name, avatar) => run(() => api.create({ name, avatar }))}
       />
       <button type="button" className="button" onClick={onDone}>
@@ -116,24 +117,36 @@ function ProfileRow({
         initial={profile}
         onSubmit={onSave}
       />
-      {confirming ? (
-        <>
-          <button type="button" className="button" onClick={() => void onDelete()}>
-            Delete {profile.name} and their history
-          </button>
+      <div className="manage-actions">
+        {confirming ? (
+          <>
+            <button
+              type="button"
+              className="button"
+              aria-label={`Delete ${profile.name} and their history`}
+              onClick={() => void onDelete()}
+            >
+              Confirm delete
+            </button>
+            <button
+              type="button"
+              className="button button-quiet"
+              onClick={() => setConfirming(false)}
+            >
+              Cancel
+            </button>
+          </>
+        ) : (
           <button
             type="button"
             className="button button-quiet"
-            onClick={() => setConfirming(false)}
+            aria-label={`Delete ${profile.name}`}
+            onClick={() => setConfirming(true)}
           >
-            Cancel
+            Delete
           </button>
-        </>
-      ) : (
-        <button type="button" className="button button-quiet" onClick={() => setConfirming(true)}>
-          Delete {profile.name}
-        </button>
-      )}
+        )}
+      </div>
     </li>
   );
 }
@@ -148,11 +161,13 @@ function ProfileForm({
   legend,
   submit,
   initial,
+  className = 'profile-form',
   onSubmit,
 }: {
   readonly legend: string;
   readonly submit: string;
   readonly initial?: Profile;
+  readonly className?: string;
   readonly onSubmit: (name: string, avatar: AvatarColor) => Promise<boolean>;
 }): React.JSX.Element {
   const [name, setName] = useState(initial?.name ?? '');
@@ -165,7 +180,7 @@ function ProfileForm({
   }
 
   return (
-    <form className="profile-form" onSubmit={(event) => void send(event)}>
+    <form className={className} onSubmit={(event) => void send(event)}>
       <fieldset>
         <legend className="visually-hidden">{legend}</legend>
         <input

@@ -72,6 +72,8 @@
   --dialog-width: 48rem;
   --shadow-raised: 0 8px 24px rgb(0 0 0 / 0.5);
   --poster-width: 9rem;
+  --profile-tile: 7.5rem;
+  --touch-target: 44px;
   --focus-ring: 2px solid var(--color-accent-text);
   /* Motion (skill ui-motion tokens). */
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
@@ -98,6 +100,7 @@
 @media (min-width: 48rem) {
   :root {
     --poster-width: 11rem;
+    --profile-tile: 10rem;
   }
 }
 
