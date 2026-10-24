@@ -13,7 +13,7 @@ How the system is split and who depends on whom. The dependency rule holds: the 
 ```mermaid
 flowchart LR
   subgraph Web ["apps/web"]
-    UI[Catalog + Player screens]
+    UI[Profile picker + Catalog + Player screens]
     UI --> Contracts
     HLS[hls.js]
     UI --> HLS
@@ -38,8 +38,12 @@ flowchart LR
     Repo[SQLite repositories]
     Stream[Range file streamer]
     Progress[Progress routes + repository]
+    Profiles[Profile routes + repository]
     Routes --> Progress
+    Routes --> Profiles
+    Progress --> Profiles
     Progress --> Repo
+    Profiles --> Repo
     Routes --> Stream
     Stream --> Parser
     Routes --> Decider

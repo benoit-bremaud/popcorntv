@@ -10,8 +10,8 @@
 
 - **R1** While a title plays, the web saves its position every 10 s, on pause and when
   the player closes. Positions are stored per profile and media (`WatchProgress`).
-- **R2** Until profiles exist (#10), every position belongs to the single profile
-  `default` (ADR-0007 §1).
+- **R2** Positions belong to the active profile (#10, ADR-0008); the rows saved before
+  profiles existed belong to the seeded profile `default` (ADR-0007 §1).
 - **R3** A title with a saved, unfinished position offers **Resume from mm:ss** next to
   **Start over** in its detail dialog. An episode's ▶ resumes at its saved position.
 - **R4** A title is *finished* when its position is ≥ 90 % of its duration
@@ -29,16 +29,17 @@
 
 ### 2.1 Storage
 
-Table `watch_progress`: `profile_id` (text, default `'default'`), `media_id` (FK
+Table `watch_progress`: `profile_id` (FK `profiles.id`, cascade delete), `media_id` (FK
 `media.id`, cascade delete), `position_sec` (integer ≥ 0), `updated_at` (ISO text).
 Primary key `(profile_id, media_id)`: one row per profile and title, upserted.
 
 ### 2.2 API
 
-- `PUT /media/:id/progress` body `{ positionSec: integer ≥ 0 }` → `204`. The position is
+- `PUT /profiles/:profileId/media/:id/progress` body `{ positionSec: integer ≥ 0 }` → `204`. The position is
   clamped to the media duration when it is known. `400` on a bad body, `404
-  media_not_found` for an unknown media or a `series` row.
-- `GET /progress` → `200 WatchProgress[]`, every row of the `default` profile:
+  media_not_found` for an unknown media or a `series` row, `404 profile_not_found`
+  for an unknown profile.
+- `GET /profiles/:profileId/progress` → `200 WatchProgress[]`, every row of that profile:
   `{ mediaId, positionSec, durationSec, finished, updatedAt }`, newest first.
 - `POST /playback/sessions` body gains `startSec?: integer ≥ 0` (default 0). Both
   answers gain `startSec`, the effective resume point (0 when the asked one is at or past

@@ -39,7 +39,7 @@ const planet = media({
 const CATALOG: Media[] = [heat, alien, dark, pilot, planet];
 
 function renderPage(load: () => Promise<Media[]> = async () => CATALOG) {
-  return { user: userEvent.setup(), ...render(<CatalogPage load={load} />) };
+  return { user: userEvent.setup(), ...render(<CatalogPage profileId="default" load={load} />) };
 }
 
 function group(name: string): HTMLElement {
@@ -163,9 +163,9 @@ describe('CatalogPage', () => {
       new Promise<Media[]>((resolve) => {
         settleOld = resolve;
       });
-    const { rerender } = render(<CatalogPage load={oldLoad} />);
+    const { rerender } = render(<CatalogPage profileId="default" load={oldLoad} />);
 
-    rerender(<CatalogPage load={async () => CATALOG} />);
+    rerender(<CatalogPage profileId="default" load={async () => CATALOG} />);
     expect(await screen.findByRole('heading', { name: 'Top rated' })).toBeInTheDocument();
     settleOld([]);
 

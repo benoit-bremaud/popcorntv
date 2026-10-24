@@ -116,7 +116,7 @@ export interface ProgressBody {
   readonly positionSec: number;
 }
 
-/** One row of `GET /progress` (class diagram `WatchProgress`, profile `default`). */
+/** One row of `GET /profiles/:profileId/progress` (class diagram `WatchProgress`). */
 export interface WatchProgress {
   readonly mediaId: string;
   readonly positionSec: number;

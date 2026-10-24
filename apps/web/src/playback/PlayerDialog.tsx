@@ -9,15 +9,19 @@ export interface PlaybackApi {
   readonly start: typeof startPlayback;
   readonly heartbeat: typeof sendHeartbeat;
   readonly stop: typeof stopPlayback;
-  readonly save: typeof saveProgress;
+  /** Saves a position for the active profile (bound by `playbackApi`). */
+  readonly save: (mediaId: string, positionSec: number) => Promise<void>;
 }
 
-const DEFAULT_API: PlaybackApi = {
-  start: startPlayback,
-  heartbeat: sendHeartbeat,
-  stop: stopPlayback,
-  save: saveProgress,
-};
+/** The real server calls, saving progress for `profileId` (ADR-0008 §1). */
+export function playbackApi(profileId: string): PlaybackApi {
+  return {
+    start: startPlayback,
+    heartbeat: sendHeartbeat,
+    stop: stopPlayback,
+    save: (mediaId, positionSec) => saveProgress(profileId, mediaId, positionSec),
+  };
+}
 
 /** A paused player must keep its session under the 60 s idle limit (ADR-0006 §4). */
 const HEARTBEAT_MS = 20_000;
@@ -44,7 +48,7 @@ type Props = {
   readonly onNext?: (next: Media) => void;
   /** `saved` settles once the last position is stored (or its save failed). */
   readonly onClose: (saved: Promise<void>) => void;
-  readonly api?: PlaybackApi;
+  readonly api: PlaybackApi;
   readonly attach?: typeof attachHls;
 };
 
@@ -62,7 +66,7 @@ export function PlayerDialog({
   next = null,
   onNext,
   onClose,
-  api = DEFAULT_API,
+  api,
   attach = attachHls,
 }: Props): React.JSX.Element {
   const ref = useRef<HTMLDialogElement>(null);

@@ -20,12 +20,14 @@ import type { CatalogView } from './view-state.js';
 type Load = { kind: 'loading' } | { kind: 'failed' } | { kind: 'ready'; media: Media[] };
 
 type Props = {
+  /** The active profile (UC8); the detail dialog reads and saves its progress. */
+  readonly profileId: string;
   /** Injected in tests; defaults to the real API. */
   readonly load?: () => Promise<Media[]>;
 };
 
 /** UC3 / UC4: the catalog with its dynamic controls and the detail dialog. */
-export function CatalogPage({ load = loadCatalog }: Props): React.JSX.Element {
+export function CatalogPage({ profileId, load = loadCatalog }: Props): React.JSX.Element {
   const [catalog, setCatalog] = useState<Load>({ kind: 'loading' });
   const [state, dispatch] = useReducer(viewReducer, HOME);
   // `seq` numbers each opening: the native `close` event is queued as a task, so a late one
@@ -128,6 +130,7 @@ export function CatalogPage({ load = loadCatalog }: Props): React.JSX.Element {
           key={open.seq}
           item={open.item}
           seasons={seasonsOf(open.item, catalog.media)}
+          profileId={profileId}
           onClose={() => onClose(open.seq)}
         />
       )}

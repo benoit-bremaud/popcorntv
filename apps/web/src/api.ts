@@ -1,9 +1,14 @@
 import type {
+  ApiError,
+  ApiErrorCode,
+  CreateProfileBody,
   Library,
   Media,
   PlaybackSessionBody,
   PlaybackStart,
+  Profile,
   ProgressBody,
+  UpdateProfileBody,
   WatchProgress,
 } from '@popcorntv/shared';
 
@@ -104,17 +109,24 @@ export async function stopPlayback(sessionId: string, fetchFn: Fetch = fetch): P
   }
 }
 
+/** `/profiles/:profileId` prefix of every per-profile route (ADR-0008 §1). */
+function profilePath(profileId: string): string {
+  return `/profiles/${encodeURIComponent(profileId)}`;
+}
+
 /**
- * `PUT /media/:id/progress` (spec resume-playback §2.2); `keepalive` lets the last save
- * leave while the player closes. A lost save is harmless: the next one is newer.
+ * `PUT /profiles/:profileId/media/:id/progress` (spec resume-playback §2.2); `keepalive`
+ * lets the last save leave while the player closes. A lost save is harmless: the next one
+ * is newer.
  */
 export async function saveProgress(
+  profileId: string,
   mediaId: string,
   positionSec: number,
   fetchFn: Fetch = fetch,
 ): Promise<void> {
   try {
-    await fetchFn(`${API}/media/${encodeURIComponent(mediaId)}/progress`, {
+    await fetchFn(`${API}${profilePath(profileId)}/media/${encodeURIComponent(mediaId)}/progress`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ positionSec } satisfies ProgressBody),
@@ -125,11 +137,82 @@ export async function saveProgress(
   }
 }
 
-/** `GET /progress`; an unreachable server simply means "nothing to resume". */
-export async function loadProgress(fetchFn: Fetch = fetch): Promise<WatchProgress[]> {
+/** `GET /profiles/:profileId/progress`; an unreachable server means "nothing to resume". */
+export async function loadProgress(
+  profileId: string,
+  fetchFn: Fetch = fetch,
+): Promise<WatchProgress[]> {
   try {
-    return await getList<WatchProgress>(fetchFn, '/progress');
+    return await getList<WatchProgress>(fetchFn, `${profilePath(profileId)}/progress`);
   } catch {
     return [];
   }
+}
+
+/** `GET /profiles` (UC8); throws `ApiRequestError` like the catalog load. */
+export async function loadProfiles(fetchFn: Fetch = fetch): Promise<Profile[]> {
+  return getList<Profile>(fetchFn, '/profiles');
+}
+
+/** A profile write's answer: the stored profile, or the server's error code (null offline). */
+export type ProfileResult =
+  | { readonly ok: true; readonly profile: Profile }
+  | { readonly ok: false; readonly error: ApiErrorCode | null };
+
+/** Sends one profile write and reads its JSON answer (UC9). */
+async function writeProfile(
+  fetchFn: Fetch,
+  path: string,
+  method: 'POST' | 'PATCH' | 'DELETE',
+  body?: CreateProfileBody | UpdateProfileBody,
+): Promise<Response | null> {
+  try {
+    return await fetchFn(`${API}${path}`, {
+      method,
+      ...(body === undefined
+        ? {}
+        : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
+    });
+  } catch {
+    return null;
+  }
+}
+
+async function profileResult(response: Response | null): Promise<ProfileResult> {
+  if (response === null) return { ok: false, error: null };
+  try {
+    const body: unknown = await response.json();
+    if (response.ok) return { ok: true, profile: body as Profile };
+    return { ok: false, error: (body as ApiError).error };
+  } catch {
+    return { ok: false, error: null };
+  }
+}
+
+/** `POST /profiles`. */
+export async function createProfile(
+  body: CreateProfileBody,
+  fetchFn: Fetch = fetch,
+): Promise<ProfileResult> {
+  return profileResult(await writeProfile(fetchFn, '/profiles', 'POST', body));
+}
+
+/** `PATCH /profiles/:profileId`. */
+export async function updateProfile(
+  profileId: string,
+  body: UpdateProfileBody,
+  fetchFn: Fetch = fetch,
+): Promise<ProfileResult> {
+  return profileResult(await writeProfile(fetchFn, profilePath(profileId), 'PATCH', body));
+}
+
+/** `DELETE /profiles/:profileId`: ok, or the error code (null when offline). */
+export async function deleteProfile(
+  profileId: string,
+  fetchFn: Fetch = fetch,
+): Promise<{ readonly ok: true } | { readonly ok: false; readonly error: ApiErrorCode | null }> {
+  const response = await writeProfile(fetchFn, profilePath(profileId), 'DELETE');
+  if (response?.ok === true) return { ok: true };
+  const result = await profileResult(response);
+  return result.ok ? { ok: false, error: null } : result;
 }

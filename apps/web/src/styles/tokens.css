@@ -23,6 +23,15 @@
   --color-navy-deep: #0b1222;
   --color-violet: #8b5cc4; /* glows and non-text accents only: 4.1:1 on bg */
   --color-violet-glow: rgb(139 92 196 / 0.28);
+  /* Profile avatars (spec profiles §4.3): white initials are ≥ 4.5:1 on each. */
+  --color-avatar-red: #b3122e;
+  --color-avatar-amber: #9a5b00;
+  --color-avatar-green: #2e7d32;
+  --color-avatar-teal: #00796b;
+  --color-avatar-blue: #1d5fbf;
+  --color-avatar-violet: #6a3fa0;
+  --color-avatar-pink: #ad1457;
+  --color-avatar-slate: #4a5563;
   --gradient-room:
     radial-gradient(ellipse 80% 50% at 50% -10%, var(--color-navy) 0%, transparent 70%),
     radial-gradient(ellipse 50% 40% at 100% 0%, var(--color-violet-glow) 0%, transparent 70%),

@@ -36,6 +36,13 @@
       "when": 1792841876502,
       "tag": "0004_watch-progress",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1792866636977,
+      "tag": "0005_profiles",
+      "breakpoints": true
     }
   ]
 }

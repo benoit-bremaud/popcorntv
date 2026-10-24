@@ -5,6 +5,7 @@ import type { MediaKind, WatchProgress } from '@popcorntv/shared';
 import { openDatabase } from '../db/index.js';
 import type { AppDatabase } from '../db/index.js';
 import { libraries, media } from '../db/schema.js';
+import { ProfileRepository } from '../profiles/repository.js';
 import { ProgressRepository } from './repository.js';
 import { registerProgressRoutes } from './routes.js';
 
@@ -29,21 +30,24 @@ function progressDb(): {
 function setup() {
   const { db, addMedia } = progressDb();
   const app = Fastify();
-  registerProgressRoutes(app, { progress: new ProgressRepository(db) });
+  registerProgressRoutes(app, {
+    progress: new ProgressRepository(db),
+    profiles: new ProfileRepository(db),
+  });
   return { app, addMedia };
 }
 
 describe('progress routes', () => {
-  it('stores a position and returns it from GET /progress', async () => {
+  it('stores a position and returns it from GET /profiles/:profileId/progress', async () => {
     const { app, addMedia } = setup();
     const id = addMedia('film', 100);
 
     const put = await app.inject({
       method: 'PUT',
-      url: `/media/${id}/progress`,
+      url: `/profiles/default/media/${id}/progress`,
       payload: { positionSec: 30 },
     });
-    const list = await app.inject({ method: 'GET', url: '/progress' });
+    const list = await app.inject({ method: 'GET', url: '/profiles/default/progress' });
 
     expect(put.statusCode).toBe(204);
     expect(list.json<WatchProgress[]>()).toMatchObject([
@@ -56,7 +60,7 @@ describe('progress routes', () => {
 
     const response = await app.inject({
       method: 'PUT',
-      url: '/media/00000000-0000-4000-8000-000000000000/progress',
+      url: '/profiles/default/media/00000000-0000-4000-8000-000000000000/progress',
       payload: { positionSec: 1 },
     });
 
@@ -74,7 +78,11 @@ describe('progress routes', () => {
     const { app, addMedia } = setup();
     const id = addMedia('film', 100);
 
-    const response = await app.inject({ method: 'PUT', url: `/media/${id}/progress`, payload });
+    const response = await app.inject({
+      method: 'PUT',
+      url: `/profiles/default/media/${id}/progress`,
+      payload,
+    });
 
     expect(response.statusCode).toBe(400);
   });
@@ -85,7 +93,7 @@ describe('progress routes', () => {
 
     const response = await app.inject({
       method: 'PUT',
-      url: `/media/${series}/progress`,
+      url: `/profiles/default/media/${series}/progress`,
       payload: { positionSec: 1 },
     });
 
@@ -97,10 +105,40 @@ describe('progress routes', () => {
 
     const response = await app.inject({
       method: 'PUT',
-      url: '/media/abc/progress',
+      url: '/profiles/default/media/abc/progress',
       payload: { positionSec: 1 },
     });
 
     expect(response.statusCode).toBe(400);
   });
+
+  it.each([
+    [
+      'PUT',
+      '/profiles/00000000-0000-4000-8000-000000000000/media/00000000-0000-4000-8000-000000000001/progress',
+    ],
+    ['GET', '/profiles/00000000-0000-4000-8000-000000000000/progress'],
+  ] as const)('answers 404 profile_not_found on %s for an unknown profile', async (method, url) => {
+    const { app } = setup();
+
+    const response = await app.inject({ method, url, payload: { positionSec: 1 } });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toEqual({ error: 'profile_not_found' });
+  });
+
+  it.each(['PUT', 'GET'] as const)(
+    'rejects a profile id that is neither default nor a uuid (%s)',
+    async (method) => {
+      const { app } = setup();
+      const url =
+        method === 'GET'
+          ? '/profiles/bob/progress'
+          : '/profiles/bob/media/00000000-0000-4000-8000-000000000001/progress';
+
+      const response = await app.inject({ method, url, payload: { positionSec: 1 } });
+
+      expect(response.statusCode).toBe(400);
+    },
+  );
 });

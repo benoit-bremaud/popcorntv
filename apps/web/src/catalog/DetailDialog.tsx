@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { decidePlayback } from '@popcorntv/shared';
 import type { CanPlay, Media, WatchProgress } from '@popcorntv/shared';
 import { artworkUrl, loadProgress } from '../api.js';
 import { browserCanPlay } from '../playback/can-play.js';
-import { PlayerDialog } from '../playback/PlayerDialog.js';
+import { PlayerDialog, playbackApi } from '../playback/PlayerDialog.js';
 import type { PlaybackApi } from '../playback/PlayerDialog.js';
 import { formatPosition, resumeAt } from '../playback/resume.js';
 import { nextEpisode } from './catalog.js';
@@ -12,12 +12,14 @@ import type { Season } from './catalog.js';
 type Props = {
   readonly item: Media;
   readonly seasons: readonly Season[];
+  /** The active profile: progress is read and saved for it (UC8). */
+  readonly profileId: string;
   readonly onClose: () => void;
   /** The browser's decoder check; injected by tests (jsdom decodes nothing). */
   readonly canPlay?: CanPlay;
   /** Playback server calls; injected by tests. */
   readonly api?: PlaybackApi;
-  /** `GET /progress`; injected by tests. */
+  /** `GET /profiles/:profileId/progress`; injected by tests. */
   readonly progress?: typeof loadProgress;
 };
 
@@ -43,12 +45,14 @@ function episodeName(episode: Media): string {
 export function DetailDialog({
   item,
   seasons,
+  profileId,
   onClose,
   canPlay = browserCanPlay,
-  api,
+  api: injectedApi,
   progress = loadProgress,
 }: Props): React.JSX.Element {
   const ref = useRef<HTMLDialogElement>(null);
+  const api = useMemo(() => injectedApi ?? playbackApi(profileId), [injectedApi, profileId]);
   const [playing, setPlaying] = useState<Playing | null>(null);
   /** Null until the first load: Play waits for it, so a resume point is never skipped. */
   const [saved, setSaved] = useState<ReadonlyMap<string, WatchProgress> | null>(null);
@@ -57,7 +61,7 @@ export function DetailDialog({
 
   async function refreshProgress(): Promise<void> {
     const id = ++request.current;
-    const rows = await progress();
+    const rows = await progress(profileId);
     if (id === request.current) setSaved(new Map(rows.map((row) => [row.mediaId, row])));
   }
 
