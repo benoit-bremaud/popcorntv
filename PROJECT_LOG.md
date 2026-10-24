@@ -4,6 +4,24 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-10-24 — #10 profiles (PR #36 merged, `da3b6e1`)
+
+- **Conception** — spec `docs/architecture/specs/profiles.md` (UC8 pick, UC9 manage),
+  sequence + state diagrams under `diagrams/profiles/`, ADR-0008 with owner-validated MCDA
+  matrices: profile in the path (`/profiles/:profileId/...`), migration 0005 seeds
+  `default` / `Me` keeping existing progress, "Who's watching?" remembered in
+  `localStorage`, management open to the network until #18.
+- **Implementation** — `profiles` table (unique lower-cased name, 8-colour palette, max
+  12, last one undeletable), `watch_progress.profile_id` FK cascade, CRUD routes, progress
+  routes moved under the profile. Web: picker, manage screen, header switch, focus
+  management, responsive cards (320 → 1440 px).
+- **Reviews** — local review Must/Should fixed; QA fixed focus loss and an uncancellable
+  delete; owner-reported responsive issues fixed; Codex 2 P2 fixed (Done awaits a fresh
+  list, focus after a pick).
+- **Gate** on `1b07f11` — 19 shared + 296 server + 124 web tests, coverage server 98.2 % /
+  web 100 % lines, SonarQube PASSED, gitleaks clean, CI 6/6. Squash-merged with owner
+  approval.
+
 ## 2026-10-24 — #27 rename to PopCornTV (PR #34 merged, `858b402`)
 
 - **Why** — popcorno .com is for sale and the npm / GitHub names are taken by torrent
