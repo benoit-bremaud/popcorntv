@@ -64,7 +64,7 @@ describe('App', () => {
     await user.click(await screen.findByRole('button', { name: 'Me' }));
     await user.click(await screen.findByRole('button', { name: /switch profile/ }));
 
-    expect(screen.getByRole('heading', { name: "Who's watching?" })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: "Who's watching?" })).toHaveFocus();
   });
 
   it('offers a retry when the profiles cannot be loaded', async () => {

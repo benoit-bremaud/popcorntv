@@ -110,4 +110,15 @@ describe('ManageProfiles', () => {
     expect(api.remove).toHaveBeenCalledWith('default');
     expect(onChanged).toHaveBeenCalledOnce();
   });
+
+  it('starts on its heading and lets a delete be cancelled', async () => {
+    const { user, api } = setup();
+
+    expect(screen.getByRole('heading', { name: 'Manage profiles' })).toHaveFocus();
+    await user.click(screen.getByRole('button', { name: 'Delete Me' }));
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(screen.getByRole('button', { name: 'Delete Me' })).toBeInTheDocument();
+    expect(api.remove).not.toHaveBeenCalled();
+  });
 });

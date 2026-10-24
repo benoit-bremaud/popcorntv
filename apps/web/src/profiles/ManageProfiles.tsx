@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AVATAR_COLORS, PROFILE_NAME_MAX } from '@popcorntv/shared';
 import type { ApiErrorCode, AvatarColor, Profile } from '@popcorntv/shared';
 import { createProfile, deleteProfile, updateProfile } from '../api.js';
@@ -48,6 +48,9 @@ export function ManageProfiles({
   api = DEFAULT_API,
 }: Props): React.JSX.Element {
   const [error, setError] = useState<string | null>(null);
+  // Focus lands on the screen's heading on entry and after a delete removed the focused row.
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => heading.current?.focus(), []);
 
   async function run(
     write: () => Promise<{ readonly ok: true } | ProfileFailure>,
@@ -64,7 +67,7 @@ export function ManageProfiles({
 
   return (
     <section className="profiles" aria-labelledby="manage-title">
-      <h2 id="manage-title" className="profiles-title">
+      <h2 id="manage-title" className="profiles-title" ref={heading} tabIndex={-1}>
         Manage profiles
       </h2>
       <p className="profile-error" role="alert">
@@ -77,7 +80,7 @@ export function ManageProfiles({
             profile={profile}
             onSave={(name, avatar) => run(() => api.update(profile.id, { name, avatar }))}
             onDelete={async () => {
-              await run(() => api.remove(profile.id));
+              if (await run(() => api.remove(profile.id))) heading.current?.focus();
             }}
           />
         ))}
@@ -114,9 +117,18 @@ function ProfileRow({
         onSubmit={onSave}
       />
       {confirming ? (
-        <button type="button" className="button" onClick={() => void onDelete()}>
-          Delete {profile.name} and their history
-        </button>
+        <>
+          <button type="button" className="button" onClick={() => void onDelete()}>
+            Delete {profile.name} and their history
+          </button>
+          <button
+            type="button"
+            className="button button-quiet"
+            onClick={() => setConfirming(false)}
+          >
+            Cancel
+          </button>
+        </>
       ) : (
         <button type="button" className="button button-quiet" onClick={() => setConfirming(true)}>
           Delete {profile.name}
