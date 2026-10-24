@@ -54,9 +54,27 @@ export function App({ load = loadProfiles, profileApi, storage }: Props): React.
     void start();
   }, [start]);
 
+  /** A pick unmounts the focused tile: focus moves to the header switch instead. */
+  const switchButton = useRef<HTMLButtonElement>(null);
+  const picked = useRef(false);
+
+  useEffect(() => {
+    if (view.kind !== 'active' || !picked.current) return;
+    picked.current = false;
+    switchButton.current?.focus();
+  }, [view]);
+
   function pick(profile: Profile): void {
     rememberProfileId(profile.id, storage);
+    picked.current = true;
     setView({ kind: 'active', profile });
+  }
+
+  /** The picker must never offer a deleted profile: Done waits for a fresh list. */
+  async function finishManaging(): Promise<void> {
+    setView({ kind: 'loading' });
+    const list = await refresh();
+    setView(list === null ? { kind: 'failed' } : { kind: 'picking' });
   }
 
   return (
@@ -65,6 +83,7 @@ export function App({ load = loadProfiles, profileApi, storage }: Props): React.
         <h1 className="brand">PopCornTV</h1>
         {view.kind === 'active' && (
           <button
+            ref={switchButton}
             type="button"
             className="switch-profile"
             onClick={() => setView({ kind: 'picking' })}
@@ -96,7 +115,7 @@ export function App({ load = loadProfiles, profileApi, storage }: Props): React.
           <ManageProfiles
             profiles={profiles}
             onChanged={() => void refresh()}
-            onDone={() => setView({ kind: 'picking' })}
+            onDone={() => void finishManaging()}
             api={profileApi}
           />
         )}

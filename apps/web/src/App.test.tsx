@@ -45,7 +45,7 @@ describe('App', () => {
 
     expect(await screen.findByText(/Nothing to show yet/)).toBeInTheDocument();
     expect(storage.getItem('popcorntv.activeProfileId')).toBe('k1');
-    expect(screen.getByRole('button', { name: /Kid, switch profile/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Kid, switch profile/ })).toHaveFocus();
   });
 
   it('skips the picker for a remembered profile that still exists', async () => {
@@ -102,5 +102,20 @@ describe('App', () => {
 
     expect(create).toHaveBeenCalledWith({ name: 'Kid', avatar: 'blue' });
     expect(await screen.findByRole('button', { name: 'Kid' })).toBeInTheDocument();
+  });
+
+  it('reloads the profiles before returning to the picker, and fails loudly', async () => {
+    const load = vi
+      .fn<() => Promise<Profile[]>>()
+      .mockResolvedValueOnce([me, kid])
+      .mockRejectedValueOnce(new Error('offline'));
+    const user = userEvent.setup();
+    render(<App load={load} storage={memoryStorage()} />);
+
+    await user.click(await screen.findByRole('button', { name: 'Manage profiles' }));
+    await user.click(screen.getByRole('button', { name: 'Done' }));
+
+    expect(await screen.findByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    expect(load).toHaveBeenCalledTimes(2);
   });
 });
