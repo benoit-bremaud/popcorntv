@@ -108,6 +108,7 @@ describe('PlayerDialog over HLS', () => {
   it('sends a heartbeat every 20 s while open', async () => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
     const api = fakeApi(HLS);
+    const attach = vi.fn(async () => () => undefined);
     render(
       <PlayerDialog
         profileId="kid"
@@ -115,10 +116,14 @@ describe('PlayerDialog over HLS', () => {
         directPlay={false}
         onClose={vi.fn()}
         api={api}
-        attach={async () => () => undefined}
+        attach={attach}
       />,
     );
     await waitFor(() => expect(document.querySelector('video')).not.toBeNull());
+    // The interval starts in the effect that also calls `attach`: the video can show before
+    // that effect ran (fake `setInterval` also stalls waitFor's polling), so flush it here.
+    await act(async () => undefined);
+    expect(attach).toHaveBeenCalled();
 
     vi.advanceTimersByTime(40_000);
 
