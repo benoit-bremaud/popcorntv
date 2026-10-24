@@ -111,7 +111,7 @@ export function isFinished(progress: {
   return durationSec !== null && durationSec > 0 && positionSec >= FINISHED_RATIO * durationSec;
 }
 
-/** Body of `PUT /media/:id/progress`: whole seconds of media time. */
+/** Body of `PUT /profiles/:profileId/media/:id/progress`: whole seconds of media time. */
 export interface ProgressBody {
   readonly positionSec: number;
 }

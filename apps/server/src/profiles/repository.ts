@@ -8,6 +8,7 @@ import { profiles } from '../db/schema.js';
 /** Why a profile write was refused (spec profiles §3, extensions). */
 export type ProfileRefusal = 'profile_not_found' | 'profile_name_taken' | 'profile_limit';
 
+/** Result of `create` / `update`: the stored profile, or why the write was refused. */
 export type ProfileWrite =
   | { readonly ok: true; readonly profile: Profile }
   | {
@@ -26,23 +27,36 @@ export class ProfileRepository {
     return this.db.select(columns).from(profiles).orderBy(asc(profiles.createdAt)).all();
   }
 
+  /** Lets callers answer 404 before writing a row that references the profile. */
   exists(id: string): boolean {
-    return this.find(id) !== undefined;
+    return (
+      this.db.select({ id: profiles.id }).from(profiles).where(eq(profiles.id, id)).get() !==
+      undefined
+    );
   }
 
-  /** `name` is expected trimmed. */
+  /**
+   * Adds a profile (`name` trimmed by the caller). Refuses past `PROFILE_LIMIT` and a name
+   * whose lower-cased key exists. better-sqlite3 is synchronous, so the checks and the
+   * insert cannot interleave in one process; the unique `name_key` index is the backstop
+   * across processes, mapped to `profile_name_taken` too.
+   */
   create(body: CreateProfileBody, now: Date = new Date()): ProfileWrite {
     if (this.size() >= PROFILE_LIMIT) return { ok: false, reason: 'profile_limit' };
     if (this.nameTaken(body.name, null)) return { ok: false, reason: 'profile_name_taken' };
     const profile: Profile = { id: randomUUID(), name: body.name, avatar: body.avatar };
-    this.db
-      .insert(profiles)
-      .values({ ...profile, nameKey: nameKey(body.name), createdAt: now.toISOString() })
-      .run();
-    return { ok: true, profile };
+    const write = () =>
+      this.db
+        .insert(profiles)
+        .values({ ...profile, nameKey: nameKey(body.name), createdAt: now.toISOString() })
+        .run();
+    return uniqueName(write) ? { ok: true, profile } : { ok: false, reason: 'profile_name_taken' };
   }
 
-  /** `name`, when given, is expected trimmed. */
+  /**
+   * Renames and / or recolours a profile (`name` trimmed by the caller); refuses an unknown
+   * id and another profile's name, like `create`.
+   */
   update(id: string, body: UpdateProfileBody): ProfileWrite {
     const current = this.find(id);
     if (current === undefined) return { ok: false, reason: 'profile_not_found' };
@@ -50,12 +64,13 @@ export class ProfileRepository {
       return { ok: false, reason: 'profile_name_taken' };
     }
     const profile: Profile = { ...current, ...body };
-    this.db
-      .update(profiles)
-      .set({ name: profile.name, nameKey: nameKey(profile.name), avatar: profile.avatar })
-      .where(eq(profiles.id, id))
-      .run();
-    return { ok: true, profile };
+    const write = () =>
+      this.db
+        .update(profiles)
+        .set({ name: profile.name, nameKey: nameKey(profile.name), avatar: profile.avatar })
+        .where(eq(profiles.id, id))
+        .run();
+    return uniqueName(write) ? { ok: true, profile } : { ok: false, reason: 'profile_name_taken' };
   }
 
   /** Deletes a profile and its progress; refuses the last one so the picker is never empty. */
@@ -81,6 +96,19 @@ export class ProfileRepository {
       .where(eq(profiles.nameKey, nameKey(name)))
       .get();
     return row !== undefined && row.id !== exceptId;
+  }
+}
+
+/** Runs a write; false when it hit the unique `name_key` index, any other error rethrows. */
+function uniqueName(write: () => unknown): boolean {
+  try {
+    write();
+    return true;
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+      return false;
+    }
+    throw error;
   }
 }
 

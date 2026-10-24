@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { decidePlayback } from '@popcorntv/shared';
 import type { CanPlay, Media, WatchProgress } from '@popcorntv/shared';
 import { artworkUrl, loadProgress } from '../api.js';
 import { browserCanPlay } from '../playback/can-play.js';
-import { PlayerDialog, playbackApi } from '../playback/PlayerDialog.js';
+import { PlayerDialog } from '../playback/PlayerDialog.js';
 import type { PlaybackApi } from '../playback/PlayerDialog.js';
 import { formatPosition, resumeAt } from '../playback/resume.js';
 import { nextEpisode } from './catalog.js';
@@ -48,11 +48,10 @@ export function DetailDialog({
   profileId,
   onClose,
   canPlay = browserCanPlay,
-  api: injectedApi,
+  api,
   progress = loadProgress,
 }: Props): React.JSX.Element {
   const ref = useRef<HTMLDialogElement>(null);
-  const api = useMemo(() => injectedApi ?? playbackApi(profileId), [injectedApi, profileId]);
   const [playing, setPlaying] = useState<Playing | null>(null);
   /** Null until the first load: Play waits for it, so a resume point is never skipped. */
   const [saved, setSaved] = useState<ReadonlyMap<string, WatchProgress> | null>(null);
@@ -205,6 +204,7 @@ export function DetailDialog({
         <PlayerDialog
           key={playing.media.id}
           item={playing.media}
+          profileId={profileId}
           directPlay={decidePlayback(playing.media, canPlay).mode === 'direct'}
           startSec={playing.startSec}
           next={nextEpisode(seasons, playing.media)}

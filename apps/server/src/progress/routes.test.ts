@@ -29,12 +29,13 @@ function progressDb(): {
 
 function setup() {
   const { db, addMedia } = progressDb();
+  const profiles = new ProfileRepository(db);
   const app = Fastify();
   registerProgressRoutes(app, {
     progress: new ProgressRepository(db),
-    profiles: new ProfileRepository(db),
+    profiles,
   });
-  return { app, addMedia };
+  return { app, addMedia, profiles };
 }
 
 describe('progress routes', () => {
@@ -141,4 +142,25 @@ describe('progress routes', () => {
       expect(response.statusCode).toBe(400);
     },
   );
+
+  it('keeps two profiles apart end to end', async () => {
+    const { app, addMedia, profiles } = setup();
+    const id = addMedia('film', 100);
+    const kid = profiles.create({ name: 'Kid', avatar: 'blue' });
+    if (!kid.ok) throw new Error('setup');
+    const put = (profile: string, positionSec: number) =>
+      app.inject({
+        method: 'PUT',
+        url: `/profiles/${profile}/media/${id}/progress`,
+        payload: { positionSec },
+      });
+
+    await put('default', 10);
+    await put(kid.profile.id, 60);
+    const mine = await app.inject({ method: 'GET', url: '/profiles/default/progress' });
+    const theirs = await app.inject({ method: 'GET', url: `/profiles/${kid.profile.id}/progress` });
+
+    expect(mine.json<WatchProgress[]>()[0]?.positionSec).toBe(10);
+    expect(theirs.json<WatchProgress[]>()[0]?.positionSec).toBe(60);
+  });
 });

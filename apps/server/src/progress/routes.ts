@@ -2,11 +2,10 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { apiError, invalid } from '../http.js';
 import type { ProfileRepository } from '../profiles/repository.js';
-import { profileId } from '../profiles/routes.js';
+import { profileParams } from '../profiles/routes.js';
 import type { ProgressRepository } from './repository.js';
 
-const profileParams = z.object({ profileId });
-const mediaParams = z.object({ profileId, id: z.uuid() });
+const mediaParams = profileParams.extend({ id: z.uuid() });
 /** A week of media time: far beyond any file, small enough to keep rows sane. */
 export const MAX_POSITION_SEC = 7 * 86_400;
 const progressBody = z.object({ positionSec: z.int().min(0).max(MAX_POSITION_SEC) });
@@ -18,7 +17,10 @@ const progressBody = z.object({ positionSec: z.int().min(0).max(MAX_POSITION_SEC
  */
 export function registerProgressRoutes(
   app: FastifyInstance,
-  deps: { readonly progress: ProgressRepository; readonly profiles: ProfileRepository },
+  deps: {
+    readonly progress: ProgressRepository;
+    readonly profiles: Pick<ProfileRepository, 'exists'>;
+  },
 ): void {
   app.put('/profiles/:profileId/media/:id/progress', (request, reply) => {
     const params = mediaParams.safeParse(request.params);

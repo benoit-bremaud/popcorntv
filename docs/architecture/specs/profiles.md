@@ -18,7 +18,8 @@
 - **R4** The owner creates, renames and deletes profiles from the web (UC9). Deleting a
   profile deletes its progress; the last profile cannot be deleted.
 - **R5** The migration seeds profile `default` / `Me` that keeps the existing progress
-  (ADR-0008 §2). At most 12 profiles.
+  (ADR-0008 §2); it can be deleted like any other and is not re-seeded. At most 12
+  profiles.
 - **R6** Profile names and history stay in SQLite and are never logged or sent out
   ([data flow](../diagrams/playback/06-data-flow.md)).
 - **R7** Done when two profiles keep separate progress, with tests on the repository,
@@ -66,7 +67,8 @@ dropped.
 - `POST /profiles` `{ name, avatar }` → `201 Profile`.
 - `PATCH /profiles/:profileId` `{ name?, avatar? }` → `200 Profile`.
 - `DELETE /profiles/:profileId` → `204`.
-- `GET /profiles/:profileId/progress` → `200 WatchProgress[]` (ADR-0007 shape).
+- `GET /profiles/:profileId/progress` → `200 WatchProgress[]` (ADR-0007 shape); `404
+  profile_not_found`.
 - `PUT /profiles/:profileId/media/:id/progress` `{ positionSec }` → `204`; `404
   profile_not_found` / `media_not_found`.
 - `:profileId` is `default` or a UUID, else `400`. The old `GET /progress` and

@@ -43,7 +43,14 @@ describe('PlayerDialog over HLS', () => {
     const attach = vi.fn(async () => detach);
     const user = userEvent.setup();
     render(
-      <PlayerDialog item={heat} directPlay={false} onClose={vi.fn()} api={api} attach={attach} />,
+      <PlayerDialog
+        profileId="kid"
+        item={heat}
+        directPlay={false}
+        onClose={vi.fn()}
+        api={api}
+        attach={attach}
+      />,
     );
 
     await waitFor(() => expect(attach).toHaveBeenCalledOnce());
@@ -61,6 +68,7 @@ describe('PlayerDialog over HLS', () => {
     const detach = vi.fn();
     const { unmount } = render(
       <PlayerDialog
+        profileId="kid"
         item={heat}
         directPlay={false}
         onClose={vi.fn()}
@@ -82,6 +90,7 @@ describe('PlayerDialog over HLS', () => {
     render(
       <StrictMode>
         <PlayerDialog
+          profileId="kid"
           item={heat}
           directPlay={false}
           onClose={vi.fn()}
@@ -101,6 +110,7 @@ describe('PlayerDialog over HLS', () => {
     const api = fakeApi(HLS);
     render(
       <PlayerDialog
+        profileId="kid"
         item={heat}
         directPlay={false}
         onClose={vi.fn()}
@@ -121,6 +131,7 @@ describe('PlayerDialog over HLS', () => {
     const api = fakeApi(HLS);
     const { unmount } = render(
       <PlayerDialog
+        profileId="kid"
         item={heat}
         directPlay={false}
         onClose={vi.fn()}
@@ -140,6 +151,7 @@ describe('PlayerDialog over HLS', () => {
     const api = fakeApi(HLS);
     render(
       <PlayerDialog
+        profileId="kid"
         item={heat}
         directPlay={false}
         onClose={vi.fn()}
@@ -159,6 +171,7 @@ describe('PlayerDialog over HLS', () => {
     const api = fakeApi(HLS);
     render(
       <PlayerDialog
+        profileId="kid"
         item={heat}
         directPlay={false}
         onClose={vi.fn()}
@@ -173,7 +186,15 @@ describe('PlayerDialog over HLS', () => {
   });
 
   it('tells the viewer when another title holds the transcoder', async () => {
-    render(<PlayerDialog item={heat} directPlay={false} onClose={vi.fn()} api={fakeApi('busy')} />);
+    render(
+      <PlayerDialog
+        profileId="kid"
+        item={heat}
+        directPlay={false}
+        onClose={vi.fn()}
+        api={fakeApi('busy')}
+      />,
+    );
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Another title is being transcoded. Try again later.',
@@ -182,14 +203,22 @@ describe('PlayerDialog over HLS', () => {
 
   it('shows a status while the server prepares the stream', () => {
     const api = { ...fakeApi(HLS), start: vi.fn(() => new Promise<never>(() => undefined)) };
-    render(<PlayerDialog item={heat} directPlay={false} onClose={vi.fn()} api={api} />);
+    render(
+      <PlayerDialog profileId="kid" item={heat} directPlay={false} onClose={vi.fn()} api={api} />,
+    );
 
     expect(screen.getByRole('status')).toHaveTextContent('Preparing playback…');
   });
 
   it('shows the failure message when the server cannot start', async () => {
     render(
-      <PlayerDialog item={heat} directPlay={false} onClose={vi.fn()} api={fakeApi('failed')} />,
+      <PlayerDialog
+        profileId="kid"
+        item={heat}
+        directPlay={false}
+        onClose={vi.fn()}
+        api={fakeApi('failed')}
+      />,
     );
 
     expect(await screen.findByRole('alert')).toHaveTextContent('This file could not be played.');
@@ -203,7 +232,9 @@ describe('PlayerDialog over HLS', () => {
     };
     const onClose = vi.fn();
     const user = userEvent.setup();
-    render(<PlayerDialog item={heat} directPlay={false} onClose={onClose} api={api} />);
+    render(
+      <PlayerDialog profileId="kid" item={heat} directPlay={false} onClose={onClose} api={api} />,
+    );
 
     await user.click(screen.getByRole('button', { name: 'Close player' }));
     await act(async () => resolve(HLS));
@@ -215,7 +246,7 @@ describe('PlayerDialog over HLS', () => {
   it('has no session to end for direct play', async () => {
     const api = fakeApi(DIRECT);
     const user = userEvent.setup();
-    render(<PlayerDialog item={heat} directPlay onClose={vi.fn()} api={api} />);
+    render(<PlayerDialog profileId="kid" item={heat} directPlay onClose={vi.fn()} api={api} />);
     await waitFor(() => expect(document.querySelector('video')).not.toBeNull());
 
     await user.click(screen.getByRole('button', { name: 'Close player' }));
@@ -232,7 +263,16 @@ async function videoOf(): Promise<HTMLVideoElement> {
 describe('PlayerDialog resume and progress', () => {
   it('asks for the resume offset and seeks a direct-played file to it', async () => {
     const api = fakeApi({ ...DIRECT, startSec: 754 });
-    render(<PlayerDialog item={heat} directPlay startSec={754} onClose={vi.fn()} api={api} />);
+    render(
+      <PlayerDialog
+        profileId="kid"
+        item={heat}
+        directPlay
+        startSec={754}
+        onClose={vi.fn()}
+        api={api}
+      />,
+    );
     const element = await videoOf();
 
     fireEvent.loadedMetadata(element);
@@ -245,6 +285,7 @@ describe('PlayerDialog resume and progress', () => {
     const api = fakeApi({ ...HLS, startSec: 754, offsetSec: 754 });
     render(
       <PlayerDialog
+        profileId="kid"
         item={heat}
         directPlay={false}
         startSec={754}
@@ -260,12 +301,13 @@ describe('PlayerDialog resume and progress', () => {
     element.currentTime = 12.7;
     fireEvent.pause(element);
 
-    await waitFor(() => expect(api.save).toHaveBeenCalledWith('heat', 766));
+    await waitFor(() => expect(api.save).toHaveBeenCalledWith('kid', 'heat', 766));
   });
 
   it('honours the server starting over instead of the asked offset', async () => {
     render(
       <PlayerDialog
+        profileId="kid"
         item={heat}
         directPlay
         startSec={754}
@@ -285,14 +327,14 @@ describe('PlayerDialog resume and progress', () => {
     let release: () => void = () => undefined;
     const order: number[] = [];
     api.save
-      .mockImplementationOnce(async (_id: string, at: number) => {
+      .mockImplementationOnce(async (_profile: string, _id: string, at: number) => {
         await new Promise<void>((done) => (release = done));
         order.push(at);
       })
-      .mockImplementation(async (_id: string, at: number) => {
+      .mockImplementation(async (_profile: string, _id: string, at: number) => {
         order.push(at);
       });
-    render(<PlayerDialog item={heat} directPlay onClose={vi.fn()} api={api} />);
+    render(<PlayerDialog profileId="kid" item={heat} directPlay onClose={vi.fn()} api={api} />);
     const element = await videoOf();
     fireEvent.loadedMetadata(element);
 
@@ -309,20 +351,20 @@ describe('PlayerDialog resume and progress', () => {
   it('saves the position when the player closes', async () => {
     const api = fakeApi(DIRECT);
     const user = userEvent.setup();
-    render(<PlayerDialog item={heat} directPlay onClose={vi.fn()} api={api} />);
+    render(<PlayerDialog profileId="kid" item={heat} directPlay onClose={vi.fn()} api={api} />);
     const element = await videoOf();
     fireEvent.loadedMetadata(element);
     element.currentTime = 30;
 
     await user.click(screen.getByRole('button', { name: 'Close player' }));
 
-    expect(api.save).toHaveBeenCalledWith('heat', 30);
+    expect(api.save).toHaveBeenCalledWith('kid', 'heat', 30);
   });
 
   it('saves every 10 s while playing, not while paused', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const api = fakeApi(DIRECT);
-    render(<PlayerDialog item={heat} directPlay onClose={vi.fn()} api={api} />);
+    render(<PlayerDialog profileId="kid" item={heat} directPlay onClose={vi.fn()} api={api} />);
     const element = await videoOf();
     let paused = true;
     Object.defineProperty(element, 'paused', { get: () => paused });
@@ -335,13 +377,22 @@ describe('PlayerDialog resume and progress', () => {
     await act(async () => vi.advanceTimersByTime(10_000));
 
     expect(api.save).toHaveBeenCalledOnce();
-    expect(api.save).toHaveBeenCalledWith('heat', 5);
+    expect(api.save).toHaveBeenCalledWith('kid', 'heat', 5);
   });
 
   it('saves nothing before the metadata and the resume seek', async () => {
     const api = fakeApi(DIRECT);
     const user = userEvent.setup();
-    render(<PlayerDialog item={heat} directPlay startSec={754} onClose={vi.fn()} api={api} />);
+    render(
+      <PlayerDialog
+        profileId="kid"
+        item={heat}
+        directPlay
+        startSec={754}
+        onClose={vi.fn()}
+        api={api}
+      />,
+    );
     const element = await videoOf();
 
     fireEvent.pause(element);
@@ -361,6 +412,7 @@ describe('PlayerDialog next episode', () => {
     const user = userEvent.setup();
     render(
       <PlayerDialog
+        profileId="kid"
         item={episode}
         directPlay={false}
         next={following}
@@ -380,7 +432,7 @@ describe('PlayerDialog next episode', () => {
     fireEvent.timeUpdate(element);
     await user.click(screen.getByRole('button', { name: 'Next episode: Second ▶' }));
 
-    expect(api.save).toHaveBeenCalledWith('e1', 90);
+    expect(api.save).toHaveBeenCalledWith('kid', 'e1', 90);
     expect(api.stop).toHaveBeenCalledWith('s1');
     expect(onNext).toHaveBeenCalledWith(following);
   });
@@ -388,6 +440,7 @@ describe('PlayerDialog next episode', () => {
   it('offers it when the video ends, even without a known duration', async () => {
     render(
       <PlayerDialog
+        profileId="kid"
         item={{ ...episode, durationSec: null }}
         directPlay
         next={following}
@@ -405,6 +458,7 @@ describe('PlayerDialog next episode', () => {
   it('does not trust a growing HLS duration when the file duration is unknown', async () => {
     render(
       <PlayerDialog
+        profileId="kid"
         item={{ ...episode, durationSec: null }}
         directPlay={false}
         next={following}
@@ -426,6 +480,7 @@ describe('PlayerDialog next episode', () => {
   it('uses the element duration in direct play when the file duration is unknown', async () => {
     render(
       <PlayerDialog
+        profileId="kid"
         item={{ ...episode, durationSec: null }}
         directPlay
         next={following}
@@ -444,7 +499,15 @@ describe('PlayerDialog next episode', () => {
   });
 
   it('offers nothing after the last episode', async () => {
-    render(<PlayerDialog item={episode} directPlay onClose={vi.fn()} api={fakeApi(DIRECT)} />);
+    render(
+      <PlayerDialog
+        profileId="kid"
+        item={episode}
+        directPlay
+        onClose={vi.fn()}
+        api={fakeApi(DIRECT)}
+      />,
+    );
     const element = await videoOf();
     fireEvent.loadedMetadata(element);
     element.currentTime = 99;

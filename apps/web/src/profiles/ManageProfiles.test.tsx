@@ -84,4 +84,30 @@ describe('ManageProfiles', () => {
 
     expect(onDone).toHaveBeenCalledOnce();
   });
+
+  it('explains a refused rename, including a non-API error body', async () => {
+    const { user } = setup({
+      update: vi
+        .fn<ProfileApi['update']>()
+        .mockResolvedValueOnce({ ok: false, error: 'profile_name_taken' })
+        .mockResolvedValueOnce({ ok: false, error: 'Bad Request' as never }),
+    });
+    const save = screen.getByRole('button', { name: 'Save' });
+
+    await user.click(save);
+    expect(screen.getByRole('alert')).toHaveTextContent('That name is already used.');
+    await user.click(save);
+
+    expect(screen.getByRole('alert')).toHaveTextContent('The server refused the change.');
+  });
+
+  it('refreshes the list after a confirmed delete', async () => {
+    const { user, api, onChanged } = setup();
+
+    await user.click(screen.getByRole('button', { name: 'Delete Me' }));
+    await user.click(screen.getByRole('button', { name: 'Delete Me and their history' }));
+
+    expect(api.remove).toHaveBeenCalledWith('default');
+    expect(onChanged).toHaveBeenCalledOnce();
+  });
 });

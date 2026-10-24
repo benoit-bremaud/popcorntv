@@ -66,7 +66,7 @@ detail dialog is open (UC4).
 
 Main scenario:
 
-1. The detail dialog loads `GET /progress` (Play appears once it answered) and shows **Resume from 12:34** and **Start
+1. The detail dialog loads `GET /profiles/:profileId/progress` (Play appears once it answered) and shows **Resume from 12:34** and **Start
    over**.
 2. The viewer presses **Resume**.
 3. The web posts `{ mediaId, directPlay, startSec: 754 }`.
@@ -74,7 +74,7 @@ Main scenario:
    starts at 754 s (`offsetSec: 754`).
 5. The web seeks to the answer's `startSec − offsetSec` once metadata is loaded, then plays.
 6. Every 10 s while playing, on pause and on close, the web sends `PUT
-   /media/:id/progress` with `offsetSec + currentTime`.
+   /profiles/:profileId/media/:id/progress` with `offsetSec + currentTime`.
 7. The viewer closes the player; the last position is saved (`keepalive`) and, once that
    save settled, the detail dialog reloads the progress.
 

@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { AVATAR_COLORS, PROFILE_NAME_MAX } from '@popcorntv/shared';
 import type { ApiErrorCode, AvatarColor, Profile } from '@popcorntv/shared';
 import { createProfile, deleteProfile, updateProfile } from '../api.js';
+import type { ProfileFailure } from '../api.js';
 import { Avatar } from './Avatar.js';
 
-/** The profile writes UC9 needs; injected by tests. */
+/** The profile writes UC9 needs: the real `/profiles` calls by default, fakes in tests. */
 export interface ProfileApi {
   readonly create: typeof createProfile;
   readonly update: typeof updateProfile;
@@ -26,7 +27,9 @@ const MESSAGES: Partial<Record<ApiErrorCode, string>> = {
 };
 
 function message(error: ApiErrorCode | null): string {
-  return (error === null ? undefined : MESSAGES[error]) ?? 'The server could not be reached.';
+  if (error === null) return 'The server could not be reached.';
+  // Fastify's own 4xx bodies carry other strings: the change was still refused.
+  return MESSAGES[error] ?? 'The server refused the change.';
 }
 
 type Props = {
@@ -47,11 +50,11 @@ export function ManageProfiles({
   const [error, setError] = useState<string | null>(null);
 
   async function run(
-    write: () => Promise<{ readonly ok: boolean; readonly error?: ApiErrorCode | null }>,
+    write: () => Promise<{ readonly ok: true } | ProfileFailure>,
   ): Promise<boolean> {
     const result = await write();
     if (!result.ok) {
-      setError(message(result.error ?? null));
+      setError(message(result.error));
       return false;
     }
     setError(null);
@@ -143,7 +146,7 @@ function ProfileForm({
   const [name, setName] = useState(initial?.name ?? '');
   const [avatar, setAvatar] = useState<AvatarColor>(initial?.avatar ?? 'blue');
 
-  async function send(event: React.FormEvent<HTMLFormElement>): Promise<void> {
+  async function send(event: React.SyntheticEvent<HTMLFormElement, SubmitEvent>): Promise<void> {
     event.preventDefault();
     const saved = await onSubmit(name.trim(), avatar);
     if (saved && initial === undefined) setName('');

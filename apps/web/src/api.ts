@@ -155,9 +155,10 @@ export async function loadProfiles(fetchFn: Fetch = fetch): Promise<Profile[]> {
 }
 
 /** A profile write's answer: the stored profile, or the server's error code (null offline). */
-export type ProfileResult =
-  | { readonly ok: true; readonly profile: Profile }
-  | { readonly ok: false; readonly error: ApiErrorCode | null };
+/** A refused profile write: the server's error code, null when offline or unreadable. */
+export type ProfileFailure = { readonly ok: false; readonly error: ApiErrorCode | null };
+
+export type ProfileResult = { readonly ok: true; readonly profile: Profile } | ProfileFailure;
 
 /** Sends one profile write and reads its JSON answer (UC9). */
 async function writeProfile(
@@ -181,9 +182,11 @@ async function writeProfile(
 async function profileResult(response: Response | null): Promise<ProfileResult> {
   if (response === null) return { ok: false, error: null };
   try {
+    // First-party server contract: a 2xx carries a `Profile`, an error an `ApiError`.
     const body: unknown = await response.json();
     if (response.ok) return { ok: true, profile: body as Profile };
-    return { ok: false, error: (body as ApiError).error };
+    const error = (body as Partial<ApiError> | null)?.error;
+    return { ok: false, error: typeof error === 'string' ? error : null };
   } catch {
     return { ok: false, error: null };
   }
@@ -210,9 +213,10 @@ export async function updateProfile(
 export async function deleteProfile(
   profileId: string,
   fetchFn: Fetch = fetch,
-): Promise<{ readonly ok: true } | { readonly ok: false; readonly error: ApiErrorCode | null }> {
+): Promise<{ readonly ok: true } | ProfileFailure> {
   const response = await writeProfile(fetchFn, profilePath(profileId), 'DELETE');
   if (response?.ok === true) return { ok: true };
   const result = await profileResult(response);
+  // A non-2xx answer never parses as ok; keep the type honest without a cast.
   return result.ok ? { ok: false, error: null } : result;
 }

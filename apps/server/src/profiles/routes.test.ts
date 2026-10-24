@@ -85,6 +85,7 @@ describe('profile routes', () => {
     });
 
     expect(unknown.statusCode).toBe(404);
+    expect(taken.statusCode).toBe(409);
     expect(taken.json()).toEqual({ error: 'profile_name_taken' });
     expect(badId.statusCode).toBe(400);
     expect(badBody.statusCode).toBe(400);
@@ -107,6 +108,7 @@ describe('profile routes', () => {
     const badId = await app.inject({ method: 'DELETE', url: '/profiles/bob' });
 
     expect(removed.statusCode).toBe(204);
+    expect(last.statusCode).toBe(409);
     expect(last.json()).toEqual({ error: 'last_profile' });
     expect(unknown.statusCode).toBe(404);
     expect(badId.statusCode).toBe(400);

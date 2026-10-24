@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Profile } from '@popcorntv/shared';
 import { loadProfiles } from './api.js';
 import { CatalogPage } from './catalog/CatalogPage.js';
@@ -27,11 +27,14 @@ type Props = {
 export function App({ load = loadProfiles, profileApi, storage }: Props): React.JSX.Element {
   const [view, setView] = useState<View>({ kind: 'loading' });
   const [profiles, setProfiles] = useState<readonly Profile[]>([]);
+  /** Only the latest load may set `profiles` (two quick writes, two refreshes). */
+  const latest = useRef(0);
 
   const refresh = useCallback(async (): Promise<readonly Profile[] | null> => {
+    const request = ++latest.current;
     try {
       const list = await load();
-      setProfiles(list);
+      if (request === latest.current) setProfiles(list);
       return list;
     } catch {
       return null;
@@ -99,9 +102,7 @@ export function App({ load = loadProfiles, profileApi, storage }: Props): React.
             api={profileApi}
           />
         )}
-        {view.kind === 'active' && (
-          <CatalogPage key={view.profile.id} profileId={view.profile.id} />
-        )}
+        {view.kind === 'active' && <CatalogPage profileId={view.profile.id} />}
       </main>
     </>
   );

@@ -76,7 +76,7 @@ transcode (spec `docs/architecture/specs/hls-transcode.md`, ADR-0006: every Play
 into an in-memory session — H.264/AAC copied, the rest re-encoded, MPEG-TS EVENT playlist,
 60 s idle watchdog + 20 s web heartbeat, hls.js loaded on demand); #9 resume (spec
 `docs/architecture/specs/resume-playback.md`, ADR-0007: `watch_progress` keyed by
-`profile_id` `'default'` until #10, `PUT /media/:id/progress` every 10 s / on pause / on
+`profile_id` `'default'` until #10, `PUT /media/:id/progress` (now under `/profiles/:profileId/`, #10) every 10 s / on pause / on
 close, `GET /progress`, `startSec` → FFmpeg `-ss` + `offsetSec` in the answer, Next episode
 button); #10 profiles (spec `docs/architecture/specs/profiles.md`, ADR-0008: `profiles`
 table seeded with `default` / `Me`, `watch_progress.profile_id` FK cascade, progress

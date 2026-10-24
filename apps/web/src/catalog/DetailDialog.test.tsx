@@ -304,6 +304,6 @@ describe('DetailDialog progress refresh and next episode', () => {
     await waitFor(() =>
       expect(api.start).toHaveBeenLastCalledWith({ mediaId: 'e2', directPlay: true, startSec: 40 }),
     );
-    expect(api.save).toHaveBeenCalledWith('e1', 95);
+    expect(api.save).toHaveBeenCalledWith('kid', 'e1', 95);
   });
 });

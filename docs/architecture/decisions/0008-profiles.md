@@ -24,10 +24,10 @@ weights /100, totals /500; scores are estimates.
 | Works with `keepalive` / sendBeacon |   20 | 5                                       | 4 — custom header forbids sendBeacon     | 5                                         |
 | KISS                              |     25 | 4 — two routes move                       | 4                                        | 2 — cookie options, CSRF surface          |
 | Fits #18 (real users later)       |     20 | 4 — authz check on the path param         | 4                                        | 3 — clashes with a session cookie         |
-| **Total / 500**                   |    100 | **455**                                   | 365                                      | 265                                       |
+| **Total / 500**                   |    100 | **455**                                   | 365                                      | 280                                       |
 
 Points: A = 175+100+100+80 · B = 105+80+100+80 · C = 70+100+50+60.
-Sensitivity: KISS at 40 (others renormalised) → A 4.4, B 3.8/5. **A.** The old
+Sensitivity: KISS at 40 (others renormalised) → A 4.4, B 3.7/5. **A.** The old
 `GET /progress` and `PUT /media/:id/progress` are removed (no client but ours).
 
 ## 2. What happens to the `'default'` rows
@@ -43,10 +43,11 @@ Sensitivity: KISS at 40 (others renormalised) → A 4.4, B 3.8/5. **A.** The old
 | KISS                              |     30 | 5 — one INSERT in the migration           | 5                                 | 2 — a one-shot branch in the service  |
 | App usable on first start         |     25 | 5 — a profile always exists               | 2 — empty picker, must create one | 2                                     |
 | Uniform ids                       |     15 | 2 — `default` beside UUIDs                | 5                                 | 5                                     |
-| **Total / 500**                   |    100 | **450**                                   | 290                               | 335                                   |
+| **Total / 500**                   |    100 | **455**                                   | 275                               | 335                                   |
 
 Points: A = 150+150+125+30 · B = 0+150+50+75 · C = 150+60+50+75.
-Sensitivity: uniform ids at 40 (others renormalised) → A 3.9, C 3.6/5. **A**; the id
+Sensitivity: uniform ids at 40 (others renormalised) → A 3.80, C 3.84/5: C edges ahead
+only at that extreme weight, and loses the history-free first start; **A**; the id
 param is validated as `default | uuid`.
 
 ## 3. How the web knows the active profile
@@ -62,11 +63,11 @@ param is validated as `default | uuid`.
 | KISS                              |     30 | 4 — one storage key, try/catch            | 5                               | 1 — adds a router dependency        |
 | Shared device (TV, family PC)     |     20 | 4 — switch button always visible          | 5                               | 4                                   |
 | Robust to a deleted profile       |     15 | 5 — falls back to the picker              | 5                               | 3 — dead links                      |
-| **Total / 500**                   |    100 | **450**                                   | 425                             | 275                                 |
+| **Total / 500**                   |    100 | **450**                                   | 430                             | 295                                 |
 
 Points: A = 175+120+80+75 · B = 105+150+100+75 · C = 140+30+80+45.
-Sensitivity: shared device at 40 (others renormalised) → A 4.4, B 4.4/5 (tie); UX
-breaks it. **A.**
+Sensitivity: shared device at 40 (others renormalised) → A 4.4, B 4.5/5: B wins only
+when shared devices dominate; the switch button keeps A usable there. **A.**
 
 ## 4. Who may manage profiles (UC9) before #18
 
@@ -80,10 +81,10 @@ breaks it. **A.**
 | Owner can manage in the web       |     25 | 5                                         | 5                                       | 0                              |
 | Risk (LAN, loopback by default)   |     25 | 3 — household can rename / delete         | 4                                       | 5                              |
 | KISS                              |     15 | 5                                         | 2                                       | 3                              |
-| **Total / 500**                   |    100 | **450**                                   | 340                                     | 340                            |
+| **Total / 500**                   |    100 | **450**                                   | 325                                     | 310                            |
 
 Points: A = 175+125+75+75 · B = 70+125+100+30 · C = 140+0+125+45.
-Sensitivity: risk at 45 (others renormalised) → A 4.1, B 3.4, C 3.7/5. **A**; `HOST`
+Sensitivity: risk at 45 (others renormalised) → A 4.1, B 3.5, C 3.6/5. **A**; `HOST`
 stays loopback by default, so the exposure is opt-in.
 
 ## Consequences

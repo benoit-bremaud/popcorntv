@@ -9,19 +9,15 @@ export interface PlaybackApi {
   readonly start: typeof startPlayback;
   readonly heartbeat: typeof sendHeartbeat;
   readonly stop: typeof stopPlayback;
-  /** Saves a position for the active profile (bound by `playbackApi`). */
-  readonly save: (mediaId: string, positionSec: number) => Promise<void>;
+  readonly save: typeof saveProgress;
 }
 
-/** The real server calls, saving progress for `profileId` (ADR-0008 §1). */
-export function playbackApi(profileId: string): PlaybackApi {
-  return {
-    start: startPlayback,
-    heartbeat: sendHeartbeat,
-    stop: stopPlayback,
-    save: (mediaId, positionSec) => saveProgress(profileId, mediaId, positionSec),
-  };
-}
+const DEFAULT_API: PlaybackApi = {
+  start: startPlayback,
+  heartbeat: sendHeartbeat,
+  stop: stopPlayback,
+  save: saveProgress,
+};
 
 /** A paused player must keep its session under the 60 s idle limit (ADR-0006 §4). */
 const HEARTBEAT_MS = 20_000;
@@ -38,6 +34,8 @@ type Status =
 
 type Props = {
   readonly item: Media;
+  /** The active profile, whose position is saved (ADR-0008 §1). */
+  readonly profileId: string;
   /** The browser's own direct-play answer; the server confirms it (spec hls-transcode). */
   readonly directPlay: boolean;
   /** Media time to resume at (UC6); 0 starts over. */
@@ -48,7 +46,7 @@ type Props = {
   readonly onNext?: (next: Media) => void;
   /** `saved` settles once the last position is stored (or its save failed). */
   readonly onClose: (saved: Promise<void>) => void;
-  readonly api: PlaybackApi;
+  readonly api?: PlaybackApi;
   readonly attach?: typeof attachHls;
 };
 
@@ -61,12 +59,13 @@ type Props = {
  */
 export function PlayerDialog({
   item,
+  profileId,
   directPlay,
   startSec = 0,
   next = null,
   onNext,
   onClose,
-  api,
+  api = DEFAULT_API,
   attach = attachHls,
 }: Props): React.JSX.Element {
   const ref = useRef<HTMLDialogElement>(null);
@@ -135,7 +134,7 @@ export function PlayerDialog({
   function save(): Promise<void> {
     const at = position();
     if (at === null) return saves.current;
-    saves.current = saves.current.then(() => api.save(item.id, at));
+    saves.current = saves.current.then(() => api.save(profileId, item.id, at));
     return saves.current;
   }
 

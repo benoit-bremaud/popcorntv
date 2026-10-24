@@ -5,8 +5,8 @@ import { apiError, invalid } from '../http.js';
 import type { ProfileRepository } from './repository.js';
 
 /** `:profileId` is the seeded `default` or a UUID (spec profiles §4.2). */
-export const profileId = z.union([z.literal(DEFAULT_PROFILE_ID), z.uuid()]);
-const profileParams = z.object({ profileId });
+const profileId = z.union([z.literal(DEFAULT_PROFILE_ID), z.uuid()]);
+export const profileParams = z.object({ profileId });
 const name = z.string().trim().min(1).max(PROFILE_NAME_MAX);
 const avatar = z.enum(AVATAR_COLORS);
 const createBody = z.object({ name, avatar });
