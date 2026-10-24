@@ -13,7 +13,7 @@ How the system is split and who depends on whom. The dependency rule holds: the 
 ```mermaid
 flowchart LR
   subgraph Web ["apps/web"]
-    UI[Catalog + Player screens]
+    UI[Profile picker + Catalog + Player screens]
     UI --> Contracts
     HLS[hls.js]
     UI --> HLS
@@ -38,8 +38,12 @@ flowchart LR
     Repo[SQLite repositories]
     Stream[Range file streamer]
     Progress[Progress routes + repository]
+    Profiles[Profile routes + repository]
     Routes --> Progress
+    Routes --> Profiles
+    Progress --> Profiles
     Progress --> Repo
+    Profiles --> Repo
     Routes --> Stream
     Stream --> Parser
     Routes --> Decider
@@ -84,6 +88,7 @@ flowchart LR
   `data/artwork` and downloads through the client. The scanner never calls TMDB: the
   scan route composes `scan` then `enrich` (UC1's «include»), so a TMDB failure cannot
   fail a scan.
-- Progress (#9, ADR-0007): `PUT /media/:id/progress` and `GET /progress` write and read
-  `watch_progress` through its own Drizzle repository; `isFinished` is pure in
+- Progress (#9, ADR-0007; per profile since #10, ADR-0008): `PUT
+  /profiles/:profileId/media/:id/progress` and `GET /profiles/:profileId/progress` write
+  and read `watch_progress` through its own Drizzle repository; `isFinished` is pure in
   `packages/shared`.

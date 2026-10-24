@@ -8,7 +8,7 @@ import {
   text,
   uniqueIndex,
 } from 'drizzle-orm/sqlite-core';
-import { LIBRARY_KINDS, MEDIA_KINDS, STREAM_TYPES } from '@popcorntv/shared';
+import { AVATAR_COLORS, LIBRARY_KINDS, MEDIA_KINDS, STREAM_TYPES } from '@popcorntv/shared';
 import type { CastMember, Genre, ProviderIds } from '@popcorntv/shared';
 
 /** Persistence shape of the class diagram (04-class.md); tables derive from the entities. */
@@ -91,17 +91,25 @@ export const streams = sqliteTable('streams', {
   language: text('language'),
 });
 
-/** The only profile until #10 (ADR-0007 §1). */
-export const DEFAULT_PROFILE = 'default';
-
 /**
- * Where a profile stopped in a title (`WatchProgress` entity, ADR-0007). One row per
- * profile and media; every row belongs to `default` until profiles exist (#10).
+ * One row per household member (`Profile` entity, ADR-0008). `name_key` is the
+ * lower-cased name, unique so two profiles never read alike.
  */
+export const profiles = sqliteTable('profiles', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  nameKey: text('name_key').notNull().unique(),
+  avatar: text('avatar', { enum: AVATAR_COLORS }).notNull(),
+  createdAt: text('created_at').notNull(),
+});
+
+/** Where a profile stopped in a title (`WatchProgress` entity, ADR-0007 / ADR-0008). */
 export const watchProgress = sqliteTable(
   'watch_progress',
   {
-    profileId: text('profile_id').notNull().default(DEFAULT_PROFILE),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
     mediaId: text('media_id')
       .notNull()
       .references(() => media.id, { onDelete: 'cascade' }),

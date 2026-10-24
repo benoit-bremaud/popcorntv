@@ -1,0 +1,229 @@
+/* Profiles: picker, manage screen, header switch — tokens only (ADR-0004, spec profiles). */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.switch-profile,
+.profile {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.profiles {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-5);
+  padding: var(--space-7) 0;
+}
+
+.profiles-title {
+  margin: 0;
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-tight);
+}
+
+.profile-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, var(--profile-tile));
+  justify-content: center;
+  gap: var(--space-5);
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.profile {
+  flex-direction: column;
+  width: 100%;
+  padding: var(--space-2);
+  color: var(--color-text-muted);
+  transition:
+    color var(--duration-ui) var(--ease-out),
+    transform var(--duration-press) var(--ease-out);
+}
+
+.profile:active {
+  transform: scale(0.97);
+}
+
+.profile-name,
+.switch-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-name {
+  font-size: var(--text-lg);
+}
+
+.switch-profile {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.switch-name {
+  min-width: 0;
+  max-width: 12ch;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .profile:hover {
+    color: var(--color-text);
+  }
+}
+
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  border-radius: var(--radius-md);
+  color: var(--color-on-accent);
+  font-weight: var(--weight-bold);
+}
+
+.avatar-lg {
+  width: 100%;
+  aspect-ratio: 1;
+  font-size: var(--text-3xl);
+}
+
+.avatar-sm {
+  width: var(--space-6);
+  aspect-ratio: 1;
+  font-size: var(--text-base);
+}
+
+.avatar-red {
+  background: var(--color-avatar-red);
+}
+.avatar-amber {
+  background: var(--color-avatar-amber);
+}
+.avatar-green {
+  background: var(--color-avatar-green);
+}
+.avatar-teal {
+  background: var(--color-avatar-teal);
+}
+.avatar-blue {
+  background: var(--color-avatar-blue);
+}
+.avatar-violet {
+  background: var(--color-avatar-violet);
+}
+.avatar-pink {
+  background: var(--color-avatar-pink);
+}
+.avatar-slate {
+  background: var(--color-avatar-slate);
+}
+
+.button-quiet {
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text);
+}
+
+.profile-error {
+  min-height: var(--leading-body);
+  margin: 0;
+  color: var(--color-accent-text);
+}
+
+.manage-list {
+  display: grid;
+  gap: var(--space-3);
+  width: min(100%, var(--dialog-width));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* One card per profile: avatar | fields | actions; the fields drop below on phones. */
+.manage-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.manage-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.manage-actions .button {
+  padding-inline: var(--space-3);
+  white-space: nowrap;
+}
+
+.profile-form fieldset {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.profile-form-add {
+  width: min(100%, var(--dialog-width));
+}
+
+.input {
+  min-width: 0;
+  min-height: var(--touch-target);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.profiles .button,
+.switch-profile {
+  min-height: var(--touch-target);
+}
+
+@media (max-width: 40rem) {
+  .manage-row {
+    grid-template-columns: auto 1fr;
+  }
+
+  .manage-row .profile-form {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .manage-actions {
+    justify-self: end;
+  }
+
+  .profile-form fieldset {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  /* The legend comes first: the name input is the first `<input>`. */
+  .profile-form fieldset > input.input {
+    grid-column: 1 / -1;
+  }
+}

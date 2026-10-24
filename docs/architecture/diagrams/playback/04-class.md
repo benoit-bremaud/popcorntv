@@ -76,7 +76,7 @@ classDiagram
   class Profile {
     +string id
     +string name
-    +string avatar
+    +AvatarColor avatar
   }
   class WatchProgress {
     +string profileId
@@ -115,6 +115,9 @@ classDiagram
   catalog's "documentaries" row is derived, `kind` stays structural. Persisted as columns
   on `media` with `genres` / `cast` as JSON.
 - `WatchProgress.isFinished()` = position ≥ 90 % of a known duration; drives "next
-  episode" (UC7). Until profiles exist (#10) every row has `profileId = 'default'`
-  (ADR-0007 §1); persisted in `watch_progress`, key `(profile_id, media_id)`.
+  episode" (UC7); persisted in `watch_progress`, key `(profile_id, media_id)`, both
+  foreign keys cascade.
+- `Profile` (UC8 / UC9, ADR-0008): `avatar` is a palette key (`AVATAR_COLORS`); the
+  migration seeds `default` / `Me`, which owns the progress saved before #10. Persisted
+  in `profiles` with a unique lower-cased `name_key`.
 - `PlaybackDecider` has no state; it is a function in a class box for UML readability.

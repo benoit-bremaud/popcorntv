@@ -54,8 +54,10 @@ function renderDetail(
     user: userEvent.setup(),
     onClose,
     api,
+    progress,
     ...render(
       <DetailDialog
+        profileId="kid"
         item={item}
         seasons={seasons}
         onClose={onClose}
@@ -68,6 +70,14 @@ function renderDetail(
 }
 
 describe('DetailDialog playback', () => {
+  it("reads the active profile's progress", async () => {
+    const { progress } = renderDetail(heat);
+
+    await screen.findByRole('button', { name: '▶ Play' });
+
+    expect(progress).toHaveBeenCalledWith('kid');
+  });
+
   it('plays a direct-playable film in a native video and returns focus to Play', async () => {
     const { user, onClose } = renderDetail(heat);
 
@@ -142,6 +152,7 @@ describe('DetailDialog playback', () => {
     const user = userEvent.setup();
     render(
       <DetailDialog
+        profileId="kid"
         item={dark}
         seasons={[{ season: 1, episodes: [pilot] }]}
         onClose={vi.fn()}
@@ -257,6 +268,7 @@ describe('DetailDialog progress refresh and next episode', () => {
     const user = userEvent.setup();
     render(
       <DetailDialog
+        profileId="kid"
         item={heat}
         seasons={[]}
         onClose={vi.fn()}
@@ -292,6 +304,6 @@ describe('DetailDialog progress refresh and next episode', () => {
     await waitFor(() =>
       expect(api.start).toHaveBeenLastCalledWith({ mediaId: 'e2', directPlay: true, startSec: 40 }),
     );
-    expect(api.save).toHaveBeenCalledWith('e1', 95);
+    expect(api.save).toHaveBeenCalledWith('kid', 'e1', 95);
   });
 });

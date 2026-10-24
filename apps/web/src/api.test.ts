@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  createProfile,
+  deleteProfile,
+  loadProfiles,
+  updateProfile,
   ApiRequestError,
   artworkUrl,
   loadCatalog,
@@ -138,9 +142,9 @@ describe('saveProgress', () => {
   it('puts the position with keepalive', async () => {
     const fetchFn = vi.fn(async () => new Response(null, { status: 204 }));
 
-    await saveProgress('m 1', 42, fetchFn);
+    await saveProgress('kid', 'm 1', 42, fetchFn);
 
-    expect(fetchFn).toHaveBeenCalledWith('/api/media/m%201/progress', {
+    expect(fetchFn).toHaveBeenCalledWith('/api/profiles/kid/media/m%201/progress', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ positionSec: 42 }),
@@ -153,7 +157,7 @@ describe('saveProgress', () => {
       throw new TypeError('offline');
     });
 
-    await expect(saveProgress('m1', 1, fetchFn)).resolves.toBeUndefined();
+    await expect(saveProgress('kid', 'm1', 1, fetchFn)).resolves.toBeUndefined();
   });
 });
 
@@ -163,10 +167,72 @@ describe('loadProgress', () => {
       { mediaId: 'm1', positionSec: 5, durationSec: 10, finished: false, updatedAt: 'x' },
     ];
 
-    await expect(loadProgress(async () => respond(rows, 200))).resolves.toEqual(rows);
+    const fetchFn = vi.fn(async () => respond(rows, 200));
+
+    await expect(loadProgress('kid', fetchFn)).resolves.toEqual(rows);
+    expect(fetchFn).toHaveBeenCalledWith('/api/profiles/kid/progress');
   });
 
   it('returns nothing when the server fails', async () => {
-    await expect(loadProgress(async () => respond({}, 500))).resolves.toEqual([]);
+    await expect(loadProgress('kid', async () => respond({}, 500))).resolves.toEqual([]);
+  });
+});
+
+describe('profiles', () => {
+  const kid = { id: 'k1', name: 'Kid', avatar: 'blue' } as const;
+  const offline = async (): Promise<Response> => {
+    throw new TypeError('offline');
+  };
+
+  it('loads the profiles', async () => {
+    await expect(loadProfiles(async () => respond([kid]))).resolves.toEqual([kid]);
+  });
+
+  it('creates a profile', async () => {
+    const fetchFn = vi.fn(async () => respond(kid, 201));
+
+    await expect(createProfile({ name: 'Kid', avatar: 'blue' }, fetchFn)).resolves.toEqual({
+      ok: true,
+      profile: kid,
+    });
+    expect(fetchFn).toHaveBeenCalledWith('/api/profiles', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Kid', avatar: 'blue' }),
+    });
+  });
+
+  it('returns the error code of a refused write', async () => {
+    const fetchFn = vi.fn(async () => respond({ error: 'profile_name_taken' }, 409));
+
+    await expect(updateProfile('k 1', { name: 'Me' }, fetchFn)).resolves.toEqual({
+      ok: false,
+      error: 'profile_name_taken',
+    });
+    expect(fetchFn).toHaveBeenCalledWith('/api/profiles/k%201', expect.anything());
+  });
+
+  it('reports a network failure or a non-JSON answer as a null error', async () => {
+    await expect(createProfile({ name: 'Kid', avatar: 'blue' }, offline)).resolves.toEqual({
+      ok: false,
+      error: null,
+    });
+    await expect(
+      updateProfile('k1', {}, async () => new Response('<html>', { status: 502 })),
+    ).resolves.toEqual({ ok: false, error: null });
+  });
+
+  it('deletes a profile', async () => {
+    const fetchFn = vi.fn(async () => new Response(null, { status: 204 }));
+
+    await expect(deleteProfile('k1', fetchFn)).resolves.toEqual({ ok: true });
+    expect(fetchFn).toHaveBeenCalledWith('/api/profiles/k1', { method: 'DELETE' });
+  });
+
+  it('returns why a delete was refused', async () => {
+    await expect(
+      deleteProfile('k1', async () => respond({ error: 'last_profile' }, 409)),
+    ).resolves.toEqual({ ok: false, error: 'last_profile' });
+    await expect(deleteProfile('k1', offline)).resolves.toEqual({ ok: false, error: null });
   });
 });

@@ -97,4 +97,4 @@ added on top later.
   compatible: both default to 0).
 - After an HLS resume the seek bar starts at the resume point until seek-ahead lands.
 - #10 adds `profiles` and turns `profile_id` into a foreign key; the default profile
-  becomes the first real one.
+  becomes the first real one (done in ADR-0008).

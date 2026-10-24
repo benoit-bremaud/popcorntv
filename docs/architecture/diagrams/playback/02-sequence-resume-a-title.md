@@ -22,8 +22,8 @@ sequenceDiagram
   participant SM as SessionManager
 
   V->>D: Open a title (UC4)
-  D->>API: GET /progress
-  API->>PR: list() (profile = default)
+  D->>API: GET /profiles/:profileId/progress
+  API->>PR: list(profileId)
   API-->>D: 200 WatchProgress[]
   alt saved, unfinished, ≥ 10 s
     D-->>V: Resume from mm:ss · Start over
@@ -42,8 +42,8 @@ sequenceDiagram
   end
   P->>P: on loadedmetadata, currentTime = startSec − offsetSec
   loop every 10 s while playing, on pause, on close (keepalive)
-    P->>API: PUT /media/:id/progress {positionSec: offsetSec + currentTime}
-    API->>PR: save(mediaId, clamp(position, duration))
+    P->>API: PUT /profiles/:profileId/media/:id/progress {positionSec: offsetSec + currentTime}
+    API->>PR: save(profileId, mediaId, clamp(position, duration))
     API-->>P: 204
   end
   opt episode finished (≥ 90 %) or ended, and a next episode exists
@@ -54,7 +54,7 @@ sequenceDiagram
   end
   V->>P: Close
   P->>D: closed(last save settled)
-  D->>API: GET /progress (refresh the offer)
+  D->>API: GET /profiles/:profileId/progress (refresh the offer)
 ```
 
 ## Notes

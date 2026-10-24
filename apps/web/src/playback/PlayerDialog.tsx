@@ -34,6 +34,8 @@ type Status =
 
 type Props = {
   readonly item: Media;
+  /** The active profile, whose position is saved (ADR-0008 §1). */
+  readonly profileId: string;
   /** The browser's own direct-play answer; the server confirms it (spec hls-transcode). */
   readonly directPlay: boolean;
   /** Media time to resume at (UC6); 0 starts over. */
@@ -57,6 +59,7 @@ type Props = {
  */
 export function PlayerDialog({
   item,
+  profileId,
   directPlay,
   startSec = 0,
   next = null,
@@ -131,7 +134,7 @@ export function PlayerDialog({
   function save(): Promise<void> {
     const at = position();
     if (at === null) return saves.current;
-    saves.current = saves.current.then(() => api.save(item.id, at));
+    saves.current = saves.current.then(() => api.save(profileId, item.id, at));
     return saves.current;
   }
 

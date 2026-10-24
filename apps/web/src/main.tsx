@@ -4,6 +4,7 @@ import { App } from './App.js';
 import '@fontsource-variable/inter';
 import './styles/tokens.css';
 import './styles/catalog.css';
+import './styles/profiles.css';
 
 const root = document.getElementById('root');
 if (root === null) {

@@ -177,6 +177,10 @@ export type ApiErrorCode =
   | 'segment_not_found'
   | 'transcode_busy'
   | 'transcode_failed'
+  | 'profile_not_found'
+  | 'profile_name_taken'
+  | 'profile_limit'
+  | 'last_profile'
   | 'internal';
 
 /** Error body of every non-2xx response. */
@@ -186,3 +190,4 @@ export interface ApiError {
 }
 
 export * from './playback.js';
+export * from './profiles.js';

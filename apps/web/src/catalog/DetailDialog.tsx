@@ -12,12 +12,14 @@ import type { Season } from './catalog.js';
 type Props = {
   readonly item: Media;
   readonly seasons: readonly Season[];
+  /** The active profile: progress is read and saved for it (UC8). */
+  readonly profileId: string;
   readonly onClose: () => void;
   /** The browser's decoder check; injected by tests (jsdom decodes nothing). */
   readonly canPlay?: CanPlay;
   /** Playback server calls; injected by tests. */
   readonly api?: PlaybackApi;
-  /** `GET /progress`; injected by tests. */
+  /** `GET /profiles/:profileId/progress`; injected by tests. */
   readonly progress?: typeof loadProgress;
 };
 
@@ -43,6 +45,7 @@ function episodeName(episode: Media): string {
 export function DetailDialog({
   item,
   seasons,
+  profileId,
   onClose,
   canPlay = browserCanPlay,
   api,
@@ -57,7 +60,7 @@ export function DetailDialog({
 
   async function refreshProgress(): Promise<void> {
     const id = ++request.current;
-    const rows = await progress();
+    const rows = await progress(profileId);
     if (id === request.current) setSaved(new Map(rows.map((row) => [row.mediaId, row])));
   }
 
@@ -201,6 +204,7 @@ export function DetailDialog({
         <PlayerDialog
           key={playing.media.id}
           item={playing.media}
+          profileId={profileId}
           directPlay={decidePlayback(playing.media, canPlay).mode === 'direct'}
           startSec={playing.startSec}
           next={nextEpisode(seasons, playing.media)}
