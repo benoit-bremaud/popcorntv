@@ -4,6 +4,21 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-02 — #38 Docker conformance (PR #49 merged, `27dee37`)
+
+- **Changes** — both `node:22.21.1-bookworm-slim` stages pinned by tag + digest; Dockerfile
+  frontend pinned to `1.28` with `# check=error=true`; DL3005 `apt-get upgrade` gets a
+  re-check note per base bump; Dependabot docker updates grouped (`patterns: ['*']`) so
+  digest-only refreshes arrive.
+- **Decision** — no BuildKit cache mounts / buildx `gha` cache: the CI image job takes
+  ~2 min (MCDA option A 450/500 vs 335 cache mounts, 270 cache + gha).
+- **Gotcha** — with a digest-pinned base, a local rebuild reuses the cached `apt-get upgrade`
+  layer and misses new Debian fixes (Trivy flagged 2 fixed CVEs); rebuild `--no-cache`
+  before a local image scan. CI runners start cold.
+- **Gate** on `58c1232` — 444 tests, SonarQube PASSED, gitleaks clean, Hadolint + Trivy
+  config/image green, `/health` 200 as uid 1000, CI 9/9. Codex review unavailable (quota).
+  Squash-merged with owner approval.
+
 ## 2026-11-02 — #31 security headers (PR #44 merged, `1121fb1`)
 
 - **Goal restated** — PopCornTV is to replace the Jellyfin of the owner's homelab; next
