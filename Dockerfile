@@ -1,4 +1,5 @@
 # syntax=docker/dockerfile:1.28
+# check=error=true
 # PopCornTV server image: builds the TypeScript workspace, ships only the runtime output,
 # runs as a non-root user with FFmpeg available for transcoding.
 
