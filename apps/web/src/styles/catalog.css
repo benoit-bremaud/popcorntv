@@ -184,28 +184,28 @@
 }
 
 /* Entrance cascade without inline styles (strict `style-src` CSP): rows are the only
-   children of `.view`; from the seventh on they enter together so the cascade stays short. */
-.row:nth-child(2) {
+   children of `.view` (see `CatalogBody`); from the seventh on they enter together so the cascade stays short. */
+.view > .row:nth-child(2) {
   animation-delay: var(--stagger);
 }
 
-.row:nth-child(3) {
+.view > .row:nth-child(3) {
   animation-delay: calc(2 * var(--stagger));
 }
 
-.row:nth-child(4) {
+.view > .row:nth-child(4) {
   animation-delay: calc(3 * var(--stagger));
 }
 
-.row:nth-child(5) {
+.view > .row:nth-child(5) {
   animation-delay: calc(4 * var(--stagger));
 }
 
-.row:nth-child(6) {
+.view > .row:nth-child(6) {
   animation-delay: calc(5 * var(--stagger));
 }
 
-.row:nth-child(n + 7) {
+.view > .row:nth-child(n + 7) {
   animation-delay: calc(6 * var(--stagger));
 }
 

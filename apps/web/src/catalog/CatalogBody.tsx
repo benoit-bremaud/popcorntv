@@ -22,7 +22,10 @@ type Props = {
   readonly onOpen: OpenHandler;
 };
 
-/** Rows or grid for the current view state (state diagram 05). */
+/**
+ * Rows or grid for the current view state (state diagram 05). Rows stay direct children of
+ * `.view`: the entrance stagger in `catalog.css` counts them with `:nth-child`.
+ */
 export function CatalogBody({ items, state, onOpen }: Props): React.JSX.Element {
   if (state.type === 'all') {
     return (

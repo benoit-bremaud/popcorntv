@@ -67,7 +67,7 @@ describe('CatalogPage', () => {
 
     await screen.findByRole('button', { name: 'More info' });
     expect(container.querySelectorAll('.row')).not.toHaveLength(0);
-    expect(container.querySelectorAll('.row[style]')).toHaveLength(0);
+    expect(container.querySelectorAll('[style]')).toHaveLength(0);
   });
 
   it('reveals views, then genres, as choices are made (progressive disclosure)', async () => {

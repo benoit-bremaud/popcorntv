@@ -1,7 +1,7 @@
 import { tmpdir } from 'node:os';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
-import { SECURITY_HEADERS, buildApp } from './app.js';
+import { buildApp } from './app.js';
 import { openDatabase } from './db/index.js';
 
 describe('buildApp', () => {
@@ -58,23 +58,22 @@ describe('buildApp', () => {
   });
 
   it.each([
-    ['a success', '/health'],
-    ['a not found', '/no-such-route'],
-    ['a rejected path', '/artwork/..%2Fsecret'],
-  ])('sends the security headers on %s', async (_case, url) => {
-    const response = await app.inject({ method: 'GET', url });
-
-    expect(response.headers).toMatchObject(SECURITY_HEADERS);
-  });
-
-  it('sends the security headers on an unexpected error', async () => {
+    ['a success', '/health', 200],
+    ['a not found', '/no-such-route', 404],
+    ['a rejected artwork name', '/artwork/..%2Fsecret', 400],
+    ['an unexpected error', '/boom', 500],
+  ])('sends the security headers on %s', async (_case, url, status) => {
     app.get('/boom', async () => {
       throw new Error('boom');
     });
 
-    const response = await app.inject({ method: 'GET', url: '/boom' });
+    const response = await app.inject({ method: 'GET', url });
 
-    expect(response.statusCode).toBe(500);
-    expect(response.headers).toMatchObject(SECURITY_HEADERS);
+    expect(response.statusCode).toBe(status);
+    expect(response.headers).toMatchObject({
+      'x-content-type-options': 'nosniff',
+      'referrer-policy': 'no-referrer',
+      'cross-origin-resource-policy': 'same-origin',
+    });
   });
 });

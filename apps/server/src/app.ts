@@ -21,8 +21,12 @@ import { registerSessionRoutes } from './playback/session-routes.js';
 import type { Transcoder } from './playback/transcoder.js';
 import type { TmdbClient } from './metadata/tmdb-client.js';
 
-/** Sent on every response: no MIME sniffing, no referrer leak, no cross-origin embedding. */
-export const SECURITY_HEADERS = {
+/**
+ * Sent on every response: no MIME sniffing, no referrer leak, no cross-origin loading (CORP).
+ * CORP `same-origin` requires the web build to be served from the API's origin (the Vite
+ * proxy in dev, the reverse proxy in production), or `<video>`, `<img>` and hls.js loads break.
+ */
+const SECURITY_HEADERS = {
   'x-content-type-options': 'nosniff',
   'referrer-policy': 'no-referrer',
   'cross-origin-resource-policy': 'same-origin',
