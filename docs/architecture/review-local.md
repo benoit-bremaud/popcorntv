@@ -1,51 +1,62 @@
-# Local review — popcorntv (#10 profiles)
+# Local review — popcorntv (#31 security headers)
 
-- Date: 2026-10-24
-- Commit: 391131a + focus / cancel fixes (head of `feat/10-profiles`)
-- Scope: branch diff `origin/main...HEAD`
-- Checks run: design · docs · tests · security · correctness · QA pass
-- Verdict: ship — every Must and Should of this diff fixed · Must 0 · Should 0 open · Nice 6 deferred
+Pre-push and pre-merge gate for issue #31: security headers on the API and no inline style in
+the catalog.
 
-## Pre-merge gate
+- Date: 2026-11-02
+- Commit: `00ac7e6`
+- Scope: branch diff `origin/main...HEAD` (6 source files)
+- Checks run: design · docs · tests · security · correctness · QA (containers out of scope)
+- Verdict: ship as-is · Must 0 · Should 0 open (4 fixed in `00ac7e6`) · Nice 3
 
-| Step        | Result                                                                                                                                                         |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1 Tests     | ✅ 19 shared · 296 server · 123 web (no E2E suite yet)                                                                                                          |
-| 2 Coverage  | server 98.1 % stmts / 95.4 % branches / 95.0 % funcs / 98.2 % lines · web 99.8 / 93.2 / 100 / 100 · shared 87.1 % · docs ≈ 96 % (doc-auditor estimate)        |
-| 3 SonarQube | ✅ PASSED (new coverage 95.2 %, 0 new issues after fixing S7754 / S1874)                                                                                        |
-| 4 Secrets   | ✅ gitleaks clean (`origin/main..HEAD`) · only `.env.example` tracked · diff read: nothing sensitive                                                             |
-| 5 QA pass   | ✅ pass · 0 Must · SEC-01 ❌ pre-existing (#31) · report: [qa/2026-10-24-profiles.md](qa/2026-10-24-profiles.md)                                                 |
+## Pre-merge gate (head SHA `00ac7e6`)
 
-- Gate: **GREEN** (step 1 and 3 re-run on the final head before push).
+| Step | Result |
+|---|---|
+| 1 Tests | ✅ 300 server · 125 web · 19 shared (no E2E suite yet) |
+| 2 Coverage | server 98.1 % stmts / 95.4 % branches / 95 % funcs / 98.2 % lines · web 99.8 / 93.4 / 100 / 100 · shared 87.1 / 100 / 100 / 84 (floor 80) · docs: every touched public symbol documented |
+| 3 SonarQube | ✅ PASSED |
+| 4 Secrets | ✅ gitleaks clean (`origin/main..HEAD`) · only `.env.example` tracked · diff read: nothing sensitive |
+| 5 QA pass | ✅ pass · headers on 200/201/206/400/404/413 and through the proxy · playback direct + HLS · no `[style]` · stagger 0→360 ms, 0 with reduced motion · SEC probes green or N/A · report: `docs/architecture/qa/2026-11-02-security-headers.md` |
+
+- Gate: **GREEN — merge authorised** (pending owner approval)
 
 ## 🔴 Must Have
 
-- `packages/shared/src/playback.ts:114`, `specs/resume-playback.md:69,77`, `diagrams/playback/03-component.md:91` `[docs]` · stale `/progress` routes · fixed.
-- `decisions/0008-profiles.md` `[docs]` · MCDA totals and sensitivity figures miscomputed (winners unchanged; §2 and §3 sensitivity flips now disclosed) · fixed.
+_None._
 
-## 🟡 Should Have (all fixed)
+## 🟡 Should Have
 
-- `playback/PlayerDialog.tsx` `[design]` · `playbackApi` factory + `useMemo` → plain `profileId` prop.
-- `profiles/repository.ts` `[correctness|docs]` · unique-index race → `profile_name_taken`; refusals documented.
-- `App.tsx` `[correctness]` · only the latest `GET /profiles` sets the list.
-- `api.ts` `[correctness]` · non-API error bodies no longer typed as `ApiErrorCode`; "refused" message.
-- tests `[tests]` · route-level two-profile isolation, cascade via `remove`, status codes, rename refusal, delete success, unique backstop.
-- `profiles/ManageProfiles.tsx`, `ProfilePicker.tsx` `[qa]` · focus moved to the view heading; delete confirm cancellable.
+All fixed in `00ac7e6`:
 
-## 🔵 Nice to Have (deferred)
+- `apps/server/src/app.ts:24` `[docs|security]` · CORP was described as "no embedding" and its
+  same-origin deployment constraint was undocumented · docstring rewritten.
+- `apps/web/src/styles/catalog.css:186` `[design|docs|correctness]` · the stagger silently
+  depended on rows being children of `.view` · selectors scoped to `.view > .row`, note in
+  `CatalogBody`.
+- `apps/server/src/app.test.ts:60` `[tests]` · header tests compared against the exported
+  constant and asserted no status · literal values and per-case status, duplicate 500 test merged.
+- `apps/web/src/catalog/CatalogPage.test.tsx:65` `[tests]` · checked `.row[style]` only · now any
+  `[style]` in the catalog.
 
-- Unicode-normalised name key (NFC/NFKC, reject control chars) `[security]`.
-- Pre-#18 warning in deployment notes about `HOST=0.0.0.0` `[security]`.
-- Error message not cleared on edit, no `aria-invalid`, whitespace-only names sent `[qa]`.
-- Touch targets 40–42 px on phone `[qa]`; colour picker without swatches `[qa]`.
-- `progress/routes.test.ts` table cleanup `[tests]`.
+## 🔵 Nice to Have
+
+- `apps/server/package.json` `[security]` · `pnpm audit --prod`: two moderate advisories (`glob`,
+  `minimatch`) through `@fastify/static`; not in this diff · proposed follow-up issue.
+- Web host `[security]` · no CSP, `frame-ancestors`, `Permissions-Policy` or HSTS until something
+  serves the web build (out of #31 scope) · proposed follow-up issue, same origin as the API.
+- `apps/web/vite.config.ts` `[correctness]` · dev proxy target hard-coded to `localhost:3000` ·
+  proposed follow-up issue.
 
 ## ⚪ Disagree / Intentional
 
-- Business rules in `ProfileRepository`, no service layer — matches `progress/repository.ts` (flat layout, CLAUDE.md).
-- No auth on `/profiles` — ADR-0008 §4, owned by #18.
-- `name_key` column rather than `COLLATE NOCASE` — NOCASE is ASCII-only.
+- `apps/web/src/styles/catalog.css:188` `[design]` · six `nth-child` rules look repetitive; CSS has
+  no portable sibling-index function, so a generator would be more machinery than this needs.
 
 ## Per-dimension summary
 
-- Design: one Should (fixed), Nice applied · Docs: stale routes + ADR arithmetic fixed · Tests: trustworthy, gaps filled · Security: clean, 3 Nice · Correctness: no Must, 3 Should fixed.
+- Design: KISS `onSend` hook, no dependency, no over-engineering.
+- Docs: touched symbols documented; ADR-0004 still accurate.
+- Tests: can fail, now pin values and status.
+- Security: no hijacked reply bypasses the hook; CORP same-origin holds with the Vite proxy.
+- Correctness: stagger matches the old `min(index, 6)` behaviour.
