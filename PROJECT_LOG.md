@@ -4,6 +4,23 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-02 — #31 security headers (PR #44 merged, `1121fb1`)
+
+- **Goal restated** — PopCornTV is to replace the Jellyfin of the owner's homelab; next
+  bricks are ranked by what closes that gap (#31, #38, #28, #24, #18, homelab deployment).
+- **Implementation** — an `onSend` hook adds `nosniff`, `Referrer-Policy: no-referrer` and
+  `Cross-Origin-Resource-Policy: same-origin` to every reply (errors, 206 media, HLS,
+  artwork). The catalog row stagger moved from an inline style to `.view > .row:nth-child`
+  rules (strict `style-src` ready). CORP same-origin means the web build and the API must
+  share one origin (one reverse proxy in production).
+- **Reviews** — local review Must 0, four Should fixed in `00ac7e6`; QA pass green
+  (`docs/architecture/qa/2026-11-02-security-headers.md`). Codex review failed on usage
+  limits; owner approved merging without it (MCDA 460 vs 350).
+- **Gate** on `830dea1` — 19 shared + 300 server + 125 web tests, coverage server 98.1 % /
+  web 99.8 %, SonarQube PASSED, gitleaks clean, CI 6/6. Squash-merged with owner approval.
+- **Follow-ups filed** — #45 `@fastify/static` advisories, #46 strict CSP on the web host,
+  #47 dev proxy target from an env var.
+
 ## 2026-10-24 — #10 profiles (PR #36 merged, `da3b6e1`)
 
 - **Conception** — spec `docs/architecture/specs/profiles.md` (UC8 pick, UC9 manage),
