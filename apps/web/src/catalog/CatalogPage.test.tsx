@@ -62,6 +62,14 @@ describe('CatalogPage', () => {
     ).toEqual(['All', 'Films', 'Series', 'Documentaries']);
   });
 
+  it('renders the rows without inline styles (strict style-src CSP)', async () => {
+    const { container } = renderPage();
+
+    await screen.findByRole('button', { name: 'More info' });
+    expect(container.querySelectorAll('.row')).not.toHaveLength(0);
+    expect(container.querySelectorAll('.row[style]')).toHaveLength(0);
+  });
+
   it('reveals views, then genres, as choices are made (progressive disclosure)', async () => {
     const { user } = renderPage();
 

@@ -21,6 +21,13 @@ import { registerSessionRoutes } from './playback/session-routes.js';
 import type { Transcoder } from './playback/transcoder.js';
 import type { TmdbClient } from './metadata/tmdb-client.js';
 
+/** Sent on every response: no MIME sniffing, no referrer leak, no cross-origin embedding. */
+export const SECURITY_HEADERS = {
+  'x-content-type-options': 'nosniff',
+  'referrer-policy': 'no-referrer',
+  'cross-origin-resource-policy': 'same-origin',
+} as const;
+
 /** Everything `buildApp` needs; `index.ts` fills it from the config, tests from fakes. */
 export interface AppOptions {
   readonly version: string;
@@ -44,6 +51,13 @@ export interface AppOptions {
 /** Builds the HTTP application without listening — the tests inject requests directly. */
 export function buildApp(options: AppOptions): FastifyInstance {
   const app = Fastify({ logger: options.logger ?? false });
+
+  // On every reply, errors and streamed media included. The CSP and `frame-ancestors`
+  // belong to whatever serves the web build.
+  app.addHook('onSend', async (_request, reply, payload) => {
+    reply.headers(SECURITY_HEADERS);
+    return payload;
+  });
 
   // Unexpected errors are logged with their cause but never echoed (SQLite messages, paths).
   app.setErrorHandler((error: FastifyError, request, reply) => {

@@ -1,7 +1,7 @@
 import { tmpdir } from 'node:os';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
-import { buildApp } from './app.js';
+import { SECURITY_HEADERS, buildApp } from './app.js';
 import { openDatabase } from './db/index.js';
 
 describe('buildApp', () => {
@@ -55,5 +55,26 @@ describe('buildApp', () => {
 
     expect(response.statusCode).toBe(400);
     expect(response.json()).toEqual({ error: 'invalid_request' });
+  });
+
+  it.each([
+    ['a success', '/health'],
+    ['a not found', '/no-such-route'],
+    ['a rejected path', '/artwork/..%2Fsecret'],
+  ])('sends the security headers on %s', async (_case, url) => {
+    const response = await app.inject({ method: 'GET', url });
+
+    expect(response.headers).toMatchObject(SECURITY_HEADERS);
+  });
+
+  it('sends the security headers on an unexpected error', async () => {
+    app.get('/boom', async () => {
+      throw new Error('boom');
+    });
+
+    const response = await app.inject({ method: 'GET', url: '/boom' });
+
+    expect(response.statusCode).toBe(500);
+    expect(response.headers).toMatchObject(SECURITY_HEADERS);
   });
 });
