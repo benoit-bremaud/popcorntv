@@ -22,13 +22,16 @@ type Props = {
   readonly onOpen: OpenHandler;
 };
 
-/** Rows or grid for the current view state (state diagram 05). */
+/**
+ * Rows or grid for the current view state (state diagram 05). Rows stay direct children of
+ * `.view`: the entrance stagger in `catalog.css` counts them with `:nth-child`.
+ */
 export function CatalogBody({ items, state, onOpen }: Props): React.JSX.Element {
   if (state.type === 'all') {
     return (
       <>
-        {homeRows(items).map((row, index) => (
-          <PosterRow key={row.key} row={row} index={index} onOpen={onOpen} />
+        {homeRows(items).map((row) => (
+          <PosterRow key={row.key} row={row} onOpen={onOpen} />
         ))}
       </>
     );
@@ -53,8 +56,8 @@ export function CatalogBody({ items, state, onOpen }: Props): React.JSX.Element 
   }
   return (
     <>
-      {byGenreRows(typed).map((row, index) => (
-        <PosterRow key={row.key} row={row} index={index} onOpen={onOpen} />
+      {byGenreRows(typed).map((row) => (
+        <PosterRow key={row.key} row={row} onOpen={onOpen} />
       ))}
     </>
   );

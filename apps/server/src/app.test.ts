@@ -56,4 +56,24 @@ describe('buildApp', () => {
     expect(response.statusCode).toBe(400);
     expect(response.json()).toEqual({ error: 'invalid_request' });
   });
+
+  it.each([
+    ['a success', '/health', 200],
+    ['a not found', '/no-such-route', 404],
+    ['a rejected artwork name', '/artwork/..%2Fsecret', 400],
+    ['an unexpected error', '/boom', 500],
+  ])('sends the security headers on %s', async (_case, url, status) => {
+    app.get('/boom', async () => {
+      throw new Error('boom');
+    });
+
+    const response = await app.inject({ method: 'GET', url });
+
+    expect(response.statusCode).toBe(status);
+    expect(response.headers).toMatchObject({
+      'x-content-type-options': 'nosniff',
+      'referrer-policy': 'no-referrer',
+      'cross-origin-resource-policy': 'same-origin',
+    });
+  });
 });

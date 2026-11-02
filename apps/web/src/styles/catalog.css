@@ -183,6 +183,32 @@
   animation: rise var(--duration-enter) var(--ease-out) both;
 }
 
+/* Entrance cascade without inline styles (strict `style-src` CSP): rows are the only
+   children of `.view` (see `CatalogBody`); from the seventh on they enter together so the cascade stays short. */
+.view > .row:nth-child(2) {
+  animation-delay: var(--stagger);
+}
+
+.view > .row:nth-child(3) {
+  animation-delay: calc(2 * var(--stagger));
+}
+
+.view > .row:nth-child(4) {
+  animation-delay: calc(3 * var(--stagger));
+}
+
+.view > .row:nth-child(5) {
+  animation-delay: calc(4 * var(--stagger));
+}
+
+.view > .row:nth-child(6) {
+  animation-delay: calc(5 * var(--stagger));
+}
+
+.view > .row:nth-child(n + 7) {
+  animation-delay: calc(6 * var(--stagger));
+}
+
 .view {
   animation: fade var(--duration-ui) var(--ease-out) both;
 }
