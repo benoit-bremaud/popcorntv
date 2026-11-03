@@ -4,6 +4,21 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-03 — #28 reap FFmpeg on a crash (PR #53 merged, `b0ec9d4`)
+
+- **Changes** — `installShutdownHandlers` closes the app on SIGINT/SIGTERM (exit 0) and on
+  `uncaughtException` / `unhandledRejection` (logged, exit 1); first event wins, exit forced
+  after 10 s. Sessions close in `preClose`, before Fastify drains open responses.
+- **Decision** — `tini` as the image `ENTRYPOINT` rather than compose `init: true`, so every
+  launcher gets a reaping PID 1 (MCDA A 420 vs 345). Free-disk check dropped (HLS sessions
+  live in memory); attached pictures were already skipped since #8.
+- **Reviews** — local review Must: `close()` waited for open direct-play streams, delaying the
+  FFmpeg kill for a whole film; fixed with `preClose` + deadline. Known limit: `kill -9` on
+  Node outside a container still orphans FFmpeg.
+- **Gate** on `5fa1ae9` — 451 tests, server coverage 98.1 %, SonarQube PASSED, gitleaks clean,
+  Hadolint + Trivy green, image PID 1 `tini`, CI 9/9. Codex review unavailable (quota).
+  Squash-merged with owner approval.
+
 ## 2026-11-02 — #38 Docker conformance (PR #49 merged, `27dee37`)
 
 - **Changes** — both `node:22.21.1-bookworm-slim` stages pinned by tag + digest; Dockerfile
