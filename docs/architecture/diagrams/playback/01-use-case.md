@@ -29,6 +29,7 @@ flowchart LR
       UC5(("Watch a title"))
       UC6(("Resume a title"))
       UC7(("Play the next episode"))
+      UC10(("Turn on subtitles"))
     end
     subgraph Profiles ["Profiles domain"]
       UC8(("Pick a profile"))
@@ -43,6 +44,7 @@ flowchart LR
   Viewer --> UC5
   Viewer --> UC6
   Viewer --> UC7
+  Viewer --> UC10
   Viewer --> UC8
   UC2 -.->|"fetches from"| TMDB
   Owner -.->|"generalises"| Viewer
@@ -57,4 +59,6 @@ flowchart LR
 - UC2 is actor-initiated (the owner asks for a refresh); the scan's automatic metadata
   fetch is an «include» of UC1, not a use case of its own. Textual specs:
   [UC1](../../specs/library-scan.md), [UC2](../../specs/tmdb-metadata.md).
+- UC10 «extends» UC5 while the title plays; textual spec:
+  [subtitles](../../specs/subtitles.md).
 - UC6 / UC7 textual spec: [resume-playback](../../specs/resume-playback.md).

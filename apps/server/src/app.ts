@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import Fastify from 'fastify';
 import type { FastifyError, FastifyInstance } from 'fastify';
 import type { ApiError, HealthResponse } from '@popcorntv/shared';
@@ -18,6 +19,8 @@ import { registerProfileRoutes } from './profiles/routes.js';
 import { registerPlaybackRoutes } from './playback/routes.js';
 import { SessionManager } from './playback/session-manager.js';
 import { registerSessionRoutes } from './playback/session-routes.js';
+import { SubtitleExtractor } from './playback/subtitle-extractor.js';
+import { registerSubtitleRoutes } from './playback/subtitle-routes.js';
 import type { Transcoder } from './playback/transcoder.js';
 import type { TmdbClient } from './metadata/tmdb-client.js';
 
@@ -101,6 +104,14 @@ export function buildApp(options: AppOptions): FastifyInstance {
     artworkDir: options.artworkDir,
   });
   registerPlaybackRoutes(app, { repository, mediaRoot: options.mediaRoot });
+  registerSubtitleRoutes(app, {
+    repository,
+    mediaRoot: options.mediaRoot,
+    extractor: new SubtitleExtractor({
+      transcoder: options.transcoder,
+      dir: join(options.transcodeDir, 'subtitles'),
+    }),
+  });
   const sessions = new SessionManager({
     transcoder: options.transcoder,
     dir: options.transcodeDir,

@@ -181,6 +181,7 @@ export type ApiErrorCode =
   | 'profile_name_taken'
   | 'profile_limit'
   | 'last_profile'
+  | 'subtitle_not_found'
   | 'internal';
 
 /** Error body of every non-2xx response. */
@@ -191,3 +192,4 @@ export interface ApiError {
 
 export * from './playback.js';
 export * from './profiles.js';
+export * from './subtitles.js';

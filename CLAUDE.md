@@ -81,7 +81,11 @@ close, `GET /progress`, `startSec` → FFmpeg `-ss` + `offsetSec` in the answer,
 button); #10 profiles (spec `docs/architecture/specs/profiles.md`, ADR-0008: `profiles`
 table seeded with `default` / `Me`, `watch_progress.profile_id` FK cascade, progress
 routes under `/profiles/:profileId/`, "Who's watching?" remembered in `localStorage`,
-profile management open to the network until #18, last profile undeletable).
+profile management open to the network until #18, last profile undeletable); #24 subtitles
+(spec `docs/architecture/specs/subtitles.md`, ADR-0009: embedded text tracks only, pure
+`subtitleTracks` in `packages/shared`, `GET /media/:id/subtitles/:index?offsetSec=` extracts
+with FFmpeg on demand, caches the unshifted WebVTT under `TRANSCODE_DIR/subtitles` and shifts
+the cues for a resumed HLS timeline, one `<track>` per offered track).
 
 Server layout (flat, component diagram 03): `src/library/` holds the pure `name-parser`
 and `path-guard`, the `ffprobe` runner (only process egress), the `scanner`, the per-library
