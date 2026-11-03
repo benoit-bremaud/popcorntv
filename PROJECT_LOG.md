@@ -4,6 +4,26 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-03 — #24 subtitles as WebVTT tracks (PR #56 merged, `ac687d7`)
+
+- **Changes** — `GET /media/:id/subtitles/:index?offsetSec=` serves an embedded text subtitle
+  stream as `text/vtt`; pure `subtitleTracks` (shared) numbers tracks by subtitle ordinal
+  (`-map 0:s:N`); `SubtitleExtractor` caches the unshifted WebVTT under
+  `TRANSCODE_DIR/subtitles/<media>-<index>-<mtime>.vtt`; pure `shiftWebVtt` aligns cues with a
+  resumed HLS timeline; the player adds one `<track>` per offered track (S4084 cleared).
+- **Decisions** — ADR-0009: embedded text tracks only (MCDA 460 vs 340 both, 285 sidecars),
+  on-demand extraction + cache (425 vs 350 no cache, 300 at scan), server-side cue shift
+  (470 vs 375 web shift).
+- **Reviews** — local review Must 0, 7 Should fixed in `770ffcd` (two runs at most, runs
+  killed in `preClose` per #28, timeout settles on exit, stale mtimes removed, `ENOENT`-only
+  cache miss, `subtitleUrl`, docs aligned, tests). Codex review unavailable (quota).
+- **Gate** on `770ffcd` — 31 shared + 334 server + 129 web tests, coverage server 98.4 % /
+  web 100 % lines, SonarQube PASSED, gitleaks clean, CI 6/6, QA with real FFmpeg in direct
+  play and resumed HLS (`docs/architecture/qa/2026-11-03-subtitles.md`). Squash-merged with
+  owner approval.
+- **Follow-up filed** — #55 resumed H.264-copy sessions start one GOP early (cues and saved
+  position may run early).
+
 ## 2026-11-03 — #28 reap FFmpeg on a crash (PR #53 merged, `b0ec9d4`)
 
 - **Changes** — `installShutdownHandlers` closes the app on SIGINT/SIGTERM (exit 0) and on
