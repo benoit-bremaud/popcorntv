@@ -59,6 +59,14 @@ export function artworkUrl(file: string): string {
   return `${API}/artwork/${encodeURIComponent(file)}`;
 }
 
+/**
+ * URL of a WebVTT track served by `GET /media/:id/subtitles/:index`, its cues shifted by the
+ * player's `offsetSec` (ADR-0009 §3).
+ */
+export function subtitleUrl(mediaId: string, index: number, offsetSec: number): string {
+  return `${API}/media/${encodeURIComponent(mediaId)}/subtitles/${index}?offsetSec=${offsetSec}`;
+}
+
 /** Why a playback could not start: another title holds the transcoder, or anything else. */
 export type PlaybackStartError = 'busy' | 'failed';
 

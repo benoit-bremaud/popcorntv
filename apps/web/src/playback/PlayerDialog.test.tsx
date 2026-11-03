@@ -523,3 +523,70 @@ describe('PlayerDialog next episode', () => {
     expect(screen.queryByRole('button', { name: /Next episode/ })).toBeNull();
   });
 });
+
+describe('PlayerDialog subtitles', () => {
+  const subtitled = media({
+    id: 'heat',
+    title: 'Heat',
+    streams: [
+      { type: 'video', codec: 'h264', width: 1920, height: 1080, language: null },
+      { type: 'subtitle', codec: 'hdmv_pgs_subtitle', width: null, height: null, language: 'eng' },
+      { type: 'subtitle', codec: 'subrip', width: null, height: null, language: 'fre' },
+      { type: 'subtitle', codec: 'ass', width: null, height: null, language: null },
+    ],
+  });
+
+  it('adds one track per text subtitle stream, shifted by the HLS offset', async () => {
+    const api = fakeApi({ ...HLS, startSec: 754, offsetSec: 754 });
+    render(
+      <PlayerDialog
+        profileId="kid"
+        item={subtitled}
+        directPlay={false}
+        startSec={754}
+        onClose={vi.fn()}
+        api={api}
+        attach={async () => () => undefined}
+      />,
+    );
+
+    const tracks = [...(await videoOf()).querySelectorAll('track')];
+
+    expect(
+      tracks.map((track) => [track.kind, track.label, track.srclang, track.getAttribute('src')]),
+    ).toEqual([
+      ['subtitles', 'fre', 'fre', '/api/media/heat/subtitles/1?offsetSec=754'],
+      ['subtitles', 'Track 3', '', '/api/media/heat/subtitles/2?offsetSec=754'],
+    ]);
+  });
+
+  it('asks for unshifted tracks in direct play', async () => {
+    render(
+      <PlayerDialog
+        profileId="kid"
+        item={subtitled}
+        directPlay
+        onClose={vi.fn()}
+        api={fakeApi(DIRECT)}
+      />,
+    );
+
+    const track = (await videoOf()).querySelector('track');
+
+    expect(track?.getAttribute('src')).toBe('/api/media/heat/subtitles/1?offsetSec=0');
+  });
+
+  it('adds no track when the file has no text subtitles', async () => {
+    render(
+      <PlayerDialog
+        profileId="kid"
+        item={heat}
+        directPlay
+        onClose={vi.fn()}
+        api={fakeApi(DIRECT)}
+      />,
+    );
+
+    expect((await videoOf()).querySelectorAll('track')).toHaveLength(0);
+  });
+});

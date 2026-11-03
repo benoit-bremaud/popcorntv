@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { isFinished } from '@popcorntv/shared';
+import { isFinished, subtitleTracks } from '@popcorntv/shared';
 import type { Media, PlaybackStart } from '@popcorntv/shared';
-import { saveProgress, sendHeartbeat, startPlayback, stopPlayback } from '../api.js';
+import { saveProgress, sendHeartbeat, startPlayback, stopPlayback, subtitleUrl } from '../api.js';
 import { attachHls } from './hls-source.js';
 
 /** The server calls the player needs; injected by tests. */
@@ -249,7 +249,18 @@ export function PlayerDialog({
           // In HLS mode hls.js reports fatal errors itself; a detach (re-render, close) also
           // fires `error` on the element and must not count as a failure.
           onError={start.mode === 'direct' ? fail : undefined}
-        />
+        >
+          {/* UC10: shifted by the server so cues match an HLS timeline starting at the offset. */}
+          {subtitleTracks(item.streams).map((track) => (
+            <track
+              key={track.index}
+              kind="subtitles"
+              src={subtitleUrl(item.id, track.index, offsetSec)}
+              label={track.language ?? `Track ${track.index + 1}`}
+              srcLang={track.language ?? undefined}
+            />
+          ))}
+        </video>
       )}
       {/* Announced when it appears: focus stays on the video (spec UC7). */}
       <div aria-live="polite" className="player__next">

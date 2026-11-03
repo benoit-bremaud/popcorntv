@@ -37,6 +37,7 @@ flowchart LR
     Probe[ffprobe runner]
     Repo[SQLite repositories]
     Stream[Range file streamer]
+    Subs[Subtitle routes + extractor + WebVTT shift]
     Progress[Progress routes + repository]
     Profiles[Profile routes + repository]
     Routes --> Progress
@@ -45,6 +46,9 @@ flowchart LR
     Progress --> Repo
     Profiles --> Repo
     Routes --> Stream
+    Routes --> Subs
+    Subs --> Parser
+    Subs --> Trans
     Stream --> Parser
     Routes --> Decider
     Routes --> Repo
@@ -69,6 +73,7 @@ flowchart LR
   UI -->|"HTTP"| Routes
   Meta -->|"HTTPS"| TMDB[("TMDB")]
   Art --> Disk[("data/artwork")]
+  Subs --> SubCache[("TRANSCODE_DIR/subtitles")]
   Trans -->|"child process"| FFmpeg[["ffmpeg"]]
   Probe -->|"child process"| FFprobe[["ffprobe"]]
   Repo --> DB[("SQLite")]
@@ -92,3 +97,6 @@ flowchart LR
   /profiles/:profileId/media/:id/progress` and `GET /profiles/:profileId/progress` write
   and read `watch_progress` through its own Drizzle repository; `isFinished` is pure in
   `packages/shared`.
+- Subtitles (#24, ADR-0009): the `SubtitleExtractor` runs FFmpeg through the same
+  injected runner, caches the unshifted WebVTT under `TRANSCODE_DIR/subtitles`; the cue
+  shift and `subtitleTracks` are pure. The path guard is the playback routes' `confinedPath`.
