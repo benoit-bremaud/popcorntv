@@ -32,7 +32,7 @@ FROM node:22.21.1-bookworm-slim@sha256:25b3eb23a00590b7499f2a2ce939322727fcce1b1
 # hadolint ignore=DL3008,DL3005
 RUN apt-get update \
   && apt-get upgrade -y --no-install-recommends \
-  && apt-get install -y --no-install-recommends ffmpeg \
+  && apt-get install -y --no-install-recommends ffmpeg tini \
   && rm -rf /var/lib/apt/lists/* \
   && rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 WORKDIR /app
@@ -43,4 +43,7 @@ ENV NODE_ENV=production PORT=3000 HOST=0.0.0.0 MEDIA_ROOT=/app/media
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD ["node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+# tini as PID 1 forwards signals to Node and reaps any FFmpeg child left behind, whatever
+# starts the container (compose, docker run, a homelab orchestrator).
+ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["node", "dist/index.js"]

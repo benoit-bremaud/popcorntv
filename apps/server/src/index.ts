@@ -6,6 +6,7 @@ import { openDatabase } from './db/index.js';
 import { createFfprobe } from './library/ffprobe.js';
 import { createTmdbClient } from './metadata/tmdb-client.js';
 import { createTranscoder } from './playback/transcoder.js';
+import { installShutdownHandlers } from './shutdown.js';
 
 const config = loadConfig(process.env);
 await mkdir(dirname(config.databasePath), { recursive: true });
@@ -33,13 +34,7 @@ const app = buildApp({
 
 if (!config.tmdbApiKey) app.log.warn('TMDB_API_KEY not set: metadata enrichment disabled');
 
-// Ctrl-C and `docker stop` close the app, so its onClose hook kills every FFmpeg child.
-for (const signal of ['SIGINT', 'SIGTERM'] as const) {
-  process.once(signal, async () => {
-    await app.close();
-    process.exit(0);
-  });
-}
+installShutdownHandlers(app, process);
 
 try {
   await app.listen({ port: config.port, host: config.host });
