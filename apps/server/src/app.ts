@@ -113,7 +113,8 @@ export function buildApp(options: AppOptions): FastifyInstance {
   registerProgressRoutes(app, { progress: new ProgressRepository(options.db), profiles });
   // Sessions live in memory: directories left by a previous run belong to no one.
   app.addHook('onReady', async () => sessions.clean());
-  app.addHook('onClose', async () => sessions.closeAll());
+  // preClose runs before the server waits for open responses (a film stream can last hours).
+  app.addHook('preClose', async () => sessions.closeAll());
 
   return app;
 }
