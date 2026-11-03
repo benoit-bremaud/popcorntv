@@ -1,45 +1,54 @@
-# Local review — popcorntv (#28 reap FFmpeg on a crash)
+# Local review — popcorntv (#24 subtitles as WebVTT tracks)
 
-Pre-push and pre-merge review of branch `fix/28-reap-ffmpeg-on-crash`.
+Pre-push and pre-merge review of branch `feat/24-subtitles-webvtt`.
 
 - Date: 2026-11-03
-- Commit: 2fa22fe
-- Scope: branch diff `origin/main...HEAD` (`apps/server/src/{shutdown,shutdown.test,index,app}.ts`, `Dockerfile`)
-- Checks run: design · docs · tests · containers · security · correctness
-- Verdict: ship as-is (Must resolved in `f10bbd4`, container Should in `2fa22fe`) · Must 0 · Should 0 open · Nice 1
+- Commit: a82afd8 (reviewed), fixes in the follow-up commit
+- Scope: branch diff `origin/main...HEAD` (`apps/server/src/playback/{webvtt,subtitle-extractor,subtitle-routes}.ts`, `apps/server/src/app.ts`, `packages/shared/src/subtitles.ts`, `apps/web/src/{api.ts,playback/PlayerDialog.tsx}`, docs)
+- Checks run: design · docs · tests · security · correctness (no container file touched)
+- Verdict: ship (every Should fixed, owner decision 2026-11-03, MCDA 450/500) · Must 0 · Should 7 fixed · Nice 6
 
-## Pre-merge gate (head SHA 2fa22fe)
+## Pre-merge gate (head SHA a82afd8, re-run after the fixes)
 
 | Step | Result |
 |---|---|
-| 1 Tests | ✅ 307 server · 125 web · 19 shared (Vitest); no E2E suite yet |
-| 2 Coverage | server 98.13 % stmts / 95.43 % branches / 95.08 % funcs / 98.21 % lines; web 99.79 / 93.35 / 100 / 100; shared 87.09 / 100 / 100 / 84 (floor 80) · docs: every new export documented, no doc counter in this repo |
-| 3 SonarQube | ✅ PASSED (localhost:9000, `popcorntv`, scanned before the review fixes; rerun before merge) |
+| 1 Tests | ✅ 334 server · 129 web · 31 shared (Vitest); no E2E suite yet |
+| 2 Coverage | server 98.3 % stmts / 95.6 % branches / 95.6 % funcs / 98.4 % lines · web 99.8 / 93.4 / 100 / 100 · shared 88.9 / 100 / 100 / 86.7 (floor 80) · docs ≈ 100 % of the new exports (floor 90) |
+| 3 SonarQube | ✅ PASSED, no issue on the changed files |
 | 4 Secrets | ✅ gitleaks clean (`origin/main..HEAD`) · only `.env.example` tracked · diff read: nothing sensitive |
-| 5 QA pass | ✅ smoke (server-only change): built server answers `/health`, exits 0 on SIGTERM; image runs `tini` as PID 1, `docker stop` clean; Hadolint clean, Trivy image HIGH/CRITICAL clean |
+| 5 QA pass | ✅ pass · direct play and resumed HLS captions in sync with real FFmpeg · report: [2026-11-03-subtitles.md](qa/2026-11-03-subtitles.md) |
 
-- Gate: **GREEN for push**; SonarQube rerun on the final SHA before merge.
+- Gate: **GREEN**
 
 ## 🔴 Must Have
 
-- `apps/server/src/shutdown.ts:23` `[design|correctness]` · `close()` waits for open responses, so a direct-play stream could hold the FFmpeg kill for a whole film · **fixed `f10bbd4`**: sessions close in `preClose` (`app.ts:117`) and the exit is forced after `SHUTDOWN_DEADLINE_MS` (10 s), fake-timer test.
+_None._
 
-## 🟡 Should Have
+## 🟡 Should Have (all fixed)
 
-- `apps/server/src/shutdown.test.ts:47` `[tests]` · idempotence test did not hold `close()` pending, vacuous `waitFor` on the second emit · **fixed `f10bbd4`**: pending close, `toHaveBeenCalledExactlyOnceWith`.
-- `apps/server/src/shutdown.ts:35` `[design|docs]` · a crash during shutdown logged "closing" yet exits 0; docstring missing first-event-wins and forced exit · **fixed `f10bbd4`**.
-- `Dockerfile:46` `[containers|design]` · compose `init: true` covers compose only · **fixed `2fa22fe`**: tini in the image as `ENTRYPOINT` (MCDA A 420 vs compose 345), compose init dropped.
+- `apps/server/src/playback/subtitle-extractor.ts` `[design][security]` · Unbounded concurrent FFmpeg runs, runs not killed at shutdown (#28 invariant), timeout rejected before FFmpeg exited · two runs at most (queue), `closeAll()` in `preClose`, the timeout settles on exit.
+- `apps/server/src/playback/subtitle-routes.ts` `[design]` · Cache-key policy (`stat` mtime) leaked into the route, four positional arguments · `get(mediaId, index, filePath)` stats the file itself.
+- `apps/web/src/playback/PlayerDialog.tsx` `[design]` · `/api` prefix hard-coded · `subtitleUrl()` in `api.ts`.
+- `apps/server/src/playback/subtitle-extractor.ts` `[security]` · Cache grew forever on modified files · older entries of the track removed after a new extraction.
+- `apps/server/src/playback/subtitle-extractor.ts` `[correctness]` · Any cache read error re-extracted · only `ENOENT` counts as a miss.
+- `docs/architecture/specs/subtitles.md`, sequence, ADR-0009 `[docs]` · `:n` vs `:index`, `extract()` vs `get()`, `srt` missing in R1, `timeoutMs` undocumented · aligned.
+- Tests `[tests]` · mtime re-extraction, path guard escape, unshifted cache shifted per request, retry after failure, queue, `closeAll`, WebVTT edge cases, direct-play track URL, codec allowlist · added.
 
 ## 🔵 Nice to Have
 
-- `apps/server/src/shutdown.ts` `[correctness]` · outside a container, a `kill -9` of Node still orphans FFmpeg (no portable parent-death signal in Node) · accepted limit, documented here.
+- `apps/server/src/playback/subtitle-routes.ts` `[security]` · FFmpeg opens the checked path by name (check-then-use); same as the HLS route; needs write access to the media tree.
+- `apps/server/src/playback/subtitle-routes.ts` `[correctness]` · `offsetSec` has no upper bound; a huge value only drops every cue.
+- `apps/server/src/playback/webvtt.ts` `[design]` · The timing regex runs twice per cue block.
+- `apps/server/src/playback/subtitle-routes.ts` `[design]` · `confinedPath` imported from another route module; move it on a third consumer.
+- `apps/server/src/playback/webvtt.ts` `[correctness]` · A cue with an empty payload merges block boundaries; harmless.
+- Resumed copy sessions start one GOP early → cues may run early · filed as #55 (inherited from ADR-0007 §2).
 
 ## ⚪ Disagree / Intentional
 
-- `apps/server/src/shutdown.ts:8` `[design]` · injecting a `process` slice is a real test seam, not over-engineering.
-- Issue #28 free-disk check · dropped: HLS sessions live in memory (owner validated 2026-11-03).
-- Issue #28 attached pictures · already skipped since #8 (`ffprobe.ts:60`, tested `ffprobe.test.ts:37`).
+- `SubtitleExtractor` used as a concrete class, no port: single implementation (architecture skill, `SessionManager` precedent).
+- `subtitleArgs` beside its only caller, not in the HLS `ffmpeg-args.ts`.
+- `TRANSCODE_DIR/subtitles` survives restarts on purpose: `SessionManager.clean()` removes session directories only.
 
 ## Per-dimension summary
 
-- Design: one Must (unbounded close) fixed · Docs: docstrings explain why · Tests: unit only, race and deadline now covered · Containers: tini PID 1 verified · Security: no new input, no secrets · Correctness: smoke-tested on the built server and image.
+- Design: flat, matches ADR-0009; three local Should fixed. · Docs: ≈ 100 % of exports, naming aligned. · Tests: healthy pyramid, fake only at the FFmpeg boundary. · Security: no injection or traversal, resource limits added. · Correctness: WebVTT shift verified on hours, BOM, NOTE/STYLE, CRLF.

@@ -1,7 +1,7 @@
 import type { StreamInfo } from './index.js';
 
 /** Subtitle codecs FFmpeg converts to WebVTT; image formats (PGS, VobSub) are left out (ADR-0009 §1). */
-export const TEXT_SUBTITLE_CODECS: ReadonlySet<string> = new Set([
+const TEXT_SUBTITLE_CODECS: ReadonlySet<string> = new Set([
   'subrip',
   'srt',
   'ass',
@@ -15,7 +15,9 @@ export const TEXT_SUBTITLE_CODECS: ReadonlySet<string> = new Set([
 export interface SubtitleTrack {
   /** Ordinal among the file's subtitle streams: FFmpeg's `-map 0:s:<index>`. */
   readonly index: number;
+  /** Lower-cased ffprobe codec name. */
   readonly codec: string;
+  /** ISO 639 tag from the file; null when it has none. */
   readonly language: string | null;
 }
 

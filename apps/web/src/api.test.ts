@@ -6,6 +6,7 @@ import {
   updateProfile,
   ApiRequestError,
   artworkUrl,
+  subtitleUrl,
   loadCatalog,
   loadProgress,
   saveProgress,
@@ -234,5 +235,11 @@ describe('profiles', () => {
       deleteProfile('k1', async () => respond({ error: 'last_profile' }, 409)),
     ).resolves.toEqual({ ok: false, error: 'last_profile' });
     await expect(deleteProfile('k1', offline)).resolves.toEqual({ ok: false, error: null });
+  });
+});
+
+describe('subtitleUrl', () => {
+  it('builds the shifted track URL under /api', () => {
+    expect(subtitleUrl('a b', 2, 754)).toBe('/api/media/a%20b/subtitles/2?offsetSec=754');
   });
 });

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { isFinished, subtitleTracks } from '@popcorntv/shared';
 import type { Media, PlaybackStart } from '@popcorntv/shared';
-import { saveProgress, sendHeartbeat, startPlayback, stopPlayback } from '../api.js';
+import { saveProgress, sendHeartbeat, startPlayback, stopPlayback, subtitleUrl } from '../api.js';
 import { attachHls } from './hls-source.js';
 
 /** The server calls the player needs; injected by tests. */
@@ -255,7 +255,7 @@ export function PlayerDialog({
             <track
               key={track.index}
               kind="subtitles"
-              src={`/api/media/${item.id}/subtitles/${track.index}?offsetSec=${offsetSec}`}
+              src={subtitleUrl(item.id, track.index, offsetSec)}
               label={track.language ?? `Track ${track.index + 1}`}
               srcLang={track.language ?? undefined}
             />

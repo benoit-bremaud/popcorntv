@@ -70,8 +70,9 @@ a pure TypeScript pass over the WebVTT text (`shiftWebVtt`), not a second FFmpeg
 
 1-A, 2-A, 3-A. `subtitleTracks` (pure, `packages/shared`) lists the offered tracks by
 their ordinal among subtitle streams. `apps/server/src/playback/`: `webvtt.ts` (pure
-shift), `subtitle-extractor.ts` (cache, in-flight sharing, 120 s timeout, FFmpeg through
-the injected `Transcoder`), `subtitle-routes.ts` (`GET /media/:id/subtitles/:n`). New
+shift), `subtitle-extractor.ts` (cache, in-flight sharing, two runs at most, 120 s timeout,
+killed at shutdown, FFmpeg through the injected `Transcoder`), `subtitle-routes.ts`
+(`GET /media/:id/subtitles/:index`). New
 error code `subtitle_not_found`. The web adds one `<track>` per offered track.
 
 ## Consequences
@@ -79,5 +80,7 @@ error code `subtitle_not_found`. The web adds one `<track>` per offered track.
 - S4084 is cleared on `PlayerDialog.tsx` for files that carry text subtitles.
 - Image subtitles (PGS, VobSub) are not offered; burn-in through HLS is a follow-up.
 - ASS styling is lost (WebVTT keeps the text).
-- A modified file leaves its old cache entries behind until `TRANSCODE_DIR/subtitles` is
-  emptied by hand; they are small text files.
+- Entries of deleted media stay in `TRANSCODE_DIR/subtitles` until it is emptied by hand;
+  they are small text files. A modified file replaces its own entries.
+- A resumed HLS session that copies H.264 starts at the keyframe before `startSec`, so its
+  cues may run early by up to one GOP (inherited from ADR-0007 §2, #55).

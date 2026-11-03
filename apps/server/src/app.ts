@@ -104,14 +104,11 @@ export function buildApp(options: AppOptions): FastifyInstance {
     artworkDir: options.artworkDir,
   });
   registerPlaybackRoutes(app, { repository, mediaRoot: options.mediaRoot });
-  registerSubtitleRoutes(app, {
-    repository,
-    mediaRoot: options.mediaRoot,
-    extractor: new SubtitleExtractor({
-      transcoder: options.transcoder,
-      dir: join(options.transcodeDir, 'subtitles'),
-    }),
+  const extractor = new SubtitleExtractor({
+    transcoder: options.transcoder,
+    dir: join(options.transcodeDir, 'subtitles'),
   });
+  registerSubtitleRoutes(app, { repository, extractor, mediaRoot: options.mediaRoot });
   const sessions = new SessionManager({
     transcoder: options.transcoder,
     dir: options.transcodeDir,
@@ -125,7 +122,10 @@ export function buildApp(options: AppOptions): FastifyInstance {
   // Sessions live in memory: directories left by a previous run belong to no one.
   app.addHook('onReady', async () => sessions.clean());
   // preClose runs before the server waits for open responses (a film stream can last hours).
-  app.addHook('preClose', async () => sessions.closeAll());
+  app.addHook('preClose', async () => {
+    extractor.closeAll();
+    await sessions.closeAll();
+  });
 
   return app;
 }

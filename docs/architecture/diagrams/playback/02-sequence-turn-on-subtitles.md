@@ -22,20 +22,20 @@ sequenceDiagram
 
   P-->>V: Captions menu, one entry per text track
   V->>P: Pick a track
-  P->>API: GET /media/:id/subtitles/:n?offsetSec=s
+  P->>API: GET /media/:id/subtitles/:index?offsetSec=s
   API->>API: validate, subtitleTracks(streams), path guard
   alt unknown media or path escape
     API-->>P: 404 media_not_found
-  else n not offered
+  else index not offered
     API-->>P: 404 subtitle_not_found
   else
-    API->>SX: extract(file, n, mtime)
+    API->>SX: get(mediaId, index, file)
     alt cached
-      SX->>C: read <mediaId>-<n>-<mtime>.vtt
+      SX->>C: stat file, read <mediaId>-<index>-<mtime>.vtt
     else first request (shared by concurrent ones)
-      SX->>FF: -map 0:s:n -f webvtt <name>.part
+      SX->>FF: -map 0:s:index -f webvtt <name>.part
       FF-->>SX: exit 0
-      SX->>C: rename .part to .vtt
+      SX->>C: rename .part to .vtt, remove older mtimes
     end
     alt FFmpeg failed or timed out
       SX-->>API: error

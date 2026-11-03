@@ -99,4 +99,4 @@ flowchart LR
   `packages/shared`.
 - Subtitles (#24, ADR-0009): the `SubtitleExtractor` runs FFmpeg through the same
   injected runner, caches the unshifted WebVTT under `TRANSCODE_DIR/subtitles`; the cue
-  shift and `subtitleTracks` are pure.
+  shift and `subtitleTracks` are pure. The path guard is the playback routes' `confinedPath`.

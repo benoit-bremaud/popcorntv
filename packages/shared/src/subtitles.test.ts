@@ -29,4 +29,15 @@ describe('subtitleTracks', () => {
   it('returns nothing for a file without subtitles', () => {
     expect(subtitleTracks([stream('video', 'h264')])).toEqual([]);
   });
+
+  it.each(['subrip', 'srt', 'ass', 'ssa', 'mov_text', 'webvtt', 'text'])('offers %s', (codec) => {
+    expect(subtitleTracks([stream('subtitle', codec)])).toHaveLength(1);
+  });
+
+  it.each(['hdmv_pgs_subtitle', 'dvd_subtitle', 'dvb_subtitle'])(
+    'leaves out image codec %s',
+    (codec) => {
+      expect(subtitleTracks([stream('subtitle', codec)])).toEqual([]);
+    },
+  );
 });

@@ -560,6 +560,22 @@ describe('PlayerDialog subtitles', () => {
     ]);
   });
 
+  it('asks for unshifted tracks in direct play', async () => {
+    render(
+      <PlayerDialog
+        profileId="kid"
+        item={subtitled}
+        directPlay
+        onClose={vi.fn()}
+        api={fakeApi(DIRECT)}
+      />,
+    );
+
+    const track = (await videoOf()).querySelector('track');
+
+    expect(track?.getAttribute('src')).toBe('/api/media/heat/subtitles/1?offsetSec=0');
+  });
+
   it('adds no track when the file has no text subtitles', async () => {
     render(
       <PlayerDialog

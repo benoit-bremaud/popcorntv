@@ -45,4 +45,24 @@ describe('shiftWebVtt', () => {
       'WEBVTT\n\n00:00:04.000 --> 00:00:05.000\nHi\n',
     );
   });
+
+  it.each([
+    [
+      'a cue ending exactly at the offset is dropped',
+      '00:00:01.000 --> 00:00:10.000\nGone',
+      10,
+      '',
+    ],
+    [
+      'hours above 99 survive',
+      '120:00:00.500 --> 120:00:01.000\nLong',
+      1,
+      '119:59:59.500 --> 120:00:00.000\nLong',
+    ],
+    ['a STYLE block is kept', 'STYLE\n::cue { color: red }', 5, 'STYLE\n::cue { color: red }'],
+  ])('%s', (_label, block, offset, expected) => {
+    expect(shiftWebVtt(`WEBVTT\n\n${block}`, offset)).toBe(
+      expected === '' ? 'WEBVTT' : `WEBVTT\n\n${expected}`,
+    );
+  });
 });
