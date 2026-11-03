@@ -2,6 +2,8 @@ services:
   popcorntv:
     build: .
     image: popcorntv:local
+    # A tiny init as PID 1 forwards signals to Node and reaps any FFmpeg child it leaves behind.
+    init: true
     ports:
       - '3000:3000'
     env_file:
