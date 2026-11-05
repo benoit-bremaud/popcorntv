@@ -4,6 +4,22 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-05 — #65 smoke mocks the profiles API (PR #66 merged, `e3ea142`)
+
+- **Changes** — the Playwright catalog smoke had been red since #10, because `/api/profiles`
+  was not mocked; the pre-merge gate of #64 caught it. The smoke now mocks the profile
+  picker and its progress load. A catch-all `route.abort()` fails any unmocked API call
+  fast, the fixtures are typed with `satisfies` through type-only shared imports (a runtime
+  import resolves to the gitignored `dist`), and the profile button is matched with
+  `exact: true`.
+- **Decisions** — owner chose a dedicated PR before the #18 design merge (MCDA 440/500).
+- **Reviews** — 3 adversarial rounds (the round-2 Must, a runtime shared import, was
+  fixed); Codex found no issue.
+- **Gate** on `d58a315` — 31 shared + 334 server + 129 web tests, smoke 1/1, coverage server
+  98.4 % / web 100 % lines, SonarQube PASSED, gitleaks clean, CI green. Squash-merged with
+  owner approval.
+- **Follow-up filed** — #67 run the Playwright smoke in CI.
+
 ## 2026-11-03 — #24 subtitles as WebVTT tracks (PR #56 merged, `ac687d7`)
 
 - **Changes** — `GET /media/:id/subtitles/:index?offsetSec=` serves an embedded text subtitle
