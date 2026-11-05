@@ -9,17 +9,19 @@
 
 ## 1. Requirements
 
-- **R1** A profile has an id, a name (1–40 chars after trim, unique case-insensitively)
+- **R1** A profile has an id, a name (1–40 chars after trim,
+  unique case-insensitively per user since #18)
   and an avatar colour picked from a fixed palette of design tokens.
 - **R2** Watch progress (ADR-0007) is stored and read per profile; two profiles keep
   separate positions for the same title.
 - **R3** On start the web asks "Who's watching?" unless the remembered profile still
   exists (ADR-0008 §3). The header shows the active profile and a switch button.
-- **R4** The owner creates, renames and deletes profiles from the web (UC9). Deleting a
-  profile deletes its progress; the last profile cannot be deleted.
+- **R4** Each signed-in user creates, renames and deletes their own profiles from the web
+  (UC9; per user since #18, ADR-0010 §5). Deleting a profile deletes its progress; a
+  user's last profile cannot be deleted.
 - **R5** The migration seeds profile `default` / `Me` that keeps the existing progress
   (ADR-0008 §2); it can be deleted like any other and is not re-seeded. At most 12
-  profiles.
+  profiles per user.
 - **R6** Profile names and history stay in SQLite and are never logged or sent out
   ([data flow](../diagrams/playback/06-data-flow.md)).
 - **R7** Done when two profiles keep separate progress, with tests on the repository,
@@ -32,7 +34,7 @@ button.
 
 1. The web reads the remembered profile id and loads `GET /profiles`.
 2. The id is in the list → the catalog opens for that profile (skip to 5).
-3. Otherwise the web shows "Who's watching?" with every profile.
+3. Otherwise the web shows "Who's watching?" with every profile of the signed-in user.
 4. The viewer picks one; the web remembers its id.
 5. The catalog and the detail dialog read and save progress for that profile.
 
@@ -41,15 +43,16 @@ Extensions: 1a server unreachable → the catalog error as today; 1b storage una
 
 ## 3. UC9 — Manage profiles
 
-Primary actor: Owner (anyone on the network until #18, ADR-0008 §4).
+Primary actor: Viewer or Owner, for their own profiles (ADR-0010 §5, superseding
+ADR-0008 §4).
 
-1. The owner opens "Manage profiles" from the picker.
+1. The user opens "Manage profiles" from the picker.
 2. Adds a profile (name + colour), renames one, or deletes one after a confirm.
 3. The list refreshes; "Done" returns to the picker. A deleted remembered profile is
    no longer listed at the next start, so the picker shows.
 
 Extensions: 2a name empty / too long → `400`; duplicate name → `409 profile_name_taken`;
-13th profile → `409 profile_limit`; 2b deleting the last profile → `409
+13th profile → `409 profile_limit`; 2b deleting the user's last profile → `409
 last_profile`; unknown id → `404 profile_not_found`.
 
 ## 4. Data rules
@@ -57,13 +60,15 @@ last_profile`; unknown id → `404 profile_not_found`.
 ### 4.1 Storage
 
 Table `profiles`: `id` (text PK, `default` or a UUID), `name` (text), `name_key`
-(lower-cased name, unique), `avatar` (text, a palette key), `created_at` (ISO text).
+(lower-cased name), `user_id` (FK `users.id` cascade, since #18, auth spec §4.1;
+`(user_id, name_key)` unique), `avatar` (text, a palette key), `created_at` (ISO text).
 `watch_progress.profile_id` → FK `profiles.id`, cascade delete; the column default is
 dropped.
 
 ### 4.2 API
 
-- `GET /profiles` → `200 Profile[]` `{ id, name, avatar }`, oldest first.
+- `GET /profiles` → `200 Profile[]` `{ id, name, avatar }`: the caller's profiles
+  only (since #18), oldest first.
 - `POST /profiles` `{ name, avatar }` → `201 Profile`.
 - `PATCH /profiles/:profileId` `{ name?, avatar? }` → `200 Profile`.
 - `DELETE /profiles/:profileId` → `204`.
