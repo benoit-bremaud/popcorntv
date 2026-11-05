@@ -88,12 +88,12 @@ and request approval (Seerr docs). The link in the UI is a follow-up issue, file
 | Criterion (weight) | A. Plex stays as their backend | B. Headless Jellyfin kept for them | C. PopCornTV absorbs their role | D. PopCornTV exposes a Jellyfin-compatible API |
 |---|---|---|---|---|
 | Effort (40) | 5 — nothing to do | 4 — one more service to run | 1 — three products to rewrite | 0 — a large foreign API surface |
-| Tools keep working (40) | 4 — all three support Plex, but Maintainerr loses the viewing that moves to PopCornTV (rules to audit) | 5 — all three support Jellyfin, same blind spot | 2 — Tunarr and Maintainerr lost | 3 — partial emulation at best |
+| Tools keep working (40) | 4 — all three support Plex, but Maintainerr loses the viewing that moves to PopCornTV (rules to audit) | 4 — all three support Jellyfin, same blind spot | 2 — Tunarr and Maintainerr lost | 3 — partial emulation at best |
 | Fits the vision (20) | 5 — PopCornTV stays a player | 2 — Jellyfin never goes | 1 — live TV and file deletion are excluded by the vision | 3 — a foreign API, no new feature |
-| Points | 200 + 160 + 100 | 160 + 200 + 40 | 40 + 80 + 20 | 0 + 120 + 60 |
-| **Total** | **460** | **400** | **140** | **180** |
+| Points | 200 + 160 + 100 | 160 + 160 + 40 | 40 + 80 + 20 | 0 + 120 + 60 |
+| **Total** | **460** | **360** | **140** | **180** |
 
-Sensitivity: tools at 60 and effort at 20 gives A 440, B 420. A stays first. **Chosen: A.**
+Sensitivity: tools at 60 and effort at 20 gives A 440, B 380. A stays first. **Chosen: A.**
 Tunarr can also read local files directly, which removes its dependency on any media server
 if Plex ever goes.
 
@@ -117,7 +117,7 @@ fallback; B needs its own ADR superseding ADR-0009 §1 and is not planned.
 
 | Criterion (weight) | A. Tdarr remuxes to MP4, re-encodes only codecs no browser decodes, converts text subtitles to `mov_text` | B. PopCornTV live HLS only (today) | C. PopCornTV runs its own background transcoding |
 |---|---|---|---|
-| Playback quality (35) | 4 — direct play for most files; PGS subtitles dropped, ASS styling lost | 3 — one FFmpeg per play, streams copied for H.264/AAC, EVENT playlist, 60 s idle watchdog | 5 — same as A without the subtitle loss, at our cost |
+| Playback quality (35) | 4 — direct play for most files; PGS subtitles dropped, ASS styling lost, for Plex and Tunarr too since they serve the same files | 3 — one FFmpeg per play, streams copied for H.264/AAC, EVENT playlist, 60 s idle watchdog | 5 — same as A without the subtitle loss, at our cost |
 | Effort in PopCornTV (30) | 5 — none | 5 — none | 1 — a job queue, storage, a UI |
 | Server load (20) | 4 — one pass per file, then none | 3 — a copy per play, a re-encode for HEVC and others | 4 — one pass per file |
 | Scope (15) | 5 — stays "player" | 5 — stays "player" | 1 — file management, excluded by the vision |
@@ -147,7 +147,7 @@ exists.
 - No integration brick is planned. The 2026-10-23 decision and the single HTTP egress to
   TMDB stand.
 
-## Facts checked (2026-11-05, official docs)
+## Facts checked and open points (2026-11-05, official docs)
 
 - Seerr runs with Plex, Jellyfin or Emby and ships request approval and a permission system.
 - Maintainerr supports Plex, Jellyfin and Emby and builds rules from the media server plus
