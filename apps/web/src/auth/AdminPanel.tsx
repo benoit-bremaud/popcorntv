@@ -79,14 +79,19 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
   /** Runs one action, then reloads; a refusal is shown, a success may show a link. */
   async function act<T>(
     run: () => Promise<AdminResult<T>>,
-    done?: (value: T) => void,
+    done?: (value: T) => 'closed' | void,
   ): Promise<void> {
     setConfirming(null);
     const result = await run();
     // Refresh either way: a refusal often means the list is stale (another owner acted).
-    if (result.ok) done?.(result.value);
+    if (result.ok && done?.(result.value) === 'closed') return;
     await refresh();
     if (!result.ok) setMessage(adminMessage(result.error));
+  }
+
+  /** Hides a shown reset link of `userId` once the server has revoked it. */
+  function forgetResetOf(userId: string): void {
+    setShown((current) => (current?.resetOf === userId ? null : current));
   }
 
   async function showDevices(userId: string): Promise<void> {
@@ -198,9 +203,12 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
                   () => api.setRole(account.id, role),
                   () => {
                     // The server revoked this account's pending reset link (UC17).
-                    setShown((current) => (current?.resetOf === account.id ? null : current));
+                    forgetResetOf(account.id);
                     // A self-demoted owner may no longer administer.
-                    if (account.id === user.id && role !== 'owner') onClose();
+                    if (account.id === user.id && role !== 'owner') {
+                      onClose();
+                      return 'closed';
+                    }
                   },
                 );
               }}
@@ -234,7 +242,7 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
               onClick={() =>
                 void act(
                   () => api.revokeReset(account.id),
-                  () => setShown((current) => (current?.resetOf === account.id ? null : current)),
+                  () => forgetResetOf(account.id),
                 )
               }
             >
@@ -267,7 +275,12 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
                 <button
                   type="button"
                   className="button"
-                  onClick={() => void act(() => api.deleteAccount(account.id))}
+                  onClick={() =>
+                    void act(
+                      () => api.deleteAccount(account.id),
+                      () => forgetResetOf(account.id),
+                    )
+                  }
                 >
                   Confirm deletion of {account.username}
                 </button>

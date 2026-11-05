@@ -142,13 +142,29 @@ describe('AdminPanel', () => {
     expect(screen.queryByLabelText('Link to send')).toBeNull();
   });
 
+  it('hides the reset link of an account once deleted', async () => {
+    const user = userEvent.setup();
+    panel();
+
+    await user.click(
+      (await screen.findAllByRole('button', { name: 'Reset link' }))[0] as HTMLElement,
+    );
+    await screen.findByLabelText('Link to send');
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    await user.click(screen.getByRole('button', { name: 'Confirm deletion of kid' }));
+
+    expect(screen.queryByLabelText('Link to send')).toBeNull();
+  });
+
   it('closes the panel when the owner demotes themself', async () => {
     const user = userEvent.setup();
-    const { onClose } = panel();
+    const { api, onClose } = panel();
 
     await user.selectOptions(await screen.findByLabelText('Role of owner'), 'viewer');
 
     expect(onClose).toHaveBeenCalledOnce();
+    // The demoted owner may no longer list accounts: no reload after closing.
+    expect(api.accounts).toHaveBeenCalledOnce();
   });
 
   it('stays open when another account is demoted', async () => {

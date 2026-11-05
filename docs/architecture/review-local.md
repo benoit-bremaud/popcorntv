@@ -3,9 +3,9 @@
 Local review gate for the invitations, reset links and account administration brick.
 
 - Date: 2026-11-05
-- Commit: 43d0622
+- Commit: see the last `fix(auth)` commit of the branch
 - Scope: branch diff `origin/main...feat/73-auth-invitations-admin` (`--push`)
-- Checks run: adversarial (Opus, 3 rounds) · design · docs · tests · security · correctness
+- Checks run: adversarial (Opus, 4 rounds) · design · docs · tests · security · correctness
 - Verdict: ship as-is · Must 0 open · Should 0 open · Nice 0 open in scope (follow-ups below)
 
 ## Adversarial review (#236)
@@ -13,14 +13,15 @@ Local review gate for the invitations, reset links and account administration br
 - Round 1 on `dd9d86d`: Must 2 (owner self-delete answered 500; stale CLAUDE.md server layout) · Push gate: closed
 - Round 2 on `da1b264`: all round 1 findings fixed · new Must 0 · new Should 1 (revoking a reset link hid any shown link) · Push gate: open
 - Round 3 on `a0aec13`: Should and two Nice fixed · new Should 1 (devices failure refresh untested, fixed in `43d0622`) · **Push gate: open**
-- Hosted reviewers: none (Copilot and Codex out of credit since 2026-11-05)
+- Round 4 on `aa54777` (Codex P2 fixes): both fixed · new Should 1 (deletion left a revoked reset link on screen) · Nice 1 (wasted reloads after self-demotion), both fixed next · **Push gate: open**
+- Hosted reviewers: Codex reviewed `85e6d93`: 2 P2 (a role change and a self-demotion left stale admin state), fixed in `aa54777`; Copilot out of credit
 
 ## Pre-merge gate (head SHA 43d0622)
 
 | Step | Result |
 |---|---|
 | 0 CI mirror | ✅ install, typecheck, eslint (`apps packages`), format:check, tests, build on Node 22; CodeQL, dependency-review CI-only |
-| 1 Tests | ✅ shared 38 · server 470 · web 194 |
+| 1 Tests | ✅ shared 38 · server 470 · web 198 |
 | 2 Coverage | server 97.5 % lines · web ~98.9 % lines (floor 80) · docs ⏸ deferred to the pre-merge run |
 | 3 SonarQube | ⏸ deferred to the pre-merge run (`--push`) |
 | 4 Secrets | ✅ gitleaks clean (`origin/main..HEAD`) · only `.env.example` tracked · diff read: nothing sensitive |
