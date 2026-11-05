@@ -1,54 +1,50 @@
-# Local review — popcorntv (#24 subtitles as WebVTT tracks)
+# Local review — popcorntv (#65 smoke mocks the profiles API)
 
-Pre-push and pre-merge review of branch `feat/24-subtitles-webvtt`.
+Pre-push review of branch `test/65-smoke-profiles-mock`.
 
-- Date: 2026-11-03
-- Commit: a82afd8 (reviewed), fixes in the follow-up commit
-- Scope: branch diff `origin/main...HEAD` (`apps/server/src/playback/{webvtt,subtitle-extractor,subtitle-routes}.ts`, `apps/server/src/app.ts`, `packages/shared/src/subtitles.ts`, `apps/web/src/{api.ts,playback/PlayerDialog.tsx}`, docs)
-- Checks run: design · docs · tests · security · correctness (no container file touched)
-- Verdict: ship (every Should fixed, owner decision 2026-11-03, MCDA 450/500) · Must 0 · Should 7 fixed · Nice 6
+- Date: 2026-11-05
+- Commit: b8d5394
+- Scope: branch diff `origin/main...HEAD` (`apps/web/e2e/catalog.smoke.spec.ts`)
+- Checks run: adversarial (Opus, 3 rounds) · tests · correctness (test-only change, no product code, no container file)
+- Verdict: ship · Must 1 fixed · Should 2 fixed · Nice 2 fixed
 
-## Pre-merge gate (head SHA a82afd8, re-run after the fixes)
+## Adversarial review (#236)
+
+- Round 1 on `e5f4803`: Must 0 · Should 2 · Nice 1 · Push gate: open
+- Round 2 on `d5fd4af`: 3 fixed · new Must 1 (runtime import of `DEFAULT_PROFILE_ID` needed a built `packages/shared/dist`) · Push gate: closed
+- Round 3 on `2fef850`: 5 fixed · new Must 0 · Nice 1 (comment over 100 columns, fixed in `b8d5394`) · **Push gate: open**
+- Hosted reviewers (filled at the pre-merge run): Copilot cannot be requested on this repo · Codex `@codex review` requested on PR #66 (optional)
+
+## Pre-merge gate (head SHA d58a315)
 
 | Step | Result |
 |---|---|
-| 1 Tests | ✅ 334 server · 129 web · 31 shared (Vitest); no E2E suite yet |
-| 2 Coverage | server 98.3 % stmts / 95.6 % branches / 95.6 % funcs / 98.4 % lines · web 99.8 / 93.4 / 100 / 100 · shared 88.9 / 100 / 100 / 86.7 (floor 80) · docs ≈ 100 % of the new exports (floor 90) |
-| 3 SonarQube | ✅ PASSED, no issue on the changed files |
+| 1 Tests | ✅ 334 server · 129 web · 31 shared (Vitest) · ✅ smoke 1/1 (Playwright) |
+| 2 Coverage | server 98.3 % stmts / 95.6 % branches / 95.6 % funcs / 98.4 % lines · web 99.8 / 93.4 / 100 / 100 · shared 88.9 / 100 / 100 / 86.7 (floor 80) · docs: no new export |
+| 3 SonarQube | ✅ PASSED |
 | 4 Secrets | ✅ gitleaks clean (`origin/main..HEAD`) · only `.env.example` tracked · diff read: nothing sensitive |
-| 5 QA pass | ✅ pass · direct play and resumed HLS captions in sync with real FFmpeg · report: [2026-11-03-subtitles.md](qa/2026-11-03-subtitles.md) |
+| 5 E2E/smoke | ✅ 1 journey (catalog) on the Vite build with mocked API · QA pass: not applicable (test-only change) |
 
-- Gate: **GREEN**
+- Gate: **GREEN** on `d58a315`; the next commit changes only this report
 
-## 🔴 Must Have
+## 🔴 Must Have (fixed)
 
-_None._
+- `apps/web/e2e/catalog.smoke.spec.ts:2` `[adversarial]` · Runtime import from `@popcorntv/shared` resolved to the gitignored `dist/` · imports are type-only, the profile id is a literal.
 
-## 🟡 Should Have (all fixed)
+## 🟡 Should Have (fixed)
 
-- `apps/server/src/playback/subtitle-extractor.ts` `[design][security]` · Unbounded concurrent FFmpeg runs, runs not killed at shutdown (#28 invariant), timeout rejected before FFmpeg exited · two runs at most (queue), `closeAll()` in `preClose`, the timeout settles on exit.
-- `apps/server/src/playback/subtitle-routes.ts` `[design]` · Cache-key policy (`stat` mtime) leaked into the route, four positional arguments · `get(mediaId, index, filePath)` stats the file itself.
-- `apps/web/src/playback/PlayerDialog.tsx` `[design]` · `/api` prefix hard-coded · `subtitleUrl()` in `api.ts`.
-- `apps/server/src/playback/subtitle-extractor.ts` `[security]` · Cache grew forever on modified files · older entries of the track removed after a new extraction.
-- `apps/server/src/playback/subtitle-extractor.ts` `[correctness]` · Any cache read error re-extracted · only `ENOENT` counts as a miss.
-- `docs/architecture/specs/subtitles.md`, sequence, ADR-0009 `[docs]` · `:n` vs `:index`, `extract()` vs `get()`, `srt` missing in R1, `timeoutMs` undocumented · aligned.
-- Tests `[tests]` · mtime re-extraction, path guard escape, unshifted cache shifted per request, retry after failure, queue, `closeAll`, WebVTT edge cases, direct-play track URL, codec allowlist · added.
+- `apps/web/e2e/catalog.smoke.spec.ts` `[adversarial][correctness]` · Unmocked API calls reached a live server through the Vite proxy · catch-all `route.abort()` registered first.
+- `apps/web/e2e/catalog.smoke.spec.ts` `[adversarial][tests]` · Mocks were not checked against the shared contracts · `satisfies Library` / `Media[]` / `Profile`.
 
-## 🔵 Nice to Have
+## 🔵 Nice to Have (fixed)
 
-- `apps/server/src/playback/subtitle-routes.ts` `[security]` · FFmpeg opens the checked path by name (check-then-use); same as the HLS route; needs write access to the media tree.
-- `apps/server/src/playback/subtitle-routes.ts` `[correctness]` · `offsetSec` has no upper bound; a huge value only drops every cue.
-- `apps/server/src/playback/webvtt.ts` `[design]` · The timing regex runs twice per cue block.
-- `apps/server/src/playback/subtitle-routes.ts` `[design]` · `confinedPath` imported from another route module; move it on a third consumer.
-- `apps/server/src/playback/webvtt.ts` `[correctness]` · A cue with an empty payload merges block boundaries; harmless.
-- Resumed copy sessions start one GOP early → cues may run early · filed as #55 (inherited from ADR-0007 §2).
+- `apps/web/e2e/catalog.smoke.spec.ts` `[adversarial]` · Profile button matched by substring · `exact: true`.
+- `apps/web/e2e/catalog.smoke.spec.ts:48` `[adversarial]` · Comment over the 100-column width · wrapped.
 
 ## ⚪ Disagree / Intentional
 
-- `SubtitleExtractor` used as a concrete class, no port: single implementation (architecture skill, `SessionManager` precedent).
-- `subtitleArgs` beside its only caller, not in the HLS `ffmpeg-args.ts`.
-- `TRANSCODE_DIR/subtitles` survives restarts on purpose: `SessionManager.clean()` removes session directories only.
+- `.github/workflows/ci.yml` · The Playwright smoke is not run in CI; out of scope, filed as a follow-up issue.
 
 ## Per-dimension summary
 
-- Design: flat, matches ADR-0009; three local Should fixed. · Docs: ≈ 100 % of exports, naming aligned. · Tests: healthy pyramid, fake only at the FFmpeg boundary. · Security: no injection or traversal, resource limits added. · Correctness: WebVTT shift verified on hours, BOM, NOTE/STYLE, CRLF.
+- Adversarial: three rounds, gate open. · Tests: the smoke is hermetic and typed. · Correctness: no unmocked request on this flow (`posterPath: null`).
