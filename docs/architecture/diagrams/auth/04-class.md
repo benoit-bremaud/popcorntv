@@ -1,4 +1,4 @@
-# Class diagram — auth — accounts, sessions, tokens, audit
+# Class diagram — auth — accounts, sessions, tokens, events
 
 > **Feature**: user accounts — [spec](../../specs/auth.md) §4.1 · **Related ADRs**:
 > ADR-0010 (§5 profile ownership), ADR-0008
@@ -6,7 +6,7 @@
 ## Context
 
 Persistent model added by #18 and its link to the profiles of #10. Cascades are database
-foreign keys.
+foreign keys. The setup token is not persisted (spec UC11).
 
 ## Diagram
 
@@ -39,41 +39,58 @@ classDiagram
     +tokenHash: string
     +kind: TokenKind
     +role: Role?
+    +userId: string?
     +expiresAt: string
     +usedAt: string?
+    +revokedAt: string?
   }
   class TokenKind {
     <<enumeration>>
-    setup
     invite
     reset
   }
-  class AuditEvent {
+  class AuthEvent {
     +id: number
     +at: string
-    +kind: AuditKind
+    +kind: AuthEventKind
     +ip: string
     +usernameTried: string?
+  }
+  class AuthEventKind {
+    <<enumeration>>
+    login_ok
+    login_failed
+    login_locked
+    logout
+    invite_issued
+    invite_revoked
+    reset_issued
+    redeemed
+    password_changed
+    role_changed
+    user_deleted
   }
   class Profile {
     +id: string
     +name: string
+    +nameKey: string
     +avatar: string
   }
 
   User "1" *-- "0..*" Session : opens
   User "1" *-- "1..*" Profile : owns
-  User "1" o-- "0..*" AuthToken : issues or redeems
-  User "0..1" <-- "0..*" AuditEvent : concerns
+  AuthToken "0..*" --> "0..1" User : resets
+  AuthEvent "0..*" --> "0..1" User : concerns
   User --> Role
   AuthToken --> TokenKind
+  AuthEvent --> AuthEventKind
 ```
 
 ## Notes
 
-- `Profile.userId` is a new NOT NULL foreign key (cascade); the migration leaves it
-  nullable until `POST /auth/setup` adopts the existing profiles (ADR-0010 §5).
-- `AuditEvent.userId` is nullable and `SET NULL` on delete, so history outlives an
-  account. `usernameTried` is stored only for failures.
-- `tokenHash` columns hold SHA-256 of a 256-bit random token; the raw value is never
-  stored or logged.
+- `Profile.userId` is a nullable SQL column with an FK cascade; it is null only between
+  migration `0006` and setup, and the repository never writes null. `(userId, nameKey)`
+  is unique.
+- `AuthEvent.userId` is `SET NULL` on delete, so history outlives an account.
+- `tokenHash` holds SHA-256 of a 256-bit random token; the raw value is never stored or
+  logged.

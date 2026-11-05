@@ -12,17 +12,17 @@ token; every transition is decided server-side.
 
 ```mermaid
 stateDiagram-v2
-  [*] --> Active: sign in / redeem token
-  Active --> Active: request within idle window (slide last_seen_at)
+  [*] --> Active: sign in · setup · redeem
+  Active --> Active: request within the idle window (last_seen_at, at most hourly)
   Active --> Expired: idle 14 days or absolute 90 days
-  Active --> Revoked: sign out · owner ends it · password change · account deleted
-  Expired --> [*]: purged at start and hourly
-  Revoked --> [*]: purged at start and hourly
+  Active --> Revoked: sign out · owner ends it · password change or reset
+  Active --> [*]: account deleted (cascade)
+  Expired --> [*]: purged at start and on each sign-in
+  Revoked --> [*]: purged at start and on each sign-in
 ```
 
 ## Notes
 
 - `Expired` and `Revoked` sessions are never accepted, even before the purge runs.
-- A password change or reset revokes every session of that user except, for a change,
-  the one performing it.
-- Deleting an account deletes its sessions and its profiles (cascade, spec §4.1).
+- A password change (UC19) revokes every other session of that user; a reset (UC20)
+  revokes all of them and opens a new one.

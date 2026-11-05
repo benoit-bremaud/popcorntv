@@ -15,8 +15,9 @@
   separate positions for the same title.
 - **R3** On start the web asks "Who's watching?" unless the remembered profile still
   exists (ADR-0008 §3). The header shows the active profile and a switch button.
-- **R4** The owner creates, renames and deletes profiles from the web (UC9). Deleting a
-  profile deletes its progress; the last profile cannot be deleted.
+- **R4** Each signed-in user creates, renames and deletes their own profiles from the web
+  (UC9; per user since #18, ADR-0010 §5). Deleting a profile deletes its progress; a
+  user's last profile cannot be deleted.
 - **R5** The migration seeds profile `default` / `Me` that keeps the existing progress
   (ADR-0008 §2); it can be deleted like any other and is not re-seeded. At most 12
   profiles.
@@ -41,7 +42,8 @@ Extensions: 1a server unreachable → the catalog error as today; 1b storage una
 
 ## 3. UC9 — Manage profiles
 
-Primary actor: Owner (anyone on the network until #18, ADR-0008 §4).
+Primary actor: Viewer or Owner, for their own profiles (ADR-0010 §5, superseding
+ADR-0008 §4).
 
 1. The owner opens "Manage profiles" from the picker.
 2. Adds a profile (name + colour), renames one, or deletes one after a confirm.

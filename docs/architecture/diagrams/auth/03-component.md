@@ -1,43 +1,53 @@
 # Component diagram — auth — authentication in front of every route
 
 > **Feature**: user accounts and secure remote access — [spec](../../specs/auth.md)
-> **Related ADRs**: ADR-0010 · Extends the [playback components](../playback/03-component.md)
+> §4.5 · **Related ADRs**: ADR-0010 · Extends the
+> [playback components](../playback/03-component.md); nodes and network are in the
+> [deployment diagram](08-deployment-prod.md)
 
 ## Context
 
-Where authentication sits and what faces the internet. Fastify never listens on a public
-interface: the reverse proxy is the only exposed component.
+Which server modules authentication adds and how they depend on the existing ones. The
+dependency direction keeps `auth` a leaf user of `profiles`, never the reverse.
 
 ## Diagram
 
 ```mermaid
 flowchart LR
-  Browser["Browser"] -->|"HTTPS 443"| Proxy["Reverse proxy (Caddy)"]
-  Proxy -->|"HTTP, loopback / private network"| Hook
-
-  subgraph Server["apps/server (Fastify)"]
-    Hook["auth hook: session + role + Origin check"]
-    AuthRoutes["src/auth/routes"]
-    Limiter["rate limiter"]
-    AuthRepo["src/auth/repository: users, sessions, tokens, audit"]
-    Existing["library, metadata, playback, progress, profile routes"]
-    Hook -->|"public list"| AuthRoutes
-    Hook -->|"authenticated"| Existing
-    AuthRoutes --> Limiter
-    AuthRoutes --> AuthRepo
-    Hook --> AuthRepo
-    Existing --> ProfRepo["profiles repository (owner check)"]
+  subgraph Server["apps/server"]
+    Http["src/http.ts: Caller type, request augmentation"]
+    subgraph Auth["src/auth/"]
+      Hook["hook (onRequest): CSRF, session, route access"]
+      Routes["routes: status, setup, redeem, session, password"]
+      UserRoutes["user-routes: users, invitations, events"]
+      Limiter["limiter"]
+      Hasher["hasher (only argon2 import)"]
+      Repos["user-, session-, token-, event-repository"]
+    end
+    Profiles["src/profiles/ (repository, routes)"]
+    Others["library, metadata, playback, progress routes"]
   end
+  DB[("SQLite")]
 
-  AuthRepo --> DB[("SQLite")]
-  ProfRepo --> DB
+  Hook --> Repos
+  Hook --> Http
+  Routes --> Limiter
+  Routes --> Hasher
+  Routes --> Repos
+  UserRoutes --> Repos
+  Routes -->|"Pick: adoptOrphans, createFirst"| Profiles
+  Profiles --> Http
+  Others --> Http
+  Repos --> DB
+  Profiles --> DB
 ```
 
 ## Notes
 
-- The hook is a single Fastify `onRequest` hook with an explicit public allow-list
-  (spec §4.3); a new route is protected by default.
-- `src/auth/` follows the flat layout of the other modules; the password hasher is the
-  only module importing the argon2 binding (swap point, ADR-0010 consequences).
-- The proxy adds HSTS; the app keeps its own headers (#31). `TRUST_PROXY` tells Fastify
-  which hop's `X-Forwarded-*` to believe.
+- One `onRequest` hook reads `request.routeOptions.config.access` (`public` | `owner` |
+  absent = session); a new route is protected by default.
+- `profiles`, `progress` and `playback` read `request.caller` through `src/http.ts` and
+  never import `src/auth/`.
+- The hasher is the only argon2 consumer, following the "single egress" modules
+  (`ffprobe`, `tmdb-client`, `transcoder`); no interface while there is one
+  implementation.

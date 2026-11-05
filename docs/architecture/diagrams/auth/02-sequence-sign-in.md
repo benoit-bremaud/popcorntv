@@ -5,9 +5,9 @@
 
 ## Context
 
-How a username and password become a session cookie, how every later request is
-checked, and where rate limiting and the audit log sit. Failure answers are identical
-for an unknown user and a wrong password (no enumeration).
+How a username and password become a session cookie, how the single `onRequest` hook
+checks every later request, and where rate limiting and the audit log sit. Failure
+answers are identical for an unknown user and a wrong password (no enumeration).
 
 ## Diagram
 
@@ -15,57 +15,61 @@ for an unknown user and a wrong password (no enumeration).
 sequenceDiagram
   actor U as Viewer / Owner
   participant W as Web app
+  participant H as Auth hook (onRequest)
   participant API as Auth routes
   participant RL as Rate limiter
   participant UR as User repository
   participant SR as Session repository
-  participant AL as Audit log
+  participant EL as Event repository
   participant R as Any other route
 
   U->>W: username + password
-  W->>API: POST /auth/session
-  API->>API: Origin / Sec-Fetch-Site check (ADR-0010 §3)
-  API->>RL: allow(ip, username)?
+  W->>H: POST /auth/session
+  H->>H: CSRF check (R7) · route access = public
+  H->>API: forward
+  API->>RL: allow(ip, usernameKey)?
   alt locked out
-    API->>AL: record login_locked
+    API->>EL: record login_locked (once per window)
     API-->>W: 429 too_many_attempts (Retry-After)
   else allowed
     API->>UR: findByUsername()
     API->>API: verify argon2id (dummy hash if unknown)
     alt wrong credentials
-      API->>RL: recordFailure(ip, username)
-      API->>AL: record login_failed
+      API->>RL: recordFailure(ip, usernameKey)
+      API->>EL: record login_failed
       API-->>W: 401 invalid_credentials
     else ok
       API->>SR: create(userId) — token stored as SHA-256
-      API->>AL: record login_ok
-      API-->>W: 200 User + Set-Cookie session (HttpOnly, SameSite=Lax)
+      API->>EL: record login_ok · purge stale rows
+      API-->>W: 200 User + Set-Cookie (HttpOnly, SameSite=Lax)
     end
   end
 
   loop every later request
-    W->>R: request + cookie
-    R->>SR: findValid(hash(token)) — idle and absolute expiry, slide
+    W->>H: request + cookie
+    H->>H: CSRF check on non-GET (R7)
+    H->>SR: findValid(hash(token)) joined with the user's current role
     alt no valid session
-      R-->>W: 401 unauthenticated
+      H-->>W: 401 unauthenticated
       W-->>U: sign-in screen
-    else role too low for the route
-      R-->>W: 403 forbidden
+    else route access = owner and role = viewer
+      H-->>W: 403 forbidden
     else ok
+      H->>R: request.caller = { userId, role }
       R-->>W: the route's answer
     end
   end
 
   U->>W: Sign out
-  W->>API: DELETE /auth/session (or /auth/sessions for all devices)
+  W->>H: DELETE /auth/session (or /auth/sessions for all devices)
+  H->>API: forward with caller
   API->>SR: revoke
   API-->>W: 204 + cookie cleared
 ```
 
 ## Notes
 
-- The rate limiter counts failures per (IP, username) and per IP; a success clears the
-  pair. The client IP comes from the socket, or from the proxy only when `TRUST_PROXY`
-  is set (spec §5).
-- Static assets of the web app and `GET /health` stay public; nothing under `/api` does,
-  except the routes in spec §4.3.
+- Route paths are Fastify's; the browser calls them under `/api`, which Caddy strips
+  (spec §5).
+- `findValid` slides `last_seen_at` at most once per hour.
+- The client IP comes from the socket, or from the proxy only when `TRUST_PROXY` is set.

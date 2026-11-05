@@ -3,7 +3,7 @@
 - Status: accepted (owner validated the weights, #18 chat, 2026-11-05)
 - Date: 2026-11-05
 - Deciders: owner
-- Related: UC11–UC18 ([spec](../specs/auth.md)), ADR-0008 (profiles), issue #18
+- Related: UC11–UC20 ([spec](../specs/auth.md)), ADR-0008 (profiles), issue #18
 
 ## Context
 
@@ -53,7 +53,8 @@ Sensitivity: KISS at 40 (others renormalised) → A 460, C 328. **A.**
 ## 3. CSRF protection for unsafe methods
 
 - **A — `SameSite=Lax` cookie plus an `Origin` / `Sec-Fetch-Site` check** on every
-  non-GET request; cross-site or missing-and-suspect origins get `403`.
+  non-GET request: `403` when `Sec-Fetch-Site` is `cross-site`, or when an `Origin`
+  header is present and differs from `PUBLIC_URL`'s origin (spec R7).
 - **B — Synchronizer token** per session, sent in a header.
 - **C — Double-submit cookie.**
 
@@ -67,8 +68,9 @@ Sensitivity: KISS at 40 (others renormalised) → A 460, C 328. **A.**
 
 Points: A = 160+150+75+75 · B = 200+60+30+30 · C = 120+90+30+75.
 Sensitivity: protection at 55 (others renormalised) → A 445, B 365. **A**; `Lax`, not
-`Strict`, so a link opened from another app keeps the session. All state changes are
-non-GET, so Lax adds no hole.
+`Strict`, so a link opened from another app keeps the session. GET routes have no
+security-relevant side effect (only playback keep-alive and cache fills), so Lax adds
+no hole.
 
 ## 4. How the first owner is created
 
@@ -110,11 +112,18 @@ another user answers `404 profile_not_found`, never `403`.
 ## Consequences
 
 - Migration `0006` (drizzle-kit): tables `users`, `sessions`, `auth_tokens`, `auth_events`;
-  `profiles.user_id` added nullable then adopted at setup (SQLite rebuild to NOT NULL
-  once a user exists is avoided: enforced in the repository, FK declared now).
-- A new `src/auth/` module (hasher, repositories, limiter, hook, routes); one
-  `onRequest` hook with an explicit public allow-list protects every other route,
-  including the static media and artwork routes.
+  `profiles.user_id` as a nullable column with an FK cascade (null only until setup;
+  the repository never writes null) and the unique index moved to `(user_id,
+  name_key)`. SQLite may need a table rebuild for that; check the generated SQL.
+- Profile rules (name uniqueness, 12-profile limit, last profile) become per user, and
+  playback sessions are bound to their user (spec R10).
+- A new flat `src/auth/` module (spec §4.5); one `onRequest` hook reads each route's
+  `config.access` (`public` | `owner` | absent = session), so every route, media and
+  artwork included, is protected by default. The caller type lives in `src/http.ts`;
+  `auth` depends on a narrow `Pick` of the profile repository, never the reverse.
+- `PUBLIC_URL` becomes a required setting; the web build is served by Caddy, which
+  strips `/api` (spec §5, deployment diagram); the compose file stops publishing the
+  app port on every interface.
 - Dependency: an argon2id binding (candidate `@node-rs/argon2`, prebuilt binaries; to be
   confirmed against current docs and the Docker image at implementation). No session or
   JWT library: the session code is ~100 lines over the repository.
