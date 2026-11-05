@@ -192,9 +192,18 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
               className="input"
               aria-label={`Role of ${account.username}`}
               value={account.role}
-              onChange={(event) =>
-                void act(() => api.setRole(account.id, event.target.value as Role))
-              }
+              onChange={(event) => {
+                const role = event.target.value as Role;
+                void act(
+                  () => api.setRole(account.id, role),
+                  () => {
+                    // The server revoked this account's pending reset link (UC17).
+                    setShown((current) => (current?.resetOf === account.id ? null : current));
+                    // A self-demoted owner may no longer administer.
+                    if (account.id === user.id && role !== 'owner') onClose();
+                  },
+                );
+              }}
             >
               {ROLES.map((role) => (
                 <option key={role} value={role}>

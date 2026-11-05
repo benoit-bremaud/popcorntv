@@ -100,7 +100,8 @@ export function AuthGate({
             <AdminPanel
               api={admin}
               user={user}
-              onClose={() => setGate({ kind: 'signedIn', user })}
+              // Re-read the status: the owner may have changed their own role.
+              onClose={() => void start()}
             />
           </main>
         </>

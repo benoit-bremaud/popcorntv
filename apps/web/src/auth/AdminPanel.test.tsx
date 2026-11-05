@@ -129,6 +129,37 @@ describe('AdminPanel', () => {
     expect(api.revokeReset).toHaveBeenCalledWith('u2');
   });
 
+  it('hides the reset link of an account once its role changes', async () => {
+    const user = userEvent.setup();
+    panel();
+
+    await user.click(
+      (await screen.findAllByRole('button', { name: 'Reset link' }))[0] as HTMLElement,
+    );
+    await screen.findByLabelText('Link to send');
+    await user.selectOptions(screen.getByLabelText('Role of kid'), 'owner');
+
+    expect(screen.queryByLabelText('Link to send')).toBeNull();
+  });
+
+  it('closes the panel when the owner demotes themself', async () => {
+    const user = userEvent.setup();
+    const { onClose } = panel();
+
+    await user.selectOptions(await screen.findByLabelText('Role of owner'), 'viewer');
+
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('stays open when another account is demoted', async () => {
+    const user = userEvent.setup();
+    const { onClose } = panel();
+
+    await user.selectOptions(await screen.findByLabelText('Role of kid'), 'viewer');
+
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it('keeps an invitation link on screen when a reset link is revoked', async () => {
     const user = userEvent.setup();
     panel();

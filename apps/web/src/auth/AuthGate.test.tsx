@@ -175,9 +175,10 @@ describe('AuthGate', () => {
     expect(history.replaceState).toHaveBeenCalledWith(null, '', '/');
   });
 
-  it('opens and closes the administration for an owner', async () => {
+  it('opens and closes the administration for an owner, re-reading the status', async () => {
     const user = userEvent.setup();
-    gate(fakeApi({ status: vi.fn(async () => ({ setupRequired: false, user: owner })) }));
+    const api = fakeApi({ status: vi.fn(async () => ({ setupRequired: false, user: owner })) });
+    gate(api);
 
     await user.click(await screen.findByText('owner', { selector: 'summary *, summary' }));
     await user.click(screen.getByRole('button', { name: 'Administration' }));
@@ -185,5 +186,6 @@ describe('AuthGate', () => {
     await user.click(screen.getByRole('button', { name: 'Done' }));
 
     expect(await screen.findByText('Hello owner')).toBeInTheDocument();
+    expect(api.status).toHaveBeenCalledTimes(2);
   });
 });
