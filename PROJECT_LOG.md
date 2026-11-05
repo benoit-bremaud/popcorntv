@@ -4,6 +4,24 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-05 — #26 homelab ecosystem triage (decision, PR pending)
+
+- **Changes** — `docs/requirements/02-homelab-ecosystem.md`: inventory of the media
+  services, the media chain, a per-tool triage and four MCDA matrices.
+- **Decisions** — the 2026-10-23 coexistence rule stands: PopCornTV replaces Jellyfin only,
+  Plex stays as backend of Seerr, Maintainerr and Tunarr (D2 460), a child viewer's
+  wishlist stays in Seerr with a link from the UI (D1 440 against 280 for calling the
+  Radarr / Sonarr API), Bazarr sidecars get muxed by a Tdarr flow (D3 440), Tdarr remuxes
+  to MP4 so most files direct-play (D4 445). No integration brick.
+- **Reviews** — a first plan that called Radarr / Sonarr was rejected by an adversarial
+  review (6 Must, among them: it reversed the recorded decision, assumed Plex was going,
+  needed an unscoped admin key and a second HTTP egress). A second round on the document
+  caught wrong MCDA totals, a false direct-play claim (only `mp4` / `m4v` / `webm`
+  direct-play) and the manual-only scan every decision depends on.
+- **Follow-ups to add at merge** — #62: resume progress survives a file replaced on
+  another path; #60: Uptime Kuma probe, Tdarr and Bazarr flows, Maintainerr rule audit,
+  Jellyfin history import. To file after #18: the Seerr link and a scheduled library scan.
+
 ## 2026-11-05 — #18 accounts and remote access, design (PR #64 merged, `9f0fcf2`)
 
 - **Changes** — design only: spec `docs/architecture/specs/auth.md` (UC11–UC20, R1–R12),
