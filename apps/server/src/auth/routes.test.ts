@@ -28,7 +28,7 @@ afterEach(async () => {
 });
 
 async function harness(
-  options: { db?: AppDatabase; hasher?: Hasher; publicUrl?: string } = {},
+  options: { db?: AppDatabase; hasher?: Hasher; publicUrl?: string; trustProxy?: boolean } = {},
 ): Promise<Harness> {
   const db = options.db ?? openDatabase(':memory:');
   let setupLink: string | null = null;
@@ -45,6 +45,7 @@ async function harness(
     transcodeDir: tmpdir(),
     publicUrl: options.publicUrl ?? TEST_PUBLIC_URL,
     hasher: options.hasher ?? fakeHasher,
+    trustProxy: options.trustProxy,
     onSetupLink: (link) => {
       setupLink = link;
     },
@@ -161,6 +162,48 @@ describe('first-owner setup (UC11)', () => {
 
     expect(refused.statusCode).toBe(429);
     expect(refused.headers['retry-after']).toBeDefined();
+  });
+
+  it('counts concurrent wrong sign-ins before the hash finishes', async () => {
+    const db = openDatabase(':memory:');
+    createAccount(db);
+    const slow: Hasher = {
+      hash: fakeHasher.hash,
+      verify: async (...args) => {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        return fakeHasher.verify(...args);
+      },
+    };
+    const h = await harness({ db, hasher: slow });
+
+    const codes = await Promise.all(
+      Array.from({ length: 10 }, () =>
+        h.app.inject({
+          method: 'POST',
+          url: '/auth/session',
+          payload: { username: 'owner', password: 'wrong password!' },
+        }),
+      ),
+    );
+
+    expect(codes.map((r) => r.statusCode).sort()).toEqual([
+      ...Array(5).fill(401),
+      ...Array(5).fill(429),
+    ]);
+  });
+
+  it('behind the proxy, limits on the nearest hop, not a forged X-Forwarded-For', async () => {
+    const h = await harness({ trustProxy: true });
+    const signIn = (forged: string) =>
+      h.app.inject({
+        method: 'POST',
+        url: '/auth/session',
+        headers: { 'x-forwarded-for': `${forged}, 203.0.113.9` },
+        payload: { username: 'owner', password: 'wrong password!' },
+      });
+    for (let i = 0; i < 5; i += 1) await signIn(`6.6.6.${i}`);
+
+    expect((await signIn('7.7.7.7')).statusCode).toBe(429);
   });
 
   it('prints no link once an account exists', async () => {

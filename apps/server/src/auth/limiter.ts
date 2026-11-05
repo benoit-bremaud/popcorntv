@@ -1,3 +1,5 @@
+import { isIPv6 } from 'node:net';
+
 /** Failure counter of one key inside its window. */
 interface Window {
   count: number;
@@ -40,7 +42,8 @@ export class LoginLimiter {
   }
 
   /** Whether `ip` may try again; `key` is the submitted username key, or null for a route without one. */
-  check(ip: string, key: string | null, now: number = Date.now()): LimitCheck {
+  check(address: string, key: string | null, now: number = Date.now()): LimitCheck {
+    const ip = clientKey(address);
     const blocking = [
       { window: this.live(`ip:${ip}`, now), limit: this.ipLimit },
       ...(key === null
@@ -54,15 +57,27 @@ export class LoginLimiter {
     return { allowed: false, retryAfterSec: Math.max(retryAfterSec, 1), firstRefusal };
   }
 
-  /** Counts a failure against the IP and, when given, the pair. */
-  fail(ip: string, key: string | null, now: number = Date.now()): void {
+  /**
+   * Counts a failure against the IP and, when given, the pair. Hashing routes call it
+   * before awaiting the hasher, so concurrent attempts cannot all pass `check`.
+   */
+  fail(address: string, key: string | null, now: number = Date.now()): void {
+    const ip = clientKey(address);
     this.bump(`ip:${ip}`, now);
     if (key !== null) this.bump(pairKey(ip, key), now);
   }
 
-  /** A success clears the pair (spec auth R8), not the IP count. */
-  succeed(ip: string, key: string): void {
+  /** A success clears the pair (spec auth R8) and refunds the attempt reserved on the IP. */
+  succeed(address: string, key: string): void {
+    const ip = clientKey(address);
     this.windows.delete(pairKey(ip, key));
+    const window = this.windows.get(`ip:${ip}`);
+    if (window && window.count > 0) window.count -= 1;
+  }
+
+  /** Tracked keys, for tests of the sweep. */
+  get size(): number {
+    return this.windows.size;
   }
 
   private bump(id: string, now: number): void {
@@ -89,6 +104,26 @@ export class LoginLimiter {
       if (now - window.startedAt >= this.windowMs) this.windows.delete(id);
     }
   }
+}
+
+/**
+ * The limited identity of an address: IPv4 as is (IPv4-mapped IPv6 included), IPv6 by
+ * its /64, since one client controls a whole /64.
+ */
+export function clientKey(address: string): string {
+  const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/i.exec(address);
+  if (mapped) return mapped[1] ?? address;
+  if (!isIPv6(address)) return address;
+  const [head = '', tail = ''] = address.split('::');
+  const left = head === '' ? [] : head.split(':');
+  const right = address.includes('::') && tail !== '' ? tail.split(':') : [];
+  const groups = address.includes('::')
+    ? [...left, ...Array<string>(8 - left.length - right.length).fill('0'), ...right]
+    : left;
+  return `${groups
+    .slice(0, 4)
+    .map((group) => group.toLowerCase().replace(/^0+(?=.)/, ''))
+    .join(':')}::/64`;
 }
 
 function pairKey(ip: string, key: string): string {

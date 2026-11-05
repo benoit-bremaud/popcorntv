@@ -77,7 +77,12 @@ export interface AppOptions {
 
 /** Builds the HTTP application without listening — the tests inject requests directly. */
 export function buildApp(options: AppOptions): FastifyInstance {
-  const app = Fastify({ logger: options.logger ?? false, trustProxy: options.trustProxy ?? false });
+  // Trust one hop, not `true`: the socket peer is the proxy, and only the entry it
+  // appended to X-Forwarded-For is believed; a forged left-most entry is ignored.
+  const app = Fastify({
+    logger: options.logger ?? false,
+    trustProxy: options.trustProxy ? (_address: string, hop: number) => hop === 0 : false,
+  });
 
   // On every reply, errors and streamed media included. The CSP and `frame-ancestors`
   // belong to whatever serves the web build.

@@ -37,7 +37,7 @@
   `http://localhost:5173` (the Vite origin). Every client, LAN included, uses that
   origin (through the proxy in production). It drives the cookie flags (R5), the CSRF
   check (R7) and the links (§4.2).
-- **R7** A non-GET request is refused with `403 csrf` when `Sec-Fetch-Site` is
+- **R7** A request other than GET, HEAD or OPTIONS is refused with `403 csrf` when `Sec-Fetch-Site` is
   `cross-site`, or when an `Origin` header is present and differs from `PUBLIC_URL`'s
   origin. GET routes have no security-relevant side effect (only keep-alive and cache
   fills).
@@ -45,6 +45,8 @@
   (IP, submitted username key) per 15 min, whether or not the account exists; 30
   failures per IP per 15 min across every route that runs the hasher (`/auth/session`,
   `/auth/setup`, `/auth/redeem`, `PUT /auth/password`). A success clears the pair.
+  An attempt counts before the hash runs and a success refunds it, so concurrent tries
+  cannot all pass the check; an IPv6 address counts by its /64.
   The pair key means a stranger cannot lock the owner out from the owner's own address.
   Sign-in and `PUT /auth/password` failures answer the same `401 invalid_credentials`
   (setup and redeem answer `404 token_invalid`); a limit answers `429` with
@@ -207,7 +209,7 @@ receives `Pick<ProfileRepository, 'adoptOrphans' | 'createFirst'>`.
 - Fastify listens on `0.0.0.0` inside the container on a private Docker network shared
   with Caddy; the compose file publishes no port (or `127.0.0.1:3000:3000` for local
   dev). The `HEALTHCHECK` on `127.0.0.1:3000` keeps working.
-- `PUBLIC_URL=https://…`; `TRUST_PROXY=1` so the limiter reads the client IP from
+- `PUBLIC_URL=https://…`; `TRUST_PROXY=1` (trusts one hop: the nearest proxy) so the limiter reads the client IP from
   `X-Forwarded-For`. Never set it without a proxy (spoofable).
 
 ## 6. Error shape

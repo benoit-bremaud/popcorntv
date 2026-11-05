@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LoginLimiter } from './limiter.js';
+import { LoginLimiter, clientKey } from './limiter.js';
 
 const MINUTE = 60_000;
 
@@ -57,9 +57,9 @@ describe('LoginLimiter', () => {
     expect(limiter.check('ip', null, 0)).toMatchObject({ allowed: false });
   });
 
-  it('clears the pair on success but not the address count', () => {
+  it('clears the pair on success and refunds only the reserved attempt', () => {
     const limiter = new LoginLimiter({ ipLimit: 6 });
-    failTimes(limiter, 5, 'ip', 'owner');
+    failTimes(limiter, 6, 'ip', 'owner');
 
     limiter.succeed('ip', 'owner');
 
@@ -72,9 +72,33 @@ describe('LoginLimiter', () => {
     const limiter = new LoginLimiter({ windowMs: 1_000 });
     for (let i = 0; i < 5_000; i += 1) limiter.fail(`ip${i}`, `u${i}`, 0);
 
+    const before = limiter.size;
+
     limiter.fail('late', 'owner', 2_000);
 
-    expect(limiter.check('ip1', 'u1', 2_000)).toEqual({ allowed: true });
-    expect(limiter.check('late', 'owner', 2_000)).toEqual({ allowed: true });
+    expect(before).toBe(10_000);
+    expect(limiter.size).toBe(2);
+  });
+
+  it('counts an IPv6 /64 as one address', () => {
+    const limiter = new LoginLimiter({ ipLimit: 2 });
+    limiter.fail('2001:db8:1:2::a', null, 0);
+    limiter.fail('2001:db8:1:2:ffff::1', null, 0);
+
+    expect(limiter.check('2001:db8:1:2:3:4:5:6', null, 0)).toMatchObject({ allowed: false });
+    expect(limiter.check('2001:db8:1:3::a', null, 0)).toEqual({ allowed: true });
+  });
+});
+
+describe('clientKey', () => {
+  it.each([
+    ['203.0.113.9', '203.0.113.9'],
+    ['::ffff:203.0.113.9', '203.0.113.9'],
+    ['2001:0DB8:0001:0002:0003:0004:0005:0006', '2001:db8:1:2::/64'],
+    ['2001:db8::1', '2001:db8:0:0::/64'],
+    ['::1', '0:0:0:0::/64'],
+    ['fe80::', 'fe80:0:0:0::/64'],
+  ])('maps %s to %s', (address, key) => {
+    expect(clientKey(address)).toBe(key);
   });
 });

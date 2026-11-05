@@ -37,7 +37,8 @@ pnpm dev:web                 # http://localhost:5173
 
 ### First start: the owner account
 
-Every route but `/health` and sign-in needs an account. On a fresh database the server logs
+Every route but `/health`, `GET /auth/status`, `POST /auth/setup` and `POST /auth/session`
+needs an account. On a fresh database the server logs
 a one-time setup link (`PUBLIC_URL/#/setup/<token>`, valid one hour, a new one at each
 start); open it to create the owner account. The owner then invites the household (next
 lot of #18). `PUBLIC_URL` is the one origin every browser uses — `http://localhost:5173` in

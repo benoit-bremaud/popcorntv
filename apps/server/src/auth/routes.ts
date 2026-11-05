@@ -117,10 +117,10 @@ export function registerAuthRoutes(app: FastifyInstance, deps: AuthRoutesDeps): 
       }
       return tooMany(reply, limit.retryAfterSec);
     }
+    limiter.fail(request.ip, key);
     const stored = users.findByUsername(body.data.username);
     const ok = await deps.hasher.verify(stored?.passwordHash ?? null, body.data.password);
     if (!stored || !ok) {
-      limiter.fail(request.ip, key);
       events.record('login_failed', {
         userId: stored?.id ?? null,
         ip: request.ip,
@@ -161,8 +161,8 @@ export function registerAuthRoutes(app: FastifyInstance, deps: AuthRoutesDeps): 
     const key = usernameKey(stored.username);
     const limit = limiter.check(request.ip, key);
     if (!limit.allowed) return tooMany(reply, limit.retryAfterSec);
+    limiter.fail(request.ip, key);
     if (!(await deps.hasher.verify(stored.passwordHash, body.data.current))) {
-      limiter.fail(request.ip, key);
       return reply.code(401).send(apiError('invalid_credentials'));
     }
     limiter.succeed(request.ip, key);
