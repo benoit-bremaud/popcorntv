@@ -11,6 +11,7 @@ import type {
 } from '@popcorntv/shared';
 import type { AdminApi, AdminResult } from '../api.js';
 import { authMessage } from './auth-api.js';
+import type { ApiErrorCode } from '@popcorntv/shared';
 import { useFocusedTitle } from './form-hooks.js';
 
 type Props = {
@@ -22,6 +23,19 @@ type Props = {
 
 /** A link shown once, with what it is for. */
 type Shown = { readonly label: string; readonly issued: IssuedLink };
+
+/** What to tell the owner for a refused administration call. */
+export function adminMessage(error: ApiErrorCode | null): string {
+  switch (error) {
+    case 'not_found':
+    case 'session_not_found':
+      return 'It no longer exists: the list was refreshed.';
+    case 'forbidden':
+      return 'Only an owner can do this.';
+    default:
+      return authMessage(error);
+  }
+}
 
 const when = (iso: string | null) => (iso === null ? 'never' : new Date(iso).toLocaleString());
 
@@ -50,7 +64,7 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
     if (i.ok) setInvitations(i.value);
     if (e.ok) setEvents(e.value);
     const failed = [a, i, e].find((r) => !r.ok);
-    setMessage(failed && !failed.ok ? authMessage(failed.error) : null);
+    setMessage(failed && !failed.ok ? adminMessage(failed.error) : null);
   }, [api]);
 
   useEffect(() => {
@@ -64,15 +78,16 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
   ): Promise<void> {
     setConfirming(null);
     const result = await run();
-    if (!result.ok) return setMessage(authMessage(result.error));
-    done?.(result.value);
+    // Refresh either way: a refusal often means the list is stale (another owner acted).
+    if (result.ok) done?.(result.value);
     await refresh();
+    if (!result.ok) setMessage(adminMessage(result.error));
   }
 
   async function showDevices(userId: string): Promise<void> {
     const result = await api.devices(userId);
     if (result.ok) setDevices({ userId, list: result.value });
-    else setMessage(authMessage(result.error));
+    else setMessage(adminMessage(result.error));
   }
 
   return (
@@ -189,6 +204,18 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
               }
             >
               Reset link
+            </button>
+            <button
+              type="button"
+              className="button button-quiet"
+              onClick={() =>
+                void act(
+                  () => api.revokeReset(account.id),
+                  () => setShown(null),
+                )
+              }
+            >
+              Revoke reset link
             </button>
             <button
               type="button"

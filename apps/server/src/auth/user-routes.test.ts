@@ -1,12 +1,12 @@
 import { tmpdir } from 'node:os';
-import { afterEach, describe, expect, it } from 'vitest';
-import { eq } from 'drizzle-orm';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { desc, eq } from 'drizzle-orm';
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import type { Account, AuthEvent, Invitation, IssuedLink, User } from '@popcorntv/shared';
 import { buildApp } from '../app.js';
 import { openDatabase } from '../db/index.js';
 import type { AppDatabase } from '../db/index.js';
-import { authTokens, profiles, users } from '../db/schema.js';
+import { authEvents, authTokens, profiles, users } from '../db/schema.js';
 import { createAccount, fakeHasher, testAuthOptions } from '../test-fixtures.js';
 import type { TestAccount } from '../test-fixtures.js';
 import type { Hasher } from './hasher.js';
@@ -170,8 +170,9 @@ describe('invitations (UC12, UC15)', () => {
     expect(response.json<User>().role).toBe('owner');
   });
 
-  it('rate-limits wrong tokens per address and refunds a busy hasher', async () => {
-    const h = await harness();
+  it('rate-limits wrong tokens per address without hashing them', async () => {
+    const hash = vi.fn(fakeHasher.hash);
+    const h = await harness({ ...fakeHasher, hash });
     for (let i = 0; i < 30; i += 1) {
       await redeem(h, { kind: 'reset', token: `wrong-${i}`, password: PASSWORD });
     }
@@ -180,6 +181,25 @@ describe('invitations (UC12, UC15)', () => {
 
     expect(locked.statusCode).toBe(429);
     expect(locked.headers['retry-after']).toBeDefined();
+    expect(hash).not.toHaveBeenCalled();
+  });
+
+  it('refunds a successful redeem and a taken username (spec auth R8)', async () => {
+    const h = await harness();
+    const token = await invite(h);
+    // 29 of the 30 attempts: without the refunds, 409 and 200 would reach the limit.
+    for (let i = 0; i < 29; i += 1) {
+      await redeem(h, { kind: 'reset', token: `wrong-${i}`, password: PASSWORD });
+    }
+
+    const taken = await redeem(h, { kind: 'invite', token, username: 'owner', password: PASSWORD });
+    const ok = await redeem(h, { kind: 'invite', token, username: 'guest', password: PASSWORD });
+    const still = await redeem(h, { kind: 'reset', token: 'wrong', password: PASSWORD });
+    const locked = await redeem(h, { kind: 'reset', token: 'wrong', password: PASSWORD });
+
+    expect([taken.statusCode, ok.statusCode, still.statusCode, locked.statusCode]).toEqual([
+      409, 200, 404, 429,
+    ]);
   });
 
   it('answers 429 without counting when the hasher is saturated', async () => {
@@ -190,9 +210,11 @@ describe('invitations (UC12, UC15)', () => {
       verify: fakeHasher.verify,
     };
     const h = await harness(busy);
+    const token = await invite(h);
     const responses = [];
     for (let i = 0; i < 31; i += 1) {
-      responses.push(await redeem(h, { kind: 'reset', token: 'x', password: PASSWORD }));
+      const payload = { kind: 'invite', token, username: 'guest', password: PASSWORD };
+      responses.push(await redeem(h, payload));
     }
 
     expect(responses.every((r) => r.statusCode === 429)).toBe(true);
@@ -256,6 +278,29 @@ describe('reset links (UC16, UC20)', () => {
     expect(revoked.statusCode).toBe(204);
     expect(none.statusCode).toBe(404);
     expect(late.statusCode).toBe(404);
+  });
+
+  it('lifts the sign-in lockout of the account from this address', async () => {
+    const h = await harness();
+    const viewer = createAccount(h.db, 'kid', 'viewer');
+    const signIn = (password: string) =>
+      h.app.inject({
+        method: 'POST',
+        url: '/auth/session',
+        payload: { username: 'kid', password },
+      });
+    for (let i = 0; i < 5; i += 1) await signIn('wrong password!');
+    const token = tokenOf(
+      await as(h, h.owner.cookie, 'POST', `/users/${viewer.userId}/reset`),
+      'reset',
+    );
+
+    const locked = await signIn(PASSWORD);
+    await redeem(h, { kind: 'reset', token, password: PASSWORD });
+    const after = await signIn(PASSWORD);
+
+    expect(locked.statusCode).toBe(429);
+    expect(after.statusCode).toBe(200);
   });
 
   it('answers 404 for an unknown account', async () => {
@@ -322,6 +367,21 @@ describe('account administration (UC17)', () => {
     });
 
     expect(response.statusCode).toBe(200);
+    expect((await as(h, h.owner.cookie, 'GET', '/users')).statusCode).toBe(403);
+  });
+
+  it('lets an owner delete their own account once another owner exists', async () => {
+    const h = await harness();
+    createAccount(h.db, 'second', 'owner');
+
+    const response = await as(h, h.owner.cookie, 'DELETE', `/users/${h.owner.userId}`);
+
+    expect(response.statusCode).toBe(204);
+    expect((await as(h, h.owner.cookie, 'GET', '/auth/status')).json()).toEqual({
+      setupRequired: false,
+    });
+    const [last] = h.db.select().from(authEvents).orderBy(desc(authEvents.id)).limit(1).all();
+    expect(last).toMatchObject({ kind: 'user_deleted', userId: null });
   });
 
   it('deletes an account with its sessions, profiles and links', async () => {

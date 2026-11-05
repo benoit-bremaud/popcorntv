@@ -95,6 +95,8 @@ classDiagram
 - `Profile.userId` is a nullable SQL column with an FK cascade; it is null only between
   migration `0006` and setup, and the repository never writes null. `(userId, nameKey)`
   is unique.
-- `AuthEvent.userId` is `SET NULL` on delete, so history outlives an account.
+- `AuthEvent.userId` is `SET NULL` on delete, so history outlives an account. It names
+  the account acted on; invitations and deletions, which leave none, name the acting
+  owner (spec R9).
 - `tokenHash` holds SHA-256 of a 256-bit random token; the raw value is never stored or
   logged.

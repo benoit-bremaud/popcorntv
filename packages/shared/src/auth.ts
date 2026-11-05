@@ -103,7 +103,10 @@ export const AUTH_EVENT_KINDS = [
 
 export type AuthEventKind = (typeof AUTH_EVENT_KINDS)[number];
 
-/** A row of `GET /auth/events` (UC18), newest first. */
+/**
+ * A row of `GET /auth/events` (UC18), newest first. `userId` is the account acted on; for
+ * invitations and deletions it is the acting owner (null when an owner deleted themselves).
+ */
 export interface AuthEvent {
   readonly id: number;
   readonly at: string;

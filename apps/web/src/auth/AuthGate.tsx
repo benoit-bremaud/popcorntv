@@ -18,7 +18,8 @@ type Gate =
   | { readonly kind: 'setup' }
   | { readonly kind: 'signIn' }
   | { readonly kind: 'redeem'; readonly link: 'invite' | 'reset'; readonly token: string }
-  | { readonly kind: 'signedIn'; readonly user: User; readonly admin: boolean };
+  | { readonly kind: 'signedIn'; readonly user: User }
+  | { readonly kind: 'admin'; readonly user: User };
 
 type Props = {
   /** The signed-in app; `account` is the header menu to place in it. */
@@ -52,7 +53,7 @@ export function AuthGate({
       // An invitation or reset link wins over a session: the person opened it on purpose.
       const link = status.setupRequired ? null : linkFromHash(location.hash);
       if (link) setGate({ kind: 'redeem', link: link.kind, token: link.token });
-      else if (status.user) setGate({ kind: 'signedIn', user: status.user, admin: false });
+      else if (status.user) setGate({ kind: 'signedIn', user: status.user });
       else setGate({ kind: status.setupRequired ? 'setup' : 'signIn' });
     } catch {
       setGate({ kind: 'failed' });
@@ -75,20 +76,20 @@ export function AuthGate({
 
   function signedIn(user: User): void {
     forgetLink();
-    setGate({ kind: 'signedIn', user, admin: false });
+    setGate({ kind: 'signedIn', user });
   }
 
-  if (gate.kind === 'signedIn') {
+  if (gate.kind === 'signedIn' || gate.kind === 'admin') {
     const { user } = gate;
     const account = (
       <AccountMenu
         user={user}
         api={api}
         onSignedOut={() => setGate({ kind: 'signIn' })}
-        onAdmin={() => setGate({ kind: 'signedIn', user, admin: true })}
+        onAdmin={() => setGate({ kind: 'admin', user })}
       />
     );
-    if (gate.admin) {
+    if (gate.kind === 'admin') {
       return (
         <>
           <header className="header">
@@ -99,7 +100,7 @@ export function AuthGate({
             <AdminPanel
               api={admin}
               user={user}
-              onClose={() => setGate({ kind: 'signedIn', user, admin: false })}
+              onClose={() => setGate({ kind: 'signedIn', user })}
             />
           </main>
         </>

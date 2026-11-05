@@ -56,7 +56,9 @@
 - **R9** `auth_events` records sign-in success and failure, the first refusal of each
   lockout window, first-owner setup, sign-out, invitation and reset issue and
   revocation, redeem, password change, sessions ended by the owner, role change and
-  deletion. No password, no token; `username_tried` only on
+  deletion. `user_id` is the account acted on; invitations and deletions, which leave
+  none, record the acting owner (null when an owner deletes their own account). No
+  password, no token; `username_tried` only on
   failures and only when it matches the username syntax. Rows older than 90 days are
   purged.
 - **R10** A profile belongs to one user. Name uniqueness, the 12-profile limit and the

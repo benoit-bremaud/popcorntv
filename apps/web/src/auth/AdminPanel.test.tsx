@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { User } from '@popcorntv/shared';
 import type { AdminApi } from '../api.js';
-import { AdminPanel } from './AdminPanel.js';
+import { AdminPanel, adminMessage } from './AdminPanel.js';
 import { fakeAdminApi } from './admin-fixtures.js';
 
 const owner: User = { id: 'u1', username: 'owner', role: 'owner' };
@@ -80,6 +80,7 @@ describe('AdminPanel', () => {
     const { api } = panel();
 
     await user.click(await screen.findByRole('button', { name: 'Delete' }));
+    expect(api.deleteAccount).not.toHaveBeenCalled();
     await user.click(screen.getByRole('button', { name: 'Confirm deletion of kid' }));
 
     expect(api.deleteAccount).toHaveBeenCalledWith('u2');
@@ -102,5 +103,38 @@ describe('AdminPanel', () => {
     await user.click(await screen.findByRole('button', { name: 'Done' }));
 
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it('revokes a reset link', async () => {
+    const user = userEvent.setup();
+    const { api } = panel();
+
+    const [kidRevoke] = await screen.findAllByRole('button', { name: 'Revoke reset link' });
+    await user.click(kidRevoke as HTMLElement);
+
+    expect(api.revokeReset).toHaveBeenCalledWith('u2');
+  });
+
+  it('refreshes the lists after a refusal and explains it', async () => {
+    const user = userEvent.setup();
+    const { api } = panel({
+      revokeInvitation: vi.fn(async () => ({ ok: false as const, error: 'not_found' as const })),
+    });
+    await user.click(await screen.findByRole('button', { name: 'Revoke' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('no longer exists');
+    expect(api.invitations).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('adminMessage', () => {
+  it.each([
+    ['not_found', /no longer exists/],
+    ['session_not_found', /no longer exists/],
+    ['forbidden', /Only an owner/],
+    ['last_owner', /last owner/],
+    [null, /could not be reached/],
+  ] as const)('explains %s', (code, expected) => {
+    expect(adminMessage(code)).toMatch(expected);
   });
 });

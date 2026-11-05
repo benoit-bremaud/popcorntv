@@ -28,7 +28,8 @@ const OWNER = { config: { access: 'owner' } } as const;
 
 /**
  * UC15–UC18 (spec auth §4.2): invitations, reset links, account administration and the
- * event list. Every route is owner-only.
+ * event list. Every route is owner-only. An event's `userId` is the account acted on; for
+ * invitations and deletions, which leave none, it is the acting owner (spec auth R9).
  */
 export function registerUserRoutes(app: FastifyInstance, deps: UserRoutesDeps): void {
   const { users, sessions, tokens, events } = deps;
@@ -40,8 +41,7 @@ export function registerUserRoutes(app: FastifyInstance, deps: UserRoutesDeps): 
   const notFound = (reply: FastifyReply) => reply.code(404).send(apiError('not_found'));
 
   app.get('/users', OWNER, (_request, reply) => {
-    const now = new Date();
-    return reply.send(users.list((id) => sessions.listLive(id, now).length));
+    return reply.send(users.list(sessions.liveCounts(new Date())));
   });
 
   app.patch('/users/:id', OWNER, (request, reply) => {
@@ -66,12 +66,14 @@ export function registerUserRoutes(app: FastifyInstance, deps: UserRoutesDeps): 
   app.delete('/users/:id', OWNER, (request, reply) => {
     const params = userParams.safeParse(request.params);
     if (!params.success) return reply.code(400).send(invalid(params.error.issues));
+    const actor = callerOf(request).userId;
     // The cascade removes the account's sessions, profiles and reset links.
     const result = deps.db.transaction(() => users.delete(params.data.id));
     if (result === 'not_found') return notFound(reply);
     if (result === 'last_owner') return reply.code(409).send(apiError('last_owner'));
-    // The account row is gone: the event names the owner who deleted it.
-    events.record('user_deleted', { userId: callerOf(request).userId, ip: request.ip });
+    // The deleted row cannot be referenced: name the acting owner, unless they deleted themselves.
+    const userId = actor === params.data.id ? null : actor;
+    events.record('user_deleted', { userId, ip: request.ip });
     return reply.code(204).send();
   });
 

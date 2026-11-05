@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, lt, ne, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, lt, ne, or } from 'drizzle-orm';
 import type { DeviceSession, Role } from '@popcorntv/shared';
 import type { AppDatabase } from '../db/index.js';
 import { sessions, users } from '../db/schema.js';
@@ -129,6 +129,17 @@ export class SessionRepository {
       .where(and(eq(sessions.userId, userId), this.live(now)))
       .orderBy(desc(sessions.createdAt))
       .all();
+  }
+
+  /** Live sessions per user (UC17), in one grouped query. */
+  liveCounts(now: Date): Map<string, number> {
+    const rows = this.db
+      .select({ userId: sessions.userId, n: count() })
+      .from(sessions)
+      .where(this.live(now))
+      .groupBy(sessions.userId)
+      .all();
+    return new Map(rows.map((row) => [row.userId, row.n]));
   }
 
   /** Ends one live session of `userId` (UC17); false when none matches. */

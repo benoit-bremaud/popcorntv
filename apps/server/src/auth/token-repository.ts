@@ -18,15 +18,11 @@ export interface IssuedToken {
   readonly expiresAt: string;
 }
 
-/** What a consumed token grants: the invited role, or the account to reset. */
-export type ConsumedToken =
-  | { readonly kind: 'invite'; readonly role: Role }
-  | { readonly kind: 'reset'; readonly userId: string };
-
 /** Single-use invitation and reset links (spec auth §4.1, UC15, UC16). */
 export class TokenRepository {
   constructor(private readonly db: AppDatabase) {}
 
+  /** Issues a single-use invitation for `role`, valid 72 h (UC15); the raw token is returned once. */
   issueInvite(role: Role, now: Date): IssuedToken {
     return this.insert({ kind: 'invite', role, userId: null }, INVITE_TTL_MS, now);
   }
@@ -73,22 +69,30 @@ export class TokenRepository {
     return result.changes > 0;
   }
 
-  /**
-   * Marks a pending token of `kind` used and returns what it grants, or null (spec auth
-   * §4.1): the guarded update changes exactly one row, so concurrent redeems cannot both
-   * win. Call it inside the redeem transaction so a later failure rolls it back.
-   */
-  consume(token: string, kind: 'invite' | 'reset', now: Date): ConsumedToken | null {
-    const tokenHash = hashToken(token);
+  /** Whether `token` is a pending link of `kind`: a cheap check before hashing (spec auth R8). */
+  isPending(token: string, kind: 'invite' | 'reset', now: Date): boolean {
     const row = this.db
-      .update(authTokens)
-      .set({ usedAt: now.toISOString() })
-      .where(and(eq(authTokens.tokenHash, tokenHash), eq(authTokens.kind, kind), this.pending(now)))
-      .returning({ role: authTokens.role, userId: authTokens.userId })
+      .select({ id: authTokens.id })
+      .from(authTokens)
+      .where(
+        and(
+          eq(authTokens.tokenHash, hashToken(token)),
+          eq(authTokens.kind, kind),
+          this.pending(now),
+        ),
+      )
       .get();
-    if (row === undefined) return null;
-    if (kind === 'invite') return { kind, role: row.role ?? 'viewer' };
-    return row.userId === null ? null : { kind, userId: row.userId };
+    return row !== undefined;
+  }
+
+  /** Spends a pending invitation and returns its role, or null (UC12). In the redeem transaction. */
+  consumeInvite(token: string, now: Date): Role | null {
+    return this.consume(token, 'invite', now)?.role ?? null;
+  }
+
+  /** Spends a pending reset link and returns its account, or null (UC20). In the redeem transaction. */
+  consumeReset(token: string, now: Date): string | null {
+    return this.consume(token, 'reset', now)?.userId ?? null;
   }
 
   /** Deletes used, revoked and expired tokens (spec auth §4.1). */
@@ -103,6 +107,25 @@ export class TokenRepository {
         ),
       )
       .run();
+  }
+
+  /**
+   * Marks a pending token used (spec auth §4.1): the guarded update changes exactly one row,
+   * so concurrent redeems cannot both win; a later failure in the transaction rolls it back.
+   */
+  private consume(token: string, kind: 'invite' | 'reset', now: Date) {
+    return this.db
+      .update(authTokens)
+      .set({ usedAt: now.toISOString() })
+      .where(
+        and(
+          eq(authTokens.tokenHash, hashToken(token)),
+          eq(authTokens.kind, kind),
+          this.pending(now),
+        ),
+      )
+      .returning({ role: authTokens.role, userId: authTokens.userId })
+      .get();
   }
 
   private insert(
