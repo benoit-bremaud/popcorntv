@@ -91,7 +91,10 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
 
   async function showDevices(userId: string): Promise<void> {
     const result = await api.devices(userId);
-    if (result.ok) return setDevices({ userId, list: result.value });
+    if (result.ok) {
+      setDevices({ userId, list: result.value });
+      return;
+    }
     await refresh();
     setMessage(adminMessage(result.error));
   }

@@ -75,6 +75,20 @@ describe('AdminPanel', () => {
     expect(api.endSessions).toHaveBeenCalledWith('u2', 's1');
   });
 
+  it('refreshes the lists when the devices of an account cannot be loaded', async () => {
+    const user = userEvent.setup();
+    const { api } = panel({
+      devices: vi.fn(() => Promise.resolve({ ok: false as const, error: 'not_found' as const })),
+    });
+
+    await user.click((await screen.findAllByRole('button', { name: 'Devices' }))[0] as HTMLElement);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'It no longer exists: the list was refreshed.',
+    );
+    expect(api.accounts).toHaveBeenCalledTimes(2);
+  });
+
   it('asks for confirmation before deleting, and never offers to delete oneself', async () => {
     const user = userEvent.setup();
     const { api } = panel();
