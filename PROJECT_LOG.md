@@ -4,6 +4,22 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-05 — #18 accounts and remote access, design (PR #64 merged, `9f0fcf2`)
+
+- **Changes** — design only: spec `docs/architecture/specs/auth.md` (UC11–UC20, R1–R12),
+  ADR-0010, 7 diagrams under `docs/architecture/diagrams/auth/`; ADR-0008 §4 superseded and
+  the profiles spec and sequence scoped per user. #18 stays open for the implementation.
+- **Decisions** — ADR-0010: invitation links (440/500), server-side sessions with an opaque
+  SHA-256-stored token (475), CSRF by `SameSite=Lax` plus an `Origin` / `Sec-Fetch-Site`
+  check (460), first owner by a one-time setup token (420), profiles owned by users (430).
+  Email/SMTP and TOTP split out of #18.
+- **Reviews** — 5 adversarial rounds (last with 0 finding) and an architecture review, all
+  applied; Codex found no issue.
+- **Gate** on `c50aa0f` (main merged in) — 31 shared + 334 server + 129 web tests, smoke 1/1,
+  SonarQube PASSED, gitleaks clean, CI green. Squash-merged with owner approval.
+- **Follow-ups filed** — #58 email, #59 TOTP, #60 homelab deploy, #61 README index, #62
+  Jellyfin parity, #63 conception coherence.
+
 ## 2026-11-05 — #65 smoke mocks the profiles API (PR #66 merged, `e3ea142`)
 
 - **Changes** — the Playwright catalog smoke had been red since #10, because `/api/profiles`
