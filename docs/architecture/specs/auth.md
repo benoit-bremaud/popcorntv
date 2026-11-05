@@ -147,7 +147,7 @@ Paths are Fastify routes; the browser reaches them under `/api` (§5).
 | `POST /auth/redeem` `{ kind: 'reset', token, password }` | public | `200 User` + cookie |
 | `POST /auth/session` `{ username, password }` | public | `200 User` + cookie |
 | `DELETE /auth/session` · `DELETE /auth/sessions` | session | `204` |
-| `PUT /auth/password` `{ current, next }` | session | `204` |
+| `PUT /auth/password` `{ current, next }` | session | `204` + cookie (rotated token) |
 | `GET /users` · `PATCH /users/:id` `{ role }` · `DELETE /users/:id` | owner | list · `200` · `204` |
 | `GET /users/:id/sessions` · `DELETE /users/:id/sessions[/:sessionId]` | owner | list · `204` |
 | `POST /users/:id/reset` | owner | `201 { link, expiresAt }` |
@@ -235,8 +235,9 @@ receives `Pick<ProfileRepository, 'adoptOrphans' | 'createFirst'>`.
   purge.
 - Routes (`app.inject`): setup once, invite → redeem, reset → redeem, kind mismatch,
   username taken keeps the token, sign-in/out, a pre-set cookie is replaced at sign-in,
-  lockout, no enumeration (same status and body), every non-public route `401` without a
-  cookie (built from the route table), `403` for a viewer on owner routes, role change
+  a password change rotates the cookie and the old token gets `401`, lockout, no
+  enumeration (same status and body), every non-public route `401` without a cookie
+  (built from the route table), `403` for a viewer on owner routes, role change
   applies at once, cross-user profile and playback session → `404`, CSRF `403`.
 - Web: setup, sign-in, invite and reset screens, users and invitations panel, `401` →
   sign-in.

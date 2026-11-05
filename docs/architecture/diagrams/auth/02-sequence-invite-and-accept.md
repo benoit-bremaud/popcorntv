@@ -55,7 +55,7 @@ sequenceDiagram
       API->>API: revoke the carried session · create session · set last_login_at
       API-->>W: 200 + session cookie
     else reset
-      API->>UR: set password · revoke all sessions · create session · set last_login_at
+      API->>UR: revoke the carried session · set password · revoke all sessions · create session · set last_login_at
       API-->>W: 200 + new session cookie
     end
   end
