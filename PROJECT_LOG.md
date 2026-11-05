@@ -22,6 +22,27 @@ context: merged PRs, decisions, tags, infra events. Not a release changelog — 
   another path; #60: Uptime Kuma probe, Tdarr and Bazarr flows, Maintainerr rule audit,
   Jellyfin history import. To file after #18: the Seerr link and a scheduled library scan.
 
+## 2026-11-05 — #18 accounts and sessions, lot 1 (PR #70 merged, `b82913d`)
+
+- **Changes** — migration 0006 (`users`, `sessions`, `auth_tokens`, `auth_events`,
+  `profiles.user_id`, `ADD COLUMN` so `watch_progress` survives); opaque session cookie
+  stored as SHA-256 (idle 14 d, absolute 90 d, cap 20, rotation); argon2id behind a 4-slot
+  semaphore; in-memory limiter (attempt counted before hashing, busy refunded, IPv6 by /64);
+  one-time setup link; access hook with `config.access` and the `Origin` /
+  `Sec-Fetch-Site` CSRF check; profiles, progress and playback sessions per user; web
+  setup, sign-in and account menu. `PUBLIC_URL` required, `TRUST_PROXY=1` trusts one hop.
+- **Decisions** — owner chose lot 1 = core (MCDA 475/500); CodeQL
+  `js/missing-rate-limiting` alerts 16–18 dismissed as false positives (410/500), global
+  limit tracked in #72; Copilot and Codex reviews dropped for lack of credit, the local
+  gate is the reference.
+- **Reviews** — 3 adversarial rounds (Opus): round 1 2 Must + 3 Should, round 2 1 Must +
+  1 Should, round 3 gate open; Codex: 3 findings fixed; SonarQube: 17 smells fixed.
+- **Gate** on `644cfef` — 38 shared + 435 server + 157 web tests, coverage server 98 % /
+  web 99 %, smoke 1/1 on the prod build, SonarQube PASSED, gitleaks clean, CI green.
+  Squash-merged with owner approval.
+- **Follow-ups filed** — #72 global rate limit, #73 lot 2 (invitations, resets,
+  administration, events, carried-over review nits), #74 per-account transcode slot.
+
 ## 2026-11-05 — #18 accounts and remote access, design (PR #64 merged, `9f0fcf2`)
 
 - **Changes** — design only: spec `docs/architecture/specs/auth.md` (UC11–UC20, R1–R12),
