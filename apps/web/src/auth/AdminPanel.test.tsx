@@ -115,6 +115,34 @@ describe('AdminPanel', () => {
     expect(api.revokeReset).toHaveBeenCalledWith('u2');
   });
 
+  it('keeps an invitation link on screen when a reset link is revoked', async () => {
+    const user = userEvent.setup();
+    panel();
+
+    await user.click(await screen.findByRole('button', { name: 'Create an invitation link' }));
+    await screen.findByLabelText('Link to send');
+    await user.click(
+      screen.getAllByRole('button', { name: 'Revoke reset link' })[0] as HTMLElement,
+    );
+
+    expect(screen.getByLabelText('Link to send')).toHaveValue('http://localhost:5173/#/invite/abc');
+  });
+
+  it('hides the reset link of an account once revoked', async () => {
+    const user = userEvent.setup();
+    panel();
+
+    await user.click(
+      (await screen.findAllByRole('button', { name: 'Reset link' }))[0] as HTMLElement,
+    );
+    await screen.findByLabelText('Link to send');
+    await user.click(
+      screen.getAllByRole('button', { name: 'Revoke reset link' })[0] as HTMLElement,
+    );
+
+    expect(screen.queryByLabelText('Link to send')).toBeNull();
+  });
+
   it('refreshes the lists after a refusal and explains it', async () => {
     const user = userEvent.setup();
     const { api } = panel({

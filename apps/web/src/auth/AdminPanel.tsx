@@ -22,7 +22,12 @@ type Props = {
 };
 
 /** A link shown once, with what it is for. */
-type Shown = { readonly label: string; readonly issued: IssuedLink };
+type Shown = {
+  readonly label: string;
+  readonly issued: IssuedLink;
+  /** Set for a reset link: revoking that account's reset hides it. */
+  readonly resetOf?: string;
+};
 
 /** What to tell the owner for a refused administration call. */
 export function adminMessage(error: ApiErrorCode | null): string {
@@ -86,8 +91,9 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
 
   async function showDevices(userId: string): Promise<void> {
     const result = await api.devices(userId);
-    if (result.ok) setDevices({ userId, list: result.value });
-    else setMessage(adminMessage(result.error));
+    if (result.ok) return setDevices({ userId, list: result.value });
+    await refresh();
+    setMessage(adminMessage(result.error));
   }
 
   return (
@@ -199,7 +205,12 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
               onClick={() =>
                 void act(
                   () => api.issueReset(account.id),
-                  (issued) => setShown({ label: `Reset link for ${account.username}`, issued }),
+                  (issued) =>
+                    setShown({
+                      label: `Reset link for ${account.username}`,
+                      issued,
+                      resetOf: account.id,
+                    }),
                 )
               }
             >
@@ -211,7 +222,7 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
               onClick={() =>
                 void act(
                   () => api.revokeReset(account.id),
-                  () => setShown(null),
+                  () => setShown((current) => (current?.resetOf === account.id ? null : current)),
                 )
               }
             >

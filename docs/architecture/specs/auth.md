@@ -47,7 +47,9 @@
   `/auth/setup`, `/auth/redeem`, `PUT /auth/password`). A success clears the pair.
   An attempt counts before the hash runs and a success refunds it, so concurrent tries
   cannot all pass the check; a busy hasher (`429`) gave no verdict and refunds it too, as
-  does a redeem refused for a taken username; an IPv6 address counts by its /64.
+  does a redeem refused for a taken username. A redeem token that is not pending is
+  counted without being hashed, and a reset redeem lifts that account's lockout from the
+  redeeming address; an IPv6 address counts by its /64.
   The pair key means a stranger cannot lock the owner out from the owner's own address.
   Sign-in and `PUT /auth/password` failures answer the same `401 invalid_credentials`
   (setup and redeem answer `404 token_invalid`); a limit answers `429` with
