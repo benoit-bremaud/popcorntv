@@ -21,21 +21,20 @@ Pre-push review of branch `feat/18-user-accounts-auth` (conception only, no code
 - Round 4 on `60aa08c`: all fixed · Must 0 · Should 1 · Nice 2 · open
 - Round 5 on `9c831d3`: all fixed · Must 0 · Should 0 · Nice 0 · **Push gate: open**
 - Hosted reviewers (filled at the pre-merge run): Copilot cannot be requested on this
-  repo · Codex quota exhausted (optional)
+  repo · Codex: no review posted on this PR (optional)
 
-## Pre-merge gate (head SHA 9c831d3)
+## Pre-merge gate (head SHA c50aa0f, main merged in)
 
 | Step | Result |
 | --- | --- |
 | 0 CI mirror | `ci.yml`: typecheck ✅, test ✅, build ✅; lint / format:check ⚠️ red locally only on the ignored `.claude/worktrees/zen-ptolemy-*` checkout (0 finding outside it; a clean CI checkout has no such folder); CodeQL, Scorecard, dependency-review CI-only |
 | 1 Tests | ✅ shared 31 · server 334 · web 129 |
-| 2 Coverage | tests: server 98.3 % stmts / 95.6 % branches / 95.6 % funcs / 98.4 % lines; web 99.8 / 93.4 / 100 / 100; shared 88.9 / 100 / 100 / 86.7 · docs ⏸ deferred to the pre-merge run (`--push`) |
-| 3 SonarQube | ⏸ deferred to the pre-merge run (`--push`) |
-| 4 Secrets | ✅ gitleaks clean on `main..HEAD` · tracked env: `.env.example` only (placeholders) · diff read: nothing sensitive |
-| 5 E2E/smoke | ⏸ deferred to the pre-merge run (`--push`); docs-only change |
+| 2 Coverage | tests: server 98.3 % stmts / 95.6 % branches / 95.6 % funcs / 98.4 % lines; web 99.8 / 93.4 / 100 / 100; shared 88.9 / 100 / 100 / 86.7 · docs: no code export (docs-only change) |
+| 3 SonarQube | ✅ PASSED |
+| 4 Secrets | ✅ gitleaks clean on `origin/main..HEAD` · tracked env: `.env.example` only (placeholders) · diff read: nothing sensitive |
+| 5 E2E/smoke | ✅ catalog smoke 1/1 (fixed by #65) · QA pass: not applicable (docs-only change) |
 
-- Gate: `--push`: **pre-push green** — steps 1, 2 (tests) and 4 by hand (no `justfile`);
-  SonarQube, doc coverage and E2E deferred.
+- Gate: **GREEN** on `c50aa0f`; the next commit changes only this report.
 - Mermaid: the 7 auth diagrams and the profiles sequence render with `mmdc` 11.4.2,
   no syntax error.
 
