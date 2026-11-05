@@ -101,7 +101,10 @@ export function registerAuthRoutes(app: FastifyInstance, deps: AuthRoutesDeps): 
     if (!body.success) return reply.code(400).send(invalid(body.error.issues));
     if (!users.isEmpty()) return reply.code(404).send(apiError('not_found'));
     const limit = limiter.check(request.ip, null);
-    if (!limit.allowed) return tooMany(reply, limit.retryAfterSec);
+    if (!limit.allowed) {
+      if (limit.firstRefusal) events.record('login_locked', { ip: request.ip });
+      return tooMany(reply, limit.retryAfterSec);
+    }
     if (!deps.setupToken.matches(body.data.token)) {
       limiter.fail(request.ip, null);
       return reply.code(404).send(apiError('token_invalid'));
@@ -181,7 +184,12 @@ export function registerAuthRoutes(app: FastifyInstance, deps: AuthRoutesDeps): 
     if (!stored) return reply.code(401).send(apiError('unauthenticated'));
     const key = usernameKey(stored.username);
     const limit = limiter.check(request.ip, key);
-    if (!limit.allowed) return tooMany(reply, limit.retryAfterSec);
+    if (!limit.allowed) {
+      if (limit.firstRefusal) {
+        events.record('login_locked', { userId: caller.userId, ip: request.ip });
+      }
+      return tooMany(reply, limit.retryAfterSec);
+    }
     if (!(await verifyCounted(request.ip, key, stored.passwordHash, body.data.current))) {
       return reply.code(401).send(apiError('invalid_credentials'));
     }

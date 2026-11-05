@@ -10,6 +10,7 @@ import {
   loadCatalog,
   loadProgress,
   saveProgress,
+  onUnauthenticated,
   sendHeartbeat,
   startPlayback,
   stopPlayback,
@@ -241,5 +242,19 @@ describe('profiles', () => {
 describe('subtitleUrl', () => {
   it('builds the shifted track URL under /api', () => {
     expect(subtitleUrl('a b', 2, 754)).toBe('/api/media/a%20b/subtitles/2?offsetSec=754');
+  });
+});
+
+describe('fire-and-forget calls after the session ended', () => {
+  it('tell the auth gate about a 401 and still never throw', async () => {
+    const listener = vi.fn();
+    onUnauthenticated(listener);
+    const gone = async () => new Response('{}', { status: 401 });
+
+    await saveProgress('p1', 'm1', 12, gone);
+    await sendHeartbeat('s1', gone);
+
+    expect(listener).toHaveBeenCalledTimes(2);
+    onUnauthenticated(() => undefined);
   });
 });

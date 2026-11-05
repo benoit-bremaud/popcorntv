@@ -118,9 +118,11 @@ export async function startPlayback(
 /** Keeps a paused HLS session alive (ADR-0006 §4); a lost heartbeat is harmless. */
 export async function sendHeartbeat(sessionId: string, fetchFn: Fetch = fetch): Promise<void> {
   try {
-    await fetchFn(`${API}/playback/sessions/${encodeURIComponent(sessionId)}/heartbeat`, {
-      method: 'POST',
-    });
+    watched(
+      await fetchFn(`${API}/playback/sessions/${encodeURIComponent(sessionId)}/heartbeat`, {
+        method: 'POST',
+      }),
+    );
   } catch {
     // The idle watchdog is the safety net.
   }
@@ -155,12 +157,17 @@ export async function saveProgress(
   fetchFn: Fetch = fetch,
 ): Promise<void> {
   try {
-    await fetchFn(`${API}${profilePath(profileId)}/media/${encodeURIComponent(mediaId)}/progress`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ positionSec } satisfies ProgressBody),
-      keepalive: true,
-    });
+    watched(
+      await fetchFn(
+        `${API}${profilePath(profileId)}/media/${encodeURIComponent(mediaId)}/progress`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ positionSec } satisfies ProgressBody),
+          keepalive: true,
+        },
+      ),
+    );
   } catch {
     // Ignored on purpose (spec 6a).
   }

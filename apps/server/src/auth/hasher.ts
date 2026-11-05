@@ -46,11 +46,13 @@ export class Argon2Hasher implements Hasher {
   }
 
   async verify(stored: string | null, password: string): Promise<boolean> {
-    // The dummy is computed once, outside a slot: it is a fixed value, not request work.
-    this.dummy ??= hash('popcorntv-dummy-password', OPTIONS).catch((error: unknown) => {
-      this.dummy = null;
-      throw error;
-    });
+    // Computed once, inside a slot like any other argon2 job; a failure is retried next time.
+    this.dummy ??= this.withSlot(() => hash('popcorntv-dummy-password', OPTIONS)).catch(
+      (error: unknown) => {
+        this.dummy = null;
+        throw error;
+      },
+    );
     const target = stored ?? (await this.dummy);
     const ok = await this.withSlot(() => verify(target, password));
     return stored !== null && ok;

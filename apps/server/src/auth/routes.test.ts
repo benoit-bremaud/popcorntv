@@ -160,8 +160,11 @@ describe('first-owner setup (UC11)', () => {
 
     const refused = await setUp(h);
 
+    await setUp(h);
+
     expect(refused.statusCode).toBe(429);
     expect(refused.headers['retry-after']).toBeDefined();
+    expect(events(h.db).filter((e) => e.kind === 'login_locked')).toHaveLength(1);
   });
 
   it('counts concurrent wrong sign-ins before the hash finishes', async () => {
@@ -416,8 +419,12 @@ describe('password change (UC19)', () => {
       await change(h.app, cookie, 'wrong password!', 'a brand new password');
 
     const refused = await change(h.app, cookie, PASSWORD, 'a brand new password');
+    await change(h.app, cookie, PASSWORD, 'a brand new password');
 
     expect(refused.statusCode).toBe(429);
+    expect(events(h.db).filter((e) => e.kind === 'login_locked')).toMatchObject([
+      { userId: expect.any(String) },
+    ]);
   });
 
   it('accepts a password that is the NFD spelling of the NFC one', async () => {
