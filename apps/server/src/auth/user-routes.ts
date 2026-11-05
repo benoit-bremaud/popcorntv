@@ -80,14 +80,14 @@ export function registerUserRoutes(app: FastifyInstance, deps: UserRoutesDeps): 
   app.get('/users/:id/sessions', OWNER, (request, reply) => {
     const params = userParams.safeParse(request.params);
     if (!params.success) return reply.code(400).send(invalid(params.error.issues));
-    if (!users.find(params.data.id)) return notFound(reply);
+    if (!users.exists(params.data.id)) return notFound(reply);
     return reply.send(sessions.listLive(params.data.id, new Date()));
   });
 
   app.delete('/users/:id/sessions', OWNER, (request, reply) => {
     const params = userParams.safeParse(request.params);
     if (!params.success) return reply.code(400).send(invalid(params.error.issues));
-    if (!users.find(params.data.id)) return notFound(reply);
+    if (!users.exists(params.data.id)) return notFound(reply);
     sessions.revokeAll(params.data.id, new Date());
     events.record('sessions_ended', { userId: params.data.id, ip: request.ip });
     return reply.code(204).send();
@@ -107,7 +107,7 @@ export function registerUserRoutes(app: FastifyInstance, deps: UserRoutesDeps): 
   app.post('/users/:id/reset', OWNER, (request, reply) => {
     const params = userParams.safeParse(request.params);
     if (!params.success) return reply.code(400).send(invalid(params.error.issues));
-    if (!users.find(params.data.id)) return notFound(reply);
+    if (!users.exists(params.data.id)) return notFound(reply);
     const now = new Date();
     const issued = deps.db.transaction(() => tokens.issueReset(params.data.id, now));
     events.record('reset_issued', { userId: params.data.id, ip: request.ip }, now);

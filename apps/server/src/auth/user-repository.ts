@@ -29,6 +29,10 @@ export class UserRepository {
     return this.db.select(publicColumns).from(users).where(eq(users.id, id)).get();
   }
 
+  exists(id: string): boolean {
+    return this.db.select({ id: users.id }).from(users).where(eq(users.id, id)).get() !== undefined;
+  }
+
   findStored(id: string): StoredUser | undefined {
     return this.db
       .select({ ...publicColumns, passwordHash: users.passwordHash })

@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { ROLES } from '@popcorntv/shared';
 import type {
   Account,
-  DeviceSession,
+  ApiErrorCode,
   AuthEvent,
+  DeviceSession,
   Invitation,
   IssuedLink,
   Role,
@@ -11,7 +12,6 @@ import type {
 } from '@popcorntv/shared';
 import type { AdminApi, AdminResult } from '../api.js';
 import { authMessage } from './auth-api.js';
-import type { ApiErrorCode } from '@popcorntv/shared';
 import { useFocusedTitle } from './form-hooks.js';
 
 type Props = {
@@ -120,7 +120,7 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
         </p>
       )}
       {shown && (
-        <div className="admin-link" role="status">
+        <output className="admin-link">
           <p>
             {shown.label} — shown once, valid until {when(shown.issued.expiresAt)}:
           </p>
@@ -131,7 +131,7 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
             value={shown.issued.link}
             onFocus={(event) => event.target.select()}
           />
-        </div>
+        </output>
       )}
 
       <h3 className="admin-title">Invite a person</h3>
