@@ -4,7 +4,7 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
-## 2026-11-05 — #26 homelab ecosystem triage (decision, PR pending)
+## 2026-11-05 — #26 homelab ecosystem triage (PR #69 merged, `5fb5eb9`)
 
 - **Changes** — `docs/requirements/02-homelab-ecosystem.md`: inventory of the media
   services, the media chain, a per-tool triage and four MCDA matrices.
@@ -18,7 +18,7 @@ context: merged PRs, decisions, tags, infra events. Not a release changelog — 
   needed an unscoped admin key and a second HTTP egress). A second round on the document
   caught wrong MCDA totals, a false direct-play claim (only `mp4` / `m4v` / `webm`
   direct-play) and the manual-only scan every decision depends on.
-- **Follow-ups to add at merge** — #62: resume progress survives a file replaced on
+- **Follow-ups posted** — #62: resume progress survives a file replaced on
   another path; #60: Uptime Kuma probe, Tdarr and Bazarr flows, Maintainerr rule audit,
   Jellyfin history import. To file after #18: the Seerr link and a scheduled library scan.
 
