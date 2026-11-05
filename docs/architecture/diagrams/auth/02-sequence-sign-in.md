@@ -26,6 +26,9 @@ sequenceDiagram
   U->>W: username + password
   W->>H: POST /auth/session
   H->>H: CSRF check (R7) · route access = public
+  opt session cookie present
+    H->>SR: findValid(hash(token)) — sets request.caller if valid
+  end
   H->>API: forward
   API->>RL: allow(ip, usernameKey)?
   alt locked out
@@ -40,6 +43,7 @@ sequenceDiagram
       API-->>W: 401 invalid_credentials
     else ok
       API->>SR: create(userId) — token stored as SHA-256
+      API->>UR: set last_login_at
       API->>EL: record login_ok · purge stale rows
       API-->>W: 200 User + Set-Cookie (HttpOnly, SameSite=Lax)
     end

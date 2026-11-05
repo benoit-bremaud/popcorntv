@@ -14,7 +14,9 @@
 - **R1** Every route requires a valid session unless it declares `config: { access:
   'public' }`; owner routes declare `access: 'owner'`. A route without the option is
   protected (viewer or owner). The hook reads the matched route's config, never the URL
-  string; an unmatched URL answers `401` before `404` (§4.3).
+  string; an unmatched URL answers `401` before `404` (§4.3). On a public route the hook
+  still resolves a session cookie when present, so `GET /auth/status` can return the
+  user.
 - **R2** Roles: `owner` (everything) and `viewer` (browse, play, own profiles). At least
   one owner always exists. The hook reads the user's current role on every request, so a
   role change or a deletion applies at once.
@@ -22,10 +24,13 @@
   owner-issued invitation (ADR-0010 §1, §4). There is no public sign-up.
 - **R4** Passwords: 12–128 characters after NFC normalisation, hashed with argon2id
   (memory 19 MiB, 2 passes, 1 lane), verified with a dummy hash for unknown users. No
-  composition rules, no truncation. At most 4 hashes run at once; beyond that the route
-  answers `429 too_many_attempts`.
+  composition rules, no truncation. At most 4 hashes run at once; a request waits up to
+  2 s for a slot, then answers `429 too_many_attempts`.
 - **R5** Sessions are server-side rows; the cookie carries a 256-bit random token, the
-  database its SHA-256. Idle expiry 14 days, absolute 90 days. Cookie `HttpOnly`,
+  database its SHA-256. Idle expiry 14 days, absolute 90 days. Every sign-in, setup or
+  redeem issues a new token and revokes the session the request carried, if any (no
+  session fixation). At most 20 active sessions per user; the oldest is revoked first.
+  Cookie `HttpOnly`,
   `SameSite=Lax`, `Path=/`; on `https` it is named `__Host-pctv_session` and `Secure`,
   on `http` (dev) `pctv_session`.
 - **R6** `PUBLIC_URL` is required; the server refuses to start without it. Dev value:
@@ -39,11 +44,15 @@
 - **R8** Rate limits, in memory (reset on restart, one process): 5 failures per
   (IP, submitted username key) per 15 min, whether or not the account exists; 30
   failures per IP per 15 min across every route that runs the hasher (`/auth/session`,
-  `/auth/setup`, `/auth/redeem`, `PUT /auth/password`). A success clears the pair. All
-  failures answer the same `401 invalid_credentials` (or `429` with `Retry-After`).
+  `/auth/setup`, `/auth/redeem`, `PUT /auth/password`). A success clears the pair.
+  The pair key means a stranger cannot lock the owner out from the owner's own address.
+  Sign-in and `PUT /auth/password` failures answer the same `401 invalid_credentials`
+  (setup and redeem answer `404 token_invalid`); a limit answers `429` with
+  `Retry-After`.
 - **R9** `auth_events` records sign-in success and failure, the first refusal of each
-  lockout window, sign-out, invitation and reset issue and revocation, redeem, password
-  change, role change and deletion. No password, no token; `username_tried` only on
+  lockout window, first-owner setup, sign-out, invitation and reset issue and
+  revocation, redeem, password change, sessions ended by the owner, role change and
+  deletion. No password, no token; `username_tried` only on
   failures and only when it matches the username syntax. Rows older than 90 days are
   purged.
 - **R10** A profile belongs to one user. Name uniqueness, the 12-profile limit and the
@@ -85,9 +94,9 @@ Extensions: 3a token wrong or expired → `404 token_invalid`; 3b a user already
   lists pending invitations and revokes one.
 - **UC16 Reset a person's password** (Owner): issues a reset link valid 24 h for that
   account; a new reset link revokes the previous one.
-- **UC17 Manage accounts** (Owner): lists users with their last sign-in (latest
-  `login_ok` event) and active devices, changes a role, ends a device's or all sessions,
-  deletes an account. Changing a role or deleting revokes that user's pending reset
+- **UC17 Manage accounts** (Owner): lists users with their last sign-in
+  (`users.last_login_at`, kept beyond the 90-day event purge) and active devices,
+  changes a role, ends a device's or all sessions, deletes an account. Changing a role or deleting revokes that user's pending reset
   link. Extension: removing or demoting the last owner → `409 last_owner`.
 - **UC18 Review sign-in activity** (Owner): last 200 `auth_events`, newest first.
 - **UC19 Change my password** (Viewer, Owner): current + new password; every other
@@ -101,7 +110,7 @@ Extensions: 3a token wrong or expired → `404 token_invalid`; 3b a user already
 ### 4.1 Storage
 
 - `users`: `id` (UUID), `username`, `username_key` (lower-cased, unique),
-  `password_hash`, `role` (`owner` | `viewer`), `created_at`.
+  `password_hash`, `role` (`owner` | `viewer`), `created_at`, `last_login_at`.
 - `sessions`: `id` (UUID, used to end one device), `user_id` (FK cascade), `token_hash`
   (unique), `created_at`, `last_seen_at`, `expires_at` (= `created_at` + 90 days, the
   absolute limit; the idle limit is `last_seen_at` + 14 days), `revoked_at`,
@@ -120,7 +129,9 @@ Extensions: 3a token wrong or expired → `404 token_invalid`; 3b a user already
   than 90 days are deleted at start and on each successful sign-in.
 - Setup and redeem run in one transaction. A token is consumed with `UPDATE auth_tokens
   SET used_at = ? WHERE token_hash = ? AND used_at IS NULL AND revoked_at IS NULL AND
-  expires_at > ?`, which must change exactly one row; any later failure rolls it back.
+  kind = ? AND expires_at > ?`, which must change exactly one row; any later failure
+  rolls it back. better-sqlite3 transactions are synchronous, so the password is hashed
+  before the transaction opens, never inside it.
 
 ### 4.2 Auth API
 
@@ -172,9 +183,22 @@ receives `Pick<ProfileRepository, 'adoptOrphans' | 'createFirst'>`.
 
 ## 5. Remote-access recipe
 
-- Caddy terminates HTTPS, serves `apps/web/dist` (`try_files {path} /index.html`,
-  `file_server`) and proxies the API with the prefix stripped (`handle_path /api/* {
-  reverse_proxy popcorntv:3000 }`): one origin for both, so CORP `same-origin` holds and
+- Caddy terminates HTTPS, proxies the API with the prefix stripped and serves the web
+  build (copied to `/srv/web`) for every other path. Order matters: `try_files` at top
+  level would rewrite `/api/…` to `index.html` first, so both live in `handle` blocks:
+
+  ```caddyfile
+  handle_path /api/* {
+    reverse_proxy popcorntv:3000
+  }
+  handle {
+    root * /srv/web
+    try_files {path} /index.html
+    file_server
+  }
+  ```
+
+  One origin for both, so CORP `same-origin` holds and
   the cookie accompanies `<video>`, `<img>` and `<track>`.
 - Caddy sets `Strict-Transport-Security: max-age=31536000` and a CSP on the web build
   (`frame-ancestors 'none'`; details in #46) with `header` directives.
@@ -204,10 +228,10 @@ receives `Pick<ProfileRepository, 'adoptOrphans' | 'createFirst'>`.
   password validation (NFC, ASCII), CSRF predicate table (`Origin` /
   `Sec-Fetch-Site`), config refuses a missing `PUBLIC_URL`.
 - Repositories (in-memory SQLite): session idle / absolute expiry and hourly slide,
-  revoke, single-use and revoked tokens, concurrent redeem (one wins), last-owner
+  revoke, the 20-session cap, single-use and revoked tokens, concurrent redeem (one wins), last-owner
   invariant, profile adoption, per-user profile rules, cascades, purge.
 - Routes (`app.inject`): setup once, invite → redeem, reset → redeem, kind mismatch,
-  username taken keeps the token, sign-in/out, lockout, no enumeration (same status and
+  username taken keeps the token, sign-in/out, a pre-set cookie is replaced at sign-in, lockout, no enumeration (same status and
   body), every non-public route `401` without a cookie (built from the route table),
   `403` for a viewer on owner routes, role change applies at once, cross-user profile
   and playback session → `404`, CSRF `403`.

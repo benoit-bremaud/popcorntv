@@ -18,7 +18,7 @@ flowchart LR
   Viewer(["Viewer"])
   Owner(["Owner"])
   Guest(["Invited person"])
-  Owner -. "generalizes" .-> Viewer
+  Owner -. "specializes" .-> Viewer
 
   subgraph PopCornTV["PopCornTV"]
     subgraph Access["Access"]
@@ -51,8 +51,9 @@ flowchart LR
 
 ## Notes
 
-- Owner generalizes Viewer: the owner can do everything a viewer can (Mermaid has no
-  hollow-triangle arrow; the dotted edge stands for it).
+- Owner specializes Viewer (actor generalization, arrow from Owner to Viewer): the owner
+  can do everything a viewer can. Mermaid has no hollow-triangle arrow; the dotted edge
+  stands for it.
 - UC16 and UC15 share the single-use link mechanism; it is an implementation detail
   (sequence and class diagrams), not an «include».
 - Existing use cases UC3–UC10 now require a signed-in Viewer; UC1 and UC2 are owner-only;

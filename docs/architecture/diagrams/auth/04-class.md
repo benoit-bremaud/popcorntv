@@ -19,6 +19,7 @@ classDiagram
     +passwordHash: string
     +role: Role
     +createdAt: string
+    +lastLoginAt: string?
   }
   class Role {
     <<enumeration>>
@@ -58,6 +59,7 @@ classDiagram
   }
   class AuthEventKind {
     <<enumeration>>
+    setup_done
     login_ok
     login_failed
     login_locked
@@ -65,8 +67,10 @@ classDiagram
     invite_issued
     invite_revoked
     reset_issued
+    reset_revoked
     redeemed
     password_changed
+    sessions_ended
     role_changed
     user_deleted
   }

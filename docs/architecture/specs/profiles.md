@@ -9,7 +9,7 @@
 
 ## 1. Requirements
 
-- **R1** A profile has an id, a name (1–40 chars after trim, unique case-insensitively)
+- **R1** A profile has an id, a name (1–40 chars after trim, unique case-insensitively per user since #18)
   and an avatar colour picked from a fixed palette of design tokens.
 - **R2** Watch progress (ADR-0007) is stored and read per profile; two profiles keep
   separate positions for the same title.
@@ -20,7 +20,7 @@
   user's last profile cannot be deleted.
 - **R5** The migration seeds profile `default` / `Me` that keeps the existing progress
   (ADR-0008 §2); it can be deleted like any other and is not re-seeded. At most 12
-  profiles.
+  profiles per user.
 - **R6** Profile names and history stay in SQLite and are never logged or sent out
   ([data flow](../diagrams/playback/06-data-flow.md)).
 - **R7** Done when two profiles keep separate progress, with tests on the repository,
@@ -45,13 +45,13 @@ Extensions: 1a server unreachable → the catalog error as today; 1b storage una
 Primary actor: Viewer or Owner, for their own profiles (ADR-0010 §5, superseding
 ADR-0008 §4).
 
-1. The owner opens "Manage profiles" from the picker.
+1. The user opens "Manage profiles" from the picker.
 2. Adds a profile (name + colour), renames one, or deletes one after a confirm.
 3. The list refreshes; "Done" returns to the picker. A deleted remembered profile is
    no longer listed at the next start, so the picker shows.
 
 Extensions: 2a name empty / too long → `400`; duplicate name → `409 profile_name_taken`;
-13th profile → `409 profile_limit`; 2b deleting the last profile → `409
+13th profile → `409 profile_limit`; 2b deleting the user's last profile → `409
 last_profile`; unknown id → `404 profile_not_found`.
 
 ## 4. Data rules
@@ -59,7 +59,8 @@ last_profile`; unknown id → `404 profile_not_found`.
 ### 4.1 Storage
 
 Table `profiles`: `id` (text PK, `default` or a UUID), `name` (text), `name_key`
-(lower-cased name, unique), `avatar` (text, a palette key), `created_at` (ISO text).
+(lower-cased name), `user_id` (FK `users.id` cascade, since #18, auth spec §4.1;
+`(user_id, name_key)` unique), `avatar` (text, a palette key), `created_at` (ISO text).
 `watch_progress.profile_id` → FK `profiles.id`, cascade delete; the column default is
 dropped.
 
