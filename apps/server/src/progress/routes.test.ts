@@ -6,6 +6,7 @@ import { openDatabase } from '../db/index.js';
 import type { AppDatabase } from '../db/index.js';
 import { libraries, media } from '../db/schema.js';
 import { ProfileRepository } from '../profiles/repository.js';
+import { actAs, createAccount } from '../test-fixtures.js';
 import { ProgressRepository } from './repository.js';
 import { registerProgressRoutes } from './routes.js';
 
@@ -30,12 +31,14 @@ function progressDb(): {
 function setup() {
   const { db, addMedia } = progressDb();
   const profiles = new ProfileRepository(db);
+  const owner = createAccount(db);
   const app = Fastify();
+  actAs(app, () => ({ userId: owner.userId, role: 'owner', sessionId: owner.sessionId }));
   registerProgressRoutes(app, {
     progress: new ProgressRepository(db),
     profiles,
   });
-  return { app, addMedia, profiles };
+  return { app, db, addMedia, profiles, userId: owner.userId };
 }
 
 describe('progress routes', () => {
@@ -144,9 +147,9 @@ describe('progress routes', () => {
   );
 
   it('keeps two profiles apart end to end', async () => {
-    const { app, addMedia, profiles } = setup();
+    const { app, addMedia, profiles, userId } = setup();
     const id = addMedia('film', 100);
-    const kid = profiles.create({ name: 'Kid', avatar: 'blue' });
+    const kid = profiles.create(userId, { name: 'Kid', avatar: 'blue' });
     if (!kid.ok) throw new Error('setup');
     const put = (profile: string, positionSec: number) =>
       app.inject({
@@ -162,5 +165,23 @@ describe('progress routes', () => {
 
     expect(mine.json<WatchProgress[]>()[0]?.positionSec).toBe(10);
     expect(theirs.json<WatchProgress[]>()[0]?.positionSec).toBe(60);
+  });
+
+  it("answers 404 profile_not_found for another user's profile", async () => {
+    const { app, db, addMedia } = setup();
+    const id = addMedia('film', 100);
+    const guest = createAccount(db, 'guest', 'viewer');
+    const guestProfile = new ProfileRepository(db).list(guest.userId)[0];
+    if (!guestProfile) throw new Error('setup');
+
+    const put = await app.inject({
+      method: 'PUT',
+      url: `/profiles/${guestProfile.id}/media/${id}/progress`,
+      payload: { positionSec: 5 },
+    });
+    const get = await app.inject({ method: 'GET', url: `/profiles/${guestProfile.id}/progress` });
+
+    expect(put.statusCode).toBe(404);
+    expect(get.json()).toEqual({ error: 'profile_not_found' });
   });
 });

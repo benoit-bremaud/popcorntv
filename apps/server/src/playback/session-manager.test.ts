@@ -9,6 +9,9 @@ import { SessionManager } from './session-manager.js';
 import type { SessionManagerOptions } from './session-manager.js';
 import type { ExitListener, Transcoder } from './transcoder.js';
 
+/** Owner of every session these tests open. */
+const USER = 'user-1';
+
 const HEVC: readonly StreamInfo[] = [
   { type: 'video', codec: 'hevc', width: 3840, height: 2160, language: null },
 ];
@@ -64,7 +67,7 @@ describe('SessionManager', () => {
     const { transcoder, runs } = fakeTranscoder('writes');
     const sessions = manager(transcoder);
 
-    const result = await sessions.open('/m/a.mkv', HEVC);
+    const result = await sessions.open(USER, '/m/a.mkv', HEVC);
 
     expect(result.kind).toBe('ready');
     if (result.kind !== 'ready') return;
@@ -77,11 +80,11 @@ describe('SessionManager', () => {
 
   it('answers busy beyond the limit, and frees the slot on close', async () => {
     const sessions = manager(fakeTranscoder('writes').transcoder);
-    const first = await sessions.open('/m/a.mkv', HEVC);
+    const first = await sessions.open(USER, '/m/a.mkv', HEVC);
 
-    expect((await sessions.open('/m/b.mkv', HEVC)).kind).toBe('busy');
+    expect((await sessions.open(USER, '/m/b.mkv', HEVC)).kind).toBe('busy');
     if (first.kind === 'ready') await sessions.close(first.id);
-    expect((await sessions.open('/m/b.mkv', HEVC)).kind).toBe('ready');
+    expect((await sessions.open(USER, '/m/b.mkv', HEVC)).kind).toBe('ready');
     await sessions.closeAll();
   });
 
@@ -89,7 +92,7 @@ describe('SessionManager', () => {
     const { transcoder, kills } = fakeTranscoder('crashes');
     const sessions = manager(transcoder);
 
-    expect((await sessions.open('/m/a.mkv', HEVC)).kind).toBe('failed');
+    expect((await sessions.open(USER, '/m/a.mkv', HEVC)).kind).toBe('failed');
     expect(kills).toHaveBeenCalledTimes(1);
     await vi.waitFor(async () => expect(await readdir(dir)).toEqual([]));
     expect(warn).toHaveBeenCalledWith(
@@ -101,7 +104,7 @@ describe('SessionManager', () => {
   it('fails when no playlist appears before the ready timeout', async () => {
     const sessions = manager(fakeTranscoder('silent').transcoder, { readyTimeoutMs: 30 });
 
-    expect((await sessions.open('/m/a.mkv', HEVC)).kind).toBe('failed');
+    expect((await sessions.open(USER, '/m/a.mkv', HEVC)).kind).toBe('failed');
     expect(await readdir(dir)).toEqual([]);
   });
 
@@ -109,7 +112,7 @@ describe('SessionManager', () => {
     const { transcoder, runs } = fakeTranscoder('writes');
     const sessions = manager(transcoder);
 
-    const result = await sessions.open('/m/a.mka', [
+    const result = await sessions.open(USER, '/m/a.mka', [
       { type: 'audio', codec: 'aac', width: null, height: null, language: null },
     ]);
 
@@ -126,7 +129,7 @@ describe('SessionManager', () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
 
     try {
-      const result = await sessions.open('/m/a.mkv', HEVC);
+      const result = await sessions.open(USER, '/m/a.mkv', HEVC);
       if (result.kind !== 'ready') throw new Error('not ready');
       id = result.id;
       await vi.advanceTimersByTimeAsync(50_000);
@@ -145,7 +148,7 @@ describe('SessionManager', () => {
 
   it('only resolves the names FFmpeg writes', async () => {
     const sessions = manager(fakeTranscoder('writes').transcoder);
-    const result = await sessions.open('/m/a.mkv', HEVC);
+    const result = await sessions.open(USER, '/m/a.mkv', HEVC);
     if (result.kind !== 'ready') throw new Error('not ready');
 
     expect(sessions.filePath(result.id, 'segment-00003.ts')).toMatch(/segment-00003\.ts$/);
@@ -160,8 +163,8 @@ describe('SessionManager', () => {
     const sessions = manager(transcoder);
 
     const results = await Promise.all([
-      sessions.open('/m/a.mkv', HEVC),
-      sessions.open('/m/b.mkv', HEVC),
+      sessions.open(USER, '/m/a.mkv', HEVC),
+      sessions.open(USER, '/m/b.mkv', HEVC),
     ]);
 
     expect(results.map((result) => result.kind).sort()).toEqual(['busy', 'ready']);
@@ -172,7 +175,7 @@ describe('SessionManager', () => {
   it('closes a ready session whose FFmpeg crashes, freeing the slot', async () => {
     const { transcoder, runs, kills } = fakeTranscoder('writes');
     const sessions = manager(transcoder);
-    const result = await sessions.open('/m/a.mkv', HEVC);
+    const result = await sessions.open(USER, '/m/a.mkv', HEVC);
     if (result.kind !== 'ready') throw new Error('not ready');
 
     runs[0]?.onExit(1, 'Conversion failed');
@@ -186,7 +189,7 @@ describe('SessionManager', () => {
   it('logs nothing when its own close kills FFmpeg', async () => {
     const { transcoder, runs } = fakeTranscoder('writes');
     const sessions = manager(transcoder);
-    const result = await sessions.open('/m/a.mkv', HEVC);
+    const result = await sessions.open(USER, '/m/a.mkv', HEVC);
     if (result.kind !== 'ready') throw new Error('not ready');
 
     await sessions.close(result.id);
@@ -206,7 +209,7 @@ describe('SessionManager', () => {
       logger: { warn, error } as unknown as FastifyBaseLogger,
     });
 
-    expect((await sessions.open('/m/a.mkv', HEVC)).kind).toBe('failed');
+    expect((await sessions.open(USER, '/m/a.mkv', HEVC)).kind).toBe('failed');
     expect(await readdir(dir)).toEqual([]);
     expect(error).toHaveBeenCalledOnce();
   });
@@ -239,7 +242,7 @@ describe('SessionManager', () => {
   it('reports a second close as already gone', async () => {
     const { transcoder, kills } = fakeTranscoder('writes');
     const sessions = manager(transcoder);
-    const result = await sessions.open('/m/a.mkv', HEVC);
+    const result = await sessions.open(USER, '/m/a.mkv', HEVC);
     if (result.kind !== 'ready') throw new Error('not ready');
 
     expect(await sessions.close(result.id)).toBe(true);

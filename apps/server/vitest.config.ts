@@ -16,7 +16,7 @@ export default defineConfig({
       reporter: ['text', 'lcov'],
       include: ['src/**/*.ts'],
       // Process entry point: listens on a port, exercised by the QA pass, not by unit tests.
-      exclude: ['src/index.ts', 'src/**/*.test.ts'],
+      exclude: ['src/index.ts', 'src/**/*.test.ts', 'src/test-fixtures.ts'],
       thresholds: { lines: 80, functions: 80, branches: 80, statements: 80 },
     },
   },

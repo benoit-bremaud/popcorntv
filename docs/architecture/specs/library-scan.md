@@ -152,9 +152,10 @@ The owner calls `POST /libraries/:id/scan`.
 - Frequency: on demand, a few times a week at most. Synchronous for the MVP; a job
   queue appears only if a scan exceeds the HTTP timeout on a real library.
 - Security: ADR-0001 dependency rule — the scanner imports `fs` and spawns `ffprobe`
-  through a single runner; the parser and the path guard are pure functions. The API has
-  no authentication yet: the server listens on loopback by default and library roots are
-  confined under `MEDIA_ROOT` (owner decision 2026-10-23, local review Must 4).
+  through a single runner; the parser and the path guard are pure functions. Every route
+  needs a session since #18 (spec auth R1, ADR-0010); `POST /libraries`, `/scan` and
+  `/enrich` are owner-only. The server still listens on loopback by default and library
+  roots are confined under `MEDIA_ROOT` (owner decision 2026-10-23, local review Must 4).
 - Scale: the pruning diff runs in JS and deletes by chunks, so a library of any size stays
   under SQLite's bind-variable limit; the walk has no depth or file cap in the MVP.
 

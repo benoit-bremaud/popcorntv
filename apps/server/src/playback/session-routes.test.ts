@@ -10,6 +10,7 @@ import type { ApiError, Library, Media, PlaybackStart, StreamInfo } from '@popco
 import { buildApp } from '../app.js';
 import { openDatabase } from '../db/index.js';
 import type { Transcoder } from './transcoder.js';
+import { createAccount, sendCookie, testAuthOptions } from '../test-fixtures.js';
 
 function stream(type: StreamInfo['type'], codec: string): StreamInfo {
   return { type, codec, width: null, height: null, language: null };
@@ -29,6 +30,8 @@ describe('playback session routes', () => {
   let root: string;
   let kills: Mock<() => void>;
   let spawned: (readonly string[])[];
+  /** Cookie of a second account, to prove sessions are private (spec auth R10). */
+  let guest: string;
 
   beforeEach(async () => {
     base = await mkdtemp(join(tmpdir(), 'popcorntv-sessions-routes-'));
@@ -45,9 +48,10 @@ describe('playback session routes', () => {
       writeFileSync(playlist, '#EXTM3U\n');
       return { kill: kills };
     };
+    const db = openDatabase(':memory:');
     app = buildApp({
       version: 'test',
-      db: openDatabase(':memory:'),
+      db,
       probe: async (path) => ({
         durationSec: 60,
         streams: probedStreams(path),
@@ -57,7 +61,10 @@ describe('playback session routes', () => {
       artworkDir: join(base, 'artwork'),
       transcoder,
       transcodeDir: join(base, 'transcode'),
+      ...testAuthOptions,
     });
+    sendCookie(app, createAccount(db).cookie);
+    guest = createAccount(db, 'guest', 'viewer').cookie;
   });
 
   afterEach(async () => {
@@ -96,6 +103,29 @@ describe('playback session routes', () => {
     if (body.mode !== 'hls') throw new Error('expected hls');
     return body;
   }
+
+  it("answers 404 session_not_found for another user's session, which keeps running", async () => {
+    const session = await hlsSession();
+    const headers = { cookie: guest };
+
+    const playlist = await app.inject({ method: 'GET', url: session.url, headers });
+    const beat = await app.inject({
+      method: 'POST',
+      url: `/playback/sessions/${session.sessionId}/heartbeat`,
+      headers,
+    });
+    const close = await app.inject({
+      method: 'DELETE',
+      url: `/playback/sessions/${session.sessionId}`,
+      headers,
+    });
+    const mine = await app.inject({ method: 'GET', url: session.url });
+
+    expect([playlist.statusCode, beat.statusCode, close.statusCode]).toEqual([404, 404, 404]);
+    expect(close.json()).toEqual({ error: 'session_not_found' });
+    expect(kills).not.toHaveBeenCalled();
+    expect(mine.statusCode).toBe(200);
+  });
 
   it('confirms direct play for a file the shared rule calls direct-playable', async () => {
     const media = await scanned('Heat (1995).mp4');

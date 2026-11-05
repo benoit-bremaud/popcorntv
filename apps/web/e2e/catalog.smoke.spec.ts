@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import type { Library, Media, Profile } from '@popcorntv/shared';
+import type { AuthStatus, Library, Media, Profile, User } from '@popcorntv/shared';
 
 // The API is mocked at the network layer: the smoke checks the built page, not the server.
 const LIBRARY = {
@@ -43,6 +43,7 @@ const MEDIA = TITLES.map(({ id, title, genre, voteAverage }, index) => ({
 })) satisfies Media[];
 
 const PROFILE = { id: 'default', name: 'Me', avatar: 'red' } satisfies Profile;
+const OWNER = { id: 'u1', username: 'owner', role: 'owner' } satisfies User;
 
 test('the catalog grid renders from the API and opens a title', async ({ page }) => {
   // Registered first so it matches last: an unmocked API call fails fast
@@ -51,6 +52,9 @@ test('the catalog grid renders from the API and opens a title', async ({ page })
   await page.route('**/api/libraries', (route) => route.fulfill({ json: [LIBRARY] }));
   await page.route('**/api/libraries/lib-1/media', (route) => route.fulfill({ json: MEDIA }));
   // Since #10 the catalog opens for a profile: answer the picker and its progress load.
+  await page.route('**/api/auth/status', (route) =>
+    route.fulfill({ json: { setupRequired: false, user: OWNER } satisfies AuthStatus }),
+  );
   await page.route('**/api/profiles', (route) => route.fulfill({ json: [PROFILE] }));
   await page.route(`**/api/profiles/${PROFILE.id}/progress`, (route) =>
     route.fulfill({ json: [] }),

@@ -1,6 +1,8 @@
 import type {
   ApiError,
   ApiErrorCode,
+  AuthStatus,
+  ChangePasswordBody,
   CreateProfileBody,
   Library,
   Media,
@@ -8,7 +10,10 @@ import type {
   PlaybackStart,
   Profile,
   ProgressBody,
+  SetupBody,
+  SignInBody,
   UpdateProfileBody,
+  User,
   WatchProgress,
 } from '@popcorntv/shared';
 
@@ -29,11 +34,25 @@ export class ApiRequestError extends Error {
 
 type Fetch = typeof fetch;
 
+/** Called on any `401`: the session ended (expired, signed out elsewhere, revoked). */
+let unauthenticated: () => void = () => undefined;
+
+/** Registers what to do when the session is gone; the auth gate shows the sign-in form. */
+export function onUnauthenticated(listener: () => void): void {
+  unauthenticated = listener;
+}
+
+/** Passes the response through, telling the auth gate first when it is a `401`. */
+function watched(response: Response): Response {
+  if (response.status === 401) unauthenticated();
+  return response;
+}
+
 /** GET a JSON array; anything else (error status, network failure, other shape) throws. */
 async function getList<T>(fetchFn: Fetch, path: string): Promise<T[]> {
   let response: Response;
   try {
-    response = await fetchFn(`${API}${path}`);
+    response = watched(await fetchFn(`${API}${path}`));
   } catch {
     throw new ApiRequestError(path, null);
   }
@@ -79,11 +98,13 @@ export async function startPlayback(
   fetchFn: Fetch = fetch,
 ): Promise<PlaybackStart | PlaybackStartError> {
   try {
-    const response = await fetchFn(`${API}/playback/sessions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
+    const response = watched(
+      await fetchFn(`${API}/playback/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }),
+    );
     if (response.status === 503) return 'busy';
     if (!response.ok) return 'failed';
     const start = (await response.json()) as PlaybackStart;
@@ -97,9 +118,11 @@ export async function startPlayback(
 /** Keeps a paused HLS session alive (ADR-0006 §4); a lost heartbeat is harmless. */
 export async function sendHeartbeat(sessionId: string, fetchFn: Fetch = fetch): Promise<void> {
   try {
-    await fetchFn(`${API}/playback/sessions/${encodeURIComponent(sessionId)}/heartbeat`, {
-      method: 'POST',
-    });
+    watched(
+      await fetchFn(`${API}/playback/sessions/${encodeURIComponent(sessionId)}/heartbeat`, {
+        method: 'POST',
+      }),
+    );
   } catch {
     // The idle watchdog is the safety net.
   }
@@ -134,12 +157,17 @@ export async function saveProgress(
   fetchFn: Fetch = fetch,
 ): Promise<void> {
   try {
-    await fetchFn(`${API}${profilePath(profileId)}/media/${encodeURIComponent(mediaId)}/progress`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ positionSec } satisfies ProgressBody),
-      keepalive: true,
-    });
+    watched(
+      await fetchFn(
+        `${API}${profilePath(profileId)}/media/${encodeURIComponent(mediaId)}/progress`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ positionSec } satisfies ProgressBody),
+          keepalive: true,
+        },
+      ),
+    );
   } catch {
     // Ignored on purpose (spec 6a).
   }
@@ -176,12 +204,14 @@ async function writeProfile(
   body?: CreateProfileBody | UpdateProfileBody,
 ): Promise<Response | null> {
   try {
-    return await fetchFn(`${API}${path}`, {
-      method,
-      ...(body === undefined
-        ? {}
-        : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
-    });
+    return watched(
+      await fetchFn(`${API}${path}`, {
+        method,
+        ...(body === undefined
+          ? {}
+          : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
+      }),
+    );
   } catch {
     return null;
   }
@@ -226,5 +256,77 @@ export async function deleteProfile(
   if (response?.ok === true) return { ok: true };
   const result = await profileResult(response);
   // A non-2xx answer never parses as ok; keep the type honest without a cast.
+  return result.ok ? { ok: false, error: null } : result;
+}
+
+/** `GET /auth/status` (spec auth §4.2); throws `ApiRequestError` when the server is unreachable. */
+export async function loadAuthStatus(fetchFn: Fetch = fetch): Promise<AuthStatus> {
+  let response: Response;
+  try {
+    response = await fetchFn(`${API}/auth/status`);
+  } catch {
+    throw new ApiRequestError('/auth/status', null);
+  }
+  if (!response.ok) throw new ApiRequestError('/auth/status', response.status);
+  return (await response.json()) as AuthStatus;
+}
+
+/** An auth call's answer: the signed-in user, or the error code (null when offline or unreadable). */
+export type AuthResult =
+  | { readonly ok: true; readonly user: User }
+  | { readonly ok: false; readonly error: ApiErrorCode | null };
+
+async function authCall(
+  fetchFn: Fetch,
+  path: string,
+  method: 'POST' | 'PUT' | 'DELETE',
+  body?: SetupBody | SignInBody | ChangePasswordBody,
+): Promise<{ readonly status: number; readonly body: unknown } | null> {
+  try {
+    const response = await fetchFn(`${API}${path}`, {
+      method,
+      ...(body === undefined
+        ? {}
+        : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
+    });
+    const text = await response.text();
+    return { status: response.status, body: text === '' ? null : (JSON.parse(text) as unknown) };
+  } catch {
+    return null;
+  }
+}
+
+function authResult(answer: Awaited<ReturnType<typeof authCall>>): AuthResult {
+  if (answer === null) return { ok: false, error: null };
+  // First-party server contract: a 2xx carries a `User`, an error an `ApiError`.
+  if (answer.status >= 200 && answer.status < 300) return { ok: true, user: answer.body as User };
+  const error = (answer.body as Partial<ApiError> | null)?.error;
+  return { ok: false, error: typeof error === 'string' ? error : null };
+}
+
+/** `POST /auth/setup` (UC11): creates the first owner and signs them in. */
+export async function setUpOwner(body: SetupBody, fetchFn: Fetch = fetch): Promise<AuthResult> {
+  return authResult(await authCall(fetchFn, '/auth/setup', 'POST', body));
+}
+
+/** `POST /auth/session` (UC13). */
+export async function signIn(body: SignInBody, fetchFn: Fetch = fetch): Promise<AuthResult> {
+  return authResult(await authCall(fetchFn, '/auth/session', 'POST', body));
+}
+
+/** `DELETE /auth/session` or, with `everywhere`, `DELETE /auth/sessions` (UC14). */
+export async function signOut(everywhere: boolean, fetchFn: Fetch = fetch): Promise<boolean> {
+  const answer = await authCall(fetchFn, everywhere ? '/auth/sessions' : '/auth/session', 'DELETE');
+  return answer !== null && (answer.status === 204 || answer.status === 401);
+}
+
+/** `PUT /auth/password` (UC19): ok, or the error code (null when offline). */
+export async function changePassword(
+  body: ChangePasswordBody,
+  fetchFn: Fetch = fetch,
+): Promise<{ readonly ok: true } | { readonly ok: false; readonly error: ApiErrorCode | null }> {
+  const answer = await authCall(fetchFn, '/auth/password', 'PUT', body);
+  if (answer?.status === 204) return { ok: true };
+  const result = authResult(answer);
   return result.ok ? { ok: false, error: null } : result;
 }

@@ -30,21 +30,36 @@ Runtime: Node ≥ 22, pnpm, FFmpeg on the host (or in the Docker image), SQLite 
 
 ```bash
 pnpm install
-cp .env.example .env.local   # fill in TMDB_API_KEY
+cp .env.example .env.local   # fill in TMDB_API_KEY; PUBLIC_URL is required
 pnpm dev:server              # http://localhost:3000  (GET /health); builds packages/shared first
 pnpm dev:web                 # http://localhost:5173
 ```
+
+### First start: the owner account
+
+Every route but `/health`, `GET /auth/status`, `POST /auth/setup` and `POST /auth/session`
+needs an account. On a fresh database the server logs
+a one-time setup link (`PUBLIC_URL/#/setup/<token>`, valid one hour, a new one at each
+start); open it to create the owner account. The owner then invites the household (next
+lot of #18). `PUBLIC_URL` is the one origin every browser uses — `http://localhost:5173` in
+dev, the HTTPS origin of the reverse proxy in production (it decides the cookie flags and
+the CSRF check). Design: [accounts spec](docs/architecture/specs/auth.md),
+[ADR-0010](docs/architecture/decisions/0010-accounts-and-sessions.md).
 
 Quality commands: `pnpm typecheck` · `pnpm lint` · `pnpm format:check` · `pnpm test` ·
 `pnpm coverage` · `pnpm build`.
 
 ### Scan a media folder
 
+Sign in first (owner account) and keep the session cookie:
+
 ```bash
-curl -X POST localhost:3000/libraries -H 'content-type: application/json' \
+curl -c jar -X POST localhost:3000/auth/session -H 'content-type: application/json' \
+  -d '{"username":"<owner>","password":"<password>"}'
+curl -b jar -X POST localhost:3000/libraries -H 'content-type: application/json' \
   -d '{"name":"Films","rootPath":"/absolute/path/under/MEDIA_ROOT/films","kind":"films"}'
-curl -X POST localhost:3000/libraries/<id>/scan     # {added, updated, removed, skipped[], metadata}
-curl localhost:3000/libraries/<id>/media            # films / episodes with streams + metadata
+curl -b jar -X POST localhost:3000/libraries/<id>/scan     # {added, updated, removed, skipped[], metadata}
+curl -b jar localhost:3000/libraries/<id>/media            # films / episodes with streams + metadata
 ```
 
 ### Metadata from TMDB
@@ -59,8 +74,8 @@ images are cached under `ARTWORK_DIR` (default `data/artwork`) and served by
 `en-US`) picks the language of titles and synopses.
 
 ```bash
-curl -X POST localhost:3000/libraries/<id>/enrich   # titles not looked up yet
-curl -X POST localhost:3000/libraries/<id>/enrich -H 'content-type: application/json' \
+curl -b jar -X POST localhost:3000/libraries/<id>/enrich   # titles not looked up yet
+curl -b jar -X POST localhost:3000/libraries/<id>/enrich -H 'content-type: application/json' \
   -d '{"refresh":true}'                             # re-fetch every title
 ```
 
@@ -70,8 +85,8 @@ on `/enrich`). Design: [UC2 spec](docs/architecture/specs/tmdb-metadata.md),
 [ADR-0003](docs/architecture/decisions/0003-tmdb-metadata.md).
 
 `ffprobe` (FFmpeg) must be installed. A library root must be `MEDIA_ROOT` or a folder under
-it (default `./media`), and the server listens on `127.0.0.1` unless `HOST` says otherwise:
-the API has no authentication yet. A scan never prunes rows while a sub-directory is
+it (default `./media`), and the server listens on `127.0.0.1` unless `HOST` says otherwise
+(`0.0.0.0` only behind the reverse proxy, with `TRUST_PROXY=1`). A scan never prunes rows while a sub-directory is
 unreadable or the root is empty (unmounted volume). File names follow the Plex / Jellyfin conventions (`Title (2019).mkv`,
 `Show/Season 01/Show S01E02.mkv`, optional `[tmdbid-…]` tags); the full list is in
 [docs/architecture/specs/library-scan.md](docs/architecture/specs/library-scan.md).

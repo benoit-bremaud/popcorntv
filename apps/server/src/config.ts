@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 /** Runtime configuration, read once from the environment (see `.env.example`). */
 export interface ServerConfig {
   readonly port: number;
-  /** Loopback by default: the API has no authentication yet; Docker sets `0.0.0.0`. */
+  /** Loopback by default; Docker sets `0.0.0.0` on a private network behind the proxy (spec auth §5). */
   readonly host: string;
   readonly databasePath: string;
   /** Absolute folder every library root must live under (`POST /libraries` rejects the rest). */
@@ -20,14 +20,22 @@ export interface ServerConfig {
   readonly tmdbLanguage: string;
   /** Absolute folder the artwork cache writes to and `GET /artwork/:file` serves from. */
   readonly artworkDir: string;
+  /**
+   * The one origin every browser uses (spec auth R6): drives the cookie flags, the CSRF
+   * check and the links. Required; dev value `http://localhost:5173`.
+   */
+  readonly publicUrl: string;
+  /** Read the client IP from `X-Forwarded-For` (spec auth §5); only behind a proxy, else spoofable. */
+  readonly trustProxy: boolean;
 }
 
 /** The `.env.example` value: a copied example file must not count as a configured key. */
 const TMDB_PLACEHOLDER = 'your-tmdb-read-access-token';
 
-/** Builds the configuration from an environment map; defaults match `.env.example`. */
+/** Builds the configuration from an environment map; defaults match `.env.example`. Throws without a valid `PUBLIC_URL`. */
 export function loadConfig(env: NodeJS.ProcessEnv): ServerConfig {
   const tmdbApiKey = env['TMDB_API_KEY']?.trim();
+  const publicUrl = parsePublicUrl(env['PUBLIC_URL']);
   return {
     port: Number(env['PORT'] ?? 3000),
     host: env['HOST'] ?? '127.0.0.1',
@@ -41,7 +49,24 @@ export function loadConfig(env: NodeJS.ProcessEnv): ServerConfig {
     tmdbApiKey: tmdbApiKey && tmdbApiKey !== TMDB_PLACEHOLDER ? tmdbApiKey : null,
     tmdbLanguage: env['TMDB_LANGUAGE'] ?? 'en-US',
     artworkDir: resolve(env['ARTWORK_DIR'] ?? 'data/artwork'),
+    publicUrl,
+    trustProxy: env['TRUST_PROXY'] === '1',
   };
+}
+
+/** An absolute `http(s)` URL without credentials, query or fragment, kept as its origin. */
+function parsePublicUrl(value: string | undefined): string {
+  if (value === undefined || value.trim() === '') {
+    throw new Error('PUBLIC_URL is required (e.g. http://localhost:5173 in dev)');
+  }
+  const url = URL.parse(value.trim());
+  if (url === null || (url.protocol !== 'http:' && url.protocol !== 'https:')) {
+    throw new Error('PUBLIC_URL must be an absolute http(s) URL');
+  }
+  if (url.username || url.password || url.search || url.hash || url.pathname !== '/') {
+    throw new Error('PUBLIC_URL must be an origin only (no path, query, fragment or credentials)');
+  }
+  return url.origin;
 }
 
 /** A finite integer ≥ 1, else the fallback: the session limit guards CPU and disk. */

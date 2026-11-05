@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import type { Profile } from '@popcorntv/shared';
 import { loadProfiles } from './api.js';
 import { CatalogPage } from './catalog/CatalogPage.js';
@@ -21,10 +22,17 @@ type Props = {
   readonly load?: typeof loadProfiles;
   readonly profileApi?: ProfileApi;
   readonly storage?: Storage;
+  /** The signed-in account's menu (sign out, change password), shown in the header. */
+  readonly account?: ReactNode;
 };
 
 /** The web player shell: brand header, "Who's watching?" (UC8 / UC9), then the catalog. */
-export function App({ load = loadProfiles, profileApi, storage }: Props): React.JSX.Element {
+export function App({
+  load = loadProfiles,
+  profileApi,
+  storage,
+  account,
+}: Props): React.JSX.Element {
   const [view, setView] = useState<View>({ kind: 'loading' });
   const [profiles, setProfiles] = useState<readonly Profile[]>([]);
   /** Only the latest load may set `profiles` (two quick writes, two refreshes). */
@@ -93,6 +101,7 @@ export function App({ load = loadProfiles, profileApi, storage }: Props): React.
             <span className="visually-hidden">, switch profile</span>
           </button>
         )}
+        {account}
       </header>
       <main className="shell">
         {view.kind === 'loading' && <p className="status muted">Loading…</p>}

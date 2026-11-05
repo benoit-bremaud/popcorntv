@@ -3,14 +3,16 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from './app.js';
 import { openDatabase } from './db/index.js';
+import { createAccount, sendCookie, testAuthOptions } from './test-fixtures.js';
 
 describe('buildApp', () => {
   let app: FastifyInstance;
 
   beforeEach(() => {
+    const db = openDatabase(':memory:');
     app = buildApp({
       version: '0.0.0-test',
-      db: openDatabase(':memory:'),
+      db,
       probe: async () => ({ durationSec: null, streams: [] }),
       mediaRoot: tmpdir(),
       tmdb: null,
@@ -19,7 +21,9 @@ describe('buildApp', () => {
         throw new Error('FFmpeg is not used by this suite');
       },
       transcodeDir: tmpdir(),
+      ...testAuthOptions,
     });
+    sendCookie(app, createAccount(db).cookie);
   });
 
   afterEach(async () => {

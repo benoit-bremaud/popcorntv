@@ -29,6 +29,8 @@ const app = buildApp({
   transcoder: createTranscoder(config.ffmpegPath),
   transcodeDir: config.transcodeDir,
   transcodeMaxSessions: config.transcodeMaxSessions,
+  publicUrl: config.publicUrl,
+  trustProxy: config.trustProxy,
   logger: true,
 });
 

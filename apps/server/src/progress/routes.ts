@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { apiError, invalid } from '../http.js';
+import { apiError, callerOf, invalid } from '../http.js';
 import type { ProfileRepository } from '../profiles/repository.js';
 import { profileParams } from '../profiles/routes.js';
 import type { ProgressRepository } from './repository.js';
@@ -27,7 +27,7 @@ export function registerProgressRoutes(
     if (!params.success) return reply.code(400).send(invalid(params.error.issues));
     const body = progressBody.safeParse(request.body);
     if (!body.success) return reply.code(400).send(invalid(body.error.issues));
-    if (!deps.profiles.exists(params.data.profileId)) {
+    if (!deps.profiles.exists(callerOf(request).userId, params.data.profileId)) {
       return reply.code(404).send(apiError('profile_not_found'));
     }
     if (!deps.progress.save(params.data.profileId, params.data.id, body.data.positionSec)) {
@@ -39,7 +39,7 @@ export function registerProgressRoutes(
   app.get('/profiles/:profileId/progress', (request, reply) => {
     const params = profileParams.safeParse(request.params);
     if (!params.success) return reply.code(400).send(invalid(params.error.issues));
-    if (!deps.profiles.exists(params.data.profileId)) {
+    if (!deps.profiles.exists(callerOf(request).userId, params.data.profileId)) {
       return reply.code(404).send(apiError('profile_not_found'));
     }
     return reply.send(deps.progress.list(params.data.profileId));

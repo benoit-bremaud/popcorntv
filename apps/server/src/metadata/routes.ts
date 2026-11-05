@@ -9,6 +9,9 @@ import type { LibraryRepository } from '../library/repository.js';
 import { ARTWORK_FILE } from './artwork-cache.js';
 import type { MetadataService } from './service.js';
 
+/** Owner-only routes (spec auth §4.4). */
+const OWNER = { config: { access: 'owner' } } as const;
+
 /** What the metadata routes need; `service` is null when `TMDB_API_KEY` is not configured. */
 export interface MetadataRoutesDeps {
   readonly repository: LibraryRepository;
@@ -30,7 +33,7 @@ const artworkParams = z.object({ file: z.string().regex(ARTWORK_FILE) });
  * file never changes content.
  */
 export function registerMetadataRoutes(app: FastifyInstance, deps: MetadataRoutesDeps): void {
-  app.post('/libraries/:id/enrich', async (request, reply) => {
+  app.post('/libraries/:id/enrich', OWNER, async (request, reply) => {
     const library = loadLibrary(request.params, deps.repository);
     if (!library.ok) return reply.code(library.status).send(library.body);
     const body = enrichBody.safeParse(request.body ?? {});

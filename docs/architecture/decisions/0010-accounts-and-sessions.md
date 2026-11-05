@@ -53,7 +53,7 @@ Sensitivity: KISS at 40 (others renormalised) → A 460, C 328. **A.**
 ## 3. CSRF protection for unsafe methods
 
 - **A — `SameSite=Lax` cookie plus an `Origin` / `Sec-Fetch-Site` check** on every
-  non-GET request: `403` when `Sec-Fetch-Site` is `cross-site`, or when an `Origin`
+  request other than GET, HEAD or OPTIONS: `403` when `Sec-Fetch-Site` is `cross-site`, or when an `Origin`
   header is present and differs from `PUBLIC_URL`'s origin (spec R7).
 - **B — Synchronizer token** per session, sent in a header.
 - **C — Double-submit cookie.**
