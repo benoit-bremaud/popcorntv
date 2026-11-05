@@ -36,11 +36,17 @@ const MEDIA = TITLES.map(({ id, title, genre, voteAverage }, index) => ({
   metadata: { ...META, genres: [{ id: index + 1, name: genre }], voteAverage },
 }));
 
+const PROFILE = { id: 'default', name: 'Me', avatar: 'red' };
+
 test('the catalog grid renders from the API and opens a title', async ({ page }) => {
   await page.route('**/api/libraries', (route) => route.fulfill({ json: [LIBRARY] }));
   await page.route('**/api/libraries/lib-1/media', (route) => route.fulfill({ json: MEDIA }));
+  // Since #10 the catalog opens for a profile: answer the picker and its progress load.
+  await page.route('**/api/profiles', (route) => route.fulfill({ json: [PROFILE] }));
+  await page.route('**/api/profiles/default/progress', (route) => route.fulfill({ json: [] }));
 
   await page.goto('/');
+  await page.getByRole('button', { name: 'Me' }).click();
 
   await expect(page.getByRole('heading', { name: 'Top rated' })).toBeVisible();
   await page.getByRole('group', { name: 'Type' }).getByRole('button', { name: 'Films' }).click();
