@@ -1,7 +1,14 @@
 import { expect, test } from '@playwright/test';
+import { DEFAULT_PROFILE_ID } from '@popcorntv/shared';
+import type { Library, Media, Profile } from '@popcorntv/shared';
 
 // The API is mocked at the network layer: the smoke checks the built page, not the server.
-const LIBRARY = { id: 'lib-1', name: 'Films', rootPath: '/media/films', kind: 'films' };
+const LIBRARY = {
+  id: 'lib-1',
+  name: 'Films',
+  rootPath: '/media/films',
+  kind: 'films',
+} satisfies Library;
 const META = {
   tmdbId: 1,
   overview: 'A synopsis.',
@@ -34,19 +41,23 @@ const MEDIA = TITLES.map(({ id, title, genre, voteAverage }, index) => ({
   part: null,
   streams: [],
   metadata: { ...META, genres: [{ id: index + 1, name: genre }], voteAverage },
-}));
+})) satisfies Media[];
 
-const PROFILE = { id: 'default', name: 'Me', avatar: 'red' };
+const PROFILE = { id: DEFAULT_PROFILE_ID, name: 'Me', avatar: 'red' } satisfies Profile;
 
 test('the catalog grid renders from the API and opens a title', async ({ page }) => {
+  // Registered first so it matches last: any unmocked API call fails fast instead of hanging.
+  await page.route('**/api/**', (route) => route.abort());
   await page.route('**/api/libraries', (route) => route.fulfill({ json: [LIBRARY] }));
   await page.route('**/api/libraries/lib-1/media', (route) => route.fulfill({ json: MEDIA }));
   // Since #10 the catalog opens for a profile: answer the picker and its progress load.
   await page.route('**/api/profiles', (route) => route.fulfill({ json: [PROFILE] }));
-  await page.route('**/api/profiles/default/progress', (route) => route.fulfill({ json: [] }));
+  await page.route(`**/api/profiles/${DEFAULT_PROFILE_ID}/progress`, (route) =>
+    route.fulfill({ json: [] }),
+  );
 
   await page.goto('/');
-  await page.getByRole('button', { name: 'Me' }).click();
+  await page.getByRole('button', { name: 'Me', exact: true }).click();
 
   await expect(page.getByRole('heading', { name: 'Top rated' })).toBeVisible();
   await page.getByRole('group', { name: 'Type' }).getByRole('button', { name: 'Films' }).click();
