@@ -24,7 +24,7 @@ export function SignInForm({ onSignedIn, signIn }: Props): React.JSX.Element {
         onSubmit={(event) => void submit(event, () => signIn({ username, password }))}
       >
         <label className="auth-field">
-          Username
+          <span>Username</span>
           <input
             className="input"
             name="username"
@@ -35,7 +35,7 @@ export function SignInForm({ onSignedIn, signIn }: Props): React.JSX.Element {
           />
         </label>
         <label className="auth-field">
-          Password
+          <span>Password</span>
           <input
             className="input"
             name="password"

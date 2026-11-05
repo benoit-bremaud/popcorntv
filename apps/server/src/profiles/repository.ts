@@ -37,7 +37,7 @@ export class ProfileRepository {
 
   /** Lets callers answer 404 before writing a row that references the profile. */
   exists(userId: string, id: string): boolean {
-    return this.find(userId, id) !== undefined;
+    return this.byId(userId, id) !== undefined;
   }
 
   /** First-owner setup (UC11): profiles from before #18 (no owner) go to the first owner. */
@@ -85,7 +85,7 @@ export class ProfileRepository {
    * id and another profile's name, like `create`.
    */
   update(userId: string, id: string, body: UpdateProfileBody): ProfileWrite {
-    const current = this.find(userId, id);
+    const current = this.byId(userId, id);
     if (current === undefined) return { ok: false, reason: 'profile_not_found' };
     if (body.name !== undefined && this.nameTaken(userId, body.name, id)) {
       return { ok: false, reason: 'profile_name_taken' };
@@ -108,7 +108,7 @@ export class ProfileRepository {
     return 'removed';
   }
 
-  private find(userId: string, id: string): Profile | undefined {
+  private byId(userId: string, id: string): Profile | undefined {
     return this.db
       .select(columns)
       .from(profiles)

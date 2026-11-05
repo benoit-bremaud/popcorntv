@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import type { FormEvent } from 'react';
 import type { User } from '@popcorntv/shared';
 import type { AuthResult } from '../api.js';
 import { authMessage } from './auth-api.js';
@@ -8,7 +7,10 @@ import { authMessage } from './auth-api.js';
 export function useAuthSubmit(onSignedIn: (user: User) => void) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  async function submit(event: FormEvent, send: () => Promise<AuthResult>): Promise<void> {
+  async function submit(
+    event: React.SyntheticEvent<HTMLFormElement, SubmitEvent>,
+    send: () => Promise<AuthResult>,
+  ): Promise<void> {
     event.preventDefault();
     setBusy(true);
     setError(null);

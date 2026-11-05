@@ -107,7 +107,7 @@ export function buildApp(options: AppOptions): FastifyInstance {
   const sessionRepository = new SessionRepository(options.db);
   registerAuthHook(app, { sessions: sessionRepository, cookie });
 
-  app.get('/health', { config: { access: 'public' } }, async (): Promise<HealthResponse> => ({
+  app.get('/health', { config: { access: 'public' } }, (): HealthResponse => ({
     status: 'ok',
     version: options.version,
   }));

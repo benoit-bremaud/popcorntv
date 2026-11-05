@@ -13,8 +13,8 @@ export const TEST_PUBLIC_URL = 'http://localhost:5173';
 
 /** Instant, deterministic stand-in for argon2id: the routes' logic, not the KDF, is under test. */
 export const fakeHasher: Hasher = {
-  hash: async (password) => `fake:${password}`,
-  verify: async (stored, password) => stored !== null && stored === `fake:${password}`,
+  hash: (password) => Promise.resolve(`fake:${password}`),
+  verify: (stored, password) => Promise.resolve(stored !== null && stored === `fake:${password}`),
 };
 
 /** Options every `buildApp` suite shares: the auth settings without real hashing or logs. */
@@ -61,7 +61,8 @@ export function sendCookie(app: FastifyInstance, cookie: string): void {
 
 /** For suites that register routes on a bare Fastify: stands in for the auth hook. */
 export function actAs(app: FastifyInstance, caller: () => Caller): void {
-  app.addHook('onRequest', async (request) => {
+  app.addHook('onRequest', (request, _reply, done) => {
     request.caller = caller();
+    done();
   });
 }

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import type { FormEvent } from 'react';
 import { PASSWORD_MAX, PASSWORD_MIN } from '@popcorntv/shared';
 import type { User } from '@popcorntv/shared';
 import type { AuthApi } from './auth-api.js';
@@ -28,7 +27,7 @@ export function AccountMenu({ user, api, onSignedOut }: Props): React.JSX.Elemen
     else setMessage(authMessage(null));
   }
 
-  async function change(event: FormEvent): Promise<void> {
+  async function change(event: React.SyntheticEvent<HTMLFormElement, SubmitEvent>): Promise<void> {
     event.preventDefault();
     setBusy(true);
     const result = await api.changePassword({ current, next });
@@ -50,15 +49,11 @@ export function AccountMenu({ user, api, onSignedOut }: Props): React.JSX.Elemen
         {user.username}
       </summary>
       <div className="account-panel">
-        {message && (
-          <p className="account-message" role="status">
-            {message}
-          </p>
-        )}
+        {message && <output className="account-message">{message}</output>}
         {changing ? (
           <form className="auth-form" onSubmit={(event) => void change(event)}>
             <label className="auth-field">
-              Current password
+              <span>Current password</span>
               <input
                 className="input"
                 type="password"
@@ -69,7 +64,7 @@ export function AccountMenu({ user, api, onSignedOut }: Props): React.JSX.Elemen
               />
             </label>
             <label className="auth-field">
-              New password
+              <span>New password</span>
               <input
                 className="input"
                 type="password"

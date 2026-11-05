@@ -31,7 +31,7 @@ export function SetupForm({ onSignedIn, setUp, initialToken }: Props): React.JSX
         onSubmit={(event) => void submit(event, () => setUp({ token, username, password }))}
       >
         <label className="auth-field">
-          Setup token
+          <span>Setup token</span>
           <input
             className="input"
             name="token"
@@ -42,7 +42,7 @@ export function SetupForm({ onSignedIn, setUp, initialToken }: Props): React.JSX
           />
         </label>
         <label className="auth-field">
-          Username
+          <span>Username</span>
           <input
             className="input"
             name="username"
@@ -56,7 +56,7 @@ export function SetupForm({ onSignedIn, setUp, initialToken }: Props): React.JSX
           />
         </label>
         <label className="auth-field">
-          Password ({PASSWORD_MIN} characters or more)
+          <span>Password ({PASSWORD_MIN} characters or more)</span>
           <input
             className="input"
             name="password"

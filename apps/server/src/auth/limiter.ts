@@ -127,7 +127,7 @@ export function clientKey(address: string): string {
   const left = head === '' ? [] : head.split(':');
   const right = address.includes('::') && tail !== '' ? tail.split(':') : [];
   const groups = address.includes('::')
-    ? [...left, ...Array<string>(8 - left.length - right.length).fill('0'), ...right]
+    ? [...left, ...new Array<string>(8 - left.length - right.length).fill('0'), ...right]
     : left;
   return `${groups
     .slice(0, 4)
