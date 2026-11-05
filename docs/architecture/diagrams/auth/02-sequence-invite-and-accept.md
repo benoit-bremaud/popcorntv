@@ -32,6 +32,7 @@ sequenceDiagram
     Note right of API: one transaction
     API->>UR: no user exists? create(role=owner)
     API->>PR: adoptOrphans(userId)
+    API->>API: create session · set last_login_at
   end
   API-->>W: 201 + session cookie
 
@@ -51,9 +52,10 @@ sequenceDiagram
     else invite
       API->>UR: create(role) — 409 username_taken rolls back, token stays usable
       API->>PR: createFirst(userId, username)
+      API->>API: revoke the carried session · create session · set last_login_at
       API-->>W: 200 + session cookie
     else reset
-      API->>UR: set password · revoke all sessions
+      API->>UR: set password · revoke all sessions · create session · set last_login_at
       API-->>W: 200 + new session cookie
     end
   end

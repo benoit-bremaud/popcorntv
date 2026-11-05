@@ -29,10 +29,10 @@
 - **R5** Sessions are server-side rows; the cookie carries a 256-bit random token, the
   database its SHA-256. Idle expiry 14 days, absolute 90 days. Every sign-in, setup or
   redeem issues a new token and revokes the session the request carried, if any (no
-  session fixation). At most 20 active sessions per user; the oldest is revoked first.
-  Cookie `HttpOnly`,
-  `SameSite=Lax`, `Path=/`; on `https` it is named `__Host-pctv_session` and `Secure`,
-  on `http` (dev) `pctv_session`.
+  session fixation); each of them also sets `users.last_login_at`. A password change
+  rotates the current session's token too. At most 20 active sessions per user; the
+  oldest is revoked first. Cookie `HttpOnly`, `SameSite=Lax`, `Path=/`; on `https` it is
+  named `__Host-pctv_session` and `Secure`, on `http` (dev) `pctv_session`.
 - **R6** `PUBLIC_URL` is required; the server refuses to start without it. Dev value:
   `http://localhost:5173` (the Vite origin). Every client, LAN included, uses that
   origin (through the proxy in production). It drives the cookie flags (R5), the CSRF
@@ -96,11 +96,13 @@ Extensions: 3a token wrong or expired → `404 token_invalid`; 3b a user already
   account; a new reset link revokes the previous one.
 - **UC17 Manage accounts** (Owner): lists users with their last sign-in
   (`users.last_login_at`, kept beyond the 90-day event purge) and active devices,
-  changes a role, ends a device's or all sessions, deletes an account. Changing a role or deleting revokes that user's pending reset
-  link. Extension: removing or demoting the last owner → `409 last_owner`.
+  changes a role, ends a device's or all sessions, deletes an account. Changing a role
+  or deleting revokes that user's pending reset link. Extension: removing or demoting
+  the last owner → `409 last_owner`.
 - **UC18 Review sign-in activity** (Owner): last 200 `auth_events`, newest first.
 - **UC19 Change my password** (Viewer, Owner): current + new password; every other
-  session of that user ends. Extension: wrong current → `401 invalid_credentials`.
+  session of that user ends and the current one gets a new token (R5). Extension: wrong
+  current → `401 invalid_credentials`.
 - **UC20 Set a new password from a reset link** (Viewer, Owner): opens
   `#/reset/<token>`, picks a password; every session of that user ends and a new one
   starts. Extension: token invalid → `404 token_invalid`.
@@ -228,13 +230,14 @@ receives `Pick<ProfileRepository, 'adoptOrphans' | 'createFirst'>`.
   password validation (NFC, ASCII), CSRF predicate table (`Origin` /
   `Sec-Fetch-Site`), config refuses a missing `PUBLIC_URL`.
 - Repositories (in-memory SQLite): session idle / absolute expiry and hourly slide,
-  revoke, the 20-session cap, single-use and revoked tokens, concurrent redeem (one wins), last-owner
-  invariant, profile adoption, per-user profile rules, cascades, purge.
+  revoke, the 20-session cap, single-use and revoked tokens, concurrent redeem (one
+  wins), last-owner invariant, profile adoption, per-user profile rules, cascades,
+  purge.
 - Routes (`app.inject`): setup once, invite → redeem, reset → redeem, kind mismatch,
-  username taken keeps the token, sign-in/out, a pre-set cookie is replaced at sign-in, lockout, no enumeration (same status and
-  body), every non-public route `401` without a cookie (built from the route table),
-  `403` for a viewer on owner routes, role change applies at once, cross-user profile
-  and playback session → `404`, CSRF `403`.
+  username taken keeps the token, sign-in/out, a pre-set cookie is replaced at sign-in,
+  lockout, no enumeration (same status and body), every non-public route `401` without a
+  cookie (built from the route table), `403` for a viewer on owner routes, role change
+  applies at once, cross-user profile and playback session → `404`, CSRF `403`.
 - Web: setup, sign-in, invite and reset screens, users and invitations panel, `401` →
   sign-in.
 - Security: gitleaks, SEC-01…SEC-12 and SEC-15 (skill `qa-browser-check`).

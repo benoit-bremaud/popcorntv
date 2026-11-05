@@ -42,7 +42,8 @@ sequenceDiagram
       API->>EL: record login_failed
       API-->>W: 401 invalid_credentials
     else ok
-      API->>SR: create(userId) — token stored as SHA-256
+      API->>SR: revoke the carried session · create(userId), token stored as SHA-256
+      API->>SR: revoke the oldest beyond 20 active sessions
       API->>UR: set last_login_at
       API->>EL: record login_ok · purge stale rows
       API-->>W: 200 User + Set-Cookie (HttpOnly, SameSite=Lax)

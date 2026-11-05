@@ -9,7 +9,8 @@
 
 ## 1. Requirements
 
-- **R1** A profile has an id, a name (1–40 chars after trim, unique case-insensitively per user since #18)
+- **R1** A profile has an id, a name (1–40 chars after trim,
+  unique case-insensitively per user since #18)
   and an avatar colour picked from a fixed palette of design tokens.
 - **R2** Watch progress (ADR-0007) is stored and read per profile; two profiles keep
   separate positions for the same title.
@@ -33,7 +34,7 @@ button.
 
 1. The web reads the remembered profile id and loads `GET /profiles`.
 2. The id is in the list → the catalog opens for that profile (skip to 5).
-3. Otherwise the web shows "Who's watching?" with every profile.
+3. Otherwise the web shows "Who's watching?" with every profile of the signed-in user.
 4. The viewer picks one; the web remembers its id.
 5. The catalog and the detail dialog read and save progress for that profile.
 
@@ -66,7 +67,8 @@ dropped.
 
 ### 4.2 API
 
-- `GET /profiles` → `200 Profile[]` `{ id, name, avatar }`, oldest first.
+- `GET /profiles` → `200 Profile[]` `{ id, name, avatar }`: the caller's profiles
+  only (since #18), oldest first.
 - `POST /profiles` `{ name, avatar }` → `201 Profile`.
 - `PATCH /profiles/:profileId` `{ name?, avatar? }` → `200 Profile`.
 - `DELETE /profiles/:profileId` → `204`.

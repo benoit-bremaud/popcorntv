@@ -16,6 +16,7 @@ stateDiagram-v2
   Active --> Active: request within the idle window (last_seen_at, at most hourly)
   Active --> Expired: idle 14 days or absolute 90 days
   Active --> Revoked: sign out · owner ends it · password change or reset
+  Active --> Revoked: replaced at sign-in, setup or redeem · evicted by the 20-session cap
   Active --> [*]: account deleted (cascade)
   Expired --> [*]: purged at start and on each sign-in
   Revoked --> [*]: purged at start and on each sign-in
