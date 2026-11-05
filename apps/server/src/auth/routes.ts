@@ -7,6 +7,7 @@ import { apiError, callerOf, invalid } from '../http.js';
 import type { ProfileRepository } from '../profiles/repository.js';
 import type { EventRepository } from './event-repository.js';
 import type { Hasher } from './hasher.js';
+import { HasherBusyError } from './hasher.js';
 import { sessionCookie } from './hook.js';
 import type { CookiePolicy } from './hook.js';
 import type { LoginLimiter } from './limiter.js';
@@ -67,6 +68,22 @@ export function registerAuthRoutes(app: FastifyInstance, deps: AuthRoutesDeps): 
     return sessionCookie(deps.cookie, issued.token);
   };
 
+  // The attempt counts before the await so concurrent tries cannot all pass `check`
+  // (spec auth R8); a busy hasher gave no verdict, so it is refunded.
+  const verifyCounted = async (
+    ip: string,
+    key: string,
+    stored: string | null,
+    password: string,
+  ) => {
+    limiter.fail(ip, key);
+    try {
+      return await deps.hasher.verify(stored, password);
+    } catch (error) {
+      if (error instanceof HasherBusyError) limiter.refund(ip, key);
+      throw error;
+    }
+  };
   const tooMany = (reply: FastifyReply, retryAfterSec: number) =>
     reply
       .code(429)
@@ -117,9 +134,13 @@ export function registerAuthRoutes(app: FastifyInstance, deps: AuthRoutesDeps): 
       }
       return tooMany(reply, limit.retryAfterSec);
     }
-    limiter.fail(request.ip, key);
     const stored = users.findByUsername(body.data.username);
-    const ok = await deps.hasher.verify(stored?.passwordHash ?? null, body.data.password);
+    const ok = await verifyCounted(
+      request.ip,
+      key,
+      stored?.passwordHash ?? null,
+      body.data.password,
+    );
     if (!stored || !ok) {
       events.record('login_failed', {
         userId: stored?.id ?? null,
@@ -161,8 +182,7 @@ export function registerAuthRoutes(app: FastifyInstance, deps: AuthRoutesDeps): 
     const key = usernameKey(stored.username);
     const limit = limiter.check(request.ip, key);
     if (!limit.allowed) return tooMany(reply, limit.retryAfterSec);
-    limiter.fail(request.ip, key);
-    if (!(await deps.hasher.verify(stored.passwordHash, body.data.current))) {
+    if (!(await verifyCounted(request.ip, key, stored.passwordHash, body.data.current))) {
       return reply.code(401).send(apiError('invalid_credentials'));
     }
     limiter.succeed(request.ip, key);

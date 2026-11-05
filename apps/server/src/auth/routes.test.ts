@@ -338,6 +338,24 @@ describe('sign-in and sign-out (UC13, UC14)', () => {
     expect(response.headers['retry-after']).toBe('2');
   });
 
+  it('does not count busy answers against the account', async () => {
+    const db = openDatabase(':memory:');
+    createAccount(db);
+    let saturated = true;
+    const flaky: Hasher = {
+      hash: fakeHasher.hash,
+      verify: async (...args) => {
+        if (saturated) throw new HasherBusyError();
+        return fakeHasher.verify(...args);
+      },
+    };
+    const h = await harness({ db, hasher: flaky });
+    for (let i = 0; i < 6; i += 1) await signIn(h.app, 'owner', 'wrong password!');
+    saturated = false;
+
+    expect((await signIn(h.app, 'owner', 'wrong password!')).statusCode).toBe(401);
+  });
+
   it('names the cookie __Host-pctv_session and marks it Secure on https', async () => {
     const h = await harness({ publicUrl: 'https://tv.example.org' });
 

@@ -35,13 +35,17 @@ sequenceDiagram
     API->>EL: record login_locked (once per window)
     API-->>W: 429 too_many_attempts (Retry-After)
   else allowed
+    API->>RL: fail(ip, usernameKey) — the attempt counts before hashing (R8)
     API->>UR: findByUsername()
     API->>API: verify argon2id (dummy hash if unknown)
     alt wrong credentials
-      API->>RL: recordFailure(ip, usernameKey)
       API->>EL: record login_failed
       API-->>W: 401 invalid_credentials
+    else hasher busy
+      API->>RL: refund(ip, usernameKey)
+      API-->>W: 429 too_many_attempts (Retry-After 2)
     else ok
+      API->>RL: succeed — clear the pair, refund the IP attempt
       API->>SR: revoke the carried session · create(userId), token stored as SHA-256
       API->>SR: revoke the oldest beyond 20 active sessions
       API->>UR: set last_login_at
@@ -52,7 +56,7 @@ sequenceDiagram
 
   loop every later request
     W->>H: request + cookie
-    H->>H: CSRF check on non-GET (R7)
+    H->>H: CSRF check on methods other than GET/HEAD/OPTIONS (R7)
     H->>SR: findValid(hash(token)) joined with the user's current role
     alt no valid session
       H-->>W: 401 unauthenticated

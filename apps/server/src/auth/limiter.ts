@@ -75,6 +75,15 @@ export class LoginLimiter {
     if (window && window.count > 0) window.count -= 1;
   }
 
+  /** Gives back an attempt that never reached a verdict (the hasher was busy). */
+  refund(address: string, key: string): void {
+    const ip = clientKey(address);
+    for (const id of [`ip:${ip}`, pairKey(ip, key)]) {
+      const window = this.windows.get(id);
+      if (window && window.count > 0) window.count -= 1;
+    }
+  }
+
   /** Tracked keys, for tests of the sweep. */
   get size(): number {
     return this.windows.size;
