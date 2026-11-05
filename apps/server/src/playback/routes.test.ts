@@ -7,6 +7,7 @@ import type { FastifyInstance } from 'fastify';
 import type { ApiError, Library, Media } from '@popcorntv/shared';
 import { buildApp } from '../app.js';
 import { openDatabase } from '../db/index.js';
+import { createAccount, sendCookie, testAuthOptions } from '../test-fixtures.js';
 
 const CONTENT = '0123456789abcdefghij';
 
@@ -21,9 +22,10 @@ describe('GET /media/:id/file', () => {
     mediaRoot = join(base, 'media');
     root = join(mediaRoot, 'films');
     await mkdir(root, { recursive: true });
+    const db = openDatabase(':memory:');
     app = buildApp({
       version: 'test',
-      db: openDatabase(':memory:'),
+      db,
       probe: async () => ({
         durationSec: 60,
         streams: [{ type: 'video', codec: 'h264', width: 1920, height: 1080, language: null }],
@@ -35,7 +37,9 @@ describe('GET /media/:id/file', () => {
         throw new Error('FFmpeg is not used by this suite');
       },
       transcodeDir: tmpdir(),
+      ...testAuthOptions,
     });
+    sendCookie(app, createAccount(db).cookie);
   });
 
   afterEach(async () => {

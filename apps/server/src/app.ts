@@ -2,6 +2,15 @@ import { join } from 'node:path';
 import Fastify from 'fastify';
 import type { FastifyError, FastifyInstance } from 'fastify';
 import type { ApiError, HealthResponse } from '@popcorntv/shared';
+import { EventRepository } from './auth/event-repository.js';
+import { Argon2Hasher, HasherBusyError } from './auth/hasher.js';
+import type { Hasher } from './auth/hasher.js';
+import { cookiePolicy, registerAuthHook } from './auth/hook.js';
+import { LoginLimiter } from './auth/limiter.js';
+import { registerAuthRoutes } from './auth/routes.js';
+import { SessionRepository } from './auth/session-repository.js';
+import { SetupToken } from './auth/setup-token.js';
+import { UserRepository } from './auth/user-repository.js';
 import type { AppDatabase } from './db/index.js';
 import type { Prober } from './library/ffprobe.js';
 import { LibraryRepository } from './library/repository.js';
@@ -52,12 +61,23 @@ export interface AppOptions {
   /** Parent of the HLS session directories (`ServerConfig.transcodeDir`). */
   readonly transcodeDir: string;
   readonly transcodeMaxSessions?: number;
+  /** `ServerConfig.publicUrl`: cookie flags, CSRF origin and the setup link (spec auth R6). */
+  readonly publicUrl: string;
+  /** Behind a reverse proxy, `request.ip` comes from `X-Forwarded-For` (spec auth §5). */
+  readonly trustProxy?: boolean;
+  /** Injected so tests hash fast; argon2id with the spec parameters otherwise. */
+  readonly hasher?: Hasher;
+  /**
+   * Receives the raw first-owner setup link while no user exists (UC11). Defaults to a log
+   * line: it is the only place the token ever appears.
+   */
+  readonly onSetupLink?: (link: string) => void;
   readonly logger?: boolean;
 }
 
 /** Builds the HTTP application without listening — the tests inject requests directly. */
 export function buildApp(options: AppOptions): FastifyInstance {
-  const app = Fastify({ logger: options.logger ?? false });
+  const app = Fastify({ logger: options.logger ?? false, trustProxy: options.trustProxy ?? false });
 
   // On every reply, errors and streamed media included. The CSP and `frame-ancestors`
   // belong to whatever serves the web build.
@@ -68,13 +88,21 @@ export function buildApp(options: AppOptions): FastifyInstance {
 
   // Unexpected errors are logged with their cause but never echoed (SQLite messages, paths).
   app.setErrorHandler((error: FastifyError, request, reply) => {
+    // A saturated password hasher is a rate limit, not a server fault (spec auth R4).
+    if (error instanceof HasherBusyError) {
+      return reply.code(429).header('retry-after', '2').send({ error: 'too_many_attempts' });
+    }
     const status = error.statusCode ?? 500;
     if (status >= 500) request.log.error(error);
     const body: ApiError = { error: status >= 500 ? 'internal' : 'invalid_request' };
     return reply.code(status).send(body);
   });
 
-  app.get('/health', async (): Promise<HealthResponse> => ({
+  const cookie = cookiePolicy(options.publicUrl);
+  const sessionRepository = new SessionRepository(options.db);
+  registerAuthHook(app, { sessions: sessionRepository, cookie });
+
+  app.get('/health', { config: { access: 'public' } }, async (): Promise<HealthResponse> => ({
     status: 'ok',
     version: options.version,
   }));
@@ -118,9 +146,35 @@ export function buildApp(options: AppOptions): FastifyInstance {
   registerSessionRoutes(app, { repository, sessions, mediaRoot: options.mediaRoot });
   const profiles = new ProfileRepository(options.db);
   registerProfileRoutes(app, { profiles });
+  const users = new UserRepository(options.db);
+  const events = new EventRepository(options.db);
+  const setupToken = new SetupToken();
+  registerAuthRoutes(app, {
+    db: options.db,
+    users,
+    sessions: sessionRepository,
+    events,
+    hasher: options.hasher ?? new Argon2Hasher(),
+    limiter: new LoginLimiter(),
+    setupToken,
+    profiles,
+    cookie,
+  });
   registerProgressRoutes(app, { progress: new ProgressRepository(options.db), profiles });
   // Sessions live in memory: directories left by a previous run belong to no one.
-  app.addHook('onReady', async () => sessions.clean());
+  app.addHook('onReady', async () => {
+    await sessions.clean();
+    const now = new Date();
+    sessionRepository.purge(now);
+    events.purge(now);
+    if (users.isEmpty()) {
+      const link = `${cookie.origin}/#/setup/${setupToken.issue()}`;
+      (
+        options.onSetupLink ??
+        ((l) => app.log.warn({ setupLink: l }, 'no account yet: open the setup link (valid 1 h)'))
+      )(link);
+    }
+  });
   // preClose runs before the server waits for open responses (a film stream can last hours).
   app.addHook('preClose', async () => {
     extractor.closeAll();

@@ -7,6 +7,7 @@ import type { ApiError, EnrichReport, Library, Media, ScanReport } from '@popcor
 import { buildApp } from '../app.js';
 import { openDatabase } from '../db/index.js';
 import type { TmdbClient } from './tmdb-client.js';
+import { createAccount, sendCookie, testAuthOptions } from '../test-fixtures.js';
 
 const DIGEST = 'a'.repeat(64);
 
@@ -55,9 +56,10 @@ describe('metadata routes', () => {
     root = join(mediaRoot, 'films');
     await mkdir(root);
     tmdb = makeClient();
+    const db = openDatabase(':memory:');
     app = buildApp({
       version: 'test',
-      db: openDatabase(':memory:'),
+      db,
       probe: async () => ({ durationSec: 60, streams: [] }),
       mediaRoot,
       tmdb,
@@ -66,7 +68,9 @@ describe('metadata routes', () => {
         throw new Error('FFmpeg is not used by this suite');
       },
       transcodeDir: tmpdir(),
+      ...testAuthOptions,
     });
+    sendCookie(app, createAccount(db).cookie);
   });
 
   afterEach(async () => {
@@ -260,9 +264,10 @@ describe('metadata routes', () => {
   describe('without a TMDB key', () => {
     beforeEach(async () => {
       await app.close();
+      const db = openDatabase(':memory:');
       app = buildApp({
         version: 'test',
-        db: openDatabase(':memory:'),
+        db,
         probe: async () => ({ durationSec: 60, streams: [] }),
         mediaRoot,
         tmdb: null,
@@ -271,7 +276,9 @@ describe('metadata routes', () => {
           throw new Error('FFmpeg is not used by this suite');
         },
         transcodeDir: tmpdir(),
+        ...testAuthOptions,
       });
+      sendCookie(app, createAccount(db).cookie);
     });
 
     it('answers 409 tmdb_not_configured and scans with metadata null', async () => {

@@ -1,10 +1,10 @@
 import { open } from 'node:fs/promises';
 import type { FileHandle } from 'node:fs/promises';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { directPlayMime } from '@popcorntv/shared';
 import type { PlaybackStart } from '@popcorntv/shared';
-import { apiError, invalid } from '../http.js';
+import { apiError, callerOf, invalid } from '../http.js';
 import { MAX_POSITION_SEC } from '../progress/routes.js';
 import type { LibraryRepository } from '../library/repository.js';
 import { PLAYLIST_NAME } from './ffmpeg-args.js';
@@ -48,6 +48,10 @@ async function openOrNull(path: string): Promise<FileHandle | null> {
  * end) and both answers carry `offsetSec`, the media time the player's timeline starts at.
  */
 export function registerSessionRoutes(app: FastifyInstance, deps: SessionRoutesDeps): void {
+  /** Another user's session answers like an unknown one (spec auth R10). */
+  const owned = (request: FastifyRequest, id: string) =>
+    deps.sessions.ownedBy(id, callerOf(request).userId);
+
   app.post('/playback/sessions', async (request, reply) => {
     const body = startBody.safeParse(request.body);
     if (!body.success) return reply.code(400).send(invalid(body.error.issues));
@@ -74,7 +78,7 @@ export function registerSessionRoutes(app: FastifyInstance, deps: SessionRoutesD
 
     const input = await confinedPath(stored.filePath, stored.rootPath, deps.mediaRoot);
     if (input === null) return reply.code(404).send(apiError('media_not_found'));
-    const result = await deps.sessions.open(input, streams, startSec);
+    const result = await deps.sessions.open(callerOf(request).userId, input, streams, startSec);
     if (result.kind !== 'ready') {
       const { status, code } = START_ERRORS[result.kind];
       return reply.code(status).send(apiError(code));
@@ -92,7 +96,7 @@ export function registerSessionRoutes(app: FastifyInstance, deps: SessionRoutesD
   app.post('/playback/sessions/:id/heartbeat', async (request, reply) => {
     const params = sessionParams.safeParse(request.params);
     if (!params.success) return reply.code(400).send(invalid(params.error.issues));
-    if (!deps.sessions.touch(params.data.id)) {
+    if (!owned(request, params.data.id) || !deps.sessions.touch(params.data.id)) {
       return reply.code(404).send(apiError('session_not_found'));
     }
     return reply.code(204).send();
@@ -101,7 +105,7 @@ export function registerSessionRoutes(app: FastifyInstance, deps: SessionRoutesD
   app.delete('/playback/sessions/:id', async (request, reply) => {
     const params = sessionParams.safeParse(request.params);
     if (!params.success) return reply.code(400).send(invalid(params.error.issues));
-    if (!(await deps.sessions.close(params.data.id))) {
+    if (!owned(request, params.data.id) || !(await deps.sessions.close(params.data.id))) {
       return reply.code(404).send(apiError('session_not_found'));
     }
     return reply.code(204).send();
@@ -111,7 +115,9 @@ export function registerSessionRoutes(app: FastifyInstance, deps: SessionRoutesD
     const params = fileParams.safeParse(request.params);
     if (!params.success) return reply.code(400).send(invalid(params.error.issues));
     const { id, file } = params.data;
-    if (!deps.sessions.touch(id)) return reply.code(404).send(apiError('session_not_found'));
+    if (!owned(request, id) || !deps.sessions.touch(id)) {
+      return reply.code(404).send(apiError('session_not_found'));
+    }
     const path = deps.sessions.filePath(id, file);
     if (path === null) return reply.code(404).send(apiError('segment_not_found'));
     const handle = await openOrNull(path);

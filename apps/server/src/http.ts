@@ -1,8 +1,42 @@
+import type { FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import type { ApiError, ApiErrorCode, Library } from '@popcorntv/shared';
+import type { ApiError, ApiErrorCode, Library, Role } from '@popcorntv/shared';
 import type { LibraryRepository } from './library/repository.js';
 
-/** Helpers shared by every route module: library lookup and error bodies. */
+/** Helpers shared by every route module: the caller, library lookup and error bodies. */
+
+/**
+ * Who sent the request, set by the auth hook from the session cookie (spec auth §4.5).
+ * Lives here so `profiles`, `progress` and `playback` never import `auth`.
+ */
+export interface Caller {
+  readonly userId: string;
+  readonly role: Role;
+  /** The session the cookie resolved to: sign-out and password change end or rotate it. */
+  readonly sessionId: string;
+}
+
+/** Route access (spec auth R1): `public`, `owner`, or absent for any signed-in user. */
+export type RouteAccess = 'public' | 'owner';
+
+declare module 'fastify' {
+  interface FastifyRequest {
+    /** Null on a public route without a valid session; set on every other route. */
+    caller: Caller | null;
+  }
+  interface FastifyContextConfig {
+    readonly access?: RouteAccess;
+  }
+}
+
+/**
+ * The caller of a protected route. The hook has already answered 401 without one, so a
+ * missing caller is a wiring bug (a route registered without the hook): fail loudly.
+ */
+export function callerOf(request: FastifyRequest): Caller {
+  if (!request.caller) throw new Error('protected route reached without a caller');
+  return request.caller;
+}
 
 const libraryParams = z.object({ id: z.uuid() });
 

@@ -5,5 +5,5 @@
     "moduleResolution": "NodeNext",
     "noEmit": false
   },
-  "exclude": ["src/**/*.test.ts"]
+  "exclude": ["src/**/*.test.ts", "src/test-fixtures.ts"]
 }

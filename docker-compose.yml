@@ -3,7 +3,8 @@ services:
     build: .
     image: popcorntv:local
     ports:
-      - '3000:3000'
+      # Loopback only (spec auth §5): remote clients go through the HTTPS reverse proxy.
+      - '127.0.0.1:3000:3000'
     env_file:
       - .env.local
     environment:

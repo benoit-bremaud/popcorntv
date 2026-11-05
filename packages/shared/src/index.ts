@@ -182,6 +182,14 @@ export type ApiErrorCode =
   | 'profile_limit'
   | 'last_profile'
   | 'subtitle_not_found'
+  | 'unauthenticated'
+  | 'forbidden'
+  | 'csrf'
+  | 'invalid_credentials'
+  | 'too_many_attempts'
+  | 'token_invalid'
+  | 'username_taken'
+  | 'not_found'
   | 'internal';
 
 /** Error body of every non-2xx response. */
@@ -190,6 +198,7 @@ export interface ApiError {
   readonly details?: unknown;
 }
 
+export * from './auth.js';
 export * from './playback.js';
 export * from './profiles.js';
 export * from './subtitles.js';

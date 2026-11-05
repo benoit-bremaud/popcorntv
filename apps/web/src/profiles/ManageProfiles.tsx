@@ -40,7 +40,7 @@ type Props = {
   readonly api?: ProfileApi;
 };
 
-/** UC9: add, rename / recolour and delete profiles (anyone on the network until #18). */
+/** UC9: add, rename / recolour and delete the signed-in account's own profiles (ADR-0010 §5). */
 export function ManageProfiles({
   profiles,
   onChanged,

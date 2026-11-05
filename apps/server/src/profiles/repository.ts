@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { asc, count, eq } from 'drizzle-orm';
-import { PROFILE_LIMIT } from '@popcorntv/shared';
+import { and, asc, count, eq, isNull } from 'drizzle-orm';
+import { AVATAR_COLORS, PROFILE_LIMIT, PROFILE_NAME_MAX } from '@popcorntv/shared';
 import type { CreateProfileBody, Profile, UpdateProfileBody } from '@popcorntv/shared';
 import type { AppDatabase } from '../db/index.js';
 import { profiles } from '../db/schema.js';
@@ -18,21 +18,41 @@ export type ProfileWrite =
 
 const columns = { id: profiles.id, name: profiles.name, avatar: profiles.avatar };
 
-/** Reads and writes `profiles` (spec profiles §4.1); deleting one cascades its progress. */
+/**
+ * Reads and writes `profiles` (spec profiles §4.1); deleting one cascades its progress.
+ * Every rule is per user (ADR-0010 §5): another user's profile reads as not found.
+ */
 export class ProfileRepository {
   constructor(private readonly db: AppDatabase) {}
 
-  /** Every profile, oldest first. */
-  list(): Profile[] {
-    return this.db.select(columns).from(profiles).orderBy(asc(profiles.createdAt)).all();
+  /** The user's profiles, oldest first. */
+  list(userId: string): Profile[] {
+    return this.db
+      .select(columns)
+      .from(profiles)
+      .where(eq(profiles.userId, userId))
+      .orderBy(asc(profiles.createdAt))
+      .all();
   }
 
   /** Lets callers answer 404 before writing a row that references the profile. */
-  exists(id: string): boolean {
-    return (
-      this.db.select({ id: profiles.id }).from(profiles).where(eq(profiles.id, id)).get() !==
-      undefined
-    );
+  exists(userId: string, id: string): boolean {
+    return this.find(userId, id) !== undefined;
+  }
+
+  /** First-owner setup (UC11): profiles from before #18 (no owner) go to the first owner. */
+  adoptOrphans(userId: string): void {
+    this.db.update(profiles).set({ userId }).where(isNull(profiles.userId)).run();
+  }
+
+  /**
+   * Gives a new account a first profile named after it (UC11, UC12), unless it already has
+   * one (the adopted `default`).
+   */
+  createFirst(userId: string, username: string, now: Date = new Date()): void {
+    if (this.size(userId) > 0) return;
+    const name = username.slice(0, PROFILE_NAME_MAX);
+    this.create(userId, { name, avatar: AVATAR_COLORS[0] }, now);
   }
 
   /**
@@ -41,14 +61,21 @@ export class ProfileRepository {
    * insert cannot interleave in one process; the unique `name_key` index is the backstop
    * across processes, mapped to `profile_name_taken` too.
    */
-  create(body: CreateProfileBody, now: Date = new Date()): ProfileWrite {
-    if (this.size() >= PROFILE_LIMIT) return { ok: false, reason: 'profile_limit' };
-    if (this.nameTaken(body.name, null)) return { ok: false, reason: 'profile_name_taken' };
+  create(userId: string, body: CreateProfileBody, now: Date = new Date()): ProfileWrite {
+    if (this.size(userId) >= PROFILE_LIMIT) return { ok: false, reason: 'profile_limit' };
+    if (this.nameTaken(userId, body.name, null)) {
+      return { ok: false, reason: 'profile_name_taken' };
+    }
     const profile: Profile = { id: randomUUID(), name: body.name, avatar: body.avatar };
     const write = () =>
       this.db
         .insert(profiles)
-        .values({ ...profile, nameKey: nameKey(body.name), createdAt: now.toISOString() })
+        .values({
+          ...profile,
+          userId,
+          nameKey: nameKey(body.name),
+          createdAt: now.toISOString(),
+        })
         .run();
     return uniqueName(write) ? { ok: true, profile } : { ok: false, reason: 'profile_name_taken' };
   }
@@ -57,10 +84,10 @@ export class ProfileRepository {
    * Renames and / or recolours a profile (`name` trimmed by the caller); refuses an unknown
    * id and another profile's name, like `create`.
    */
-  update(id: string, body: UpdateProfileBody): ProfileWrite {
-    const current = this.find(id);
+  update(userId: string, id: string, body: UpdateProfileBody): ProfileWrite {
+    const current = this.find(userId, id);
     if (current === undefined) return { ok: false, reason: 'profile_not_found' };
-    if (body.name !== undefined && this.nameTaken(body.name, id)) {
+    if (body.name !== undefined && this.nameTaken(userId, body.name, id)) {
       return { ok: false, reason: 'profile_name_taken' };
     }
     const profile: Profile = { ...current, ...body };
@@ -74,26 +101,32 @@ export class ProfileRepository {
   }
 
   /** Deletes a profile and its progress; refuses the last one so the picker is never empty. */
-  remove(id: string): 'removed' | 'profile_not_found' | 'last_profile' {
-    if (!this.exists(id)) return 'profile_not_found';
-    if (this.size() <= 1) return 'last_profile';
+  remove(userId: string, id: string): 'removed' | 'profile_not_found' | 'last_profile' {
+    if (!this.exists(userId, id)) return 'profile_not_found';
+    if (this.size(userId) <= 1) return 'last_profile';
     this.db.delete(profiles).where(eq(profiles.id, id)).run();
     return 'removed';
   }
 
-  private find(id: string): Profile | undefined {
-    return this.db.select(columns).from(profiles).where(eq(profiles.id, id)).get();
+  private find(userId: string, id: string): Profile | undefined {
+    return this.db
+      .select(columns)
+      .from(profiles)
+      .where(and(eq(profiles.id, id), eq(profiles.userId, userId)))
+      .get();
   }
 
-  private size(): number {
-    return this.db.select({ n: count() }).from(profiles).get()?.n ?? 0;
+  private size(userId: string): number {
+    return (
+      this.db.select({ n: count() }).from(profiles).where(eq(profiles.userId, userId)).get()?.n ?? 0
+    );
   }
 
-  private nameTaken(name: string, exceptId: string | null): boolean {
+  private nameTaken(userId: string, name: string, exceptId: string | null): boolean {
     const row = this.db
       .select({ id: profiles.id })
       .from(profiles)
-      .where(eq(profiles.nameKey, nameKey(name)))
+      .where(and(eq(profiles.userId, userId), eq(profiles.nameKey, nameKey(name))))
       .get();
     return row !== undefined && row.id !== exceptId;
   }

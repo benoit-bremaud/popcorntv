@@ -4,12 +4,16 @@ import type { Profile } from '@popcorntv/shared';
 import { openDatabase } from '../db/index.js';
 import { ProfileRepository } from './repository.js';
 import { registerProfileRoutes } from './routes.js';
+import { actAs, createAccount } from '../test-fixtures.js';
 
 const UNKNOWN = '00000000-0000-4000-8000-000000000000';
 
 function setup() {
+  const db = openDatabase(':memory:');
+  const owner = createAccount(db);
   const app = Fastify();
-  registerProfileRoutes(app, { profiles: new ProfileRepository(openDatabase(':memory:')) });
+  actAs(app, () => ({ userId: owner.userId, role: 'owner', sessionId: owner.sessionId }));
+  registerProfileRoutes(app, { profiles: new ProfileRepository(db) });
   return app;
 }
 

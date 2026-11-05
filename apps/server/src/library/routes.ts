@@ -11,6 +11,9 @@ import type { LibraryRepository } from './repository.js';
 import { RootUnreadableError } from './scanner.js';
 import type { LibraryScanner } from './scanner.js';
 
+/** Owner-only routes (spec auth §4.4). */
+const OWNER = { config: { access: 'owner' } } as const;
+
 /** What the library routes need; built by `buildApp`, replaced by tests at will. */
 export interface LibraryRoutesDeps {
   readonly repository: LibraryRepository;
@@ -45,7 +48,7 @@ export function registerLibraryRoutes(app: FastifyInstance, deps: LibraryRoutesD
     kind: z.enum(LIBRARY_KINDS),
   });
 
-  app.post('/libraries', async (request, reply) => {
+  app.post('/libraries', OWNER, async (request, reply) => {
     const body = createLibraryBody.safeParse(request.body);
     if (!body.success) return reply.code(400).send(invalid(body.error.issues));
     const library: Library = deps.repository.createLibrary(body.data);
@@ -54,7 +57,7 @@ export function registerLibraryRoutes(app: FastifyInstance, deps: LibraryRoutesD
 
   app.get('/libraries', async (): Promise<Library[]> => deps.repository.listLibraries());
 
-  app.post('/libraries/:id/scan', async (request, reply) => {
+  app.post('/libraries/:id/scan', OWNER, async (request, reply) => {
     const library = loadLibrary(request.params, deps.repository);
     if (!library.ok) return reply.code(library.status).send(library.body);
     try {

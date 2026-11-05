@@ -70,6 +70,7 @@
   --radius-pill: 999px;
   --measure: 40rem;
   --dialog-width: 48rem;
+  --form-width: 24rem; /* sign-in, setup and account forms */
   --shadow-raised: 0 8px 24px rgb(0 0 0 / 0.5);
   --poster-width: 9rem;
   --profile-tile: 7.5rem;

@@ -7,6 +7,7 @@ import type { ApiError, Library } from '@popcorntv/shared';
 import { buildApp } from '../app.js';
 import { openDatabase } from '../db/index.js';
 import type { Prober } from './ffprobe.js';
+import { createAccount, sendCookie, testAuthOptions } from '../test-fixtures.js';
 
 describe('library routes', () => {
   let app: FastifyInstance;
@@ -19,9 +20,10 @@ describe('library routes', () => {
     root = join(mediaRoot, 'films');
     await mkdir(root);
     probe = vi.fn<Prober>(async () => ({ durationSec: 60, streams: [] }));
+    const db = openDatabase(':memory:');
     app = buildApp({
       version: 'test',
-      db: openDatabase(':memory:'),
+      db,
       probe,
       mediaRoot,
       tmdb: null,
@@ -30,7 +32,9 @@ describe('library routes', () => {
         throw new Error('FFmpeg is not used by this suite');
       },
       transcodeDir: tmpdir(),
+      ...testAuthOptions,
     });
+    sendCookie(app, createAccount(db).cookie);
   });
 
   afterEach(async () => {

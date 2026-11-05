@@ -8,6 +8,7 @@ import type { ApiError, Library, Media, StreamInfo } from '@popcorntv/shared';
 import { buildApp } from '../app.js';
 import { openDatabase } from '../db/index.js';
 import type { Transcoder } from './transcoder.js';
+import { createAccount, sendCookie, testAuthOptions } from '../test-fixtures.js';
 
 const VTT =
   'WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nEarly\n\n00:00:20.000 --> 00:00:22.000\nLate\n';
@@ -33,9 +34,10 @@ describe('GET /media/:id/subtitles/:index', () => {
       queueMicrotask(() => onExit(exitCode, 'bad stream'));
       return { kill: vi.fn() };
     });
+    const db = openDatabase(':memory:');
     app = buildApp({
       version: 'test',
-      db: openDatabase(':memory:'),
+      db,
       probe: async () => ({
         durationSec: 60,
         streams: [
@@ -49,7 +51,9 @@ describe('GET /media/:id/subtitles/:index', () => {
       artworkDir: join(base, 'artwork'),
       transcoder,
       transcodeDir: join(base, 'transcode'),
+      ...testAuthOptions,
     });
+    sendCookie(app, createAccount(db).cookie);
   });
 
   afterEach(async () => {

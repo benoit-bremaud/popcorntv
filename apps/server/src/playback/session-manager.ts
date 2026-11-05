@@ -32,6 +32,8 @@ export type OpenResult =
   | { readonly kind: 'not_playable' | 'busy' | 'failed' };
 
 interface Session {
+  /** The user who opened it (spec auth R10); nobody else may read or close it. */
+  readonly owner: string;
   readonly dir: string;
   readonly handle: TranscodeHandle;
   readonly timer: NodeJS.Timeout;
@@ -77,9 +79,14 @@ export class SessionManager {
    * Starts FFmpeg on a confined real path and resolves once its playlist exists. Creates
    * one directory under `dir`, removed again on every failure path. `startSec` (media
    * seconds, 0 = from the start) is the resume offset (ADR-0007 §2); the routes never pass
-   * one at or past the end of the file.
+   * one at or past the end of the file. `owner` is the opening user's id.
    */
-  async open(inputPath: string, streams: readonly StreamInfo[], startSec = 0): Promise<OpenResult> {
+  async open(
+    owner: string,
+    inputPath: string,
+    streams: readonly StreamInfo[],
+    startSec = 0,
+  ): Promise<OpenResult> {
     if (this.sessions.size + this.starting >= this.options.maxSessions) return { kind: 'busy' };
     // Reserved before the first await, so concurrent opens cannot both pass the limit.
     this.starting += 1;
@@ -113,7 +120,7 @@ export class SessionManager {
       return { kind: 'failed' };
     }
     const timer = setTimeout(() => void this.close(id), this.idleMs);
-    this.sessions.set(id, { dir, handle, timer });
+    this.sessions.set(id, { owner, dir, handle, timer });
 
     const deadline = Date.now() + this.readyTimeoutMs;
     const playlist = join(dir, PLAYLIST_NAME);
@@ -126,6 +133,11 @@ export class SessionManager {
     if (await waitForPlaylist()) return { kind: 'ready', id };
     await this.close(id);
     return { kind: 'failed' };
+  }
+
+  /** True when the session is live and was opened by `userId`; another user's reads as unknown. */
+  ownedBy(id: string, userId: string): boolean {
+    return this.sessions.get(id)?.owner === userId;
   }
 
   /** Resets the idle timer; false for an unknown or closed session. */

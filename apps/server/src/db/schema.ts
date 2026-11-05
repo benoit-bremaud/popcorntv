@@ -8,7 +8,7 @@ import {
   text,
   uniqueIndex,
 } from 'drizzle-orm/sqlite-core';
-import { AVATAR_COLORS, LIBRARY_KINDS, MEDIA_KINDS, STREAM_TYPES } from '@popcorntv/shared';
+import { AVATAR_COLORS, LIBRARY_KINDS, MEDIA_KINDS, ROLES, STREAM_TYPES } from '@popcorntv/shared';
 import type { CastMember, Genre, ProviderIds } from '@popcorntv/shared';
 
 /** Persistence shape of the class diagram (04-class.md); tables derive from the entities. */
@@ -92,16 +92,108 @@ export const streams = sqliteTable('streams', {
 });
 
 /**
- * One row per household member (`Profile` entity, ADR-0008). `name_key` is the
- * lower-cased name, unique so two profiles never read alike.
+ * One row per account (`User` entity, spec auth §4.1). `username_key` is the lower-cased
+ * username, unique so two accounts never read alike.
  */
-export const profiles = sqliteTable('profiles', {
+export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
-  name: text('name').notNull(),
-  nameKey: text('name_key').notNull().unique(),
-  avatar: text('avatar', { enum: AVATAR_COLORS }).notNull(),
+  username: text('username').notNull(),
+  usernameKey: text('username_key').notNull().unique(),
+  passwordHash: text('password_hash').notNull(),
+  role: text('role', { enum: ROLES }).notNull(),
   createdAt: text('created_at').notNull(),
+  lastLoginAt: text('last_login_at'),
 });
+
+/**
+ * One row per signed-in device (`Session` entity, ADR-0010 §2). Only the SHA-256 of the
+ * cookie token is stored; `expires_at` is the absolute limit, the idle one is
+ * `last_seen_at` + 14 days.
+ */
+export const sessions = sqliteTable(
+  'sessions',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    tokenHash: text('token_hash').notNull().unique(),
+    createdAt: text('created_at').notNull(),
+    lastSeenAt: text('last_seen_at').notNull(),
+    expiresAt: text('expires_at').notNull(),
+    revokedAt: text('revoked_at'),
+    userAgent: text('user_agent'),
+  },
+  (table) => [index('sessions_user_idx').on(table.userId)],
+);
+
+/** Token kinds of `auth_tokens`: invitation and password reset links (ADR-0010 §1). */
+export const AUTH_TOKEN_KINDS = ['invite', 'reset'] as const;
+
+/** Single-use invitation and reset links (spec auth §4.1); the setup token is never stored. */
+export const authTokens = sqliteTable('auth_tokens', {
+  id: text('id').primaryKey(),
+  tokenHash: text('token_hash').notNull().unique(),
+  kind: text('kind', { enum: AUTH_TOKEN_KINDS }).notNull(),
+  role: text('role', { enum: ROLES }),
+  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: text('created_at').notNull(),
+  expiresAt: text('expires_at').notNull(),
+  usedAt: text('used_at'),
+  revokedAt: text('revoked_at'),
+});
+
+/** What `auth_events` records (spec auth R9, class diagram `AuthEventKind`). */
+export const AUTH_EVENT_KINDS = [
+  'setup_done',
+  'login_ok',
+  'login_failed',
+  'login_locked',
+  'logout',
+  'invite_issued',
+  'invite_revoked',
+  'reset_issued',
+  'reset_revoked',
+  'redeemed',
+  'password_changed',
+  'sessions_ended',
+  'role_changed',
+  'user_deleted',
+] as const;
+
+export type AuthEventKind = (typeof AUTH_EVENT_KINDS)[number];
+
+/** Audit trail (spec auth R9): no password, no token; purged after 90 days. */
+export const authEvents = sqliteTable(
+  'auth_events',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    at: text('at').notNull(),
+    kind: text('kind', { enum: AUTH_EVENT_KINDS }).notNull(),
+    userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
+    ip: text('ip'),
+    usernameTried: text('username_tried'),
+  },
+  (table) => [index('auth_events_at_idx').on(table.at)],
+);
+
+/**
+ * One row per household member (`Profile` entity, ADR-0008, ADR-0010 §5). `name_key` is
+ * the lower-cased name, unique per user so two of their profiles never read alike.
+ * `user_id` is null only between migration 0006 and the first-owner setup.
+ */
+export const profiles = sqliteTable(
+  'profiles',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    nameKey: text('name_key').notNull(),
+    avatar: text('avatar', { enum: AVATAR_COLORS }).notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [uniqueIndex('profiles_user_name_idx').on(table.userId, table.nameKey)],
+);
 
 /** Where a profile stopped in a title (`WatchProgress` entity, ADR-0007 / ADR-0008). */
 export const watchProgress = sqliteTable(
