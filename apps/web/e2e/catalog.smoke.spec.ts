@@ -45,7 +45,8 @@ const MEDIA = TITLES.map(({ id, title, genre, voteAverage }, index) => ({
 const PROFILE = { id: 'default', name: 'Me', avatar: 'red' } satisfies Profile;
 
 test('the catalog grid renders from the API and opens a title', async ({ page }) => {
-  // Registered first so it matches last: any unmocked API call fails fast instead of reaching a live server on :3000.
+  // Registered first so it matches last: an unmocked API call fails fast
+  // instead of reaching a live server on :3000.
   await page.route('**/api/**', (route) => route.abort());
   await page.route('**/api/libraries', (route) => route.fulfill({ json: [LIBRARY] }));
   await page.route('**/api/libraries/lib-1/media', (route) => route.fulfill({ json: MEDIA }));
