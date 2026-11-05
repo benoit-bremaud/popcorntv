@@ -1,6 +1,6 @@
 # ADR-0008 — Profiles: path-scoped progress, seeded default profile, remembered choice
 
-- Status: accepted (owner validated the weights, #10 chat, 2026-10-24)
+- Status: accepted (owner validated the weights, #10 chat, 2026-10-24); §4 superseded by ADR-0010 §5 (#18)
 - Date: 2026-10-24
 - Deciders: owner
 - Related: UC8 / UC9 ([spec](../specs/profiles.md)), ADR-0007, issue #10, #18 (users)

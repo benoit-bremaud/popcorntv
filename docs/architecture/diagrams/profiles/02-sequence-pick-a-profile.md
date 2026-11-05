@@ -53,4 +53,5 @@ sequenceDiagram
 
 - `profile_not_found` while saving means the profile was deleted from another device:
   the save is dropped like any failed save, and the next start shows the picker.
-- Profiles are a preference boundary, not a security one, until #18 (ADR-0008 §4).
+- Since #18 every profile route is scoped to the signed-in user (ADR-0010 §5); another
+  user's profile answers `404 profile_not_found`.
