@@ -91,7 +91,10 @@ the cues for a resumed HLS timeline, one `<track>` per offered track); #18 lot 1
 `pctv_session` / `__Host-pctv_session`, `PUBLIC_URL` required, CSRF by `Origin` /
 `Sec-Fetch-Site`, one-time setup link in the log, routes declare `config.access`
 `public` | `owner`, profiles and playback sessions per user; invitations, resets, account
-administration and the event list are lot 2).
+administration and the event list are lot 2); #73 lot 2 (`token-repository` single-use
+invite / reset links redeemed by `POST /auth/redeem`, owner `user-routes` for accounts,
+devices, links and `GET /auth/events`, last owner protected, web `RedeemForm` +
+`AdminPanel` from the account menu).
 
 Server layout (flat, component diagram 03): `src/library/` holds the pure `name-parser`
 and `path-guard`, the `ffprobe` runner (only process egress), the `scanner`, the per-library

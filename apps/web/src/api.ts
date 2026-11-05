@@ -1,15 +1,22 @@
 import type {
+  Account,
   ApiError,
   ApiErrorCode,
+  AuthEvent,
   AuthStatus,
   ChangePasswordBody,
   CreateProfileBody,
+  DeviceSession,
+  Invitation,
+  IssuedLink,
   Library,
   Media,
   PlaybackSessionBody,
   PlaybackStart,
   Profile,
   ProgressBody,
+  RedeemBody,
+  Role,
   SetupBody,
   SignInBody,
   UpdateProfileBody,
@@ -279,8 +286,8 @@ export type AuthResult =
 async function authCall(
   fetchFn: Fetch,
   path: string,
-  method: 'POST' | 'PUT' | 'DELETE',
-  body?: SetupBody | SignInBody | ChangePasswordBody,
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
+  body?: SetupBody | SignInBody | ChangePasswordBody | RedeemBody | { readonly role: Role },
 ): Promise<{ readonly status: number; readonly body: unknown } | null> {
   try {
     const response = await fetchFn(`${API}${path}`, {
@@ -330,3 +337,54 @@ export async function changePassword(
   const result = authResult(answer);
   return result.ok ? { ok: false, error: null } : result;
 }
+
+/** `POST /auth/redeem` (UC12, UC20): an invitation or a reset link, then signed in. */
+export async function redeem(body: RedeemBody, fetchFn: Fetch = fetch): Promise<AuthResult> {
+  return authResult(await authCall(fetchFn, '/auth/redeem', 'POST', body));
+}
+
+/** An owner call's answer: the body on success, or the error code (null when offline). */
+export type AdminResult<T> =
+  | { readonly ok: true; readonly value: T }
+  | { readonly ok: false; readonly error: ApiErrorCode | null };
+
+/** Owner administration calls (UC15–UC18); a `401` sends the gate back to sign-in. */
+async function adminCall<T>(
+  fetchFn: Fetch,
+  path: string,
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
+  body?: { readonly role: Role },
+): Promise<AdminResult<T>> {
+  const answer = await authCall(fetchFn, path, method, body);
+  if (answer?.status === 401) unauthenticated();
+  if (answer === null) return { ok: false, error: null };
+  // First-party server contract: a 2xx carries `T` (null for 204), an error an `ApiError`.
+  if (answer.status >= 200 && answer.status < 300) return { ok: true, value: answer.body as T };
+  const error = (answer.body as Partial<ApiError> | null)?.error;
+  return { ok: false, error: typeof error === 'string' ? error : null };
+}
+
+/** The owner administration API (spec auth §4.2); `fetchFn` is injected in tests. */
+export function adminApi(fetchFn: Fetch = (...args) => fetch(...args)) {
+  return {
+    accounts: () => adminCall<Account[]>(fetchFn, '/users', 'GET'),
+    setRole: (id: string, role: Role) =>
+      adminCall<User>(fetchFn, `/users/${id}`, 'PATCH', { role }),
+    deleteAccount: (id: string) => adminCall<null>(fetchFn, `/users/${id}`, 'DELETE'),
+    devices: (id: string) => adminCall<DeviceSession[]>(fetchFn, `/users/${id}/sessions`, 'GET'),
+    endSessions: (id: string, sessionId?: string) =>
+      adminCall<null>(
+        fetchFn,
+        sessionId === undefined ? `/users/${id}/sessions` : `/users/${id}/sessions/${sessionId}`,
+        'DELETE',
+      ),
+    issueReset: (id: string) => adminCall<IssuedLink>(fetchFn, `/users/${id}/reset`, 'POST'),
+    revokeReset: (id: string) => adminCall<null>(fetchFn, `/users/${id}/reset`, 'DELETE'),
+    invitations: () => adminCall<Invitation[]>(fetchFn, '/invitations', 'GET'),
+    invite: (role: Role) => adminCall<IssuedLink>(fetchFn, '/invitations', 'POST', { role }),
+    revokeInvitation: (id: string) => adminCall<null>(fetchFn, `/invitations/${id}`, 'DELETE'),
+    events: () => adminCall<AuthEvent[]>(fetchFn, '/auth/events', 'GET'),
+  };
+}
+
+export type AdminApi = ReturnType<typeof adminApi>;

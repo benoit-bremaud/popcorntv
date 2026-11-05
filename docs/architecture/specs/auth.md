@@ -46,11 +46,13 @@
   failures per IP per 15 min across every route that runs the hasher (`/auth/session`,
   `/auth/setup`, `/auth/redeem`, `PUT /auth/password`). A success clears the pair.
   An attempt counts before the hash runs and a success refunds it, so concurrent tries
-  cannot all pass the check; an IPv6 address counts by its /64.
+  cannot all pass the check; a busy hasher (`429`) gave no verdict and refunds it too, as
+  does a redeem refused for a taken username; an IPv6 address counts by its /64.
   The pair key means a stranger cannot lock the owner out from the owner's own address.
   Sign-in and `PUT /auth/password` failures answer the same `401 invalid_credentials`
   (setup and redeem answer `404 token_invalid`); a limit answers `429` with
-  `Retry-After`.
+  `Retry-After`. Several cookies of the session name (another app on the same http host
+  can shadow it) are each tried, at most four.
 - **R9** `auth_events` records sign-in success and failure, the first refusal of each
   lockout window, first-owner setup, sign-out, invitation and reset issue and
   revocation, redeem, password change, sessions ended by the owner, role change and
@@ -95,7 +97,7 @@ Extensions: 3a token wrong or expired → `404 token_invalid`; 3b a user already
 - **UC15 Invite a person** (Owner): chooses a role, gets a link valid 72 h, shown once;
   lists pending invitations and revokes one.
 - **UC16 Reset a person's password** (Owner): issues a reset link valid 24 h for that
-  account; a new reset link revokes the previous one.
+  account; a new reset link revokes the previous one; the owner can revoke it.
 - **UC17 Manage accounts** (Owner): lists users with their last sign-in
   (`users.last_login_at`, kept beyond the 90-day event purge) and active devices,
   changes a role, ends a device's or all sessions, deletes an account. Changing a role
@@ -152,7 +154,7 @@ Paths are Fastify routes; the browser reaches them under `/api` (§5).
 | `PUT /auth/password` `{ current, next }` | session | `204` + cookie (rotated token) |
 | `GET /users` · `PATCH /users/:id` `{ role }` · `DELETE /users/:id` | owner | list · `200` · `204` |
 | `GET /users/:id/sessions` · `DELETE /users/:id/sessions[/:sessionId]` | owner | list · `204` |
-| `POST /users/:id/reset` | owner | `201 { link, expiresAt }` |
+| `POST /users/:id/reset` · `DELETE /users/:id/reset` | owner | `201 { link, expiresAt }` · `204` |
 | `POST /invitations` `{ role }` · `GET /invitations` · `DELETE /invitations/:id` | owner | `201 { link, expiresAt }` · pending list · `204` |
 | `GET /auth/events` | owner | `200 AuthEvent[]` |
 

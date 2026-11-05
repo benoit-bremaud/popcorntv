@@ -43,3 +43,73 @@ export interface ChangePasswordBody {
   readonly current: string;
   readonly next: string;
 }
+
+/** Body of `POST /auth/redeem` (UC12 invitation, UC20 reset). */
+export type RedeemBody =
+  | {
+      readonly kind: 'invite';
+      readonly token: string;
+      readonly username: string;
+      readonly password: string;
+    }
+  | { readonly kind: 'reset'; readonly token: string; readonly password: string };
+
+/** A one-time link, shown once (UC15, UC16): the raw token sits in the URL fragment. */
+export interface IssuedLink {
+  readonly link: string;
+  readonly expiresAt: string;
+}
+
+/** A pending invitation in `GET /invitations` (UC15); never the token. */
+export interface Invitation {
+  readonly id: string;
+  readonly role: Role;
+  readonly createdAt: string;
+  readonly expiresAt: string;
+}
+
+/** An account in `GET /users` (UC17). */
+export interface Account extends User {
+  readonly createdAt: string;
+  readonly lastLoginAt: string | null;
+  readonly activeSessions: number;
+}
+
+/** A live device of an account in `GET /users/:id/sessions` (UC17). */
+export interface DeviceSession {
+  readonly id: string;
+  readonly createdAt: string;
+  readonly lastSeenAt: string;
+  readonly userAgent: string | null;
+}
+
+/** What `auth_events` records (spec auth R9). */
+export const AUTH_EVENT_KINDS = [
+  'setup_done',
+  'login_ok',
+  'login_failed',
+  'login_locked',
+  'logout',
+  'invite_issued',
+  'invite_revoked',
+  'reset_issued',
+  'reset_revoked',
+  'redeemed',
+  'password_changed',
+  'sessions_ended',
+  'role_changed',
+  'user_deleted',
+] as const;
+
+export type AuthEventKind = (typeof AUTH_EVENT_KINDS)[number];
+
+/** A row of `GET /auth/events` (UC18), newest first. */
+export interface AuthEvent {
+  readonly id: number;
+  readonly at: string;
+  readonly kind: AuthEventKind;
+  readonly userId: string | null;
+  readonly username: string | null;
+  readonly ip: string | null;
+  readonly usernameTried: string | null;
+}

@@ -1,7 +1,8 @@
-import { lt } from 'drizzle-orm';
+import { desc, eq, lt } from 'drizzle-orm';
 import { USERNAME_PATTERN } from '@popcorntv/shared';
+import type { AuthEvent } from '@popcorntv/shared';
 import type { AppDatabase } from '../db/index.js';
-import { authEvents } from '../db/schema.js';
+import { authEvents, users } from '../db/schema.js';
 import type { AuthEventKind } from '../db/schema.js';
 
 /** Events older than this are purged (spec auth R9). */
@@ -15,7 +16,7 @@ export interface AuthEventInput {
   readonly usernameTried?: string;
 }
 
-/** Writes `auth_events` (spec auth R9); UC18 reads them in lot 2. */
+/** Writes `auth_events` (spec auth R9); UC18 lists them. */
 export class EventRepository {
   constructor(private readonly db: AppDatabase) {}
 
@@ -31,6 +32,25 @@ export class EventRepository {
         usernameTried: tried !== undefined && USERNAME_PATTERN.test(tried) ? tried : null,
       })
       .run();
+  }
+
+  /** The latest events, newest first, with the account's current username (UC18). */
+  list(limit = 200): AuthEvent[] {
+    return this.db
+      .select({
+        id: authEvents.id,
+        at: authEvents.at,
+        kind: authEvents.kind,
+        userId: authEvents.userId,
+        username: users.username,
+        ip: authEvents.ip,
+        usernameTried: authEvents.usernameTried,
+      })
+      .from(authEvents)
+      .leftJoin(users, eq(users.id, authEvents.userId))
+      .orderBy(desc(authEvents.id))
+      .limit(limit)
+      .all();
   }
 
   purge(now: Date): void {

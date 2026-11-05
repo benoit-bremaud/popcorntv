@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cookiePolicy, isCrossSite, readCookie, sessionCookie } from './hook.js';
+import { cookiePolicy, isCrossSite, readCookies, sessionCookie } from './hook.js';
 
 const ORIGIN = 'https://tv.example.org';
 
@@ -23,17 +23,18 @@ describe('cookiePolicy and sessionCookie', () => {
   });
 });
 
-describe('readCookie', () => {
+describe('readCookies', () => {
   it.each([
-    [undefined, null],
-    ['', null],
-    ['pctv_session=abc', 'abc'],
-    ['other=1; pctv_session=abc; x=y', 'abc'],
-    ['xpctv_session=abc', null],
-    ['pctv_session=', null],
-    ['=abc; pctv_session = abc ', 'abc'],
+    [undefined, []],
+    ['', []],
+    ['pctv_session=abc', ['abc']],
+    ['other=1; pctv_session=abc; x=y', ['abc']],
+    ['xpctv_session=abc', []],
+    ['pctv_session=', []],
+    ['=abc; pctv_session = abc ', ['abc']],
+    ['pctv_session=shadow; pctv_session=real', ['shadow', 'real']],
   ])('reads %j as %j', (header, expected) => {
-    expect(readCookie(header, 'pctv_session')).toBe(expected);
+    expect(readCookies(header, 'pctv_session')).toEqual(expected);
   });
 });
 

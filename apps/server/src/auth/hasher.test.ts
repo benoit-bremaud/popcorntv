@@ -43,4 +43,16 @@ describe('Argon2Hasher', () => {
     // The slot of the timed-out waiter was not leaked.
     await expect(hasher.hash('third password')).resolves.toMatch(/^\$argon2id\$/);
   });
+
+  it('computes the dummy hash again after a busy failure', async () => {
+    const hasher = new Argon2Hasher({ maxConcurrent: 1, waitMs: 1 });
+
+    const [, busy] = await Promise.allSettled([
+      hasher.hash('first password'),
+      hasher.verify(null, 'any password!'),
+    ]);
+
+    expect(busy).toMatchObject({ status: 'rejected', reason: expect.any(HasherBusyError) });
+    await expect(hasher.verify(null, 'any password!')).resolves.toBe(false);
+  });
 });

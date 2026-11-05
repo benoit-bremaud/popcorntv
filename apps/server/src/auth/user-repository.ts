@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { count, eq } from 'drizzle-orm';
-import type { Role, User } from '@popcorntv/shared';
+import { and, asc, count, eq, ne } from 'drizzle-orm';
+import type { Account, Role, User } from '@popcorntv/shared';
 import type { AppDatabase } from '../db/index.js';
 import { users } from '../db/schema.js';
 
@@ -68,5 +68,45 @@ export class UserRepository {
   /** `last_login_at` outlives the 90-day event purge (spec auth UC17). */
   touchLogin(id: string, now: Date): void {
     this.db.update(users).set({ lastLoginAt: now.toISOString() }).where(eq(users.id, id)).run();
+  }
+
+  /** Every account with its live session count (UC17), by username. */
+  list(liveSessions: (userId: string) => number): Account[] {
+    return this.db
+      .select({ ...publicColumns, createdAt: users.createdAt, lastLoginAt: users.lastLoginAt })
+      .from(users)
+      .orderBy(asc(users.usernameKey))
+      .all()
+      .map((row) => ({ ...row, activeSessions: liveSessions(row.id) }));
+  }
+
+  /**
+   * Sets the role; `last_owner` when it would demote the only owner (spec auth R2). Call it
+   * inside a transaction so the owner count cannot change in between.
+   */
+  setRole(id: string, role: Role): 'ok' | 'not_found' | 'last_owner' {
+    const user = this.find(id);
+    if (!user) return 'not_found';
+    if (user.role === 'owner' && role !== 'owner' && !this.hasOtherOwner(id)) return 'last_owner';
+    this.db.update(users).set({ role }).where(eq(users.id, id)).run();
+    return 'ok';
+  }
+
+  /** Deletes the account (cascade); `last_owner` for the only owner (UC17). In a transaction. */
+  delete(id: string): 'ok' | 'not_found' | 'last_owner' {
+    const user = this.find(id);
+    if (!user) return 'not_found';
+    if (user.role === 'owner' && !this.hasOtherOwner(id)) return 'last_owner';
+    this.db.delete(users).where(eq(users.id, id)).run();
+    return 'ok';
+  }
+
+  private hasOtherOwner(id: string): boolean {
+    const others = this.db
+      .select({ n: count() })
+      .from(users)
+      .where(and(eq(users.role, 'owner'), ne(users.id, id)))
+      .get();
+    return (others?.n ?? 0) > 0;
   }
 }

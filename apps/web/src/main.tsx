@@ -7,6 +7,7 @@ import './styles/tokens.css';
 import './styles/catalog.css';
 import './styles/profiles.css';
 import './styles/auth.css';
+import './styles/admin.css';
 
 const root = document.getElementById('root');
 if (root === null) {

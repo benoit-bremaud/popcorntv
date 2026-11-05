@@ -29,17 +29,21 @@ export function sessionCookie(policy: CookiePolicy, token: string | null): strin
   return [`${policy.name}=${token ?? ''}`, ...flags].join('; ');
 }
 
-/** The value of cookie `name` in a `Cookie` header, or null. */
-export function readCookie(header: string | undefined, name: string): string | null {
-  if (header === undefined) return null;
+/**
+ * Every non-empty value of cookie `name` in a `Cookie` header, in order. On http another
+ * app on the same host can set a cookie of the same name, so the hook tries each one.
+ */
+export function readCookies(header: string | undefined, name: string): string[] {
+  if (header === undefined) return [];
+  const values: string[] = [];
   for (const part of header.split(';')) {
     const separator = part.indexOf('=');
     if (separator > 0 && part.slice(0, separator).trim() === name) {
       const value = part.slice(separator + 1).trim();
-      return value === '' ? null : value;
+      if (value !== '') values.push(value);
     }
   }
-  return null;
+  return values;
 }
 
 /**
@@ -73,8 +77,13 @@ export function registerAuthHook(app: FastifyInstance, deps: AuthHookDeps): void
     if (isCrossSite(request.method, request.headers, deps.cookie.origin)) {
       return reply.code(403).send(apiError('csrf'));
     }
-    const token = readCookie(request.headers.cookie, deps.cookie.name);
-    const session = token === null ? null : deps.sessions.resolve(token, new Date());
+    const now = new Date();
+    let session = null;
+    // Bounded: a header is at most a few kB, and each try is one indexed lookup.
+    for (const token of readCookies(request.headers.cookie, deps.cookie.name).slice(0, 4)) {
+      session = deps.sessions.resolve(token, now);
+      if (session) break;
+    }
     request.caller = session && {
       userId: session.userId,
       role: session.role,

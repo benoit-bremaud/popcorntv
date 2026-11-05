@@ -9,10 +9,12 @@ type Props = {
   readonly api: Pick<AuthApi, 'signOut' | 'changePassword'>;
   /** The session is over on this device: back to the sign-in form. */
   readonly onSignedOut: () => void;
+  /** Owners only: opens the household administration (UC15–UC18). */
+  readonly onAdmin?: () => void;
 };
 
 /** UC14 and UC19 from the header: sign out here or everywhere, change my password. */
-export function AccountMenu({ user, api, onSignedOut }: Props): React.JSX.Element {
+export function AccountMenu({ user, api, onSignedOut, onAdmin }: Props): React.JSX.Element {
   const [changing, setChanging] = useState(false);
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
@@ -37,6 +39,11 @@ export function AccountMenu({ user, api, onSignedOut }: Props): React.JSX.Elemen
       setCurrent('');
       setNext('');
       setMessage('Password changed. Your other devices were signed out.');
+    } else if (result.error === 'unauthenticated') {
+      // The session ended meanwhile (expired, revoked): sign in again.
+      onSignedOut();
+    } else if (result.error === 'invalid_credentials') {
+      setMessage('Wrong current password.');
     } else {
       setMessage(authMessage(result.error));
     }
@@ -89,6 +96,11 @@ export function AccountMenu({ user, api, onSignedOut }: Props): React.JSX.Elemen
           </form>
         ) : (
           <>
+            {onAdmin && user.role === 'owner' && (
+              <button type="button" className="button button-quiet" onClick={onAdmin}>
+                Administration
+              </button>
+            )}
             <button type="button" className="button button-quiet" onClick={() => setChanging(true)}>
               Change password
             </button>

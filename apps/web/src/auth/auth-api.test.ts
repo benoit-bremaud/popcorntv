@@ -1,7 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { ApiErrorCode } from '@popcorntv/shared';
-import { changePassword, loadAuthStatus, setUpOwner, signIn, signOut } from '../api.js';
-import { authMessage, setupTokenFromHash } from './auth-api.js';
+import {
+  adminApi,
+  changePassword,
+  loadAuthStatus,
+  onUnauthenticated,
+  redeem,
+  setUpOwner,
+  signIn,
+  signOut,
+} from '../api.js';
+import { authMessage, linkFromHash, setupTokenFromHash } from './auth-api.js';
 
 function respond(body: unknown, status = 200): Response {
   return new Response(body === null ? null : JSON.stringify(body), { status });
@@ -98,7 +107,9 @@ describe('authMessage', () => {
   it.each<[ApiErrorCode | null, RegExp]>([
     ['invalid_credentials', /Wrong username or password/],
     ['too_many_attempts', /Too many attempts/],
-    ['token_invalid', /setup link is invalid/],
+    ['token_invalid', /link is invalid, expired or already used/],
+    ['username_taken', /username is taken/],
+    ['last_owner', /last owner/],
     ['not_found', /already set up/],
     ['invalid_request', /Check the fields/],
     [null, /could not be reached/],
@@ -116,5 +127,92 @@ describe('setupTokenFromHash', () => {
     ['#/setup/a b', ''],
   ])('reads %j as %j', (hash, token) => {
     expect(setupTokenFromHash(hash)).toBe(token);
+  });
+});
+
+describe('links and redeem', () => {
+  it.each([
+    ['#/invite/abc_DEF-1', { kind: 'invite', token: 'abc_DEF-1' }],
+    ['#/reset/xyz', { kind: 'reset', token: 'xyz' }],
+    ['#/setup/xyz', null],
+    ['#/invite/', null],
+    ['#/invite/a b', null],
+    ['', null],
+  ])('reads %j as %j', (hash, expected) => {
+    expect(linkFromHash(hash)).toEqual(expected);
+  });
+
+  it('posts a redeem body and returns the user', async () => {
+    const fetchFn = vi.fn(async () => respond(user));
+
+    expect(await redeem({ kind: 'reset', token: 't', password: 'pw' }, fetchFn)).toEqual({
+      ok: true,
+      user,
+    });
+    expect(fetchFn).toHaveBeenCalledWith(
+      '/api/auth/redeem',
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
+});
+
+describe('owner administration client', () => {
+  it('calls each route with its method and body', async () => {
+    const fetchFn = vi.fn<typeof fetch>(async () => respond([]));
+    const api = adminApi(fetchFn);
+
+    await api.accounts();
+    await api.setRole('u2', 'owner');
+    await api.deleteAccount('u2');
+    await api.devices('u2');
+    await api.endSessions('u2');
+    await api.endSessions('u2', 's1');
+    await api.issueReset('u2');
+    await api.revokeReset('u2');
+    await api.invitations();
+    await api.invite('viewer');
+    await api.revokeInvitation('i1');
+    await api.events();
+
+    expect(fetchFn.mock.calls.map(([url, init]) => `${init?.method} ${url}`)).toEqual([
+      'GET /api/users',
+      'PATCH /api/users/u2',
+      'DELETE /api/users/u2',
+      'GET /api/users/u2/sessions',
+      'DELETE /api/users/u2/sessions',
+      'DELETE /api/users/u2/sessions/s1',
+      'POST /api/users/u2/reset',
+      'DELETE /api/users/u2/reset',
+      'GET /api/invitations',
+      'POST /api/invitations',
+      'DELETE /api/invitations/i1',
+      'GET /api/auth/events',
+    ]);
+    expect(fetchFn.mock.calls[1]?.[1]?.body).toBe('{"role":"owner"}');
+  });
+
+  it('returns the value, the error code, or null when offline', async () => {
+    expect(await adminApi(async () => respond(null, 204)).deleteAccount('u2')).toEqual({
+      ok: true,
+      value: null,
+    });
+    expect(
+      await adminApi(async () => respond({ error: 'last_owner' }, 409)).setRole('u1', 'viewer'),
+    ).toEqual({ ok: false, error: 'last_owner' });
+    expect(
+      await adminApi(async () => {
+        throw new TypeError('offline');
+      }).accounts(),
+    ).toEqual({ ok: false, error: null });
+  });
+
+  it('tells the auth gate on a 401', async () => {
+    const listener = vi.fn();
+    onUnauthenticated(listener);
+
+    await adminApi(async () => respond({ error: 'unauthenticated' }, 401)).events();
+    onUnauthenticated(() => undefined);
+
+    expect(listener).toHaveBeenCalled();
   });
 });
