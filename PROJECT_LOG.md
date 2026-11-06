@@ -4,6 +4,29 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-06 — #18 R12 closing gate: QA pass and security review (PR #94 merged, `258bfcb`)
+
+- **Changes** — QA pass `docs/architecture/qa/2026-11-06-auth.md` on a production-like
+  stack (prod image behind Caddy `tls internal`, spec §5): SEC-02…12 and SEC-15 pass,
+  SEC-01 fails on headers. Security review `docs/architecture/qa/2026-11-06-auth-security-review.md` (Opus):
+  1 Must, 3 Should, 5 Nice. Fixes: demoting or deleting an owner revokes every pending
+  link (a deleted owner could take another owner's account back), a password change
+  revokes the pending reset, `TRUST_PROXY` is now the proxy's address list (`1` / `true`
+  refuse to start; supersedes the "trusts one hop" of lot 1), `username_tried` only names
+  an existing account, API answers default to `Cache-Control: no-store`.
+- **Decisions** — QA target: prod image + Caddy container (MCDA 440/500 against plain HTTP
+  295); revoke all pending links on owner loss, no `issued_by` column (440 against 420);
+  `TRUST_PROXY` as addresses (430 against 330 / 275). Re-check: trusting the whole Docker
+  network CIDR lets a sibling container forge `X-Forwarded-For`; docs say Caddy's fixed
+  address.
+- **Reviews** — 2 adversarial rounds (round 1: 1 Must, stale diagram note; round 2 gate
+  open); Codex review started, no finding before merge.
+- **Gate** on `d34c8b1` — 38 shared + 497 server + 198 web tests, coverage server 98.6 % /
+  web 99.4 % lines, SonarQube PASSED, gitleaks clean, smoke 1/1, CI green. #18 closed.
+- **Follow-ups** — #86–#93 (rotate on revoked session, token in URL, eager dummy hash, IP
+  log retention, `reset_revoked` events, 404/431 body, `/health` version, artwork
+  `private`); web-build headers on #46, limiter map growth on #72.
+
 ## 2026-11-06 — #73 accounts lot 2: invitations, resets, administration (PR #77 merged, `c1a62fd`)
 
 - **Changes** — `token-repository`: single-use invitation (72 h) and reset (24 h) links,
