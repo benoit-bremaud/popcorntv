@@ -4,6 +4,25 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-06 — #73 accounts lot 2: invitations, resets, administration (PR #77 merged, `c1a62fd`)
+
+- **Changes** — `token-repository`: single-use invitation (72 h) and reset (24 h) links,
+  SHA-256 stored, redeemed by `POST /auth/redeem` (a reset ends every session and lifts the
+  lockout); owner `user-routes`: accounts with live device counts, role change, deletion,
+  per-device and global sign-out, reset and invitation links, `GET /auth/events`; last
+  owner protected (`409 last_owner`); a token that is not pending is counted without
+  hashing; the hook tries up to four session cookies; web `RedeemForm` and `AdminPanel`.
+- **Decisions** — one PR for the whole lot (MCDA 430/500); `Refs #18`, not `Closes`
+  (450/500): spec R12 needs the QA pass and the security review before #18 closes.
+- **Reviews** — 5 adversarial rounds (Opus): round 1 2 Must (owner self-delete answered
+  500, stale layout), then gate open with Should fixes each round; Codex: 2 P2 (stale admin
+  state after a role change or a self-demotion) fixed; SonarQube: 7 issues fixed.
+- **Gate** on `bd98e84` — 38 shared + 470 server + 198 web tests, coverage server 97.5 % /
+  web ~98.9 % lines, SonarQube PASSED, gitleaks clean, Playwright smoke 1/1, CI green.
+- **Follow-ups** — ESLint ignore for `.claude/**`; links ignoring a `PUBLIC_URL` path
+  prefix; per-token attempt cap; `hashchange` handling; "this device" flag; self-demotion
+  confirmation; actor column in the event list.
+
 ## 2026-11-05 — #26 homelab ecosystem triage (PR #69 merged, `5fb5eb9`)
 
 - **Changes** — `docs/requirements/02-homelab-ecosystem.md`: inventory of the media
