@@ -13,7 +13,7 @@ export interface ServerConfig {
   readonly ffmpegPath: string;
   /** Absolute parent of the HLS session directories; leftover `session-*` ones are removed at start. */
   readonly transcodeDir: string;
-  /** HLS sessions allowed at once; one more gets `503 transcode_busy`. */
+  /** HLS sessions allowed at once; past it a Play takes a slot over or gets `503` (R5b). */
   readonly transcodeMaxSessions: number;
   /** TMDB API Read Access Token (sent as Bearer); null disables UC2 (ADR-0003). Never logged. */
   readonly tmdbApiKey: string | null;
