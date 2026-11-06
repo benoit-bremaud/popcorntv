@@ -4,6 +4,28 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-06 — #45 prod advisories and #96 node base (PRs #97 `3f012ab`, #99 `bb3d4bc`)
+
+- **Decision** — homelab roadmap, option D (MCDA 415/500 against A all-first 380, corrected
+  C 345, B LAN-now 335): exactly the #60 prerequisites in order, #45 → #47 → #72 → #74 →
+  full security audit (issue to file), then #60 with #46 (CSP, HSTS) as its first step in
+  the Caddy config; the #18 R12 Nice findings (#86–#93) after the cut-over, Jellyfin kept
+  as fallback until it is validated. Open question for #60: is Jellyfin used remotely?
+- **Changes** — #45: `@fastify/static` `^10.1.9` resolves `glob` 14.0.3 and `minimatch`
+  11.0.4; `pnpm audit --prod` clean (was GHSA-3g3m-2fjr-6pw4, GHSA-g3hv-75wg-m249). #96:
+  both stages on `node:22.23.4-bookworm-slim` (apt 2.6.2, CVE-2026-109518); the
+  `apt-get upgrade` stays, its comment now says keep and re-check on each base bump.
+- **Lesson** — #96 was filed on a stale cached image: CI was green because cold runners
+  re-run `apt-get upgrade`. The adversarial review caught it; the #38 rule stands, rebuild
+  `--no-cache` before any local image scan.
+- **Reviews** — adversarial (Opus): #45 1 round, open; #96 2 rounds, 2 Should fixed. Codex
+  on both: no finding.
+- **Gate** — 38 shared + 497 server + 198 web tests, SonarQube PASSED, smoke 1/1, Trivy
+  image clean, CI green on both heads (#97 re-gated after its rebase on #99).
+- **Follow-ups** — #98 dev-only advisories (`typescript-eslint` minimatch, `drizzle-kit`
+  esbuild); Dependabot ignore for Node majors (#50) and a `--no-cache` image build target
+  not filed yet.
+
 ## 2026-11-06 — #18 R12 closing gate: QA pass and security review (PR #94 merged, `258bfcb`)
 
 - **Changes** — QA pass `docs/architecture/qa/2026-11-06-auth.md` on a production-like
