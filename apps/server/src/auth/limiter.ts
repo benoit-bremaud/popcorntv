@@ -67,7 +67,11 @@ export class LoginLimiter {
     if (key !== null) this.bump(pairKey(ip, key), now);
   }
 
-  /** A success clears the pair (spec auth R8) and refunds the attempt reserved on the IP. */
+  /**
+   * A success clears the pair (spec auth R8) and refunds the attempt reserved on the IP.
+   * When the IP window rolled over while the hash ran, the refund lands on the newer
+   * window: one attempt in the caller's favour, accepted rather than tracking windows.
+   */
   succeed(address: string, key: string): void {
     const ip = clientKey(address);
     this.windows.delete(pairKey(ip, key));
@@ -75,10 +79,10 @@ export class LoginLimiter {
     if (window && window.count > 0) window.count -= 1;
   }
 
-  /** Gives back an attempt that never reached a verdict (the hasher was busy). */
-  refund(address: string, key: string): void {
+  /** Gives back an attempt that never reached a verdict (busy hasher, or a redeem that is not a guess). */
+  refund(address: string, key: string | null): void {
     const ip = clientKey(address);
-    for (const id of [`ip:${ip}`, pairKey(ip, key)]) {
+    for (const id of key === null ? [`ip:${ip}`] : [`ip:${ip}`, pairKey(ip, key)]) {
       const window = this.windows.get(id);
       if (window && window.count > 0) window.count -= 1;
     }

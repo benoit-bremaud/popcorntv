@@ -1,0 +1,62 @@
+/* Household administration (spec auth UC15–UC18) — tokens only (ADR-0004). */
+.admin {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-6) 0;
+}
+
+.admin-head,
+.admin-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.admin-title {
+  margin: var(--space-4) 0 0;
+  font-size: var(--text-lg);
+}
+
+.admin-list,
+.admin-devices {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-devices {
+  flex-basis: 100%;
+  padding-left: var(--space-4);
+}
+
+.admin-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.admin-name {
+  flex: 1 1 var(--form-width);
+}
+
+.admin-item .button,
+.admin .input {
+  min-height: var(--touch-target);
+}
+
+.admin-link {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-md);
+}

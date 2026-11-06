@@ -293,6 +293,19 @@ describe('sign-in and sign-out (UC13, UC14)', () => {
     expect(old.statusCode).toBe(401);
   });
 
+  it('finds the session behind a shadowing cookie of the same name', async () => {
+    const h = await harness();
+    const cookie = cookieOf(await setUp(h));
+
+    const response = await h.app.inject({
+      method: 'GET',
+      url: '/auth/status',
+      headers: { cookie: `pctv_session=shadowed-by-another-app; ${cookie}` },
+    });
+
+    expect(response.json<AuthStatus>().user?.username).toBe('owner');
+  });
+
   it('signs out this device only, clearing the cookie', async () => {
     const h = await harness();
     const a = cookieOf(await setUp(h));
@@ -427,6 +440,27 @@ describe('password change (UC19)', () => {
     ]);
   });
 
+  it('refunds an attempt the busy hasher never judged', async () => {
+    let saturated = true;
+    const flaky: Hasher = {
+      hash: fakeHasher.hash,
+      verify: async (...args) => {
+        if (saturated) throw new HasherBusyError();
+        return fakeHasher.verify(...args);
+      },
+    };
+    const h = await harness({ hasher: flaky });
+    const cookie = cookieOf(await setUp(h));
+    for (let i = 0; i < 6; i += 1) {
+      expect(
+        (await change(h.app, cookie, 'wrong password!', 'a brand new password')).statusCode,
+      ).toBe(429);
+    }
+    saturated = false;
+
+    expect((await change(h.app, cookie, PASSWORD, 'a brand new password')).statusCode).toBe(204);
+  });
+
   it('accepts a password that is the NFD spelling of the NFC one', async () => {
     const h = await harness();
     const cookie = cookieOf(await setUp(h));
@@ -546,6 +580,7 @@ describe('route table', () => {
     'GET /auth/status',
     'HEAD /auth/status',
     'POST /auth/setup',
+    'POST /auth/redeem',
     'POST /auth/session',
   ]);
 

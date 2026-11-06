@@ -8,7 +8,14 @@ import {
   text,
   uniqueIndex,
 } from 'drizzle-orm/sqlite-core';
-import { AVATAR_COLORS, LIBRARY_KINDS, MEDIA_KINDS, ROLES, STREAM_TYPES } from '@popcorntv/shared';
+import {
+  AUTH_EVENT_KINDS,
+  AVATAR_COLORS,
+  LIBRARY_KINDS,
+  MEDIA_KINDS,
+  ROLES,
+  STREAM_TYPES,
+} from '@popcorntv/shared';
 import type { CastMember, Genre, ProviderIds } from '@popcorntv/shared';
 
 /** Persistence shape of the class diagram (04-class.md); tables derive from the entities. */
@@ -143,25 +150,7 @@ export const authTokens = sqliteTable('auth_tokens', {
   revokedAt: text('revoked_at'),
 });
 
-/** What `auth_events` records (spec auth R9, class diagram `AuthEventKind`). */
-export const AUTH_EVENT_KINDS = [
-  'setup_done',
-  'login_ok',
-  'login_failed',
-  'login_locked',
-  'logout',
-  'invite_issued',
-  'invite_revoked',
-  'reset_issued',
-  'reset_revoked',
-  'redeemed',
-  'password_changed',
-  'sessions_ended',
-  'role_changed',
-  'user_deleted',
-] as const;
-
-export type AuthEventKind = (typeof AUTH_EVENT_KINDS)[number];
+export type { AuthEventKind } from '@popcorntv/shared';
 
 /** Audit trail (spec auth R9): no password, no token; purged after 90 days. */
 export const authEvents = sqliteTable(

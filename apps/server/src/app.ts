@@ -10,7 +10,9 @@ import { LoginLimiter } from './auth/limiter.js';
 import { registerAuthRoutes } from './auth/routes.js';
 import { SessionRepository } from './auth/session-repository.js';
 import { SetupToken } from './auth/setup-token.js';
+import { TokenRepository } from './auth/token-repository.js';
 import { UserRepository } from './auth/user-repository.js';
+import { registerUserRoutes } from './auth/user-routes.js';
 import type { AppDatabase } from './db/index.js';
 import type { Prober } from './library/ffprobe.js';
 import { LibraryRepository } from './library/repository.js';
@@ -154,6 +156,7 @@ export function buildApp(options: AppOptions): FastifyInstance {
   const users = new UserRepository(options.db);
   const events = new EventRepository(options.db);
   const setupToken = new SetupToken();
+  const tokens = new TokenRepository(options.db);
   registerAuthRoutes(app, {
     db: options.db,
     users,
@@ -162,8 +165,17 @@ export function buildApp(options: AppOptions): FastifyInstance {
     hasher: options.hasher ?? new Argon2Hasher(),
     limiter: new LoginLimiter(),
     setupToken,
+    tokens,
     profiles,
     cookie,
+  });
+  registerUserRoutes(app, {
+    db: options.db,
+    users,
+    sessions: sessionRepository,
+    tokens,
+    events,
+    origin: cookie.origin,
   });
   registerProgressRoutes(app, { progress: new ProgressRepository(options.db), profiles });
   // Sessions live in memory: directories left by a previous run belong to no one.
@@ -172,6 +184,7 @@ export function buildApp(options: AppOptions): FastifyInstance {
     const now = new Date();
     sessionRepository.purge(now);
     events.purge(now);
+    tokens.purge(now);
     if (users.isEmpty()) {
       const link = `${cookie.origin}/#/setup/${setupToken.issue()}`;
       (

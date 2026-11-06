@@ -44,6 +44,8 @@ sequenceDiagram
   O-->>G: sends the link (any channel)
   G->>W: opens #/invite/<token> or #/reset/<token>
   W->>API: POST /auth/redeem {kind, token, username?, password}
+  API->>TR: isPending(token, kind)? — else 404 token_invalid, counted, before any hash
+  API->>API: hash the password (argon2id, outside the transaction)
   rect rgb(240, 240, 240)
     Note right of API: one transaction
     API->>TR: consume — UPDATE … WHERE unused, unrevoked, unexpired, kind matches
@@ -59,6 +61,12 @@ sequenceDiagram
       API-->>W: 200 + new session cookie
     end
   end
+
+  Note over O,API: Revoke a pending link (UC15, UC16)
+  O->>W: Revoke invitation / reset link
+  W->>API: DELETE /invitations/:id · DELETE /users/:id/reset
+  API->>TR: revoke — 204, or 404 when none is pending
+  Note over API,TR: a role change or an account deletion also revokes the pending reset
 ```
 
 ## Notes

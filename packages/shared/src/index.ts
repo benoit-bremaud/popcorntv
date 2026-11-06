@@ -189,6 +189,7 @@ export type ApiErrorCode =
   | 'too_many_attempts'
   | 'token_invalid'
   | 'username_taken'
+  | 'last_owner'
   | 'not_found'
   | 'internal';
 

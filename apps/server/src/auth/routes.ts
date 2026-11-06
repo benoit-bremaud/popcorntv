@@ -13,6 +13,7 @@ import type { CookiePolicy } from './hook.js';
 import type { LoginLimiter } from './limiter.js';
 import type { SessionRepository } from './session-repository.js';
 import type { SetupToken } from './setup-token.js';
+import type { TokenRepository } from './token-repository.js';
 import type { UserRepository } from './user-repository.js';
 import { usernameKey } from './user-repository.js';
 
@@ -32,6 +33,15 @@ const submittedPassword = z
 export const username = z.string().regex(USERNAME_PATTERN);
 
 const setupBody = z.object({ token: z.string().max(128), username, password: newPassword });
+const redeemBody = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('invite'),
+    token: z.string().max(128),
+    username,
+    password: newPassword,
+  }),
+  z.object({ kind: z.literal('reset'), token: z.string().max(128), password: newPassword }),
+]);
 const signInBody = z.object({ username: z.string().max(64), password: submittedPassword });
 const passwordBody = z.object({ current: submittedPassword, next: newPassword });
 
@@ -44,15 +54,19 @@ export interface AuthRoutesDeps {
   readonly hasher: Hasher;
   readonly limiter: LoginLimiter;
   readonly setupToken: SetupToken;
+  readonly tokens: TokenRepository;
   readonly profiles: Pick<ProfileRepository, 'adoptOrphans' | 'createFirst'>;
   readonly cookie: CookiePolicy;
 }
 
+/** Thrown inside the redeem transaction to roll the token back (UC12 extension). */
+class UsernameTaken extends Error {}
+
 const PUBLIC = { config: { access: 'public' } } as const;
 
 /**
- * UC11, UC13, UC14, UC19 (spec auth §4.2): status, first-owner setup, sign-in / out and
- * password change. Every route running the hasher is rate-limited (spec auth R8).
+ * UC11, UC12, UC13, UC14, UC19, UC20 (spec auth §4.2): status, first-owner setup, link
+ * redeem, sign-in / out and password change. Every route running the hasher is rate-limited (spec auth R8).
  */
 export function registerAuthRoutes(app: FastifyInstance, deps: AuthRoutesDeps): void {
   const { users, sessions, events, limiter } = deps;
@@ -81,6 +95,16 @@ export function registerAuthRoutes(app: FastifyInstance, deps: AuthRoutesDeps): 
       return await deps.hasher.verify(stored, password);
     } catch (error) {
       if (error instanceof HasherBusyError) limiter.refund(ip, key);
+      throw error;
+    }
+  };
+  /** Hashes a new password with the attempt counted first; a busy hasher refunds it. */
+  const hashCounted = async (ip: string, password: string) => {
+    limiter.fail(ip, null);
+    try {
+      return await deps.hasher.hash(password);
+    } catch (error) {
+      if (error instanceof HasherBusyError) limiter.refund(ip, null);
       throw error;
     }
   };
@@ -126,6 +150,59 @@ export function registerAuthRoutes(app: FastifyInstance, deps: AuthRoutesDeps): 
     return reply.code(201).header('set-cookie', done.cookie).send(done.user);
   });
 
+  app.post('/auth/redeem', PUBLIC, async (request, reply) => {
+    const body = redeemBody.safeParse(request.body);
+    if (!body.success) return reply.code(400).send(invalid(body.error.issues));
+    const data = body.data;
+    const limit = limiter.check(request.ip, null);
+    if (!limit.allowed) {
+      if (limit.firstRefusal) events.record('login_locked', { ip: request.ip });
+      return tooMany(reply, limit.retryAfterSec);
+    }
+    // A wrong token is a counted guess and never reaches the hasher (spec auth R8); it is
+    // not refunded, so token guessing stays throttled.
+    if (!deps.tokens.isPending(data.token, data.kind, new Date())) {
+      limiter.fail(request.ip, null);
+      return reply.code(404).send(apiError('token_invalid'));
+    }
+    const passwordHash = await hashCounted(request.ip, data.password);
+    const now = new Date();
+    const redeemed = (): User | null => {
+      if (data.kind === 'invite') {
+        const role = deps.tokens.consumeInvite(data.token, now);
+        if (role === null) return null;
+        if (users.findByUsername(data.username)) throw new UsernameTaken();
+        const user = users.create(data.username, passwordHash, role, now);
+        deps.profiles.createFirst(user.id, user.username, now);
+        return user;
+      }
+      const userId = deps.tokens.consumeReset(data.token, now);
+      const user = userId === null ? undefined : users.find(userId);
+      if (!user) return null;
+      users.setPassword(user.id, passwordHash);
+      sessions.revokeAll(user.id, now);
+      return user;
+    };
+    // A taken username throws so the consumed token rolls back and stays usable (UC12).
+    let outcome: { user: User; cookie: string } | null;
+    try {
+      outcome = deps.db.transaction(() => {
+        const user = redeemed();
+        return user && { user, cookie: signIn(request, user, now) };
+      });
+    } catch (error) {
+      if (!(error instanceof UsernameTaken)) throw error;
+      limiter.refund(request.ip, null);
+      return reply.code(409).send(apiError('username_taken'));
+    }
+    if (outcome === null) return reply.code(404).send(apiError('token_invalid'));
+    // A success refunds the attempt; a new password also lifts the account's lockout here.
+    if (data.kind === 'reset') limiter.succeed(request.ip, usernameKey(outcome.user.username));
+    else limiter.refund(request.ip, null);
+    events.record('redeemed', { userId: outcome.user.id, ip: request.ip }, now);
+    return reply.header('set-cookie', outcome.cookie).send(outcome.user);
+  });
+
   app.post('/auth/session', PUBLIC, async (request, reply) => {
     const body = signInBody.safeParse(request.body);
     if (!body.success) return reply.code(400).send(invalid(body.error.issues));
@@ -159,6 +236,7 @@ export function registerAuthRoutes(app: FastifyInstance, deps: AuthRoutesDeps): 
     events.record('login_ok', { userId: user.id, ip: request.ip }, now);
     sessions.purge(now);
     events.purge(now);
+    deps.tokens.purge(now);
     return reply.header('set-cookie', cookie).send(user);
   });
 

@@ -1,102 +1,78 @@
-# Local review — popcorntv (#18 accounts and sessions — design)
+# Local review — popcorntv (#73, #18 lot 2)
 
-Pre-push review of branch `feat/18-user-accounts-auth` (conception only, no code).
+Local review gate for the invitations, reset links and account administration brick.
 
-- Date: 2026-11-05
-- Commit: 8b606f5 (reviewed), fixes in 430e846, c784ad7, 60aa08c, 9c831d3
-- Scope: branch diff `main...HEAD` (`docs/architecture/specs/auth.md`,
-  `docs/architecture/decisions/0010-accounts-and-sessions.md`,
-  `docs/architecture/diagrams/auth/*`, profiles spec / ADR-0008 / profiles sequence
-  updates)
-- Checks run: adversarial (Opus, 5 rounds) · design · correctness (owner self-review).
-  Docs-only diff: tests and container auditors not applicable; security covered by the
-  adversarial rounds.
-- Verdict: ship as-is · Must 0 · Should 0 · Nice 0 open
+- Date: 2026-11-06
+- Commit: bd98e84
+- Scope: branch diff `origin/main...feat/73-auth-invitations-admin` (`--push`)
+- Checks run: adversarial (Opus, 5 rounds) · design · docs · tests · security · correctness
+- Verdict: ship as-is · Must 0 open · Should 0 open · Nice 0 open in scope (follow-ups below)
 
 ## Adversarial review (#236)
 
-- Round 1 on `8b606f5`: Must 4 · Should 13 · Nice 10 · unverified 1 · Push gate: closed
-- Round 2 on `430e846`: all round 1 fixed · new Must 1 · Should 1 · Nice 7 · closed
-- Round 3 on `c784ad7`: all fixed · Must 0 · Should 2 · Nice 4 · open
-- Round 4 on `60aa08c`: all fixed · Must 0 · Should 1 · Nice 2 · open
-- Round 5 on `9c831d3`: all fixed · Must 0 · Should 0 · Nice 0 · **Push gate: open**
-- Hosted reviewers (filled at the pre-merge run): Copilot cannot be requested on this
-  repo · Codex: no review posted on this PR (optional)
+- Round 1 on `dd9d86d`: Must 2 (owner self-delete answered 500; stale CLAUDE.md server layout) · Push gate: closed
+- Round 2 on `da1b264`: all round 1 findings fixed · new Must 0 · new Should 1 (revoking a reset link hid any shown link) · Push gate: open
+- Round 3 on `a0aec13`: Should and two Nice fixed · new Should 1 (devices failure refresh untested, fixed in `43d0622`) · **Push gate: open**
+- Round 4 on `aa54777` (Codex P2 fixes): both fixed · new Should 1 (deletion left a revoked reset link on screen) · Nice 1 (wasted reloads after self-demotion), both fixed next · **Push gate: open**
+- Round 5 on `d97d6f1` (deletion fix, SonarQube fixes): all fixed · new Should 1 (`<p>` inside `<output>`) and the demotion test Nice, both fixed in `bd98e84` · **Push gate: open**
+- Hosted reviewers: Codex reviewed `85e6d93`: 2 P2 (a role change and a self-demotion left stale admin state), fixed in `aa54777`; Copilot out of credit
 
-## Pre-merge gate (head SHA c50aa0f, main merged in)
+## Pre-merge gate (head SHA bd98e84)
 
 | Step | Result |
-| --- | --- |
-| 0 CI mirror | `ci.yml`: typecheck ✅, test ✅, build ✅; lint / format:check ⚠️ red locally only on the ignored `.claude/worktrees/zen-ptolemy-*` checkout (0 finding outside it; a clean CI checkout has no such folder); CodeQL, Scorecard, dependency-review CI-only |
-| 1 Tests | ✅ shared 31 · server 334 · web 129 |
-| 2 Coverage | tests: server 98.3 % stmts / 95.6 % branches / 95.6 % funcs / 98.4 % lines; web 99.8 / 93.4 / 100 / 100; shared 88.9 / 100 / 100 / 86.7 · docs: no code export (docs-only change) |
-| 3 SonarQube | ✅ PASSED |
-| 4 Secrets | ✅ gitleaks clean on `origin/main..HEAD` · tracked env: `.env.example` only (placeholders) · diff read: nothing sensitive |
-| 5 E2E/smoke | ✅ catalog smoke 1/1 (fixed by #65) · QA pass: not applicable (docs-only change) |
+|---|---|
+| 0 CI mirror | ✅ install, typecheck, eslint (`apps packages`), format:check, tests, build on Node 22; CodeQL, dependency-review CI-only |
+| 1 Tests | ✅ shared 38 · server 470 · web 198 |
+| 2 Coverage | server 97.5 % lines · web ~98.9 % lines (floor 80) · docs not measured (no doc counter in this repo) |
+| 3 SonarQube | ✅ PASSED on `bd98e84` (first run FAILED with 7 new issues, fixed in `d97d6f1`) |
+| 4 Secrets | ✅ gitleaks clean (`origin/main..HEAD`) · only `.env.example` tracked · diff read: nothing sensitive |
+| 5 E2E/smoke | ✅ Playwright catalog smoke 1/1 on the local prod build · QA pass: on staging, with the R12 security review |
 
-- Gate: **GREEN** on `c50aa0f`; the next commit changes only this report.
-- Mermaid: the 7 auth diagrams and the profiles sequence render with `mmdc` 11.4.2,
-  no syntax error.
+- Gate: **GREEN** on `bd98e84`, except doc coverage (no counter in this repo); the head commit only adds this report.
 
 ## 🔴 Must Have
 
-_None open._ Fixed across rounds (main ones):
+_None open._ Fixed in `da1b264`:
 
-- `specs/auth.md` `[adversarial]` · `PUBLIC_URL` undefined when unset → required, dev
-  value, one origin for every client.
-- `specs/auth.md` §5 `[adversarial|design]` · Fastify did not serve the web build and
-  the Caddy recipe could not work → Caddy serves the build, strips `/api`, `handle`
-  blocks (reproduced on `caddy:2.11.7-alpine`); new `08-deployment-prod.md`.
-- `decisions/0008-profiles.md`, `specs/profiles.md` `[adversarial]` · UC9 ownership
-  stated two ways → ADR-0008 §4 superseded by ADR-0010 §5, per-user profile rules.
-- `diagrams/auth/04-class.md` `[adversarial|design]` · `profiles.user_id` nullability
-  contradicted → one wording.
-- `specs/auth.md` R10, `specs/profiles.md` `[design|adversarial]` · global profile name
-  index / limit / last-profile rule → per user, `(user_id, name_key)` unique.
-- `specs/auth.md` R1 `[design|adversarial]` · URL-string allow-list → route
-  `config.access`, protected by default.
-- `diagrams/auth/02-sequence-sign-in.md` `[design]` · per-route session checks → one
-  `onRequest` hook participant.
-- `specs/auth.md` §4.5 `[design]` · `auth` ↔ `profiles` cycle → `Caller` in
-  `src/http.ts`, narrow `Pick` port.
-- `diagrams/auth/01-use-case.md` `[design]` · wrong «include», missing goals → UC19,
-  UC20, actor generalization.
+- `apps/server/src/auth/user-routes.ts` `[adversarial]` · Owner self-delete answered 500: the event row pointed at the deleted user · The event now records `userId` null.
+- `CLAUDE.md` `[adversarial|docs]` · The server layout was stale · It now lists the token repository and the user routes.
+- `docs/architecture/diagrams/auth/` `[docs]` · The diagrams were missing the pre-hash token check and revocation · The sequence and class diagrams are updated.
+- `apps/server/src/auth/token-repository.test.ts` `[tests]` · There was no token expiry test and no demotion test · Both are added.
 
 ## 🟡 Should Have
 
-_None open._ Fixed: atomic single-use token consumption (kind in the `UPDATE`), rate
-limits on every hashing route and a bounded hash concurrency cap, revocable invitations,
-user-bound playback sessions, role read on every request, Docker `HOST` / compose port,
-SEC-11/12/15 in the QA scope, CSRF claim wording, setup token kept in memory, hourly
-`last_seen_at` slide, purge without a timer, class diagram names and links, rotated
-cookie on password change, session-state revocation causes.
+_None open._ Fixed:
+
+- `apps/web/src/auth/AdminPanel.tsx:225` `[adversarial]` · Revoking a reset link cleared any shown link · Now only that account's reset link is cleared (`a0aec13`).
+- `apps/web/src/auth/AdminPanel.test.tsx` `[adversarial|tests]` · The refresh after a failed devices load had no test · A test is added (`43d0622`).
 
 ## 🔵 Nice to Have
 
-_None open._ Fixed: `__Host-` cookie, reset TTL 24 h, one lockout event per window,
-`username_tried` syntax filter, ASCII usernames and NFC passwords, `last_login_at`,
-HSTS and CSP in Caddy, `rootPath` decision recorded, event kinds completed, no session
-fixation, 20-session cap, hashing outside the synchronous transaction (self-review).
+Fixed:
+
+- `apps/web/src/auth/AdminPanel.tsx` · A failed devices load now refreshes the lists.
+- `docs/architecture/specs/auth.md` · R8 now covers wrong tokens and lockout lifting.
+
+Deferred as follow-ups:
+
+- `eslint.config` · Add an ESLint ignore for `.claude/**`, where stale local worktrees break `pnpm lint`.
+- `apps/server/src/auth/routes.ts` · Links ignore any path prefix in `PUBLIC_URL`.
+- `apps/server/src/auth/routes.ts` · Add a per-token attempt cap.
+- `apps/web/src/auth/AuthGate.tsx` · Handle `hashchange`.
+- Device list · Add a "this device" flag.
+- Self-demotion · Ask for confirmation.
+- Event list · Add an actor column.
+- `apps/web/src/auth/AdminPanel.tsx:92` · A failed load for another account leaves the open devices list on screen.
 
 ## ⚪ Disagree / Intentional
 
-- `specs/auth.md` §7 `[adversarial]` · email, TOTP and homelab deployment split out of
-  #18 · owner decision (#18 chat, 2026-11-05), follow-up issues filed.
-- `specs/auth.md` §4.4 `[adversarial]` · `rootPath` visible to viewers · recorded, to
-  revisit in the post-#18 security audit.
-- `[design]` · audit log, no session/JWT library, hasher without interface, one
-  `auth_tokens` table, 404 instead of 403 cross-user · intentional (issue scope,
-  ADR-0003 precedent, single-egress modules).
-
-## Out of scope (pre-existing)
-
-- `CLAUDE.md:84`, `apps/web/src/profiles/ManageProfiles.tsx:43` — "open to the network
-  until #18": update in the implementation PR.
-- `docs/architecture/README.md:39-48` — feature and ADR index stale: follow-up issue.
+- CodeQL `js/missing-rate-limiting` on LoginLimiter-guarded routes is a known false positive (#72).
 
 ## Per-dimension summary
 
-- Adversarial: 5 rounds, 0 open, gate open · Design: 6 Must / 8 Should / 7 Nice all
-  applied, five ADR decisions confirmed sound · Correctness: self-review added 5 fixes
-  · Security: covered by the adversarial rounds, design follows OWASP session and
-  password guidance · Docs / tests / containers: not applicable to a design-only diff.
+- Adversarial: 3 rounds, gate open.
+- Design: no Must; flat layout kept.
+- Docs: spec and diagrams match the code.
+- Tests: expiry, refund and self-delete paths are covered.
+- Security: no Must; tokens are hashed and single-use; a token is checked before any hashing.
+- Correctness: the self-delete 500 is fixed.

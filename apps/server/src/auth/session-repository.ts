@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { and, asc, eq, gt, inArray, isNotNull, isNull, lt, ne, or } from 'drizzle-orm';
-import type { Role } from '@popcorntv/shared';
+import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, lt, ne, or } from 'drizzle-orm';
+import type { DeviceSession, Role } from '@popcorntv/shared';
 import type { AppDatabase } from '../db/index.js';
 import { sessions, users } from '../db/schema.js';
 import { hashToken, newToken } from './token.js';
@@ -114,6 +114,42 @@ export class SessionRepository {
         ),
       )
       .run();
+  }
+
+  /** The user's live sessions, newest first (UC17). */
+  listLive(userId: string, now: Date): DeviceSession[] {
+    return this.db
+      .select({
+        id: sessions.id,
+        createdAt: sessions.createdAt,
+        lastSeenAt: sessions.lastSeenAt,
+        userAgent: sessions.userAgent,
+      })
+      .from(sessions)
+      .where(and(eq(sessions.userId, userId), this.live(now)))
+      .orderBy(desc(sessions.createdAt))
+      .all();
+  }
+
+  /** Live sessions per user (UC17), in one grouped query. */
+  liveCounts(now: Date): Map<string, number> {
+    const rows = this.db
+      .select({ userId: sessions.userId, n: count() })
+      .from(sessions)
+      .where(this.live(now))
+      .groupBy(sessions.userId)
+      .all();
+    return new Map(rows.map((row) => [row.userId, row.n]));
+  }
+
+  /** Ends one live session of `userId` (UC17); false when none matches. */
+  revokeOf(userId: string, sessionId: string, now: Date): boolean {
+    const result = this.db
+      .update(sessions)
+      .set({ revokedAt: now.toISOString() })
+      .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId), this.live(now)))
+      .run();
+    return result.changes === 1;
   }
 
   /** Deletes revoked and expired sessions (spec auth §4.1, at start and on each sign-in). */
