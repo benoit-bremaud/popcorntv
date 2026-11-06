@@ -4,7 +4,7 @@ Pre-push review of #109: the 2026-11-06 security audit report and the gitignored
 
 - Date: 2026-11-06
 - Commit: e3284b7 (+ wording commit)
-- Scope: branch diff origin/main...HEAD (`.gitignore`, `docs/security/reports/2026-11-06-security-audit.md`)
+- Scope: branch diff origin/main...HEAD (`.gitignore`, `docs/security/reports/2026-11-06-security-audit.md`, this file)
 - Checks run: adversarial (Opus, 2 rounds) · docs · security · correctness (design, tests and containers: n/a, docs-only diff)
 - Verdict: ship as-is · Must 0 · Should 0 · Nice 0
 
@@ -12,7 +12,8 @@ Pre-push review of #109: the 2026-11-06 security audit report and the gitignored
 
 - Round 1 on `bf04650`: Must 3 · Should 2 · Nice 2 · unverified 0 · Push gate: closed
 - Round 2 on `e3284b7`: 7 fixed (one title kept as `chore(security):` on purpose) · 0 not fixed · 0 regressed · new Must 0 · **Push gate: open**; its 2 wording Nice applied in the next commit
-- Hosted reviewers (filled at the pre-merge run): Codex optional
+- Round 3 on `2d7cb5f` (after the Codex P2 on PR #113, recorded as SA-04 #114): 2 Nice fixed · new Must 0 · Should 1 (SA-04 widened to directory swaps and ffprobe) applied in the next commit · **Push gate: open**
+- Hosted reviewers: Codex posted one P2 on `805a199` (O_NOFOLLOW claim), fixed and answered inline
 
 ## Pre-merge gate (head SHA filled at the pre-merge run)
 
