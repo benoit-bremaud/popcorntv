@@ -3,7 +3,7 @@
 # PopCornTV server image: builds the TypeScript workspace, ships only the runtime output,
 # runs as a non-root user with FFmpeg available for transcoding.
 
-FROM node:22.21.1-bookworm-slim@sha256:25b3eb23a00590b7499f2a2ce939322727fcce1b15fdd69754fcd09536a3ae2c AS build
+FROM node:22.23.4-bookworm-slim@sha256:5ec23b7c622b00547753bc6ffd78085dd868a68aeb41c8e0a1418f033e13d96d AS build
 # better-sqlite3 is compiled from source when no prebuilt binary matches: node-gyp needs
 # python3 + a C++ toolchain. Build stage only; the runtime image ships the .node binary.
 # hadolint ignore=DL3008
@@ -23,12 +23,13 @@ COPY apps/server apps/server
 RUN pnpm --filter @popcorntv/server... build \
   && pnpm --filter @popcorntv/server --prod deploy --legacy /out
 
-FROM node:22.21.1-bookworm-slim@sha256:25b3eb23a00590b7499f2a2ce939322727fcce1b15fdd69754fcd09536a3ae2c
+FROM node:22.23.4-bookworm-slim@sha256:5ec23b7c622b00547753bc6ffd78085dd868a68aeb41c8e0a1418f033e13d96d
 # ffmpeg comes from Debian stable: pinned by the base image tag, patched by Dependabot bumps.
 # `apt-get upgrade` (DL3005) is deliberate: the node base image lags Debian's security
 # updates (17 fixed HIGH/CRITICAL CVEs in perl, pcre2, gnutls, libcap on 2026-10-23) and
 # the weekly Trivy scan blocks on them; the upgrade is reproducible per base image digest.
-# Re-check on every Dependabot base bump: drop the upgrade once Trivy is clean without it.
+# Keep while the base can lag Debian security (it did on 2026-10-23 and 2026-11-06);
+# re-check on each base bump.
 # hadolint ignore=DL3008,DL3005
 RUN apt-get update \
   && apt-get upgrade -y --no-install-recommends \
