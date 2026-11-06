@@ -1,78 +1,70 @@
-# Local review — popcorntv (#73, #18 lot 2)
+# Local review — popcorntv (#18 R12 findings)
 
-Local review gate for the invitations, reset links and account administration brick.
+Local review gate for the fixes of the #18 R12 security review and QA pass.
 
 - Date: 2026-11-06
-- Commit: bd98e84
-- Scope: branch diff `origin/main...feat/73-auth-invitations-admin` (`--push`)
-- Checks run: adversarial (Opus, 5 rounds) · design · docs · tests · security · correctness
-- Verdict: ship as-is · Must 0 open · Should 0 open · Nice 0 open in scope (follow-ups below)
+- Commit: 17fee64
+- Scope: branch diff `origin/main...fix/18-auth-r12-findings` (`--push`)
+- Checks run: adversarial (Opus, 2 rounds) · design · docs · tests · security · correctness
+- Verdict: ship · Must 0 · Should 0 open · Nice 0 open
 
 ## Adversarial review (#236)
 
-- Round 1 on `dd9d86d`: Must 2 (owner self-delete answered 500; stale CLAUDE.md server layout) · Push gate: closed
-- Round 2 on `da1b264`: all round 1 findings fixed · new Must 0 · new Should 1 (revoking a reset link hid any shown link) · Push gate: open
-- Round 3 on `a0aec13`: Should and two Nice fixed · new Should 1 (devices failure refresh untested, fixed in `43d0622`) · **Push gate: open**
-- Round 4 on `aa54777` (Codex P2 fixes): both fixed · new Should 1 (deletion left a revoked reset link on screen) · Nice 1 (wasted reloads after self-demotion), both fixed next · **Push gate: open**
-- Round 5 on `d97d6f1` (deletion fix, SonarQube fixes): all fixed · new Should 1 (`<p>` inside `<output>`) and the demotion test Nice, both fixed in `bd98e84` · **Push gate: open**
-- Hosted reviewers: Codex reviewed `85e6d93`: 2 P2 (a role change and a self-demotion left stale admin state), fixed in `aa54777`; Copilot out of credit
+- Round 1 on `228d586`: Must 1 · Should 4 · Nice 2 · unverified 0 · Push gate: closed
+- Round 2 on `7974e2c`: 7 fixed · 0 not fixed · 0 regressed · new Must 0 (1 new Should, a
+  missing `/0` test, fixed in `17fee64` and proven by a mutation run) · **Push gate: open**
+- Hosted reviewers (filled at the pre-merge run): Copilot out of credit · Codex optional
 
-## Pre-merge gate (head SHA bd98e84)
+## Pre-merge gate (head SHA 228d586 for steps 2, 3 and 5; 17fee64 for steps 1 and 4)
 
 | Step | Result |
 |---|---|
-| 0 CI mirror | ✅ install, typecheck, eslint (`apps packages`), format:check, tests, build on Node 22; CodeQL, dependency-review CI-only |
-| 1 Tests | ✅ shared 38 · server 470 · web 198 |
-| 2 Coverage | server 97.5 % lines · web ~98.9 % lines (floor 80) · docs not measured (no doc counter in this repo) |
-| 3 SonarQube | ✅ PASSED on `bd98e84` (first run FAILED with 7 new issues, fixed in `d97d6f1`) |
-| 4 Secrets | ✅ gitleaks clean (`origin/main..HEAD`) · only `.env.example` tracked · diff read: nothing sensitive |
-| 5 E2E/smoke | ✅ Playwright catalog smoke 1/1 on the local prod build · QA pass: on staging, with the R12 security review |
+| 0 CI mirror | `ci.yml`: typecheck · lint (`eslint apps packages`; plain `pnpm lint` walks the untracked `.claude/worktrees`, #79) · format:check · test · build, all green; `docker-security.yml` not triggered (no Dockerfile, lockfile or package change); CodeQL, dependency-review, Scorecard, gitleaks workflow: CI-only |
+| 1 Tests | ✅ 38 shared + 497 server + 198 web · smoke 1/1 |
+| 2 Coverage | server 97.6 % stmts / 93.8 % branches / 95.9 % funcs / 98.6 % lines · web 99.1 / 92.8 / 98.4 / 99.4 · shared 90.2 / 100 / 100 / 88.6 (floor 80) · docs: not measured (no counter in the repo) |
+| 3 SonarQube | ✅ PASSED |
+| 4 Secrets | ✅ gitleaks history clean; tree scan flags only the untracked `.claude/worktrees/3-library-scan-6c4678` Playwright log · no tracked `.env` · diff read: QA screenshots mask the invitation link, test passwords only in the scratchpad |
+| 5 E2E/smoke | ✅ 1 journey on the local prod build · QA pass: done on the production-like stack before the fixes, re-checked after (`qa/2026-11-06-auth.md`) |
 
-- Gate: **GREEN** on `bd98e84`, except doc coverage (no counter in this repo); the head commit only adds this report.
+- Gate: `--push`: **pre-push green** — steps 2, 3 and 5 re-run on the head before the merge
+  question
 
 ## 🔴 Must Have
 
-_None open._ Fixed in `da1b264`:
-
-- `apps/server/src/auth/user-routes.ts` `[adversarial]` · Owner self-delete answered 500: the event row pointed at the deleted user · The event now records `userId` null.
-- `CLAUDE.md` `[adversarial|docs]` · The server layout was stale · It now lists the token repository and the user routes.
-- `docs/architecture/diagrams/auth/` `[docs]` · The diagrams were missing the pre-hash token check and revocation · The sequence and class diagrams are updated.
-- `apps/server/src/auth/token-repository.test.ts` `[tests]` · There was no token expiry test and no demotion test · Both are added.
+- `docs/architecture/diagrams/auth/02-sequence-invite-and-accept.md:69` `[adversarial]` ·
+  stale revocation rule · fixed in `7974e2c`
 
 ## 🟡 Should Have
 
-_None open._ Fixed:
-
-- `apps/web/src/auth/AdminPanel.tsx:225` `[adversarial]` · Revoking a reset link cleared any shown link · Now only that account's reset link is cleared (`a0aec13`).
-- `apps/web/src/auth/AdminPanel.test.tsx` `[adversarial|tests]` · The refresh after a failed devices load had no test · A test is added (`43d0622`).
+- `apps/server/src/config.ts:108` `[adversarial]` · `/0` passed the validator then crashed
+  Fastify · fixed in `7974e2c`, test in `17fee64`
+- `docs/architecture/diagrams/auth/02-sequence-sign-in.md:33,84` `[adversarial|docs]` ·
+  lookup order and `TRUST_PROXY` note stale · fixed in `7974e2c`
+- `apps/server/src/auth/event-repository.ts:15` `[adversarial|docs]` · old R9 wording ·
+  fixed in `7974e2c`
+- `README.md:89` `[adversarial]` · CIDR offered without its restriction · fixed in `7974e2c`
+- `apps/server/src/app.test.ts`, `token-repository.test.ts`, `routes.test.ts` `[tests]` ·
+  route cache policy, `revokeAllPending` and another account's reset not pinned · fixed in
+  `7974e2c`
+- `PROJECT_LOG.md:52` `[docs]` · historical `TRUST_PROXY=1` mention · superseded note in the
+  `docs(log)` PR
 
 ## 🔵 Nice to Have
 
-Fixed:
-
-- `apps/web/src/auth/AdminPanel.tsx` · A failed devices load now refreshes the lists.
-- `docs/architecture/specs/auth.md` · R8 now covers wrong tokens and lockout lifting.
-
-Deferred as follow-ups:
-
-- `eslint.config` · Add an ESLint ignore for `.claude/**`, where stale local worktrees break `pnpm lint`.
-- `apps/server/src/auth/routes.ts` · Links ignore any path prefix in `PUBLIC_URL`.
-- `apps/server/src/auth/routes.ts` · Add a per-token attempt cap.
-- `apps/web/src/auth/AuthGate.tsx` · Handle `hashchange`.
-- Device list · Add a "this device" flag.
-- Self-demotion · Ask for confirmation.
-- Event list · Add an actor column.
-- `apps/web/src/auth/AdminPanel.tsx:92` · A failed load for another account leaves the open devices list on screen.
+- `apps/server/src/config.ts:78` `[adversarial|tests]` · trailing comma refused · fixed
+- `apps/server/src/index.ts:39` `[adversarial]` · untested warning · pure
+  `trustProxyWarning` with tests
 
 ## ⚪ Disagree / Intentional
 
-- CodeQL `js/missing-rate-limiting` on LoginLimiter-guarded routes is a known false positive (#72).
+- `apps/server/src/config.ts` `[adversarial]` · `TRUST_PROXY=1` now refuses to start · spec §5
+- `apps/server/src/auth/user-routes.ts:59,78` `[adversarial|design]` · an owner leaving
+  revokes the other owners' links too · UC17, MCDA M1-B 440/500
+- `apps/server/src/auth/token-repository.ts:76` `[adversarial]` · no revocation event · #90
 
 ## Per-dimension summary
 
-- Adversarial: 3 rounds, gate open.
-- Design: no Must; flat layout kept.
-- Docs: spec and diagrams match the code.
-- Tests: expiry, refund and self-delete paths are covered.
-- Security: no Must; tokens are hashed and single-use; a token is checked before any hashing.
-- Correctness: the self-delete 500 is fixed.
+- Adversarial: 1 Must + 4 Should in round 1, all fixed; gate open in round 2 · Design: sound,
+  M1-B over-broad by design · Docs: stale copies fixed · Tests: four gaps filled ·
+  Security: covered by the R12 review (`qa/2026-11-06-auth-security-review.md`) ·
+  Correctness: no bug found
