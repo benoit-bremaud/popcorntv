@@ -8,7 +8,7 @@ context: merged PRs, decisions, tags, infra events. Not a release changelog — 
 
 - **Changes** — QA pass `docs/architecture/qa/2026-11-06-auth.md` on a production-like
   stack (prod image behind Caddy `tls internal`, spec §5): SEC-02…12 and SEC-15 pass,
-  SEC-01 fails on headers. Security review `qa/2026-11-06-auth-security-review.md` (Opus):
+  SEC-01 fails on headers. Security review `docs/architecture/qa/2026-11-06-auth-security-review.md` (Opus):
   1 Must, 3 Should, 5 Nice. Fixes: demoting or deleting an owner revokes every pending
   link (a deleted owner could take another owner's account back), a password change
   revokes the pending reset, `TRUST_PROXY` is now the proxy's address list (`1` / `true`
