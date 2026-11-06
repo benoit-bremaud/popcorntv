@@ -75,7 +75,9 @@ path guard re-run per request, Play + native `<video>` player in `DetailDialog`)
 transcode (spec `docs/architecture/specs/hls-transcode.md`, ADR-0006: every Play posts
 `/playback/sessions`, the server confirms direct play with `directPlayMime` or runs FFmpeg
 into an in-memory session — H.264/AAC copied, the rest re-encoded, MPEG-TS EVENT playlist,
-60 s idle watchdog + 20 s web heartbeat, hls.js loaded on demand; #74 ADR-0012: at the limit a Play takes over the caller's own oldest session, else for an owner the oldest viewer one); #9 resume (spec
+60 s idle watchdog + 20 s web heartbeat, hls.js loaded on demand; #74
+ADR-0012: at the limit a Play takes over the caller's own oldest session, else for an owner
+the oldest viewer one); #9 resume (spec
 `docs/architecture/specs/resume-playback.md`, ADR-0007: `watch_progress` keyed by
 `profile_id` `'default'` until #10, `PUT /media/:id/progress` (now under `/profiles/:profileId/`, #10) every 10 s / on pause / on
 close, `GET /progress`, `startSec` → FFmpeg `-ss` + `offsetSec` in the answer, Next episode

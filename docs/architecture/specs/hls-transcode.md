@@ -22,7 +22,8 @@
 - **R5b** At the limit, a Play takes over a slot instead of failing (ADR-0012): first the
   caller's own oldest session, else, for an owner, the oldest viewer session. A viewer
   never takes another account's slot, an owner never takes another owner's. The session
-  taken over is closed as on `DELETE`; its player sees the 3d error on the next request.
+  taken over is closed as on `DELETE`: its next request answers `404 session_not_found`
+  and its player shows the 4a message; a pending open taken over answers 3d.
 - **R6** Done when an MKV/HEVC + AC-3 (or similar) file plays through HLS in Chromium and
   Firefox.
 

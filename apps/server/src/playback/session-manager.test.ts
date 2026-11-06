@@ -107,14 +107,37 @@ describe('SessionManager', () => {
 
   it("lets an owner take over the oldest viewer session, not another owner's", async () => {
     const sessions = manager(fakeTranscoder('writes').transcoder, { maxSessions: 2 });
-    const viewer = await sessions.open(VIEWER, '/m/a.mkv', HEVC);
     const owner = await sessions.open(OTHER_OWNER, '/m/b.mkv', HEVC);
+    const viewer = await sessions.open(VIEWER, '/m/a.mkv', HEVC);
 
     expect((await sessions.open(USER, '/m/c.mkv', HEVC)).kind).toBe('ready');
     if (viewer.kind !== 'ready' || owner.kind !== 'ready') return;
     expect(sessions.touch(viewer.id)).toBe(false);
     expect(sessions.touch(owner.id)).toBe(true);
     expect((await sessions.open(OTHER_VIEWER, '/m/d.mkv', HEVC)).kind).toBe('busy');
+    await sessions.closeAll();
+  });
+
+  it("takes over an owner's own session before a viewer's, and the oldest first", async () => {
+    const sessions = manager(fakeTranscoder('writes').transcoder, { maxSessions: 3 });
+    const viewer = await sessions.open(VIEWER, '/m/a.mkv', HEVC);
+    const older = await sessions.open(USER, '/m/b.mkv', HEVC);
+    const newer = await sessions.open(USER, '/m/c.mkv', HEVC);
+
+    expect((await sessions.open(USER, '/m/d.mkv', HEVC)).kind).toBe('ready');
+    if (viewer.kind !== 'ready' || older.kind !== 'ready' || newer.kind !== 'ready') return;
+    expect(sessions.touch(viewer.id)).toBe(true);
+    expect(sessions.touch(older.id)).toBe(false);
+    expect(sessions.touch(newer.id)).toBe(true);
+    expect(await readdir(dir)).toHaveLength(3);
+    await sessions.closeAll();
+  });
+
+  it("answers busy to a viewer when the slot is an owner's", async () => {
+    const sessions = manager(fakeTranscoder('writes').transcoder);
+    await sessions.open(USER, '/m/a.mkv', HEVC);
+
+    expect((await sessions.open(VIEWER, '/m/b.mkv', HEVC)).kind).toBe('busy');
     await sessions.closeAll();
   });
 
@@ -127,13 +150,16 @@ describe('SessionManager', () => {
   });
 
   it('fails the open of a session taken over before its playlist exists', async () => {
-    const sessions = manager(fakeTranscoder('silent').transcoder, { readyTimeoutMs: 1_000 });
+    const { transcoder, runs, kills } = fakeTranscoder('silent');
+    const sessions = manager(transcoder, { readyTimeoutMs: 1_000 });
     const pending = sessions.open(VIEWER, '/m/a.mkv', HEVC);
-    await vi.waitFor(async () => expect(await readdir(dir)).toHaveLength(1));
+    // The session joins the map in the same tick FFmpeg is spawned.
+    await vi.waitFor(() => expect(runs).toHaveLength(1));
 
     const owner = sessions.open(USER, '/m/b.mkv', HEVC);
 
     expect((await pending).kind).toBe('failed');
+    expect(kills).toHaveBeenCalledOnce();
     await sessions.closeAll();
     expect((await owner).kind).toBe('failed');
   });

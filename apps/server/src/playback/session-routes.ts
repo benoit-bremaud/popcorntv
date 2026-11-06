@@ -43,7 +43,8 @@ async function openOrNull(path: string): Promise<FileHandle | null> {
 /**
  * UC5 sessions (spec hls-transcode, ADR-0006): `POST /playback/sessions` (200 direct |
  * 201 hls | 400 | 404 `media_not_found` | 422 `not_playable` | 502 `transcode_failed` |
- * 503 `transcode_busy` when no slot may be taken over, spec R5b), the playlist and segment files, the heartbeat and `DELETE`.
+ * 503 `transcode_busy` when no slot may be taken over, spec R5b), the playlist and segment
+ * files, the heartbeat and `DELETE`.
  * UC6 (ADR-0007): the body's optional `startSec` resumes there (start over at or past the
  * end) and both answers carry `offsetSec`, the media time the player's timeline starts at.
  */

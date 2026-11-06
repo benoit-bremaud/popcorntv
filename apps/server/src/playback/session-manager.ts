@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import type { FastifyBaseLogger } from 'fastify';
 import type { Role, StreamInfo } from '@popcorntv/shared';
+import type { Caller } from '../http.js';
 import { PLAYLIST_NAME, SEGMENT_PATTERN, ffmpegArgs } from './ffmpeg-args.js';
 import type { TranscodeHandle, Transcoder } from './transcoder.js';
 
@@ -24,21 +25,22 @@ export interface SessionManagerOptions {
 }
 
 /** The user opening a session: the slot rule (spec R5b) depends on the role. */
-export interface Opener {
-  readonly userId: string;
-  readonly role: Role;
-}
+export type Opener = Pick<Caller, 'userId' | 'role'>;
 
 /**
- * Outcome of `open`: `busy` when `maxSessions` are running and none may be taken over, `failed` when FFmpeg exits or
- * writes no playlist within `readyTimeoutMs`, `not_playable` without a video stream.
+ * Outcome of `open`: `busy` when `maxSessions` are running and none may be taken over,
+ * `failed` when FFmpeg exits, writes no playlist within `readyTimeoutMs` or the session is
+ * taken over meanwhile, `not_playable` without a video stream.
  */
 export type OpenResult =
   | { readonly kind: 'ready'; readonly id: string }
   | { readonly kind: 'not_playable' | 'busy' | 'failed' };
 
 interface Session {
-  /** The user who opened it (spec auth R10); nobody else may read or close it. */
+  /**
+   * The user who opened it: nobody else may read or close it through the routes (spec auth
+   * R10); an owner's Play may still take its slot (spec hls-transcode R5b).
+   */
   readonly owner: string;
   readonly role: Role;
   readonly dir: string;
@@ -99,11 +101,15 @@ export class SessionManager {
     if (this.sessions.size + this.starting >= this.options.maxSessions) {
       const victim = this.victimFor(opener);
       if (victim === undefined) return { kind: 'busy' };
-      this.options.logger.info({ session: victim, by: opener.userId }, 'session taken over');
+      const { owner, role } = this.sessions.get(victim) ?? {};
+      this.options.logger.info(
+        { session: victim, victimOwner: owner, victimRole: role, by: opener.userId },
+        'session taken over',
+      );
       // `close` forgets the session synchronously: the slot is free before any await.
       preempted = this.close(victim);
     }
-    // Reserved before the first await, so concurrent opens cannot both pass the limit.
+    // Reserved before the first await (nothing is awaited since the check), so concurrent opens cannot both pass the limit.
     this.starting += 1;
     let dir: string;
     try {

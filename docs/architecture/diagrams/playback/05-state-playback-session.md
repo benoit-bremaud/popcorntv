@@ -13,7 +13,7 @@ one temp directory.
 
 ```mermaid
 stateDiagram-v2
-  [*] --> Starting: POST /playback/sessions (HLS, under the limit)
+  [*] --> Starting: POST /playback/sessions (HLS, under the limit or after a take-over, R5b)
   Starting --> Streaming: index.m3u8 written
   Starting --> Failed: ffmpeg exits or 20 s without playlist
   state Streaming {
@@ -39,4 +39,5 @@ stateDiagram-v2
 - The heartbeat (every 20 s from the open player) keeps a paused session alive; a closed
   tab stops it and the watchdog cleans up.
 - `Failed` and `Closed` free a slot of `TRANSCODE_MAX_SESSIONS`. At the limit, a Play
-  closes the caller's own oldest session, else for an owner the oldest viewer one.
+  closes the caller's own oldest session, else for an owner the oldest viewer one. A
+  session taken over in `Starting` makes its pending open answer `502 transcode_failed`.

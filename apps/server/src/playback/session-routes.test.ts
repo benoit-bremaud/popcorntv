@@ -287,8 +287,13 @@ describe('playback session routes', () => {
       payload: body,
     });
 
+    const taken = viewer.json<{ url: string }>().url;
+    const dead = await app.inject({ method: 'GET', url: taken, headers: asGuest });
+
     expect(viewer.statusCode).toBe(201);
     expect(owner.mode).toBe('hls');
+    expect(kills).toHaveBeenCalledOnce();
+    expect(dead.json<ApiError>().error).toBe('session_not_found');
     expect(busy.statusCode).toBe(503);
     expect(busy.json<ApiError>().error).toBe('transcode_busy');
   });
