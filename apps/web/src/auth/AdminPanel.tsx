@@ -121,9 +121,9 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
       )}
       {shown && (
         <output className="admin-link">
-          <p>
+          <span>
             {shown.label} — shown once, valid until {when(shown.issued.expiresAt)}:
-          </p>
+          </span>
           <input
             className="input"
             readOnly

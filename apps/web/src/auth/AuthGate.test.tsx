@@ -175,9 +175,13 @@ describe('AuthGate', () => {
     expect(history.replaceState).toHaveBeenCalledWith(null, '', '/');
   });
 
-  it('opens and closes the administration for an owner, re-reading the status', async () => {
+  it('re-reads the status when the administration closes, dropping it after a demotion', async () => {
     const user = userEvent.setup();
-    const api = fakeApi({ status: vi.fn(async () => ({ setupRequired: false, user: owner })) });
+    const status = vi
+      .fn<AuthApi['status']>()
+      .mockResolvedValueOnce({ setupRequired: false, user: owner })
+      .mockResolvedValue({ setupRequired: false, user: { ...owner, role: 'viewer' } });
+    const api = fakeApi({ status });
     gate(api);
 
     await user.click(await screen.findByText('owner', { selector: 'summary *, summary' }));
@@ -186,6 +190,8 @@ describe('AuthGate', () => {
     await user.click(screen.getByRole('button', { name: 'Done' }));
 
     expect(await screen.findByText('Hello owner')).toBeInTheDocument();
-    expect(api.status).toHaveBeenCalledTimes(2);
+    expect(status).toHaveBeenCalledTimes(2);
+    // Demoted while the panel was open: the menu no longer offers it.
+    expect(screen.queryByRole('button', { name: 'Administration' })).toBeNull();
   });
 });
