@@ -12,7 +12,10 @@ const RETENTION_MS = 90 * 86_400_000;
 export interface AuthEventInput {
   readonly userId?: string | null;
   readonly ip?: string | null;
-  /** Kept only on failures and only when it matches the username syntax (spec auth R9). */
+  /**
+   * Set by the caller only on failures and only for an existing account (spec auth R9); the
+   * syntax check here is a second guard.
+   */
   readonly usernameTried?: string;
 }
 

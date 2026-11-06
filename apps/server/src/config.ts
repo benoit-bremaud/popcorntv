@@ -73,10 +73,26 @@ function parsePublicUrl(value: string | undefined): string {
   return url.origin;
 }
 
+/**
+ * The start-up warning for an https `PUBLIC_URL` without `TRUST_PROXY`, or null: behind the
+ * proxy every client would share its address, and one stranger could lock the household out
+ * (spec auth R8).
+ */
+export function trustProxyWarning(
+  config: Pick<ServerConfig, 'publicUrl' | 'trustProxy'>,
+): string | null {
+  return config.publicUrl.startsWith('https:') && config.trustProxy === null
+    ? 'PUBLIC_URL is https but TRUST_PROXY is not set: the limiter sees the proxy address'
+    : null;
+}
+
 /** Addresses or CIDRs only: `1` or `true` would trust any peer to forge the client IP. */
 function parseTrustProxy(value: string | undefined): string | null {
-  const entries = (value ?? '').split(',').map((entry) => entry.trim());
-  if (entries.every((entry) => entry === '' || entry === '0')) return null;
+  const entries = (value ?? '')
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry !== '');
+  if (entries.every((entry) => entry === '0')) return null;
   if (!entries.every(isAddressOrCidr)) {
     throw new Error('TRUST_PROXY must list proxy addresses or CIDRs (e.g. 172.18.0.10)');
   }
@@ -89,7 +105,7 @@ function isAddressOrCidr(entry: string): boolean {
   if (family === 0 || rest.length > 0) return false;
   if (prefix === undefined) return true;
   const bits = Number(prefix);
-  return /^\d{1,3}$/.test(prefix) && bits <= (family === 4 ? 32 : 128);
+  return /^[1-9]\d{0,2}$/.test(prefix) && bits <= (family === 4 ? 32 : 128);
 }
 
 /** A finite integer ≥ 1, else the fallback: the session limit guards CPU and disk. */

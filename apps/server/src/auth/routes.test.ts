@@ -442,7 +442,9 @@ describe('password change (UC19)', () => {
     const cookie = cookieOf(await setUp(h));
     const owner = h.db.select().from(users).get();
     if (!owner) throw new Error('no owner');
-    const reset = new TokenRepository(h.db).issueReset(owner.id, new Date());
+    const tokens = new TokenRepository(h.db);
+    const reset = tokens.issueReset(owner.id, new Date());
+    const other = tokens.issueReset(createAccount(h.db, 'kid', 'viewer').userId, new Date());
 
     await change(h.app, cookie, PASSWORD, 'a brand new password');
     const redeemed = await h.app.inject({
@@ -452,6 +454,7 @@ describe('password change (UC19)', () => {
     });
 
     expect(redeemed.statusCode).toBe(404);
+    expect(tokens.isPending(other.token, 'reset', new Date())).toBe(true);
   });
 
   it('answers 401 invalid_credentials for a wrong current password, 400 for a weak new one', async () => {

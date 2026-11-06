@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { loadConfig } from './config.js';
+import { loadConfig, trustProxyWarning } from './config.js';
 
 /** The one required variable (spec auth R6). */
 const BASE = { PUBLIC_URL: 'http://localhost:5173' };
@@ -88,14 +88,36 @@ describe('loadConfig', () => {
     expect(loadConfig({ ...BASE, TRUST_PROXY: value }).trustProxy).toBeNull();
   });
 
-  it.each(['::1', 'fd00::/8', '192.168.1.10/32'])('accepts TRUST_PROXY=%j', (value) => {
-    expect(loadConfig({ ...BASE, TRUST_PROXY: value }).trustProxy).toBe(value);
+  it.each([
+    ['::1', '::1'],
+    ['fd00::/8', 'fd00::/8'],
+    ['192.168.1.10/32', '192.168.1.10/32'],
+    ['10.0.0.2,', '10.0.0.2'],
+  ])('accepts TRUST_PROXY=%j', (value, expected) => {
+    expect(loadConfig({ ...BASE, TRUST_PROXY: value }).trustProxy).toBe(expected);
   });
 
-  it.each(['1', 'true', '10.0.0.0/33', 'fd00::/129', '10.0.0.0/8/1', '10.0.0.0/x', 'caddy'])(
+  it.each([
+    '1',
+    'true',
+    '10.0.0.0/33',
+    'fd00::/129',
+    '10.0.0.0/8/1',
+    '10.0.0.0/x',
+    '10.0.0.0/08',
+    'caddy',
+  ])(
     'refuses to start with TRUST_PROXY=%j, which would trust any peer or nothing meant',
     (value) => {
       expect(() => loadConfig({ ...BASE, TRUST_PROXY: value })).toThrow(/addresses or CIDRs/);
     },
   );
+
+  it.each([
+    ['https://tv.example.org', null, true],
+    ['https://tv.example.org', '172.18.0.10', false],
+    ['http://localhost:5173', null, false],
+  ])('warns for PUBLIC_URL %j and TRUST_PROXY %j: %j', (publicUrl, trustProxy, warns) => {
+    expect(trustProxyWarning({ publicUrl, trustProxy }) !== null).toBe(warns);
+  });
 });
