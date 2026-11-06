@@ -28,3 +28,6 @@ test-results/
 
 # Personal overrides
 CLAUDE.local.md
+
+# Pentest campaign scope (owner-confirmed, never committed)
+docs/security/scope.yaml
