@@ -4,6 +4,23 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-06 — #72 global HTTP rate limit (PR #104 merged, `da5fe1f`)
+
+- **Change** — `@fastify/rate-limit` 10.3 as the first root `onRequest` hook (before the
+  auth hook), keyed `api:` / `media:` + `clientKey(request.ip)` (IPv6 by /64): 300 / min
+  per client on the API, 3000 / min on `MEDIA_ROUTE` routes (segments, ranges, subtitles,
+  artwork, heartbeat, health). `429 too_many_requests` + `Retry-After`, no `x-ratelimit-*`
+  on ordinary answers, web message added. `buildApp` is async. Spec auth R13, ADR-0011,
+  auth UML 02/03.
+- **Decision** — plugin 410 vs own limiter 290 vs Caddy only 250 (MCDA). Review turned the
+  approved media exemption into a separate bucket: the exemption let forged-cookie floods
+  through uncounted.
+- **Reviews** — adversarial (Opus) 2 rounds: 2 Must fixed (no IPv6 /64 grouping although
+  documented, unauthenticated media flood). Codex: no finding. CodeQL: no open alert.
+- **Gate** — 38 shared + 513 server + 199 web tests, server coverage 97.6 %, SonarQube
+  PASSED, smoke 1/1, gitleaks clean, CI green.
+- **Follow-ups** — #105 shared `buildApp` test fixture.
+
 ## 2026-11-06 — #47 dev proxy target from `API_URL` (PR #101 merged, `5d6cf09`)
 
 - **Change** — `apps/web/vite.config.ts` proxies `/api` to `process.env['API_URL'] ||
