@@ -139,6 +139,7 @@ describe('global rate limit (spec auth R13)', () => {
     expect(response.statusCode).toBe(429);
     expect(response.json()).toEqual({ error: 'too_many_requests' });
     expect(Number(response.headers['retry-after'])).toBeGreaterThan(0);
+    expect(response.headers['x-content-type-options']).toBe('nosniff');
   });
 
   it('does not advertise the budget on ordinary answers', async () => {

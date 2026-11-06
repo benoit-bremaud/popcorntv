@@ -10,8 +10,8 @@
 Before the homelab exposure (#60), every route needs a per-client request cap. #18 only
 limits the hashing routes with the in-memory `LoginLimiter` (R8). CodeQL's
 `js/missing-rate-limiting` raised alerts 14–18 on `app.ts` and the auth routes: 14, 16, 17
-and 18 were dismissed as false positives in #70, 15 is already fixed.
-Two kinds of traffic must never get `429`: media (HLS playlist and segments, direct-play
+14 was dismissed as a false positive in the HLS brick, 16–18 in #70, and 15 is already
+fixed. Two kinds of traffic must never be throttled by normal use: media (HLS playlist and segments, direct-play
 ranges in bursts on seek, subtitles, the artwork of a whole catalog grid) and the 20 s
 playback heartbeat. `request.ip` is already trustworthy: `trustProxy` lists the proxy
 addresses only (spec auth §5). Scores 0–5, weights /100, totals /500; scores are
@@ -27,7 +27,7 @@ estimates.
 | Criterion                         | Weight | A                                   | B                              | C                                          |
 | --------------------------------- | -----: | ----------------------------------- | ------------------------------ | ------------------------------------------ |
 | Real protection                   |     30 | 4 — every route, tested             | 4 — same coverage              | 3 — nothing locally nor in tests           |
-| Closes the CodeQL alerts          |     20 | 5 — recognised plugin               | 0 — false positives stay       | 0                                          |
+| CodeQL recognises the limit       |     20 | 5 — its known plugin (unverified)   | 0 — false positives stay       | 0                                          |
 | KISS / maintenance                |     20 | 4 — official plugin, one config     | 2 — more own code to test      | 3 — custom Caddy build, config out of repo |
 | No playback regression            |     20 | 4 — media bucket, tested            | 4                              | 3 — path filter duplicated in Caddy        |
 | Dependency cost                   |     10 | 3 — one official Fastify dependency | 5 — none                       | 4                                          |
@@ -53,6 +53,9 @@ the `x-ratelimit-*` headers are not sent on other answers.
 
 - A player stays far below the media bucket; a client that floods it gets `429` like any
   other.
+- `/health` shares the media bucket: behind a proxy without `TRUST_PROXY` (which
+  `trustProxyWarning` already reports) a media flood over 3000 / min from the shared
+  address could fail the Docker health check.
 - The counters live in memory (the plugin's LRU of 5000 keys), one process, reset on
   restart, like R8; grouping IPv6 by /64 keeps address rotation from flushing it.
 - Whether CodeQL models a hand-added `app.rateLimit()` hook is unverified; the alerts are
