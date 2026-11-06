@@ -1,32 +1,33 @@
-# Local review — popcorntv (#45 @fastify/static bump)
+# Local review — popcorntv (#47 dev proxy target)
 
-Local review gate for the `@fastify/static` bump that clears the `glob` and `minimatch` advisories.
+Pre-push review of the branch that reads the Vite `/api` proxy target from `API_URL`.
 
 - Date: 2026-11-06
-- Commit: 91867bf
-- Scope: branch diff `origin/main...chore/45-bump-fastify-static` (`--push`)
-- Checks run: adversarial (Opus, 1 round) · security · correctness; design, docs and tests not run (lockfile and version range only, no source change)
-- Verdict: ship as-is · Must 0 · Should 0 · Nice 0
+- Commit: fbdd8e4
+- Scope: branch diff origin/main...HEAD
+- Checks run: adversarial (Opus, 2 rounds) · design · docs · tests · security · correctness
+  (the last five folded into the adversarial pass: 4-file config and docs diff)
+- Verdict: ship as-is · Must 0 · Should 0 · Nice 1
 
 ## Adversarial review (#236)
 
-- Round 1 on `91867bf`: Must 0 · Should 0 · Nice 0 · unverified 1 (image scan, run below) · Push gate: open
-- Round 2: not needed, round 1 open and nothing committed after it except this report
+- Round 1 on `50666d5`: Must 0 · Should 3 · Nice 2 · unverified 0 · Push gate: open
+- Round 2 on `fbdd8e4`: 4 fixed · 1 not fixed (cosmetic wrap) · 0 regressed · new Must 0 ·
+  **Push gate: open**
 - Hosted reviewers (filled at the pre-merge run): Copilot out of credit · Codex optional
 
-## Pre-merge gate (head SHA 91867bf)
+## Pre-merge gate (head SHA fbdd8e4)
 
-| Step | Result |
-|---|---|
-| 0 CI mirror | ✅ typecheck, lint, format:check, test, build (`ci.yml`) · ✅ Hadolint, Trivy config, Trivy image on a `--pull` build (`docker-security.yml`) · CodeQL, dependency-review, Scorecard, gitleaks action: CI-only |
-| 1 Tests | ✅ 38 shared · 497 server · 198 web |
-| 2 Coverage | server 98.63 % lines / 93.78 % branches · web 99.41 % / 92.83 % · shared 88.57 % / 100 % · docs ⏸ deferred to the pre-merge run |
-| 3 SonarQube | ⏸ deferred to the pre-merge run (`--push`) |
-| 4 Secrets | ✅ gitleaks clean (`origin/main..HEAD`) · only `.env.example` tracked · diff read: nothing sensitive |
-| 5 E2E/smoke | ⏸ deferred to the pre-merge run (`--push`) |
+| Step         | Result                                                                                                       |
+| ------------ | ------------------------------------------------------------------------------------------------------------ |
+| 0 CI mirror  | ✅ `ci.yml`: typecheck, lint, format:check, test, build; CodeQL, Scorecard, dependency-review CI-only          |
+| 1 Tests      | ✅ shared 38 · server 497 · web 198                                                                          |
+| 2 Coverage   | statements: web 99.1 % · server 97.6 % · shared 90.2 % (floor 80) · docs ⏸ deferred to the pre-merge run    |
+| 3 SonarQube  | ⏸ deferred to the pre-merge run (`--push`)                                                                   |
+| 4 Secrets    | ✅ gitleaks clean (origin/main..HEAD) · only `.env.example` tracked · diff read: nothing sensitive           |
+| 5 E2E/smoke  | ⏸ deferred to the pre-merge run (`--push`)                                                                   |
 
 - Gate: `--push`: **pre-push green**, SonarQube, doc coverage and E2E deferred
-- `pnpm audit --prod`: no known vulnerabilities (base: 2 moderate, GHSA-3g3m-2fjr-6pw4 and GHSA-g3hv-75wg-m249)
 
 ## 🔴 Must Have
 
@@ -34,18 +35,22 @@ _None._
 
 ## 🟡 Should Have
 
-_None._
+_None._ (Round 1: empty `API_URL` gave a 502, remote-host example, `API_URL` / `PORT` drift —
+all fixed in fbdd8e4.)
 
 ## 🔵 Nice to Have
 
-_None._
+- `apps/web/vite.config.ts:20` `[adversarial]` · a whitespace-only `API_URL` still passes `||` ·
+  `?.trim() ||` if ever needed; left out (YAGNI).
+- `CLAUDE.md:55` `[docs]` · line wraps at 99 characters, wider than its neighbours · cosmetic.
 
 ## ⚪ Disagree / Intentional
 
-- `PROJECT_LOG.md` `[adversarial]` · not touched · the log entry ships after the merge in its own `docs(log)` PR (`2064785`, `978cabb`)
+- `apps/web/vite.config.ts:20` `[tests]` · no unit test: one expression in dev-only config,
+  outside coverage and lint scope; behaviour checked live by the reviewer · KISS.
 
 ## Per-dimension summary
 
-- Adversarial: lock integrity matches the registry, engines fit Node 22, the glob code path is unused (`serve: false`), real-plugin artwork tests pass.
-- Security: two moderate prod advisories cleared. The dev-only `minimatch` (via `typescript-eslint`) and `esbuild` (via `drizzle-kit`) advisories are out of scope and filed as a follow-up.
-- Correctness: two files, both needed; the tree stays clean after install.
+- Adversarial: 3 Should fixed, gate open · Design: one-line change, nothing to add · Docs:
+  CLAUDE.md, README, `.env.example` agree with the code · Tests: none needed · Security: value
+  from the developer's shell only, never bundled · Correctness: set / unset / empty verified.
