@@ -16,6 +16,13 @@ export interface Caller {
   readonly sessionId: string;
 }
 
+/**
+ * Route options of the media routes the global rate limit skips (spec auth R13): a player
+ * fetches segments, ranges, artwork and heartbeats in bursts, and every one of them is
+ * already behind the session check.
+ */
+export const MEDIA_ROUTE = { config: { rateLimit: false } } as const;
+
 /** Route access (spec auth R1): `public`, `owner`, or absent for any signed-in user. */
 export type RouteAccess = 'public' | 'owner';
 

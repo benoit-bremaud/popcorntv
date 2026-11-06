@@ -23,7 +23,7 @@ describe('GET /media/:id/file', () => {
     root = join(mediaRoot, 'films');
     await mkdir(root, { recursive: true });
     const db = openDatabase(':memory:');
-    app = buildApp({
+    app = await buildApp({
       version: 'test',
       db,
       probe: async () => ({

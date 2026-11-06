@@ -30,7 +30,7 @@ afterEach(async () => {
 async function harness(hasher: Hasher = fakeHasher): Promise<Harness> {
   const db = openDatabase(':memory:');
   const owner = createAccount(db);
-  const app = buildApp({
+  const app = await buildApp({
     version: 'test',
     db,
     probe: async () => ({ durationSec: null, streams: [] }),

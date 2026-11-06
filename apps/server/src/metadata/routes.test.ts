@@ -57,7 +57,7 @@ describe('metadata routes', () => {
     await mkdir(root);
     tmdb = makeClient();
     const db = openDatabase(':memory:');
-    app = buildApp({
+    app = await buildApp({
       version: 'test',
       db,
       probe: async () => ({ durationSec: 60, streams: [] }),
@@ -265,7 +265,7 @@ describe('metadata routes', () => {
     beforeEach(async () => {
       await app.close();
       const db = openDatabase(':memory:');
-      app = buildApp({
+      app = await buildApp({
         version: 'test',
         db,
         probe: async () => ({ durationSec: 60, streams: [] }),

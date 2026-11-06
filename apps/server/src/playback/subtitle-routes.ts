@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { subtitleTracks } from '@popcorntv/shared';
-import { apiError, invalid } from '../http.js';
+import { apiError, invalid, MEDIA_ROUTE } from '../http.js';
 import type { LibraryRepository } from '../library/repository.js';
 import { confinedPath } from './routes.js';
 import type { SubtitleExtractor } from './subtitle-extractor.js';
@@ -24,7 +24,7 @@ const query = z.object({ offsetSec: z.coerce.number().int().min(0).default(0) })
  * subtitles, ADR-0009). The cues are shifted by the HLS session's `offsetSec`.
  */
 export function registerSubtitleRoutes(app: FastifyInstance, deps: SubtitleRoutesDeps): void {
-  app.get('/media/:id/subtitles/:index', async (request, reply) => {
+  app.get('/media/:id/subtitles/:index', MEDIA_ROUTE, async (request, reply) => {
     const path = params.safeParse(request.params);
     if (!path.success) return reply.code(400).send(invalid(path.error.issues));
     const search = query.safeParse(request.query);

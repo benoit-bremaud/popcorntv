@@ -2,7 +2,7 @@ import fastifyStatic from '@fastify/static';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import type { EnrichReport } from '@popcorntv/shared';
-import { apiError, invalid, loadLibrary } from '../http.js';
+import { apiError, invalid, loadLibrary, MEDIA_ROUTE } from '../http.js';
 import { LibraryBusyError } from '../library/lock.js';
 import type { LibraryLock } from '../library/lock.js';
 import type { LibraryRepository } from '../library/repository.js';
@@ -64,7 +64,7 @@ export function registerMetadataRoutes(app: FastifyInstance, deps: MetadataRoute
       scope.setNotFoundHandler(async (_request, reply) =>
         reply.code(404).send(apiError('artwork_not_found')),
       );
-      scope.get('/:file', async (request, reply) => {
+      scope.get('/:file', MEDIA_ROUTE, async (request, reply) => {
         const params = artworkParams.safeParse(request.params);
         if (!params.success) return reply.code(400).send(invalid(params.error.issues));
         // The regex only admits `<64 hex>.jpg|png`, so the name cannot leave the folder.

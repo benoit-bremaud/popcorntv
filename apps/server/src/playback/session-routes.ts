@@ -4,7 +4,7 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { directPlayMime } from '@popcorntv/shared';
 import type { PlaybackStart } from '@popcorntv/shared';
-import { apiError, callerOf, invalid } from '../http.js';
+import { apiError, callerOf, invalid, MEDIA_ROUTE } from '../http.js';
 import { MAX_POSITION_SEC } from '../progress/routes.js';
 import type { LibraryRepository } from '../library/repository.js';
 import { PLAYLIST_NAME } from './ffmpeg-args.js';
@@ -93,7 +93,7 @@ export function registerSessionRoutes(app: FastifyInstance, deps: SessionRoutesD
     return reply.code(201).send(hls);
   });
 
-  app.post('/playback/sessions/:id/heartbeat', async (request, reply) => {
+  app.post('/playback/sessions/:id/heartbeat', MEDIA_ROUTE, async (request, reply) => {
     const params = sessionParams.safeParse(request.params);
     if (!params.success) return reply.code(400).send(invalid(params.error.issues));
     if (!owned(request, params.data.id) || !deps.sessions.touch(params.data.id)) {
@@ -111,7 +111,7 @@ export function registerSessionRoutes(app: FastifyInstance, deps: SessionRoutesD
     return reply.code(204).send();
   });
 
-  app.get('/playback/sessions/:id/:file', async (request, reply) => {
+  app.get('/playback/sessions/:id/:file', MEDIA_ROUTE, async (request, reply) => {
     const params = fileParams.safeParse(request.params);
     if (!params.success) return reply.code(400).send(invalid(params.error.issues));
     const { id, file } = params.data;

@@ -21,7 +21,7 @@ describe('library routes', () => {
     await mkdir(root);
     probe = vi.fn<Prober>(async () => ({ durationSec: 60, streams: [] }));
     const db = openDatabase(':memory:');
-    app = buildApp({
+    app = await buildApp({
       version: 'test',
       db,
       probe,

@@ -1,7 +1,9 @@
 import { join } from 'node:path';
+import rateLimit from '@fastify/rate-limit';
 import Fastify from 'fastify';
 import type { FastifyError, FastifyInstance } from 'fastify';
 import type { ApiError, HealthResponse } from '@popcorntv/shared';
+import { apiError } from './http.js';
 import { EventRepository } from './auth/event-repository.js';
 import { Argon2Hasher, HasherBusyError } from './auth/hasher.js';
 import type { Hasher } from './auth/hasher.js';
@@ -77,11 +79,16 @@ export interface AppOptions {
    * line: it is the only place the token ever appears.
    */
   readonly onSetupLink?: (link: string) => void;
+  /** Requests per client per minute before `429` (spec auth R13); lowered by tests. */
+  readonly rateLimitMax?: number;
   readonly logger?: boolean;
 }
 
+/** Spec auth R13: far above what browsing sends, far below what a script can. */
+const RATE_LIMIT_MAX = 300;
+
 /** Builds the HTTP application without listening — the tests inject requests directly. */
-export function buildApp(options: AppOptions): FastifyInstance {
+export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   // Trust the listed proxy addresses only, never `true`: a peer outside the list (another
   // container, a local process) cannot forge the client IP, and the right-most address not
   // in the list is the client, so a forged left-most entry is ignored.
@@ -107,16 +114,35 @@ export function buildApp(options: AppOptions): FastifyInstance {
       return reply.code(429).header('retry-after', '2').send({ error: 'too_many_attempts' });
     }
     const status = error.statusCode ?? 500;
+    if (status === 429) return reply.code(429).send(apiError('too_many_requests'));
     if (status >= 500) request.log.error(error);
     const body: ApiError = { error: status >= 500 ? 'internal' : 'invalid_request' };
     return reply.code(status).send(body);
   });
 
+  // Global per-client limit (spec auth R13, ADR-0011), a root hook added before the auth
+  // hook so it also counts unauthenticated and unmatched requests. Keyed on `request.ip`
+  // (trusted proxies only) with IPv6 grouped by /64; routes marked `MEDIA_ROUTE` skip it.
+  // `LoginLimiter` stays the per-username guard of the hashing routes.
+  await app.register(rateLimit, { global: false });
+  app.addHook(
+    'onRequest',
+    app.rateLimit({
+      max: options.rateLimitMax ?? RATE_LIMIT_MAX,
+      timeWindow: 60_000,
+      allowList: (request) => request.routeOptions.config.rateLimit === false,
+      // Thrown to the error handler below, which answers `{ error: 'too_many_requests' }`;
+      // the plugin has already set `retry-after`.
+      errorResponseBuilder: () => ({ statusCode: 429, error: 'too_many_requests' }),
+    }),
+  );
+
   const cookie = cookiePolicy(options.publicUrl);
   const sessionRepository = new SessionRepository(options.db);
   registerAuthHook(app, { sessions: sessionRepository, cookie });
 
-  app.get('/health', { config: { access: 'public' } }, (): HealthResponse => ({
+  // Docker polls it; it reads nothing and must answer even under a flood.
+  app.get('/health', { config: { access: 'public', rateLimit: false } }, (): HealthResponse => ({
     status: 'ok',
     version: options.version,
   }));

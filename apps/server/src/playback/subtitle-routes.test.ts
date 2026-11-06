@@ -35,7 +35,7 @@ describe('GET /media/:id/subtitles/:index', () => {
       return { kill: vi.fn() };
     });
     const db = openDatabase(':memory:');
-    app = buildApp({
+    app = await buildApp({
       version: 'test',
       db,
       probe: async () => ({

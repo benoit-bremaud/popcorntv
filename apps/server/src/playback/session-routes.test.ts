@@ -49,7 +49,7 @@ describe('playback session routes', () => {
       return { kill: kills };
     };
     const db = openDatabase(':memory:');
-    app = buildApp({
+    app = await buildApp({
       version: 'test',
       db,
       probe: async (path) => ({
