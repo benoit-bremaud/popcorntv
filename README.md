@@ -32,7 +32,7 @@ Runtime: Node ≥ 22, pnpm, FFmpeg on the host (or in the Docker image), SQLite 
 pnpm install
 cp .env.example .env.local   # fill in TMDB_API_KEY; PUBLIC_URL is required
 pnpm dev:server              # http://localhost:3000  (GET /health); builds packages/shared first
-pnpm dev:web                 # http://localhost:5173
+pnpm dev:web                 # http://localhost:5173; /api proxied to API_URL (default :3000)
 ```
 
 ### First start: the owner account
