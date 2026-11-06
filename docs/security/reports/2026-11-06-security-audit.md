@@ -14,7 +14,7 @@ Method B of the MCDA in #109 (445 / 500): a white-box review plus pentest-kit ca
 - **Tools**: `pnpm audit --prod`, gitleaks (full history), Hadolint, Trivy image and config. Semgrep: not run (no local target, SA-01).
 - **pentest-kit cards** on the local production image (`docker compose up`, loopback only), scope `docs/security/scope.yaml` (gitignored, loopback targets only, expires 2026-11-20): SECRETS, CONTAINER, WEB-APP.
 
-Out of scope: the homelab host, its network and the reverse proxy, none of which exist yet. Re-run EXT-EXPO, EXT-APP and HOST cards after #60.
+Out of scope: the homelab host, its network and the reverse proxy, none of which exist yet. Run EXT-EXPO, EXT-APP and the machine cards listed below after #60.
 
 Not run: OSINT (the repository is public by design and gitleaks covers its history); ACCESS-ADMIN, TAILNET, PRIVESC, SSH, VULN, HARDEN-OS, RESOURCE, BACKUP-RESTORE (they need the homelab machine, after #60); LAN-SURFACE, LATERAL, DISCOVERY, MITM, MQTT, IOT, RADIO, PHYSICAL, RESILIENCE (not applicable to a single local container).
 
@@ -54,7 +54,7 @@ Not run: OSINT (the repository is public by design and gitleaks covers its histo
 - FFmpeg runs through `spawn` with an argument array, the input behind `-i`; the session cap is reserved before the first await.
 - The error handler logs only 5xx errors and never echoes them (`app.ts`).
 - The TMDB key travels in the `Authorization` header only, never in an error (`tmdb-client.ts`).
-- #74 slot take-over: a viewer only takes over their own session, an owner a viewer's; the role comes from the server-side caller, and `ownedBy` still guards every session route.
+- #74 slot take-over: a viewer only takes over their own session, an owner their own, else a viewer's, never another owner's; the role comes from the server-side caller, and `ownedBy` still guards every session route.
 - No `dangerouslySetInnerHTML`, `innerHTML` or `eval` in the web app; `localStorage` holds the profile id only.
 - Base image pinned by tag and digest, non-root, HEALTHCHECK, tini, complete `.dockerignore`; compose binds loopback and mounts media read-only.
 - Every workflow action pinned by SHA, `contents: read` by default; CodeQL, Gitleaks, dependency review, Hadolint, Trivy, Scorecard and Dependabot in place.
