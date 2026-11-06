@@ -133,6 +133,19 @@ describe('SessionManager', () => {
     await sessions.closeAll();
   });
 
+  it('takes nothing over for a title without video at the limit', async () => {
+    const sessions = manager(fakeTranscoder('writes').transcoder);
+    const viewer = await sessions.open(VIEWER, '/m/a.mkv', HEVC);
+
+    const audio = await sessions.open(USER, '/m/b.mka', [
+      { type: 'audio', codec: 'ac3', width: null, height: null, language: null },
+    ]);
+
+    expect(audio.kind).toBe('not_playable');
+    if (viewer.kind === 'ready') expect(sessions.touch(viewer.id)).toBe(true);
+    await sessions.closeAll();
+  });
+
   it("answers busy to a viewer when the slot is an owner's", async () => {
     const sessions = manager(fakeTranscoder('writes').transcoder);
     await sessions.open(USER, '/m/a.mkv', HEVC);
@@ -194,7 +207,7 @@ describe('SessionManager', () => {
 
     expect(result.kind).toBe('not_playable');
     expect(runs).toHaveLength(0);
-    expect(await readdir(dir)).toEqual([]);
+    expect(await exists(dir)).toBe(false);
   });
 
   it('closes a session after the idle delay, unless touched', async () => {

@@ -97,6 +97,8 @@ export class SessionManager {
     streams: readonly StreamInfo[],
     startSec = 0,
   ): Promise<OpenResult> {
+    // Known before any take-over: a title without video must not end someone's stream.
+    if (!streams.some((stream) => stream.type === 'video')) return { kind: 'not_playable' };
     let preempted: Promise<boolean> | undefined;
     if (this.sessions.size + this.starting >= this.options.maxSessions) {
       const victim = this.victimFor(opener);
@@ -109,7 +111,8 @@ export class SessionManager {
       // `close` forgets the session synchronously: the slot is free before any await.
       preempted = this.close(victim);
     }
-    // Reserved before the first await (nothing is awaited since the check), so concurrent opens cannot both pass the limit.
+    // Reserved before the first await (nothing is awaited since the check), so concurrent
+    // opens cannot both pass the limit.
     this.starting += 1;
     let dir: string;
     try {

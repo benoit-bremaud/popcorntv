@@ -32,16 +32,16 @@ sequenceDiagram
   else HLS
     API->>API: path guard on the stored path (404 media_not_found)
     API->>SM: open(caller, realPath, streams)
-    opt limit reached and a slot may be taken over (spec R5b)
-      SM->>SM: close(own oldest session, else for an owner the oldest viewer one)
-    end
-    alt limit reached and no slot may be taken over (counted before any await)
-      SM-->>API: busy
-      API-->>W: 503 transcode_busy
-    else no video stream
+    alt no video stream (checked before the limit)
       SM-->>API: not_playable
       API-->>W: 422 not_playable
-    else slot free
+    else limit reached and no slot may be taken over (counted before any await)
+      SM-->>API: busy
+      API-->>W: 503 transcode_busy
+    else slot free, or taken over at the limit (spec R5b)
+      opt limit reached
+        SM->>SM: close(own oldest session, else for an owner the oldest viewer one)
+      end
       SM->>FS: mkdtemp
       SM->>TR: run(ffmpegArgs(realPath, streams, dir))
       TR->>FF: spawn (no shell, -i path)

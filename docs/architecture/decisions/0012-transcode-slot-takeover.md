@@ -15,7 +15,8 @@ sessions). A user who starts another title while the previous session is still a
 gets `503` until its 60 s watchdog fires. The limit itself protects the homelab CPU and
 stays. ADR-0006 §6 rejected pre-empting the oldest session because one household member
 would kill another; with accounts, the take-over is limited to the caller's own session or
-to an owner over a viewer, a cost the owner accepts (#74). Scores 0–5, weights /100, totals /500; scores are estimates.
+to an owner over a viewer, a cost the owner accepts (#74). Scores 0–5, weights /100,
+totals /500; scores are estimates.
 
 ## Options
 
@@ -35,8 +36,8 @@ to an owner over a viewer, a cost the owner accepts (#74). Scores 0–5, weights
 Points: A = 70+125+80+100 · B = 140+125+80+80 · C = 175+125+60+80 · D = 175+25+100+100.
 
 Sensitivity: C − B equals the "Fixes" weight minus the "Simplicity" weight, so C stays
-first while "Fixes" outweighs "Simplicity" (at 25 / 30, C 430 and B 425; at 20 / 35, B
-leads). D leads only if "CPU" falls to about 10 with those 15 points moved to "Simplicity".
+first while "Fixes" outweighs "Simplicity" (at 30 / 25, C 430 and B 425; at 20 / 35, B 425
+and C 410). D leads once "CPU" falls below about 18, the points moved to "Simplicity".
 
 ## Decision
 
