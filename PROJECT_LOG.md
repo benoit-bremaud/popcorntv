@@ -4,6 +4,20 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-06 — #74 transcode slot take-over (PR #107 merged, `37832ec`)
+
+- **Change** — at `TRANSCODE_MAX_SESSIONS` a Play takes over the caller's own oldest HLS
+  session, else for an owner the oldest viewer one, else `503 transcode_busy`; never
+  another owner's. A title without video answers 422 before any take-over; a session taken
+  over while starting answers 502. Take-overs logged at `info`. Spec hls-transcode R5b,
+  ADR-0012 (amends ADR-0006 §6), playback UML 02/05.
+- **Decision** — own + owner-first 440 vs owner-first 425 vs per-account limit 400 vs own
+  slot 375 (MCDA; totals first given wrong in chat, corrected in review).
+- **Reviews** — adversarial (Opus) 4 rounds: 5 Must (docs drift, MCDA arithmetic) and the
+  no-video take-over fixed. Codex: 1 P2 fixed (playlist check racing a take-over).
+- **Gate** — 38 shared + 521 server + 199 web tests, server coverage 97.5 %, SonarQube
+  PASSED, smoke 1/1, gitleaks clean, CI green.
+
 ## 2026-11-06 — #72 global HTTP rate limit (PR #104 merged, `da5fe1f`)
 
 - **Change** — `@fastify/rate-limit` 10.3 as the first root `onRequest` hook (before the
