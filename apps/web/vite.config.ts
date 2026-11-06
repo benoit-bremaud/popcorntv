@@ -17,7 +17,7 @@ export default defineConfig({
       // The web player calls the API under /api; the dev server forwards to Fastify
       // at API_URL (shell variable, like the server's own settings).
       '/api': {
-        target: process.env['API_URL'] ?? 'http://localhost:3000',
+        target: process.env['API_URL'] || 'http://localhost:3000',
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
