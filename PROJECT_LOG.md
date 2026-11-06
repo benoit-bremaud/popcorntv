@@ -4,6 +4,24 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-06 — #109 security audit before the homelab exposure (PR #113 merged, `11a5b4a`)
+
+- **Change** — report `docs/security/reports/2026-11-06-security-audit.md` (audited commit
+  `30a3b86`): white-box review (OWASP Top 10:2025, ASVS 5.0) of server, web, container and
+  CI, plus pentest-kit cards SECRETS, CONTAINER and WEB-APP on a local production image;
+  loopback-only `docs/security/scope.yaml`, gitignored.
+- **Decision** — method B (review + cards on a local prod build) 445 vs review only 370 vs
+  full campaign with the homelab 250 (MCDA); exposure and machine cards run after #60.
+- **Findings** — no Critical or High in the code. SA-03 #110 (High, Must before #60:
+  Debian 12 FFmpeg 5.1 stack with unfixed Critical/High CVEs hidden by `--ignore-unfixed`),
+  SA-01 #111 (Should, local `make sast`), SA-02 #112 (Nice, compose hardening), SA-04 #114
+  (Nice, path swap window between the check and the reopening). #46 goes into #60; #86,
+  #87, #89 Should; the other open security issues Nice.
+- **Reviews** — adversarial (Opus) 3 rounds: 3 Must fixed (branch predated #74, Semgrep
+  claim, SA-01 rule misstated). Codex: 1 P2 fixed (O_NOFOLLOW claim, became SA-04).
+- **Gate** — 38 shared + 521 server + 199 web tests, server coverage 97.5 %, SonarQube
+  PASSED, smoke 1/1, Hadolint and Trivy config clean, gitleaks clean, CI green.
+
 ## 2026-11-06 — #74 transcode slot take-over (PR #107 merged, `37832ec`)
 
 - **Change** — at `TRANSCODE_MAX_SESSIONS` a Play takes over the caller's own oldest HLS
