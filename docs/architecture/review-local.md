@@ -14,7 +14,9 @@ Pre-push review of #74: transcode slot take-over at the `TRANSCODE_MAX_SESSIONS`
 - Round 2 on `ac5f92b`: 9 fixed · 1 partly fixed (ADR-0012 sensitivity) · new Should 1
   (take-over before the no-video check) · Push gate: closed
 - Round 3 on `4b4adcd`: all fixed · new Must 0 · **Push gate: open**
-- Hosted reviewers (filled at the pre-merge run): Copilot out of credit · Codex optional
+- Round 4 on `762e92f` (Codex finding on #107, playlist check vs take-over): fixed ·
+  new Must 0 · **Push gate: open**
+- Hosted reviewers: Copilot out of credit · Codex posted on `2048c89` (1 P2, fixed in `762e92f`)
 
 ## Pre-merge gate (head SHA 4b4adcd)
 
