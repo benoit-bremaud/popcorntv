@@ -105,6 +105,8 @@ describe('loadConfig', () => {
     '10.0.0.0/8/1',
     '10.0.0.0/x',
     '10.0.0.0/08',
+    '10.0.0.0/0',
+    '::/0',
     'caddy',
   ])(
     'refuses to start with TRUST_PROXY=%j, which would trust any peer or nothing meant',
