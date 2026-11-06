@@ -96,8 +96,8 @@ administration and the event list are lot 2); #73 lot 2 (`token-repository` sing
 invite / reset links redeemed by `POST /auth/redeem`, owner `user-routes` for accounts,
 devices, links and `GET /auth/events`, last owner protected, web `RedeemForm` +
 `AdminPanel` from the account menu); #72 global rate limit (ADR-0011, spec auth R13:
-`@fastify/rate-limit` as the first root `onRequest` hook, 300 / min per client, media routes
-marked `MEDIA_ROUTE` skip it, `buildApp` is async).
+`@fastify/rate-limit` as the first root `onRequest` hook keyed on `clientKey`, 300 / min per
+client, `MEDIA_ROUTE` routes in a 3000 / min bucket, `buildApp` is async).
 
 Server layout (flat, component diagram 03): `src/library/` holds the pure `name-parser`
 and `path-guard`, the `ffprobe` runner (only process egress), the `scanner`, the per-library

@@ -1,14 +1,14 @@
 import { join } from 'node:path';
 import rateLimit from '@fastify/rate-limit';
 import Fastify from 'fastify';
-import type { FastifyError, FastifyInstance } from 'fastify';
+import type { FastifyError, FastifyInstance, FastifyRequest } from 'fastify';
 import type { ApiError, HealthResponse } from '@popcorntv/shared';
 import { apiError } from './http.js';
 import { EventRepository } from './auth/event-repository.js';
 import { Argon2Hasher, HasherBusyError } from './auth/hasher.js';
 import type { Hasher } from './auth/hasher.js';
 import { cookiePolicy, registerAuthHook } from './auth/hook.js';
-import { LoginLimiter } from './auth/limiter.js';
+import { clientKey, LoginLimiter } from './auth/limiter.js';
 import { registerAuthRoutes } from './auth/routes.js';
 import { SessionRepository } from './auth/session-repository.js';
 import { SetupToken } from './auth/setup-token.js';
@@ -79,13 +79,15 @@ export interface AppOptions {
    * line: it is the only place the token ever appears.
    */
   readonly onSetupLink?: (link: string) => void;
-  /** Requests per client per minute before `429` (spec auth R13); lowered by tests. */
+  /** API requests per client per minute before `429` (spec auth R13); lowered by tests. */
   readonly rateLimitMax?: number;
   readonly logger?: boolean;
 }
 
 /** Spec auth R13: far above what browsing sends, far below what a script can. */
 const RATE_LIMIT_MAX = 300;
+/** Media routes get their own bucket, this many times larger (spec auth R13). */
+const MEDIA_FACTOR = 10;
 
 /** Builds the HTTP application without listening — the tests inject requests directly. */
 export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
@@ -111,7 +113,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   app.setErrorHandler((error: FastifyError, request, reply) => {
     // A saturated password hasher is a rate limit, not a server fault (spec auth R4).
     if (error instanceof HasherBusyError) {
-      return reply.code(429).header('retry-after', '2').send({ error: 'too_many_attempts' });
+      return reply.code(429).header('retry-after', '2').send(apiError('too_many_attempts'));
     }
     const status = error.statusCode ?? 500;
     if (status === 429) return reply.code(429).send(apiError('too_many_requests'));
@@ -122,18 +124,30 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
 
   // Global per-client limit (spec auth R13, ADR-0011), a root hook added before the auth
   // hook so it also counts unauthenticated and unmatched requests. Keyed on `request.ip`
-  // (trusted proxies only) with IPv6 grouped by /64; routes marked `MEDIA_ROUTE` skip it.
-  // `LoginLimiter` stays the per-username guard of the hashing routes.
-  await app.register(rateLimit, { global: false });
+  // (trusted proxies only) through `clientKey`, so an IPv6 client counts by its /64. Routes
+  // marked `MEDIA_ROUTE` count in a separate, larger bucket: a player bursts there, but a
+  // flood of forged cookies is still capped. `LoginLimiter` stays the per-username guard.
+  const apiMax = options.rateLimitMax ?? RATE_LIMIT_MAX;
+  const isMedia = (request: FastifyRequest): boolean =>
+    request.routeOptions.config?.rateBucket === 'media';
+  await app.register(rateLimit, {
+    global: false,
+    // The budget is not advertised on ordinary answers.
+    addHeadersOnExceeding: {
+      'x-ratelimit-limit': false,
+      'x-ratelimit-remaining': false,
+      'x-ratelimit-reset': false,
+    },
+  });
   app.addHook(
     'onRequest',
     app.rateLimit({
-      max: options.rateLimitMax ?? RATE_LIMIT_MAX,
+      max: (request) => (isMedia(request) ? apiMax * MEDIA_FACTOR : apiMax),
       timeWindow: 60_000,
-      allowList: (request) => request.routeOptions.config.rateLimit === false,
-      // Thrown to the error handler below, which answers `{ error: 'too_many_requests' }`;
+      keyGenerator: (request) => `${isMedia(request) ? 'media' : 'api'}:${clientKey(request.ip)}`,
+      // Thrown to the error handler above, which answers `{ error: 'too_many_requests' }`;
       // the plugin has already set `retry-after`.
-      errorResponseBuilder: () => ({ statusCode: 429, error: 'too_many_requests' }),
+      errorResponseBuilder: () => ({ statusCode: 429 }),
     }),
   );
 
@@ -141,8 +155,8 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   const sessionRepository = new SessionRepository(options.db);
   registerAuthHook(app, { sessions: sessionRepository, cookie });
 
-  // Docker polls it; it reads nothing and must answer even under a flood.
-  app.get('/health', { config: { access: 'public', rateLimit: false } }, (): HealthResponse => ({
+  // Docker polls it; it reads nothing, so it counts in the larger media bucket.
+  app.get('/health', { config: { access: 'public', rateBucket: 'media' } }, (): HealthResponse => ({
     status: 'ok',
     version: options.version,
   }));

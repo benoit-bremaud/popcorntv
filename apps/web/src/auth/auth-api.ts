@@ -27,6 +27,8 @@ export function authMessage(error: ApiErrorCode | null): string {
       return 'Wrong username or password.';
     case 'too_many_attempts':
       return 'Too many attempts. Wait a few minutes, then try again.';
+    case 'too_many_requests':
+      return 'Too many requests. Wait a minute, then try again.';
     case 'token_invalid':
       return 'This link is invalid, expired or already used. Ask for a new one (a setup link: restart the server).';
     case 'username_taken':

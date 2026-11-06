@@ -17,11 +17,11 @@ export interface Caller {
 }
 
 /**
- * Route options of the media routes the global rate limit skips (spec auth R13): a player
- * fetches segments, ranges, artwork and heartbeats in bursts, and every one of them is
- * already behind the session check.
+ * Route options of the media routes (spec auth R13): a player fetches segments, ranges,
+ * subtitles, artwork and heartbeats in bursts, so they count in their own, larger rate-limit
+ * bucket. Every new streaming route takes it.
  */
-export const MEDIA_ROUTE = { config: { rateLimit: false } } as const;
+export const MEDIA_ROUTE = { config: { rateBucket: 'media' } } as const;
 
 /** Route access (spec auth R1): `public`, `owner`, or absent for any signed-in user. */
 export type RouteAccess = 'public' | 'owner';
@@ -33,6 +33,8 @@ declare module 'fastify' {
   }
   interface FastifyContextConfig {
     readonly access?: RouteAccess;
+    /** `media` puts the route in the larger rate-limit bucket (spec auth R13). */
+    readonly rateBucket?: 'media';
   }
 }
 

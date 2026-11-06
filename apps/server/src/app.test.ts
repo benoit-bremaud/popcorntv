@@ -100,6 +100,8 @@ describe('buildApp', () => {
 });
 
 describe('global rate limit (spec auth R13)', () => {
+  const MEDIA_LIMIT = LIMIT * 10;
+  const ID = '00000000-0000-4000-8000-000000000000';
   let app: FastifyInstance;
   let db: AppDatabase;
 
@@ -108,10 +110,18 @@ describe('global rate limit (spec auth R13)', () => {
     app = await buildApp({ ...options(db), rateLimitMax: LIMIT, ...extra });
   }
 
-  async function burst(url: string, count: number, headers: Record<string, string> = {}) {
+  async function burst(
+    url: string,
+    count: number,
+    request: {
+      method?: 'GET' | 'POST';
+      headers?: Record<string, string>;
+      remoteAddress?: string;
+    } = {},
+  ): Promise<number[]> {
     const statuses: number[] = [];
     for (let i = 0; i < count; i += 1) {
-      statuses.push((await app.inject({ method: 'GET', url, headers })).statusCode);
+      statuses.push((await app.inject({ method: 'GET', url, ...request })).statusCode);
     }
     return statuses;
   }
@@ -129,7 +139,14 @@ describe('global rate limit (spec auth R13)', () => {
     expect(response.statusCode).toBe(429);
     expect(response.json()).toEqual({ error: 'too_many_requests' });
     expect(Number(response.headers['retry-after'])).toBeGreaterThan(0);
-    expect(response.headers['x-content-type-options']).toBe('nosniff');
+  });
+
+  it('does not advertise the budget on ordinary answers', async () => {
+    await start();
+
+    const response = await app.inject({ method: 'GET', url: '/auth/status' });
+
+    expect(response.headers['x-ratelimit-remaining']).toBeUndefined();
   });
 
   it('counts unauthenticated and unmatched requests before the auth hook', async () => {
@@ -140,72 +157,94 @@ describe('global rate limit (spec auth R13)', () => {
     expect(statuses).toEqual([...new Array<number>(LIMIT).fill(401), 429]);
   });
 
+  it('throttles a signed-in caller on an API route', async () => {
+    await start();
+    sendCookie(app, createAccount(db).cookie);
+
+    const statuses = await burst('/libraries', LIMIT + 1);
+
+    expect(statuses).toEqual([...new Array<number>(LIMIT).fill(200), 429]);
+  });
+
   it('keeps one bucket per client address', async () => {
     await start();
-    await burst('/auth/status', LIMIT + 1);
+    expect((await burst('/auth/status', LIMIT + 1)).at(-1)).toBe(429);
 
-    const other = await app.inject({
-      method: 'GET',
-      url: '/auth/status',
-      remoteAddress: '192.0.2.7',
-    });
+    const other = await burst('/auth/status', 1, { remoteAddress: '192.0.2.7' });
 
-    expect(other.statusCode).toBe(200);
+    expect(other).toEqual([200]);
+  });
+
+  it('counts an IPv6 client by its /64', async () => {
+    await start();
+    for (let i = 1; i <= LIMIT; i += 1) {
+      await burst('/auth/status', 1, { remoteAddress: `2001:db8:1:2::${i}` });
+    }
+
+    const sameNetwork = await burst('/auth/status', 1, { remoteAddress: '2001:db8:1:2::ff' });
+    const otherNetwork = await burst('/auth/status', 1, { remoteAddress: '2001:db8:1:3::1' });
+
+    expect(sameNetwork).toEqual([429]);
+    expect(otherNetwork).toEqual([200]);
   });
 
   it.each([
-    ['the health probe', '/health'],
-    ['an artwork file', `/artwork/${'a'.repeat(64)}.jpg`],
-    ['a direct-play range', '/media/00000000-0000-4000-8000-000000000000/file'],
-    ['an HLS segment', '/playback/sessions/00000000-0000-4000-8000-000000000000/seg-00001.ts'],
-    ['a subtitle track', '/media/00000000-0000-4000-8000-000000000000/subtitles/2'],
-  ])('never throttles %s', async (_case, url) => {
+    ['the health probe', 'GET', '/health'],
+    ['an artwork file', 'GET', `/artwork/${'a'.repeat(64)}.jpg`],
+    ['a direct-play range', 'GET', `/media/${ID}/file`],
+    ['an HLS segment', 'GET', `/playback/sessions/${ID}/seg-00001.ts`],
+    ['a subtitle track', 'GET', `/media/${ID}/subtitles/2`],
+    ['the playback heartbeat', 'POST', `/playback/sessions/${ID}/heartbeat`],
+  ] as const)('lets %s burst past the API limit', async (_case, method, url) => {
     await start();
     sendCookie(app, createAccount(db).cookie);
 
-    const statuses = await burst(url, LIMIT * 4);
+    const statuses = await burst(url, MEDIA_LIMIT, { method });
 
     expect(statuses).not.toContain(429);
     expect(statuses).not.toContain(401);
   });
 
-  it('never throttles the playback heartbeat', async () => {
+  it('caps a media flood without a session in its own bucket', async () => {
     await start();
-    sendCookie(app, createAccount(db).cookie);
-    const url = '/playback/sessions/00000000-0000-4000-8000-000000000000/heartbeat';
 
-    const statuses: number[] = [];
-    for (let i = 0; i < LIMIT * 4; i += 1) {
-      statuses.push((await app.inject({ method: 'POST', url })).statusCode);
-    }
+    const statuses = await burst(`/media/${ID}/file`, MEDIA_LIMIT + 1);
+
+    expect(statuses.slice(0, MEDIA_LIMIT)).not.toContain(429);
+    expect(statuses.at(-1)).toBe(429);
+  });
+
+  it('keeps media requests out of the API budget', async () => {
+    await start();
+    await burst('/health', LIMIT * 4);
+
+    const statuses = await burst('/auth/status', LIMIT);
 
     expect(statuses).not.toContain(429);
-    expect(statuses).not.toContain(401);
   });
 
   it('keys on the forwarded client only behind a trusted proxy', async () => {
     await start({ trustProxy: '127.0.0.1' });
-    await burst('/auth/status', LIMIT + 1, { 'x-forwarded-for': '198.51.100.1' });
+    const first = await burst('/auth/status', LIMIT + 1, {
+      headers: { 'x-forwarded-for': '198.51.100.1' },
+    });
+    expect(first.at(-1)).toBe(429);
 
-    const other = await app.inject({
-      method: 'GET',
-      url: '/auth/status',
+    const other = await burst('/auth/status', 1, {
       headers: { 'x-forwarded-for': '198.51.100.2' },
     });
 
-    expect(other.statusCode).toBe(200);
+    expect(other).toEqual([200]);
   });
 
   it('ignores a forged X-Forwarded-For from an untrusted peer', async () => {
     await start();
-    await burst('/auth/status', LIMIT, { 'x-forwarded-for': '198.51.100.1' });
+    await burst('/auth/status', LIMIT, { headers: { 'x-forwarded-for': '198.51.100.1' } });
 
-    const forged = await app.inject({
-      method: 'GET',
-      url: '/auth/status',
+    const forged = await burst('/auth/status', 1, {
       headers: { 'x-forwarded-for': '198.51.100.2' },
     });
 
-    expect(forged.statusCode).toBe(429);
+    expect(forged).toEqual([429]);
   });
 });

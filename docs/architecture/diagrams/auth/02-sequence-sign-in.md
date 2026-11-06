@@ -1,7 +1,7 @@
 # Sequence diagram — auth — sign in and use a session
 
 > **Feature**: UC13 Sign in, UC14 Sign out — [use cases](01-use-case.md),
-> [spec](../../specs/auth.md) · **Related ADRs**: ADR-0010
+> [spec](../../specs/auth.md) · **Related ADRs**: ADR-0010, ADR-0011
 
 ## Context
 
@@ -15,6 +15,7 @@ answers are identical for an unknown user and a wrong password (no enumeration).
 sequenceDiagram
   actor U as Viewer / Owner
   participant W as Web app
+  participant G as Global rate limit (onRequest)
   participant H as Auth hook (onRequest)
   participant API as Auth routes
   participant RL as Rate limiter
@@ -24,7 +25,11 @@ sequenceDiagram
   participant R as Any other route
 
   U->>W: username + password
-  W->>H: POST /auth/session
+  W->>G: POST /auth/session
+  alt client over its bucket (R13)
+    G-->>W: 429 too_many_requests (Retry-After)
+  else within the bucket
+  G->>H: forward
   H->>H: CSRF check (R7) · route access = public
   opt session cookie present
     H->>SR: findValid(hash(token)) — sets request.caller if valid
@@ -53,9 +58,11 @@ sequenceDiagram
       API-->>W: 200 User + Set-Cookie (HttpOnly, SameSite=Lax)
     end
   end
+  end
 
   loop every later request
-    W->>H: request + cookie
+    W->>G: request + cookie
+    G->>H: forward when within the bucket (else 429, as above)
     H->>H: CSRF check on methods other than GET/HEAD/OPTIONS (R7)
     H->>SR: findValid(hash(token)) joined with the user's current role
     alt no valid session
