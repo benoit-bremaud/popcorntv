@@ -146,6 +146,27 @@ describe('SessionManager', () => {
     await sessions.closeAll();
   });
 
+  it('fails an open taken over while its playlist check is in flight', async () => {
+    const { transcoder: writes } = fakeTranscoder('writes');
+    let takeover: Promise<unknown> = Promise.resolve();
+    const sessions: SessionManager = manager((args, onExit) => {
+      const handle = writes(args, onExit);
+      // Runs before the pending `access` of the victim's playlist resolves.
+      if (args.includes('/m/a.mkv')) {
+        queueMicrotask(() => {
+          takeover = sessions.open(USER, '/m/b.mkv', HEVC);
+        });
+      }
+      return handle;
+    });
+
+    const victim = await sessions.open(VIEWER, '/m/a.mkv', HEVC);
+
+    expect(victim.kind).toBe('failed');
+    expect(await takeover).toMatchObject({ kind: 'ready' });
+    await sessions.closeAll();
+  });
+
   it("answers busy to a viewer when the slot is an owner's", async () => {
     const sessions = manager(fakeTranscoder('writes').transcoder);
     await sessions.open(USER, '/m/a.mkv', HEVC);

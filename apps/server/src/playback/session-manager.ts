@@ -150,7 +150,8 @@ export class SessionManager {
     const deadline = Date.now() + this.readyTimeoutMs;
     const playlist = join(dir, PLAYLIST_NAME);
     const waitForPlaylist = async (): Promise<boolean> => {
-      if (await exists(playlist)) return true;
+      // A take-over may land while `exists` is in flight: only a live session is ready.
+      if (await exists(playlist)) return this.sessions.has(id);
       if (exited || Date.now() >= deadline || !this.sessions.has(id)) return false;
       await delay(this.pollMs);
       return waitForPlaylist();
