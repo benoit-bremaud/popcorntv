@@ -69,6 +69,14 @@ export class TokenRepository {
     return result.changes > 0;
   }
 
+  /**
+   * Revokes every pending link, invitations and resets alike: an owner who loses the role
+   * must not keep a link they issued (spec auth UC17). Tokens do not record their issuer.
+   */
+  revokeAllPending(now: Date): void {
+    this.db.update(authTokens).set({ revokedAt: now.toISOString() }).where(this.pending(now)).run();
+  }
+
   /** Whether `token` is a pending link of `kind`: a cheap check before hashing (spec auth R8). */
   isPending(token: string, kind: 'invite' | 'reset', now: Date): boolean {
     const row = this.db

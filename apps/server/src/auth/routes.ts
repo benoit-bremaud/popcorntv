@@ -207,14 +207,15 @@ export function registerAuthRoutes(app: FastifyInstance, deps: AuthRoutesDeps): 
     const body = signInBody.safeParse(request.body);
     if (!body.success) return reply.code(400).send(invalid(body.error.issues));
     const key = usernameKey(body.data.username);
+    // `username_tried` only names an existing account: a password typed into the username
+    // field must never be stored (spec auth R9).
+    const stored = users.findByUsername(body.data.username);
+    const usernameTried = stored?.username;
     const limit = limiter.check(request.ip, key);
     if (!limit.allowed) {
-      if (limit.firstRefusal) {
-        events.record('login_locked', { ip: request.ip, usernameTried: body.data.username });
-      }
+      if (limit.firstRefusal) events.record('login_locked', { ip: request.ip, usernameTried });
       return tooMany(reply, limit.retryAfterSec);
     }
-    const stored = users.findByUsername(body.data.username);
     const ok = await verifyCounted(
       request.ip,
       key,
@@ -225,7 +226,7 @@ export function registerAuthRoutes(app: FastifyInstance, deps: AuthRoutesDeps): 
       events.record('login_failed', {
         userId: stored?.id ?? null,
         ip: request.ip,
-        usernameTried: body.data.username,
+        usernameTried,
       });
       return reply.code(401).send(apiError('invalid_credentials'));
     }
@@ -277,6 +278,8 @@ export function registerAuthRoutes(app: FastifyInstance, deps: AuthRoutesDeps): 
     const token = deps.db.transaction(() => {
       users.setPassword(caller.userId, passwordHash);
       sessions.revokeAll(caller.userId, now, caller.sessionId);
+      // A reset link already sent would hand the account back (UC19).
+      deps.tokens.revokeResets(caller.userId, now);
       return sessions.rotate(caller.sessionId);
     });
     events.record('password_changed', { userId: caller.userId, ip: request.ip }, now);

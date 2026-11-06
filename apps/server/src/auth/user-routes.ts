@@ -51,10 +51,13 @@ export function registerUserRoutes(app: FastifyInstance, deps: UserRoutesDeps): 
     if (!body.success) return reply.code(400).send(invalid(body.error.issues));
     const { id } = params.data;
     const now = new Date();
-    // A role change revokes the pending reset link (UC17).
+    // A role change revokes the pending reset link; a demoted owner's links all go (UC17).
     const result = deps.db.transaction(() => {
+      const wasOwner = users.find(id)?.role === 'owner';
       const outcome = users.setRole(id, body.data.role);
-      if (outcome === 'ok') tokens.revokeResets(id, now);
+      if (outcome !== 'ok') return outcome;
+      if (wasOwner && body.data.role !== 'owner') tokens.revokeAllPending(now);
+      else tokens.revokeResets(id, now);
       return outcome;
     });
     if (result === 'not_found') return notFound(reply);
@@ -67,8 +70,14 @@ export function registerUserRoutes(app: FastifyInstance, deps: UserRoutesDeps): 
     const params = userParams.safeParse(request.params);
     if (!params.success) return reply.code(400).send(invalid(params.error.issues));
     const actor = callerOf(request).userId;
-    // The cascade removes the account's sessions, profiles and reset links.
-    const result = deps.db.transaction(() => users.delete(params.data.id));
+    // The cascade removes the account's sessions, profiles and reset links; a deleted
+    // owner's invitations and resets for others go too (UC17).
+    const result = deps.db.transaction(() => {
+      const wasOwner = users.find(params.data.id)?.role === 'owner';
+      const outcome = users.delete(params.data.id);
+      if (outcome === 'ok' && wasOwner) tokens.revokeAllPending(new Date());
+      return outcome;
+    });
     if (result === 'not_found') return notFound(reply);
     if (result === 'last_owner') return reply.code(409).send(apiError('last_owner'));
     // The deleted row cannot be referenced: name the acting owner, unless they deleted themselves.

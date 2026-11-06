@@ -78,6 +78,7 @@ describe('buildApp', () => {
       'x-content-type-options': 'nosniff',
       'referrer-policy': 'no-referrer',
       'cross-origin-resource-policy': 'same-origin',
+      'cache-control': 'no-store',
     });
   });
 });

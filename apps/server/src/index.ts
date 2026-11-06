@@ -34,6 +34,13 @@ const app = buildApp({
   logger: true,
 });
 
+// Behind an HTTPS proxy without TRUST_PROXY, every client shares the proxy's address: one
+// stranger's failures would lock the whole household out (spec auth R8).
+if (config.publicUrl.startsWith('https:') && !config.trustProxy) {
+  app.log.warn(
+    'PUBLIC_URL is https but TRUST_PROXY is not set: the limiter sees the proxy address',
+  );
+}
 if (!config.tmdbApiKey) app.log.warn('TMDB_API_KEY not set: metadata enrichment disabled');
 
 installShutdownHandlers(app, process);
