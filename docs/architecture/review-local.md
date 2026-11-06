@@ -1,46 +1,61 @@
-# Local review — popcorntv (#72 global rate limit)
+# Local review — popcorntv (fix/74-per-account-transcode-slot)
 
-Pre-push review of the branch that adds a global per-client HTTP rate limit.
+Pre-push review of #74: transcode slot take-over at the `TRANSCODE_MAX_SESSIONS` limit.
 
 - Date: 2026-11-06
-- Commit: 8916341 (fixes on top of 7023e1f)
+- Commit: 4b4adcd
 - Scope: branch diff origin/main...HEAD
-- Checks run: adversarial (Opus, 2 rounds) · design · docs · tests · security · correctness
-- Verdict: ship · Must 0 open · Should 0 open · Nice 2 open (follow-ups)
+- Checks run: adversarial (Opus, 3 rounds) · design · docs · tests · security · correctness
+- Verdict: ship as-is · Must 0 · Should 0 · Nice 2
 
 ## Adversarial review (#236)
-- Round 1 on `7023e1f`: Must 2 · Should 3 · Nice 3 · unverified 1 · Push gate: closed
-- Round 2 on `8916341`: 2 Must fixed · 3 Should fixed · 2 Nice fixed · 0 regressed · new Must 0 · **Push gate: open**; its Should (ADR context wording, CodeQL score) and two Nice (alert attribution, nosniff assert, `/health` note) applied in the report commit.
-- Hosted reviewers (filled at the pre-merge run): Codex optional (answer if it posts).
 
-## Pre-merge gate (head SHA 8916341, `--push` mode)
-| Step | Result |
-|---|---|
-| 0 CI mirror | ✅ install --frozen-lockfile · typecheck · lint · format:check · test · build · Docker build + `make lint-docker` + `scan-docker-config` + `scan-docker-image TRIVY_EXIT=1` · CI-only: CodeQL, Scorecard, dependency-review |
-| 1 Tests | ✅ shared 38 · server 513 · web 199 |
-| 2 Coverage | server 97.57 % stmts / 93.61 % branches / 95.97 % funcs / 98.64 % lines · ⏸ docs deferred to the pre-merge run |
-| 3 SonarQube | ⏸ deferred to the pre-merge run |
-| 4 Secrets | ✅ gitleaks clean (origin/main..HEAD) · only `.env.example` tracked · diff read: nothing sensitive |
-| 5 E2E/smoke | ⏸ deferred to the pre-merge run |
-- Gate: **pre-push green** — SonarQube, E2E and doc coverage deferred (never GREEN)
+- Round 1 on `e391500`: Must 5 · Should 3 · Nice 3 · unverified 0 · Push gate: closed
+- Round 2 on `ac5f92b`: 9 fixed · 1 partly fixed (ADR-0012 sensitivity) · new Should 1
+  (take-over before the no-video check) · Push gate: closed
+- Round 3 on `4b4adcd`: all fixed · new Must 0 · **Push gate: open**
+- Hosted reviewers (filled at the pre-merge run): Copilot out of credit · Codex optional
+
+## Pre-merge gate (head SHA 4b4adcd)
+
+| Step         | Result                                                                                                                         |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| 0 CI mirror  | ✅ `ci.yml`: typecheck, lint, format:check, test, build all green locally; CodeQL, Scorecard, dependency-review CI-only        |
+| 1 Tests      | ✅ shared 38 · server 520 · web 199                                                                                            |
+| 2 Coverage   | ⏸ deferred to the pre-merge run (`--push`); reviewer measured server 97.6 % statements, 93.5 % branches                        |
+| 3 SonarQube  | ⏸ deferred to the pre-merge run (`--push`)                                                                                     |
+| 4 Secrets    | ✅ gitleaks clean (origin/main..HEAD) · only `.env.example` tracked (placeholders) · diff read: ids and roles in logs only     |
+| 5 E2E/smoke  | ⏸ deferred to the pre-merge run (`--push`)                                                                                     |
+
+- Gate: `--push`: **pre-push green** — steps 2, 3, 5 deferred (never GREEN)
 
 ## 🔴 Must Have
-- `apps/server/src/app.ts` `[adversarial|design|docs|security|tests]` · IPv6 not grouped by /64 although documented · fixed: `keyGenerator` uses `clientKey`, test added.
-- `apps/server/src/app.ts`, `http.ts` `[adversarial|security]` · media routes exempt before auth, forged-cookie flood uncounted · fixed: separate `media` bucket at 10× the API max, test added.
+
+_None._ (Round 1: ADR-0012 totals, ADR-0006 §6 not marked amended, sequence diagram 02,
+state diagram 05 entry label, `.env.example` / `config.ts` comments — all fixed.)
 
 ## 🟡 Should Have
-- `docs/architecture/diagrams/auth/02,03` `[adversarial]` · global limiter missing from UML · fixed.
-- `apps/web/src/auth/auth-api.ts` `[adversarial]` · no message for `too_many_requests` · fixed.
-- `docs/architecture/decisions/0011-global-rate-limit.md` `[adversarial|docs]` · alert numbers, "never 429" context, CodeQL score · fixed.
-- `apps/server/src/app.test.ts` `[tests]` · weak asserts, no signed-in throttling case, no media-budget case · fixed.
-- `apps/server/src/*.test.ts` `[design]` · `buildApp` test setup duplicated in 9 suites · follow-up issue.
+
+_None._ (Fixed: own-before-viewer and oldest-first tests, `Session.owner` comment, 502 on a
+take-over during `Starting`, playability checked before any take-over.)
 
 ## 🔵 Nice to Have
-- `apps/server/src/config.ts:85` `[adversarial]` · proxy warning could mention the shared 300/min budget · open.
-- Window reset not exercised with fake timers `[tests]` · open.
+
+- `apps/server/src/playback/session-manager.ts:125` `[adversarial]` · the `args === null`
+  branch is now unreachable (checked at the top) · keep as a type guard or throw.
+- `apps/server/src/playback/session-manager.test.ts:145` `[adversarial|tests]` · the
+  `if (viewer.kind === 'ready')` guard can pass vacuously · assert the kind first.
 
 ## ⚪ Disagree / Intentional
-- `buildApp` async `[design]` · required to add the plugin hook before the auth hook (ADR-0011).
+
+- `apps/web/src/playback/PlayerDialog.tsx:27` `[adversarial]` · a viewer taken over sees
+  *This file could not be played* · no dedicated error code by design (ADR-0012).
+- `session-manager.ts:99` `[adversarial]` · a Play during another open's `starting` window
+  gets `busy` · the "counted before the first await" invariant holds (spec §4).
 
 ## Per-dimension summary
-- Adversarial: 2 Must fixed, gate open · Design: reuse `clientKey`, fixture duplication follow-up · Docs: /64 claim fixed · Tests: asserts tightened, new cases · Security: IPv6 bypass and media flood fixed · Correctness: Retry-After and error path verified.
+
+- Adversarial: docs drift fixed over three rounds; code sound · Design: `Opener` now
+  `Pick<Caller>` · Docs: spec, ADRs, diagrams aligned · Tests: ordering and take-over cases
+  added · Security: role from the server-side `Caller`, no cross-account read · Correctness:
+  slot accounting exact, no-video checked first.
