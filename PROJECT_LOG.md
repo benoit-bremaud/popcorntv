@@ -4,6 +4,19 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-06 — #47 dev proxy target from `API_URL` (PR #101 merged, `5d6cf09`)
+
+- **Change** — `apps/web/vite.config.ts` proxies `/api` to `process.env['API_URL'] ||
+  'http://localhost:3000'` (`||` so an empty value falls back); documented in `CLAUDE.md`,
+  `README.md`, `.env.example` (keep its port in step with `PORT`). No test (KISS).
+- **Decision** — read from the shell like every server setting, not `loadEnv` (MCDA 500/500
+  vs 300/500): nothing in the project loads `.env.local`. Codex raised the same point on
+  #101; answered Disagree, filed as #102.
+- **Reviews** — adversarial (Opus) 2 rounds: 3 Should fixed (empty value 502, remote-host
+  example, `PORT` drift). Codex: 1 P2, Disagree.
+- **Gate** — 38 shared + 497 server + 198 web tests, SonarQube PASSED, smoke 1/1, CI green.
+- **Follow-ups** — #102 `.env.local` loading, empty `PORT`, untyped Vite config.
+
 ## 2026-11-06 — #45 prod advisories and #96 node base (PRs #97 `3f012ab`, #99 `bb3d4bc`)
 
 - **Decision** — homelab roadmap, option D (MCDA 415/500 against A all-first 380, corrected
