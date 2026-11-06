@@ -34,6 +34,7 @@ Not run: OSINT (the repository is public by design and gitleaks covers its histo
 | SA-03 | High | Must (scheduled before #60) | #110 | The runtime image (Debian 12, FFmpeg 5.1) ships 4 Critical and about 200 High CVEs with no fix available; CI hides them with `--ignore-unfixed`. FFmpeg parses media files, so the decoder CVEs are reachable. |
 | SA-01 | Low | Should | #111 | No local `make sast` Semgrep target (skill `semgrep-sast`); CodeQL is the CI SAST of record on this public repository, so only the fast local first line is missing. |
 | SA-02 | Low | Nice | #112 | `docker-compose.yml` lacks `no-new-privileges`, `cap_drop: [ALL]` and a read-only root file system. |
+| SA-04 | Low | Nice | #114 | HLS and subtitle extraction hand the checked path to FFmpeg, which opens it later without `O_NOFOLLOW`: a writer on the media share could swap in a symlink in that window. The read-only media mount limits it (found by the Codex review of #113). |
 
 ### Known issues re-rated
 
@@ -50,7 +51,7 @@ Not run: OSINT (the repository is public by design and gitleaks covers its histo
 - argon2id hashing behind a concurrency cap; zod length caps on auth inputs.
 - `__Host-` session cookie, `HttpOnly`, `SameSite=Lax`, `Secure` on https; CSRF by `Origin` and `Sec-Fetch-Site`.
 - The access hook fails closed; owner routes check the role; profile, progress and playback routes check ownership.
-- `confinedPath` resolves with `realpath` on every request and opens with `O_NOFOLLOW`; segment names are pattern-checked.
+- `confinedPath` resolves with `realpath` on every request; direct play then opens the file with `O_NOFOLLOW` (HLS and subtitles do not: SA-04); segment names are pattern-checked.
 - FFmpeg runs through `spawn` with an argument array, the input behind `-i`; the session cap is reserved before the first await.
 - The error handler logs only 5xx errors and never echoes them (`app.ts`).
 - The TMDB key travels in the `Authorization` header only, never in an error (`tmdb-client.ts`).
