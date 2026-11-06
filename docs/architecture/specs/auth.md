@@ -72,6 +72,17 @@
 - **R12** Done when: unit and route tests for every rule above (coverage ≥ 80 %), a test
   proving every non-public route answers `401` without a session, a security review and
   a QA pass recorded under `docs/architecture/qa/` (SEC-01…SEC-12 and SEC-15).
+- **R13** Global rate limit (#72, ADR-0011): every request counts against its client
+  (`request.ip`, so `X-Forwarded-For` only from a `TRUST_PROXY` address; IPv6 by its
+  /64 through `clientKey`), in memory, per minute: 300 in the API bucket, 3000 in the
+  media bucket. The check runs before the auth hook, so unauthenticated and unmatched
+  requests count too. Past the limit: `429 too_many_requests` with `Retry-After`; the
+  remaining budget is not advertised on other answers. The media bucket (`MEDIA_ROUTE`)
+  holds `GET /media/:id/file`, `GET /media/:id/subtitles/:index`, `GET /artwork/:file`,
+  `GET /playback/sessions/:id/:file`, `POST /playback/sessions/:id/heartbeat` and `GET
+  /health` (Docker probe): a player or the catalog grid sends them in bursts, while a
+  flood of forged cookies stays capped. R8 stays the per-username guard of the hashing
+  routes.
 
 ## 2. UC11 — Set up the first owner
 
@@ -232,7 +243,7 @@ receives `Pick<ProfileRepository, 'adoptOrphans' | 'createFirst'>`.
 ## 6. Error shape
 
 `{ error: '<code>' }`: `unauthenticated` (401), `forbidden` (403), `csrf` (403),
-`invalid_credentials` (401), `too_many_attempts` (429), `token_invalid` (404),
+`invalid_credentials` (401), `too_many_attempts` (429), `too_many_requests` (429, R13), `token_invalid` (404),
 `username_taken` (409), `last_owner` (409), `not_found` (404), `profile_not_found`
 (404), `session_not_found` (404).
 
@@ -258,6 +269,10 @@ receives `Pick<ProfileRepository, 'adoptOrphans' | 'createFirst'>`.
   enumeration (same status and body), every non-public route `401` without a cookie
   (built from the route table), `403` for a viewer on owner routes, role change
   applies at once, cross-user profile and playback session → `404`, CSRF `403`.
+- Global limit (R13, `app.test.ts`): `429` with `Retry-After` past the limit, unmatched,
+  unauthenticated and signed-in requests counted, one bucket per client and per IPv6
+  /64, media routes burst past the API limit without spending it, a media flood without
+  a session capped, `X-Forwarded-For` honoured only from a trusted proxy.
 - Web: setup, sign-in, invite and reset screens, users and invitations panel, `401` →
   sign-in.
 - Security: gitleaks, SEC-01…SEC-12 and SEC-15 (skill `qa-browser-check`).

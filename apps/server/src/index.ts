@@ -13,7 +13,7 @@ await mkdir(dirname(config.databasePath), { recursive: true });
 // `@fastify/static` checks its root at start-up; the cache would only create it on first write.
 await mkdir(config.artworkDir, { recursive: true });
 
-const app = buildApp({
+const app = await buildApp({
   version: process.env['npm_package_version'] ?? '0.0.0',
   db: openDatabase(config.databasePath),
   probe: createFfprobe(config.ffprobePath),

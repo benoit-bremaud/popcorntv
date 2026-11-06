@@ -4,7 +4,7 @@ import type { FileHandle } from 'node:fs/promises';
 import { extname } from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { apiError, invalid } from '../http.js';
+import { apiError, invalid, MEDIA_ROUTE } from '../http.js';
 import { isAtOrUnderRoot, resolveUnderRoot } from '../library/path-guard.js';
 import type { LibraryRepository } from '../library/repository.js';
 import { parseRange } from './range.js';
@@ -91,7 +91,7 @@ async function confinedFile(
  * client-supplied path reaches the file system.
  */
 export function registerPlaybackRoutes(app: FastifyInstance, deps: PlaybackRoutesDeps): void {
-  app.get('/media/:id/file', async (request, reply) => {
+  app.get('/media/:id/file', MEDIA_ROUTE, async (request, reply) => {
     const params = mediaParams.safeParse(request.params);
     if (!params.success) return reply.code(400).send(invalid(params.error.issues));
     const stored = deps.repository.findMediaFile(params.data.id);

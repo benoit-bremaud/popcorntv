@@ -33,7 +33,7 @@ async function harness(
 ): Promise<Harness> {
   const db = options.db ?? openDatabase(':memory:');
   let setupLink: string | null = null;
-  const app = buildApp({
+  const app = await buildApp({
     version: 'test',
     db,
     probe: async () => ({ durationSec: null, streams: [] }),

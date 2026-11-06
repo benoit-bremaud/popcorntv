@@ -187,6 +187,7 @@ export type ApiErrorCode =
   | 'csrf'
   | 'invalid_credentials'
   | 'too_many_attempts'
+  | 'too_many_requests'
   | 'token_invalid'
   | 'username_taken'
   | 'last_owner'

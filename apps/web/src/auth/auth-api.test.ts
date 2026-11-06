@@ -107,6 +107,7 @@ describe('authMessage', () => {
   it.each<[ApiErrorCode | null, RegExp]>([
     ['invalid_credentials', /Wrong username or password/],
     ['too_many_attempts', /Too many attempts/],
+    ['too_many_requests', /Too many requests/],
     ['token_invalid', /link is invalid, expired or already used/],
     ['username_taken', /username is taken/],
     ['last_owner', /last owner/],
