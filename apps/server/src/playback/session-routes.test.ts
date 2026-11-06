@@ -268,14 +268,34 @@ describe('playback session routes', () => {
     expect(unknown.json<ApiError>().error).toBe('session_not_found');
   });
 
-  it('answers 503 transcode_busy beyond one session', async () => {
-    await hlsSession();
+  it("lets the owner take over a viewer's slot, and answers 503 transcode_busy to the viewer", async () => {
     const other = await scanned('Alien (1979).mkv');
+    const asGuest = { cookie: guest };
+    const body = { mediaId: other.id, directPlay: false };
+    const viewer = await app.inject({
+      method: 'POST',
+      url: '/playback/sessions',
+      headers: asGuest,
+      payload: body,
+    });
 
-    const response = await start(other.id, false);
+    const owner = await hlsSession();
+    const busy = await app.inject({
+      method: 'POST',
+      url: '/playback/sessions',
+      headers: asGuest,
+      payload: body,
+    });
 
-    expect(response.statusCode).toBe(503);
-    expect(response.json<ApiError>().error).toBe('transcode_busy');
+    const taken = viewer.json<{ url: string }>().url;
+    const dead = await app.inject({ method: 'GET', url: taken, headers: asGuest });
+
+    expect(viewer.statusCode).toBe(201);
+    expect(owner.mode).toBe('hls');
+    expect(kills).toHaveBeenCalledOnce();
+    expect(dead.json<ApiError>().error).toBe('session_not_found');
+    expect(busy.statusCode).toBe(503);
+    expect(busy.json<ApiError>().error).toBe('transcode_busy');
   });
 
   it('kills every session when the server closes', async () => {

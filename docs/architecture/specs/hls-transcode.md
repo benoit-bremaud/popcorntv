@@ -19,6 +19,11 @@
   without any request from its player, and on server shutdown.
 - **R5** At most `TRANSCODE_MAX_SESSIONS` (default 1) HLS sessions run at once
   (requirements: "transcoding runs one stream at a time").
+- **R5b** At the limit, a Play takes over a slot instead of failing (ADR-0012): first the
+  caller's own oldest session, else, for an owner, the oldest viewer session. A viewer
+  never takes another account's slot, an owner never takes another owner's. The session
+  taken over is closed as on `DELETE`: its next request answers `404 session_not_found`
+  and its player shows the 4a message; a pending open taken over answers 3d.
 - **R6** Done when an MKV/HEVC + AC-3 (or similar) file plays through HLS in Chromium and
   Firefox.
 
@@ -76,7 +81,8 @@ Extensions:
 - 3a. Unknown media, row without file, or stored path no longer confined → `404
   media_not_found` (same path guard as #7).
 - 3b. Media without a video stream → `422 not_playable`; no Play button is shown for it.
-- 3c. `TRANSCODE_MAX_SESSIONS` reached → `503 transcode_busy`; the player shows *Another
+- 3c. `TRANSCODE_MAX_SESSIONS` reached and no slot may be taken over (R5b) →
+  `503 transcode_busy`; the player shows *Another
   title is being transcoded. Try again later.*
 - 3d. FFmpeg exits or cannot spawn, or no playlist after 20 s → session removed,
   `502 transcode_failed`;
@@ -97,7 +103,8 @@ Extensions:
   directories a previous run left are removed; one `mkdtemp` directory per session;
   segment names validated before any `join`.
 - At most `TRANSCODE_MAX_SESSIONS` sessions, counted before the first `await`, so
-  concurrent requests cannot exceed it. A ready session whose FFmpeg crashes is closed.
+  concurrent requests cannot exceed it; a take-over (R5b) forgets the old session before
+  that count too. A ready session whose FFmpeg crashes is closed.
 - Playlist served as `application/vnd.apple.mpegurl`, segments as `video/mp2t`, both
   `Cache-Control: no-store`.
 - hls.js is loaded with a dynamic `import()` only for HLS sessions: the catalog bundle
