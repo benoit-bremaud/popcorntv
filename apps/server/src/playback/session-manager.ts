@@ -4,7 +4,7 @@ import { access, mkdir, mkdtemp, readdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import type { FastifyBaseLogger } from 'fastify';
-import type { StreamInfo } from '@popcorntv/shared';
+import type { Role, StreamInfo } from '@popcorntv/shared';
 import { PLAYLIST_NAME, SEGMENT_PATTERN, ffmpegArgs } from './ffmpeg-args.js';
 import type { TranscodeHandle, Transcoder } from './transcoder.js';
 
@@ -13,7 +13,7 @@ export interface SessionManagerOptions {
   readonly transcoder: Transcoder;
   /** Parent of every session directory (`TRANSCODE_DIR`). */
   readonly dir: string;
-  /** `TRANSCODE_MAX_SESSIONS`: beyond it `open` answers `busy` (spec R5). */
+  /** `TRANSCODE_MAX_SESSIONS`: at it `open` frees a slot or answers `busy` (spec R5, R5b). */
   readonly maxSessions: number;
   readonly logger: FastifyBaseLogger;
   /** Without any request for this long the session is closed (spec R4). */
@@ -23,8 +23,14 @@ export interface SessionManagerOptions {
   readonly pollMs?: number;
 }
 
+/** The user opening a session: the slot rule (spec R5b) depends on the role. */
+export interface Opener {
+  readonly userId: string;
+  readonly role: Role;
+}
+
 /**
- * Outcome of `open`: `busy` when `maxSessions` are running, `failed` when FFmpeg exits or
+ * Outcome of `open`: `busy` when `maxSessions` are running and none may be taken over, `failed` when FFmpeg exits or
  * writes no playlist within `readyTimeoutMs`, `not_playable` without a video stream.
  */
 export type OpenResult =
@@ -34,6 +40,7 @@ export type OpenResult =
 interface Session {
   /** The user who opened it (spec auth R10); nobody else may read or close it. */
   readonly owner: string;
+  readonly role: Role;
   readonly dir: string;
   readonly handle: TranscodeHandle;
   readonly timer: NodeJS.Timeout;
@@ -79,19 +86,28 @@ export class SessionManager {
    * Starts FFmpeg on a confined real path and resolves once its playlist exists. Creates
    * one directory under `dir`, removed again on every failure path. `startSec` (media
    * seconds, 0 = from the start) is the resume offset (ADR-0007 §2); the routes never pass
-   * one at or past the end of the file. `owner` is the opening user's id.
+   * one at or past the end of the file. At the limit, the slot of `opener`'s own oldest
+   * session is taken over, else, for an owner, the oldest viewer session (spec R5b).
    */
   async open(
-    owner: string,
+    opener: Opener,
     inputPath: string,
     streams: readonly StreamInfo[],
     startSec = 0,
   ): Promise<OpenResult> {
-    if (this.sessions.size + this.starting >= this.options.maxSessions) return { kind: 'busy' };
+    let preempted: Promise<boolean> | undefined;
+    if (this.sessions.size + this.starting >= this.options.maxSessions) {
+      const victim = this.victimFor(opener);
+      if (victim === undefined) return { kind: 'busy' };
+      this.options.logger.info({ session: victim, by: opener.userId }, 'session taken over');
+      // `close` forgets the session synchronously: the slot is free before any await.
+      preempted = this.close(victim);
+    }
     // Reserved before the first await, so concurrent opens cannot both pass the limit.
     this.starting += 1;
     let dir: string;
     try {
+      await preempted;
       await mkdir(this.options.dir, { recursive: true });
       dir = await mkdtemp(join(this.options.dir, SESSION_PREFIX));
     } finally {
@@ -120,7 +136,7 @@ export class SessionManager {
       return { kind: 'failed' };
     }
     const timer = setTimeout(() => void this.close(id), this.idleMs);
-    this.sessions.set(id, { owner, dir, handle, timer });
+    this.sessions.set(id, { owner: opener.userId, role: opener.role, dir, handle, timer });
 
     const deadline = Date.now() + this.readyTimeoutMs;
     const playlist = join(dir, PLAYLIST_NAME);
@@ -133,6 +149,18 @@ export class SessionManager {
     if (await waitForPlaylist()) return { kind: 'ready', id };
     await this.close(id);
     return { kind: 'failed' };
+  }
+
+  /**
+   * The session whose slot `opener` may take at the limit (spec R5b): their own oldest, else
+   * for an owner the oldest viewer one; `sessions` iterates in insertion order.
+   */
+  private victimFor(opener: Opener): string | undefined {
+    const entries = [...this.sessions];
+    const own = entries.find(([, session]) => session.owner === opener.userId);
+    if (own !== undefined) return own[0];
+    if (opener.role !== 'owner') return undefined;
+    return entries.find(([, session]) => session.role === 'viewer')?.[0];
   }
 
   /** True when the session is live and was opened by `userId`; another user's reads as unknown. */

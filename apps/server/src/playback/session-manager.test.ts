@@ -9,8 +9,11 @@ import { SessionManager } from './session-manager.js';
 import type { SessionManagerOptions } from './session-manager.js';
 import type { ExitListener, Transcoder } from './transcoder.js';
 
-/** Owner of every session these tests open. */
-const USER = 'user-1';
+/** Opener of the sessions these tests open, unless a test names another one. */
+const USER = { userId: 'user-1', role: 'owner' } as const;
+const VIEWER = { userId: 'viewer-1', role: 'viewer' } as const;
+const OTHER_VIEWER = { userId: 'viewer-2', role: 'viewer' } as const;
+const OTHER_OWNER = { userId: 'owner-2', role: 'owner' } as const;
 
 const HEVC: readonly StreamInfo[] = [
   { type: 'video', codec: 'hevc', width: 3840, height: 2160, language: null },
@@ -57,7 +60,7 @@ describe('SessionManager', () => {
       transcoder,
       dir,
       maxSessions: 1,
-      logger: { warn } as unknown as FastifyBaseLogger,
+      logger: { warn, info: vi.fn() } as unknown as FastifyBaseLogger,
       pollMs: 5,
       ...overrides,
     });
@@ -78,14 +81,61 @@ describe('SessionManager', () => {
     await sessions.closeAll();
   });
 
-  it('answers busy beyond the limit, and frees the slot on close', async () => {
+  it('answers busy to a viewer at the limit, and frees the slot on close', async () => {
     const sessions = manager(fakeTranscoder('writes').transcoder);
-    const first = await sessions.open(USER, '/m/a.mkv', HEVC);
+    const first = await sessions.open(VIEWER, '/m/a.mkv', HEVC);
+
+    expect((await sessions.open(OTHER_VIEWER, '/m/b.mkv', HEVC)).kind).toBe('busy');
+    if (first.kind === 'ready') await sessions.close(first.id);
+    expect((await sessions.open(OTHER_VIEWER, '/m/b.mkv', HEVC)).kind).toBe('ready');
+    await sessions.closeAll();
+  });
+
+  it("takes over the opener's own session at the limit", async () => {
+    const { transcoder, kills } = fakeTranscoder('writes');
+    const sessions = manager(transcoder);
+    const first = await sessions.open(VIEWER, '/m/a.mkv', HEVC);
+
+    const second = await sessions.open(VIEWER, '/m/b.mkv', HEVC);
+
+    expect(second.kind).toBe('ready');
+    if (first.kind !== 'ready') return;
+    expect(sessions.touch(first.id)).toBe(false);
+    expect(kills).toHaveBeenCalledOnce();
+    await sessions.closeAll();
+  });
+
+  it("lets an owner take over the oldest viewer session, not another owner's", async () => {
+    const sessions = manager(fakeTranscoder('writes').transcoder, { maxSessions: 2 });
+    const viewer = await sessions.open(VIEWER, '/m/a.mkv', HEVC);
+    const owner = await sessions.open(OTHER_OWNER, '/m/b.mkv', HEVC);
+
+    expect((await sessions.open(USER, '/m/c.mkv', HEVC)).kind).toBe('ready');
+    if (viewer.kind !== 'ready' || owner.kind !== 'ready') return;
+    expect(sessions.touch(viewer.id)).toBe(false);
+    expect(sessions.touch(owner.id)).toBe(true);
+    expect((await sessions.open(OTHER_VIEWER, '/m/d.mkv', HEVC)).kind).toBe('busy');
+    await sessions.closeAll();
+  });
+
+  it('answers busy to an owner when every slot belongs to another owner', async () => {
+    const sessions = manager(fakeTranscoder('writes').transcoder);
+    await sessions.open(OTHER_OWNER, '/m/a.mkv', HEVC);
 
     expect((await sessions.open(USER, '/m/b.mkv', HEVC)).kind).toBe('busy');
-    if (first.kind === 'ready') await sessions.close(first.id);
-    expect((await sessions.open(USER, '/m/b.mkv', HEVC)).kind).toBe('ready');
     await sessions.closeAll();
+  });
+
+  it('fails the open of a session taken over before its playlist exists', async () => {
+    const sessions = manager(fakeTranscoder('silent').transcoder, { readyTimeoutMs: 1_000 });
+    const pending = sessions.open(VIEWER, '/m/a.mkv', HEVC);
+    await vi.waitFor(async () => expect(await readdir(dir)).toHaveLength(1));
+
+    const owner = sessions.open(USER, '/m/b.mkv', HEVC);
+
+    expect((await pending).kind).toBe('failed');
+    await sessions.closeAll();
+    expect((await owner).kind).toBe('failed');
   });
 
   it('fails and cleans up when FFmpeg exits before writing the playlist', async () => {

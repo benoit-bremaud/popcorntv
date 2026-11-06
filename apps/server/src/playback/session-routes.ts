@@ -43,7 +43,7 @@ async function openOrNull(path: string): Promise<FileHandle | null> {
 /**
  * UC5 sessions (spec hls-transcode, ADR-0006): `POST /playback/sessions` (200 direct |
  * 201 hls | 400 | 404 `media_not_found` | 422 `not_playable` | 502 `transcode_failed` |
- * 503 `transcode_busy`), the playlist and segment files, the heartbeat and `DELETE`.
+ * 503 `transcode_busy` when no slot may be taken over, spec R5b), the playlist and segment files, the heartbeat and `DELETE`.
  * UC6 (ADR-0007): the body's optional `startSec` resumes there (start over at or past the
  * end) and both answers carry `offsetSec`, the media time the player's timeline starts at.
  */
@@ -78,7 +78,7 @@ export function registerSessionRoutes(app: FastifyInstance, deps: SessionRoutesD
 
     const input = await confinedPath(stored.filePath, stored.rootPath, deps.mediaRoot);
     if (input === null) return reply.code(404).send(apiError('media_not_found'));
-    const result = await deps.sessions.open(callerOf(request).userId, input, streams, startSec);
+    const result = await deps.sessions.open(callerOf(request), input, streams, startSec);
     if (result.kind !== 'ready') {
       const { status, code } = START_ERRORS[result.kind];
       return reply.code(status).send(apiError(code));

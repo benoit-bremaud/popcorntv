@@ -1,7 +1,7 @@
 # State diagram — playback — PlaybackSession lifecycle
 
 > **Feature**: UC5 Watch a title — [spec](../../specs/hls-transcode.md)
-> **Related ADRs**: ADR-0001, ADR-0006
+> **Related ADRs**: ADR-0001, ADR-0006, ADR-0012
 
 ## Context
 
@@ -25,6 +25,8 @@ stateDiagram-v2
   Streaming --> Closed: DELETE session
   Streaming --> Closed: 60 s without request (watchdog)
   Streaming --> Closed: server shutdown
+  Starting --> Closed: slot taken over (spec R5b)
+  Streaming --> Closed: slot taken over (spec R5b)
   Failed --> [*]: 502 transcode_failed, dir removed
   Closed --> [*]: ffmpeg killed, dir removed
 ```
@@ -36,4 +38,5 @@ stateDiagram-v2
   player through hls.js when a missing segment is requested.
 - The heartbeat (every 20 s from the open player) keeps a paused session alive; a closed
   tab stops it and the watchdog cleans up.
-- `Failed` and `Closed` free a slot of `TRANSCODE_MAX_SESSIONS`.
+- `Failed` and `Closed` free a slot of `TRANSCODE_MAX_SESSIONS`. At the limit, a Play
+  closes the caller's own oldest session, else for an owner the oldest viewer one.
