@@ -384,6 +384,58 @@ describe('account administration (UC17)', () => {
     expect(last).toMatchObject({ kind: 'user_deleted', userId: null });
   });
 
+  it.each([
+    ['demoted', 'PATCH', { role: 'viewer' }],
+    ['deleted', 'DELETE', undefined],
+  ] as const)('revokes every pending link once their owner is %s', async (_case, method, body) => {
+    const h = await harness();
+    const second = createAccount(h.db, 'second', 'owner');
+    const victim = createAccount(h.db, 'victim', 'viewer');
+    const invitation = tokenOf(
+      await as(h, second.cookie, 'POST', '/invitations', { role: 'owner' }),
+      'invite',
+    );
+    const reset = tokenOf(
+      await as(h, second.cookie, 'POST', `/users/${victim.userId}/reset`),
+      'reset',
+    );
+
+    const removed = await as(h, h.owner.cookie, method, `/users/${second.userId}`, body);
+    const invited = await redeem(h, {
+      kind: 'invite',
+      token: invitation,
+      username: 'intruder',
+      password: PASSWORD,
+    });
+    const taken = await redeem(h, { kind: 'reset', token: reset, password: PASSWORD });
+
+    expect(removed.statusCode).toBeLessThan(300);
+    expect(invited.statusCode).toBe(404);
+    expect(taken.statusCode).toBe(404);
+    expect((await as(h, victim.cookie, 'GET', '/auth/status')).json()).toHaveProperty(
+      'user.username',
+      'victim',
+    );
+  });
+
+  it('keeps pending links when a viewer is deleted or promoted', async () => {
+    const h = await harness();
+    const promoted = createAccount(h.db, 'kid', 'viewer');
+    const deleted = createAccount(h.db, 'guest', 'viewer');
+    const invitation = await invite(h);
+
+    await as(h, h.owner.cookie, 'PATCH', `/users/${promoted.userId}`, { role: 'owner' });
+    await as(h, h.owner.cookie, 'DELETE', `/users/${deleted.userId}`);
+    const accepted = await redeem(h, {
+      kind: 'invite',
+      token: invitation,
+      username: 'newcomer',
+      password: PASSWORD,
+    });
+
+    expect(accepted.statusCode).toBe(200);
+  });
+
   it('deletes an account with its sessions, profiles and links', async () => {
     const h = await harness();
     const viewer = createAccount(h.db, 'kid', 'viewer');

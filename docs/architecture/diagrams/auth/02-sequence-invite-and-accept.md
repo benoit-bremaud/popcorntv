@@ -66,7 +66,7 @@ sequenceDiagram
   O->>W: Revoke invitation / reset link
   W->>API: DELETE /invitations/:id · DELETE /users/:id/reset
   API->>TR: revoke — 204, or 404 when none is pending
-  Note over API,TR: a role change or an account deletion also revokes the pending reset
+  Note over API,TR: a role change, an account deletion or a password change revokes that account's pending reset; demoting or deleting an owner revokes every pending link (UC17, UC19)
 ```
 
 ## Notes

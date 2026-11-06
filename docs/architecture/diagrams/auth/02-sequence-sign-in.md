@@ -30,13 +30,13 @@ sequenceDiagram
     H->>SR: findValid(hash(token)) — sets request.caller if valid
   end
   H->>API: forward
+  API->>UR: findByUsername() — username_tried is kept only for an existing account (R9)
   API->>RL: allow(ip, usernameKey)?
   alt locked out
     API->>EL: record login_locked (once per window)
     API-->>W: 429 too_many_attempts (Retry-After)
   else allowed
     API->>RL: fail(ip, usernameKey) — the attempt counts before hashing (R8)
-    API->>UR: findByUsername()
     API->>API: verify argon2id (dummy hash if unknown)
     alt wrong credentials
       API->>EL: record login_failed
@@ -81,4 +81,5 @@ sequenceDiagram
 - Route paths are Fastify's; the browser calls them under `/api`, which Caddy strips
   (spec §5).
 - `findValid` slides `last_seen_at` at most once per hour.
-- The client IP comes from the socket, or from the proxy only when `TRUST_PROXY` is set.
+- The client IP comes from the socket, or from `X-Forwarded-For` only when the socket peer
+  is listed in `TRUST_PROXY` (spec §5).

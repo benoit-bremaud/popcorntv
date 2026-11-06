@@ -86,7 +86,8 @@ on `/enrich`). Design: [UC2 spec](docs/architecture/specs/tmdb-metadata.md),
 
 `ffprobe` (FFmpeg) must be installed. A library root must be `MEDIA_ROOT` or a folder under
 it (default `./media`), and the server listens on `127.0.0.1` unless `HOST` says otherwise
-(`0.0.0.0` only behind the reverse proxy, with `TRUST_PROXY=1`). A scan never prunes rows while a sub-directory is
+(`0.0.0.0` only behind the reverse proxy, with `TRUST_PROXY` set to the proxy's fixed address; a CIDR only for a network holding
+the proxy and the app alone). A scan never prunes rows while a sub-directory is
 unreadable or the root is empty (unmounted volume). File names follow the Plex / Jellyfin conventions (`Title (2019).mkv`,
 `Show/Season 01/Show S01E02.mkv`, optional `[tmdbid-…]` tags); the full list is in
 [docs/architecture/specs/library-scan.md](docs/architecture/specs/library-scan.md).

@@ -14,6 +14,28 @@ function setUp() {
 }
 
 describe('TokenRepository', () => {
+  it('revokes every pending link and leaves spent and expired ones as they were', () => {
+    const { db, tokens, userId } = setUp();
+    const spent = tokens.issueInvite('viewer', T0).token;
+    tokens.consumeInvite(spent, T0);
+    const expired = tokens.issueInvite('viewer', T0).token;
+    const now = later(INVITE_TTL_MS + 1);
+    const invite = tokens.issueInvite('owner', now).token;
+    const reset = tokens.issueReset(userId, now).token;
+
+    tokens.revokeAllPending(now);
+
+    expect(tokens.isPending(invite, 'invite', now)).toBe(false);
+    expect(tokens.isPending(reset, 'reset', now)).toBe(false);
+    const revoked = db
+      .select()
+      .from(authTokens)
+      .all()
+      .filter((t) => t.revokedAt !== null);
+    expect(revoked).toHaveLength(2);
+    expect(tokens.isPending(expired, 'invite', now)).toBe(false);
+  });
+
   it('spends an invitation once and returns its role', () => {
     const { tokens } = setUp();
     const { token } = tokens.issueInvite('owner', T0);

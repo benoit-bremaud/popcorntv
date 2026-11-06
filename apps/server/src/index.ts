@@ -1,7 +1,7 @@
 import { mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { buildApp } from './app.js';
-import { loadConfig } from './config.js';
+import { loadConfig, trustProxyWarning } from './config.js';
 import { openDatabase } from './db/index.js';
 import { createFfprobe } from './library/ffprobe.js';
 import { createTmdbClient } from './metadata/tmdb-client.js';
@@ -34,6 +34,8 @@ const app = buildApp({
   logger: true,
 });
 
+const proxyWarning = trustProxyWarning(config);
+if (proxyWarning) app.log.warn(proxyWarning);
 if (!config.tmdbApiKey) app.log.warn('TMDB_API_KEY not set: metadata enrichment disabled');
 
 installShutdownHandlers(app, process);

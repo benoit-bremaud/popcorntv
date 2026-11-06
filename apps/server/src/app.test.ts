@@ -78,6 +78,15 @@ describe('buildApp', () => {
       'x-content-type-options': 'nosniff',
       'referrer-policy': 'no-referrer',
       'cross-origin-resource-policy': 'same-origin',
+      'cache-control': 'no-store',
     });
+  });
+
+  it('keeps a cache policy the route chose itself', async () => {
+    app.get('/cached', async (_request, reply) => reply.header('cache-control', 'private').send());
+
+    const response = await app.inject({ method: 'GET', url: '/cached' });
+
+    expect(response.headers['cache-control']).toBe('private');
   });
 });

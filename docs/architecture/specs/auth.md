@@ -60,8 +60,8 @@
   revocation, redeem, password change, sessions ended by the owner, role change and
   deletion. `user_id` is the account acted on; invitations and deletions, which leave
   none, record the acting owner (null when an owner deletes their own account). No
-  password, no token; `username_tried` only on
-  failures and only when it matches the username syntax. Rows older than 90 days are
+  password, no token; `username_tried` only on failures and only when it names an existing
+  account (a password typed into the username field is never stored). Rows older than 90 days are
   purged.
 - **R10** A profile belongs to one user. Name uniqueness, the 12-profile limit and the
   last-profile rule are per user; another user's profile answers `404
@@ -105,11 +105,14 @@ Extensions: 3a token wrong or expired → `404 token_invalid`; 3b a user already
 - **UC17 Manage accounts** (Owner): lists users with their last sign-in
   (`users.last_login_at`, kept beyond the 90-day event purge) and active devices,
   changes a role, ends a device's or all sessions, deletes an account. Changing a role
-  or deleting revokes that user's pending reset link. Extension: removing or demoting
+  or deleting revokes that user's pending reset link; demoting or deleting an owner
+  revokes every pending invitation and reset link, since links do not record who issued
+  them and a former owner must not keep one. Extension: removing or demoting
   the last owner → `409 last_owner`.
 - **UC18 Review sign-in activity** (Owner): last 200 `auth_events`, newest first.
 - **UC19 Change my password** (Viewer, Owner): current + new password; every other
-  session of that user ends and the current one gets a new token (R5). Extension: wrong
+  session of that user ends, the current one gets a new token (R5) and a pending reset
+  link of that account is revoked. Extension: wrong
   current → `401 invalid_credentials`.
 - **UC20 Set a new password from a reset link** (Viewer, Owner): opens
   `#/reset/<token>`, picks a password; every session of that user ends and a new one
@@ -210,13 +213,21 @@ receives `Pick<ProfileRepository, 'adoptOrphans' | 'createFirst'>`.
 
   One origin for both, so CORP `same-origin` holds and
   the cookie accompanies `<video>`, `<img>` and `<track>`.
-- Caddy sets `Strict-Transport-Security: max-age=31536000` and a CSP on the web build
-  (`frame-ancestors 'none'`; details in #46) with `header` directives.
+- Caddy sets `Strict-Transport-Security: max-age=31536000`, `X-Frame-Options: DENY`,
+  `Permissions-Policy: camera=(), microphone=(), geolocation=()`,
+  `Cross-Origin-Opener-Policy: same-origin` and a CSP on the web build
+  (`frame-ancestors 'none'`; details in #46) with `header` directives. Fastify answers
+  `Cache-Control: no-store` unless a route sets its own policy (artwork).
 - Fastify listens on `0.0.0.0` inside the container on a private Docker network shared
   with Caddy; the compose file publishes no port (or `127.0.0.1:3000:3000` for local
   dev). The `HEALTHCHECK` on `127.0.0.1:3000` keeps working.
-- `PUBLIC_URL=https://…`; `TRUST_PROXY=1` (trusts one hop: the nearest proxy) so the limiter reads the client IP from
-  `X-Forwarded-For`. Never set it without a proxy (spoofable).
+- `PUBLIC_URL=https://…`; `TRUST_PROXY=<Caddy's address>` (a fixed `ipv4_address` in
+  compose; comma-separated for several, a CIDR only for a network that holds Caddy and
+  the app alone) so the limiter reads the client IP from `X-Forwarded-For`, and only when
+  the socket peer is in that list: another container or a local process cannot forge it
+  (QA 2026-11-06: a sibling container inside a trusted CIDR could). `1` or `true` refuse to start. With an `https`
+  `PUBLIC_URL` and no `TRUST_PROXY` the server logs a warning: every client would share
+  the proxy's address and one stranger could lock the household out (R8).
 
 ## 6. Error shape
 

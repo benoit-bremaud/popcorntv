@@ -65,8 +65,11 @@ export interface AppOptions {
   readonly transcodeMaxSessions?: number;
   /** `ServerConfig.publicUrl`: cookie flags, CSRF origin and the setup link (spec auth R6). */
   readonly publicUrl: string;
-  /** Behind a reverse proxy, `request.ip` comes from `X-Forwarded-For` (spec auth §5). */
-  readonly trustProxy?: boolean;
+  /**
+   * `ServerConfig.trustProxy`: from these proxy addresses or CIDRs only, `request.ip` comes
+   * from `X-Forwarded-For` (spec auth §5).
+   */
+  readonly trustProxy?: string | null;
   /** Injected so tests hash fast; argon2id with the spec parameters otherwise. */
   readonly hasher?: Hasher;
   /**
@@ -79,17 +82,21 @@ export interface AppOptions {
 
 /** Builds the HTTP application without listening — the tests inject requests directly. */
 export function buildApp(options: AppOptions): FastifyInstance {
-  // Trust one hop, not `true`: the socket peer is the proxy, and only the entry it
-  // appended to X-Forwarded-For is believed; a forged left-most entry is ignored.
+  // Trust the listed proxy addresses only, never `true`: a peer outside the list (another
+  // container, a local process) cannot forge the client IP, and the right-most address not
+  // in the list is the client, so a forged left-most entry is ignored.
   const app = Fastify({
     logger: options.logger ?? false,
-    trustProxy: options.trustProxy ? (_address: string, hop: number) => hop === 0 : false,
+    trustProxy: options.trustProxy ?? false,
   });
 
   // On every reply, errors and streamed media included. The CSP and `frame-ancestors`
   // belong to whatever serves the web build.
   app.addHook('onSend', async (_request, reply, payload) => {
     reply.headers(SECURITY_HEADERS);
+    // Answers carry accounts, addresses and progress: no browser or shared-device cache keeps
+    // them unless the route chose a policy itself (artwork).
+    if (!reply.hasHeader('cache-control')) reply.header('cache-control', 'no-store');
     return payload;
   });
 

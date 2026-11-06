@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { loadConfig } from './config.js';
+import { loadConfig, trustProxyWarning } from './config.js';
 
 /** The one required variable (spec auth R6). */
 const BASE = { PUBLIC_URL: 'http://localhost:5173' };
@@ -20,7 +20,7 @@ describe('loadConfig', () => {
       tmdbLanguage: 'en-US',
       artworkDir: resolve('data/artwork'),
       publicUrl: 'http://localhost:5173',
-      trustProxy: false,
+      trustProxy: null,
     });
   });
 
@@ -39,7 +39,7 @@ describe('loadConfig', () => {
         TMDB_LANGUAGE: 'fr-FR',
         ARTWORK_DIR: '/tmp/art',
         PUBLIC_URL: ' https://tv.example.org/ ',
-        TRUST_PROXY: '1',
+        TRUST_PROXY: '172.18.0.0/16, 10.0.0.2',
       }),
     ).toEqual({
       port: 8080,
@@ -54,7 +54,7 @@ describe('loadConfig', () => {
       tmdbLanguage: 'fr-FR',
       artworkDir: '/tmp/art',
       publicUrl: 'https://tv.example.org',
-      trustProxy: true,
+      trustProxy: '172.18.0.0/16,10.0.0.2',
     });
   });
 
@@ -84,7 +84,42 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ PUBLIC_URL: value })).toThrow(message);
   });
 
-  it('trusts the proxy only for TRUST_PROXY=1', () => {
-    expect(loadConfig({ ...BASE, TRUST_PROXY: 'true' }).trustProxy).toBe(false);
+  it.each(['', '0', ' , '])('trusts no proxy for TRUST_PROXY=%j', (value) => {
+    expect(loadConfig({ ...BASE, TRUST_PROXY: value }).trustProxy).toBeNull();
+  });
+
+  it.each([
+    ['::1', '::1'],
+    ['fd00::/8', 'fd00::/8'],
+    ['192.168.1.10/32', '192.168.1.10/32'],
+    ['10.0.0.2,', '10.0.0.2'],
+  ])('accepts TRUST_PROXY=%j', (value, expected) => {
+    expect(loadConfig({ ...BASE, TRUST_PROXY: value }).trustProxy).toBe(expected);
+  });
+
+  it.each([
+    '1',
+    'true',
+    '10.0.0.0/33',
+    'fd00::/129',
+    '10.0.0.0/8/1',
+    '10.0.0.0/x',
+    '10.0.0.0/08',
+    '10.0.0.0/0',
+    '::/0',
+    'caddy',
+  ])(
+    'refuses to start with TRUST_PROXY=%j, which would trust any peer or nothing meant',
+    (value) => {
+      expect(() => loadConfig({ ...BASE, TRUST_PROXY: value })).toThrow(/addresses or CIDRs/);
+    },
+  );
+
+  it.each([
+    ['https://tv.example.org', null, true],
+    ['https://tv.example.org', '172.18.0.10', false],
+    ['http://localhost:5173', null, false],
+  ])('warns for PUBLIC_URL %j and TRUST_PROXY %j: %j', (publicUrl, trustProxy, warns) => {
+    expect(trustProxyWarning({ publicUrl, trustProxy }) !== null).toBe(warns);
   });
 });

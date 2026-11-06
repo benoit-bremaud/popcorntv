@@ -10,6 +10,7 @@ import { authEvents, users } from '../db/schema.js';
 import { TEST_PUBLIC_URL, createAccount, fakeHasher } from '../test-fixtures.js';
 import type { Hasher } from './hasher.js';
 import { HasherBusyError } from './hasher.js';
+import { TokenRepository } from './token-repository.js';
 
 const PASSWORD = 'correct horse battery';
 
@@ -28,7 +29,7 @@ afterEach(async () => {
 });
 
 async function harness(
-  options: { db?: AppDatabase; hasher?: Hasher; publicUrl?: string; trustProxy?: boolean } = {},
+  options: { db?: AppDatabase; hasher?: Hasher; publicUrl?: string; trustProxy?: string } = {},
 ): Promise<Harness> {
   const db = options.db ?? openDatabase(':memory:');
   let setupLink: string | null = null;
@@ -196,12 +197,27 @@ describe('first-owner setup (UC11)', () => {
   });
 
   it('behind the proxy, limits on the nearest hop, not a forged X-Forwarded-For', async () => {
-    const h = await harness({ trustProxy: true });
+    const h = await harness({ trustProxy: '127.0.0.1' });
     const signIn = (forged: string) =>
       h.app.inject({
         method: 'POST',
         url: '/auth/session',
         headers: { 'x-forwarded-for': `${forged}, 203.0.113.9` },
+        payload: { username: 'owner', password: 'wrong password!' },
+      });
+    for (let i = 0; i < 5; i += 1) await signIn(`6.6.6.${i}`);
+
+    expect((await signIn('7.7.7.7')).statusCode).toBe(429);
+  });
+
+  it('ignores X-Forwarded-For from a peer that is not the listed proxy', async () => {
+    const h = await harness({ trustProxy: '172.18.0.2' });
+    const signIn = (forged: string) =>
+      h.app.inject({
+        method: 'POST',
+        url: '/auth/session',
+        remoteAddress: '172.18.0.9',
+        headers: { 'x-forwarded-for': forged },
         payload: { username: 'owner', password: 'wrong password!' },
       });
     for (let i = 0; i < 5; i += 1) await signIn(`6.6.6.${i}`);
@@ -251,17 +267,21 @@ describe('sign-in and sign-out (UC13, UC14)', () => {
     expect(wrong.json()).toEqual({ error: 'invalid_credentials' });
     expect(events(h.db).slice(-2)).toMatchObject([
       { kind: 'login_failed', usernameTried: 'owner' },
-      { kind: 'login_failed', usernameTried: 'nobody', userId: null },
+      { kind: 'login_failed', usernameTried: null, userId: null },
     ]);
   });
 
-  it('never records a username_tried that is not a valid username', async () => {
-    const h = await harness();
+  it.each(['my password typed here', 'correcthorsebatterystaple'])(
+    'never records %j, which names no account and may be a password (spec auth R9)',
+    async (typed) => {
+      const h = await harness();
+      await setUp(h);
 
-    await signIn(h.app, 'my password typed here', 'x');
+      await signIn(h.app, typed, 'x');
 
-    expect(events(h.db).at(-1)).toMatchObject({ kind: 'login_failed', usernameTried: null });
-  });
+      expect(events(h.db).at(-1)).toMatchObject({ kind: 'login_failed', usernameTried: null });
+    },
+  );
 
   it('locks a pair after 5 failures, for known and unknown usernames alike', async () => {
     const h = await harness();
@@ -279,7 +299,11 @@ describe('sign-in and sign-out (UC13, UC14)', () => {
     expect(known.json()).toEqual({ error: 'too_many_attempts' });
     expect(Number(known.headers['retry-after'])).toBeGreaterThan(0);
     expect(unknown.statusCode).toBe(429);
-    expect(events(h.db).filter((e) => e.kind === 'login_locked')).toHaveLength(2);
+    expect(
+      events(h.db)
+        .filter((e) => e.kind === 'login_locked')
+        .map((e) => e.usernameTried),
+    ).toEqual(['owner', null]);
   });
 
   it('replaces a pre-set session at sign-in (no fixation)', async () => {
@@ -411,6 +435,26 @@ describe('password change (UC19)', () => {
     ).toBe(200);
     expect((await signIn(h.app, 'owner', 'a brand new password')).statusCode).toBe(200);
     expect((await signIn(h.app, 'owner', PASSWORD)).statusCode).toBe(401);
+  });
+
+  it('revokes the pending reset link, which would hand the account back (UC19)', async () => {
+    const h = await harness();
+    const cookie = cookieOf(await setUp(h));
+    const owner = h.db.select().from(users).get();
+    if (!owner) throw new Error('no owner');
+    const tokens = new TokenRepository(h.db);
+    const reset = tokens.issueReset(owner.id, new Date());
+    const other = tokens.issueReset(createAccount(h.db, 'kid', 'viewer').userId, new Date());
+
+    await change(h.app, cookie, PASSWORD, 'a brand new password');
+    const redeemed = await h.app.inject({
+      method: 'POST',
+      url: '/auth/redeem',
+      payload: { kind: 'reset', token: reset.token, password: 'an attacker password' },
+    });
+
+    expect(redeemed.statusCode).toBe(404);
+    expect(tokens.isPending(other.token, 'reset', new Date())).toBe(true);
   });
 
   it('answers 401 invalid_credentials for a wrong current password, 400 for a weak new one', async () => {

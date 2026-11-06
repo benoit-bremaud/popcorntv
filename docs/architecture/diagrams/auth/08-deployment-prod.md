@@ -37,6 +37,7 @@ flowchart LR
 ## Notes
 
 - `PUBLIC_URL` is the Caddy origin; LAN clients use it too (one origin, R6).
-- `TRUST_PROXY=1` on the app because Caddy is the only hop.
+- `TRUST_PROXY` on the app lists Caddy's fixed address: only that peer may set the
+  client IP (spec auth §5).
 - Local development keeps `127.0.0.1:3000:3000` and the Vite proxy; the production
   compose file publishes no app port.
