@@ -3,7 +3,12 @@
 # PopCornTV server image: builds the TypeScript workspace, ships only the runtime output,
 # runs as a non-root user with FFmpeg available for transcoding.
 
-FROM node:22.23.4-bookworm-slim@sha256:5ec23b7c622b00547753bc6ffd78085dd868a68aeb41c8e0a1418f033e13d96d AS build
+# Static FFmpeg build (#110): Debian's FFmpeg packages carry unfixed decoder CVEs on both
+# Debian 12 and 13, and FFmpeg parses every media file. Upstream releases ship the fixes;
+# Dependabot bumps this tag + digest. Trivy cannot see a static binary: see SECURITY.md.
+FROM mwader/static-ffmpeg:9.0.2-1@sha256:f5d100184884eb3e82b0eb14bb5ebf98da99826ac824989720297fb9ef21c822 AS ffmpeg
+
+FROM node:22.23.4-trixie-slim@sha256:be1e2a3dc2c4fd68cdfadad2a696a280e0d2749098bee509230174d72fb768c6 AS build
 # better-sqlite3 is compiled from source when no prebuilt binary matches: node-gyp needs
 # python3 + a C++ toolchain. Build stage only; the runtime image ships the .node binary.
 # hadolint ignore=DL3008
@@ -23,8 +28,7 @@ COPY apps/server apps/server
 RUN pnpm --filter @popcorntv/server... build \
   && pnpm --filter @popcorntv/server --prod deploy --legacy /out
 
-FROM node:22.23.4-bookworm-slim@sha256:5ec23b7c622b00547753bc6ffd78085dd868a68aeb41c8e0a1418f033e13d96d
-# ffmpeg comes from Debian stable: pinned by the base image tag, patched by Dependabot bumps.
+FROM node:22.23.4-trixie-slim@sha256:be1e2a3dc2c4fd68cdfadad2a696a280e0d2749098bee509230174d72fb768c6
 # `apt-get upgrade` (DL3005) is deliberate: the node base image lags Debian's security
 # updates (17 fixed HIGH/CRITICAL CVEs in perl, pcre2, gnutls, libcap on 2026-10-23) and
 # the weekly Trivy scan blocks on them; the upgrade is reproducible per base image digest.
@@ -33,9 +37,14 @@ FROM node:22.23.4-bookworm-slim@sha256:5ec23b7c622b00547753bc6ffd78085dd868a68ae
 # hadolint ignore=DL3008,DL3005
 RUN apt-get update \
   && apt-get upgrade -y --no-install-recommends \
-  && apt-get install -y --no-install-recommends ffmpeg tini \
+  && apt-get install -y --no-install-recommends tini \
   && rm -rf /var/lib/apt/lists/* \
   && rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
+COPY --from=ffmpeg /ffmpeg /ffprobe /usr/local/bin/
+# Fail the build if the binary drifts from the pinned release: a Dependabot bump of the
+# ffmpeg tag must update this version too, after a look at the FFmpeg security page.
+# No pipe (DL4006).
+RUN v="$(ffmpeg -hide_banner -version)" && v="${v#ffmpeg version }" && test "${v%% *}" = "9.0.2"
 WORKDIR /app
 COPY --from=build --chown=1000:1000 /out /app
 RUN mkdir -p /app/data /app/media && chown 1000:1000 /app/data /app/media

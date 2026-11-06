@@ -19,7 +19,17 @@ vulnerability). Do not open a public issue for a vulnerability.
 | SonarQube         | Quality gate + coverage (local, pre-merge)      | yes      |
 
 Accepted Trivy findings live in `.trivyignore.yaml`, each scoped (`paths`), time-boxed
-(`expired_at`) and justified (`statement`). None at the moment.
+(`expired_at`) and justified (`statement`); OS packages are scoped by `purls`, as they have no
+file path. The current entries are unfixed HIGH CVEs in Debian 13 base packages outside the
+media path (#110); CI scans with `--ignore-unfixed`, so they document the accepted risk of
+the full scan and expire for a re-check.
+
+FFmpeg and ffprobe are a static upstream build (`mwader/static-ffmpeg`, pinned by tag and
+digest in the `Dockerfile`, bumped by Dependabot), not Debian packages: Debian's FFmpeg
+carried unfixed decoder CVEs on both Debian 12 and 13 (#110). Trivy cannot see a static
+binary, so its CVEs are tracked by hand: check the FFmpeg security page on each Dependabot
+bump and when a new FFmpeg release ships. The build fails if the binary drifts from the
+pinned version.
 
 Not scanned: third-party images referenced from `docker-compose.yml` (reviewed by hand on
 Dependabot bumps).
