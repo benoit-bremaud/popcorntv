@@ -4,6 +4,19 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-07 — #134 progress carry-over at scan (PR #148 merged, `9849002`)
+
+- **Conception** — spec `progress-carry-over.md` (UC1 extension, UC6), ADR-0018: before missing
+  rows are pruned, their `watch_progress` moves to the one present file of the same title
+  (episode by series / season / episode, else title + year + part or TMDB id + part); an
+  ambiguous match carries nothing; newer position wins, a watched mark is kept.
+- **Change** — pure `library/identity` (`identityKeys`, `carryOverTargets`), carry-over in the
+  repository's prune transaction, skipped when nothing is missing; no migration.
+- **Gate** — coverage server 97.5 % / web 99 %, SonarQube PASSED, gitleaks clean, E2E smoke
+  green; Sonnet combined review (Must 0, 6 Should fixed or recorded in R3 / R4). Opus
+  adversarial review deferred to the end of the #134–#136 stack. Report
+  `docs/architecture/review-local.md`.
+
 ## 2026-11-07 — #133 watched marks (PR #146 merged, `17f5d97`)
 
 - **Conception** — spec `watched-marks.md` (UC23), ADR-0017: nullable `watch_progress.watched_at`
