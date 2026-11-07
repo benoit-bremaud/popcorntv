@@ -4,6 +4,13 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-07 — #62 Plex / Jellyfin parity matrix
+
+- **Change** — `docs/requirements/03-plex-jellyfin-parity.md`: 18 gaps scored by MCDA
+  (value 40, effort 25, cut-over need 25, risk 10).
+- **Decision** — owner chose option A (440 vs 420 / 380): file items 1–8 as #131–#138 on
+  Project #71 (Todo); items 9–17 wait for the cut-over, item 18 is out of scope.
+
 ## 2026-11-07 — #123 library management from the web app, with #122 (PR #129 merged, `91b4c4f`)
 
 - **Conception** — brainstorm against Plex, Jellyfin and Netflix; spec
