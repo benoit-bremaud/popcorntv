@@ -3,9 +3,9 @@
 Pre-push review of #123 (library management from the web app) with #122 folded in.
 
 - Date: 2026-11-07
-- Commit: 819dc69
+- Commit: da2e8ec (+ this report)
 - Scope: branch diff origin/main...HEAD
-- Checks run: adversarial (Opus, 3 rounds) · design (architecture-guardian) · docs (through
+- Checks run: adversarial (Opus, 4 rounds) · design (architecture-guardian) · docs (through
   design and adversarial) · tests (test-auditor) · security and correctness (through the
   adversarial review)
 - Verdict: ship · Must 0 · Should 0 · Nice 4
@@ -14,22 +14,23 @@ Pre-push review of #123 (library management from the web app) with #122 folded i
 
 - Round 1 on `543915e`: Must 3 · Should 4 · Nice 5 · unverified 1 · Push gate: closed
 - Round 2 on `880374d`: all 3 Must fixed · new Should 3 · Push gate: open
-- Round 3 on `819dc69`: 5 fixed · 0 regressed · new Must 0 · **Push gate: open**
-- Hosted reviewers (filled at the pre-merge run): Copilot out of credit · Codex optional
+- Round 3 on `819dc69`: 5 fixed · 0 regressed · new Must 0 · Push gate: open
+- Round 4 on `da2e8ec`: 3 SonarQube fixes verified · 0 regressed · **Push gate: open**
+- Hosted reviewers (filled at the pre-merge run): Copilot out of credit · Codex quota refused (PR #129, 2026-11-07)
 
-## Pre-merge gate (head SHA 819dc69, `--push` mode)
+## Pre-merge gate (head SHA da2e8ec)
 
 | Step         | Result                                                                                                |
 | ------------ | ----------------------------------------------------------------------------------------------------- |
 | 0 CI mirror  | ✅ `ci.yml`: typecheck, lint, format:check, test, build all green locally; CodeQL, Scorecard, dependency-review CI-only |
 | 1 Tests      | ✅ 800 (shared 38, server 542, web 220)                                                                |
-| 2 Coverage   | server 97.4 % stmts / 93.4 % branches · web 98.0 % / 92.3 % · docs ⏸ deferred to the pre-merge run   |
-| 3 SonarQube  | ⏸ deferred to the pre-merge run                                                                       |
+| 2 Coverage   | server 97.4 % stmts / 93.4 % branches · web 98.0 % / 92.3 % · docs ⚠️ no doc-coverage counter in this repo   |
+| 3 SonarQube  | ✅ PASSED (new coverage 95.0 %, 0 new issues, 0 % duplication)                                                                       |
 | 4 Secrets    | ✅ gitleaks clean on origin/main..HEAD · only `.env.example` tracked · diff read: nothing sensitive    |
-| 5 E2E/smoke  | ⏸ deferred to the pre-merge run                                                                       |
+| 5 E2E/smoke  | ✅ Playwright catalog smoke 1/1                                                                       |
 
-- Gate: **pre-push green** — every CI job passed locally, SonarQube / doc coverage / E2E deferred
-  (never GREEN in `--push`).
+- Gate: **local gate green except doc coverage (no counter)**; GitHub Actions disabled on the
+  repo, so the merge needs the owner's `MERGE_GATE_WAIVER`.
 
 ## 🔴 Must Have
 
