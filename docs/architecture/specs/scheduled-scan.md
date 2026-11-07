@@ -16,10 +16,13 @@ manual scan.
   /libraries/:id/scan` (`scanLibrary`): under the library lock, with the included metadata
   enrichment.
 - **R3** A library already scanned or enriched (lock held) is skipped and logged at `info`; a
-  failure (root unreadable, probe error) is logged at `warn` and the run goes on.
+  library deleted since the run started is not scanned; a finished scan logs its counts
+  (added, updated, removed, skipped, probe failures included) at `info`; a failure (root
+  unreadable) is logged at `warn` and the run goes on.
 - **R4** A run never starts while the previous one is still going.
-- **R5** The timer starts when the server is ready and stops before it closes; it does not
-  keep the process alive.
+- **R5** The timer starts when the server is ready (the first run comes one interval later)
+  and stops before it closes, waiting for the library in flight; it does not keep the
+  process alive.
 - **R6** Done when the schedule, the skip and the stop have unit tests and an app test shows
   a file added on disk appearing after a tick.
 

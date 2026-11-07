@@ -1,5 +1,5 @@
 import type { FastifyBaseLogger } from 'fastify';
-import type { Library } from '@popcorntv/shared';
+import type { Library, ScanReport } from '@popcorntv/shared';
 import { LibraryBusyError } from './lock.js';
 
 /** What a scheduled scan run needs; `buildApp` wires the real ones, tests fakes. */
@@ -8,19 +8,38 @@ export interface ScanScheduleDeps {
   readonly intervalMin: number;
   readonly libraries: () => readonly Library[];
   /** The same lock-held scan + included enrichment as `POST /libraries/:id/scan`. */
-  readonly scan: (library: Library) => Promise<unknown>;
+  readonly scan: (library: Library) => Promise<ScanReport>;
   readonly logger: Pick<FastifyBaseLogger, 'info' | 'warn'>;
   /** Timer boundary, injected so tests drive time. */
   readonly setInterval?: (run: () => void, ms: number) => unknown;
   readonly clearInterval?: (handle: unknown) => void;
 }
 
-/** Rescans every library one after the other; a busy one is skipped, a failure only logged. */
-export async function scanAllLibraries(deps: Omit<ScanScheduleDeps, 'intervalMin'>): Promise<void> {
+/**
+ * Rescans every library one after the other; a busy one is skipped, a failure only logged.
+ * Before each scan the list is read again, so a library deleted meanwhile is not scanned,
+ * and `stopped` is checked so a closing server starts no further scan.
+ */
+export async function scanAllLibraries(
+  deps: Omit<ScanScheduleDeps, 'intervalMin'>,
+  stopped: () => boolean = () => false,
+): Promise<void> {
   for (const library of deps.libraries()) {
+    if (stopped()) return;
+    if (!deps.libraries().some((current) => current.id === library.id)) continue;
     try {
       // One at a time on purpose: scans share the disk and ffprobe.
-      await deps.scan(library); // NOSONAR
+      const report = await deps.scan(library); // NOSONAR
+      deps.logger.info(
+        {
+          libraryId: library.id,
+          added: report.added,
+          updated: report.updated,
+          removed: report.removed,
+          skipped: report.skipped.length,
+        },
+        'scheduled scan done',
+      );
     } catch (error) {
       if (error instanceof LibraryBusyError) {
         deps.logger.info({ libraryId: library.id }, 'scheduled scan skipped: library busy');
@@ -33,22 +52,27 @@ export async function scanAllLibraries(deps: Omit<ScanScheduleDeps, 'intervalMin
 
 /**
  * UC1 on a timer (spec scheduled-scan, ADR-0016): every `intervalMin` minutes, unless the
- * previous run is still going. Returns the stop function.
+ * previous run is still going. Returns the stop function, which resolves once the run in
+ * flight (if any) has finished its current library.
  */
-export function startScanSchedule(deps: ScanScheduleDeps): () => void {
+export function startScanSchedule(deps: ScanScheduleDeps): () => Promise<void> {
   const set = deps.setInterval ?? ((run, ms) => globalThis.setInterval(run, ms).unref());
   const clear =
     deps.clearInterval ??
     ((handle) => globalThis.clearInterval(handle as ReturnType<typeof globalThis.setInterval>));
-  let running = false;
+  let stopped = false;
+  let running: Promise<void> | null = null;
   const handle = set(() => {
-    if (running) return;
-    running = true;
-    void scanAllLibraries(deps)
+    if (running || stopped) return;
+    running = scanAllLibraries(deps, () => stopped)
       .catch((error: unknown) => deps.logger.warn({ err: error }, 'scheduled scan failed'))
       .finally(() => {
-        running = false;
+        running = null;
       });
   }, deps.intervalMin * 60_000);
-  return () => clear(handle);
+  return async () => {
+    stopped = true;
+    clear(handle);
+    await running;
+  };
 }

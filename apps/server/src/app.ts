@@ -196,7 +196,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     : null;
   const enrich = metadata ? (library: Library) => metadata.enrich(library) : null;
   registerLibraryRoutes(app, { repository, scanner, lock, mediaRoot: options.mediaRoot, enrich });
-  let stopSchedule: (() => void) | null = null;
+  let stopSchedule: (() => Promise<void>) | null = null;
   registerMetadataRoutes(app, {
     repository,
     service: metadata,
@@ -269,7 +269,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   });
   // preClose runs before the server waits for open responses (a film stream can last hours).
   app.addHook('preClose', async () => {
-    stopSchedule?.();
+    await stopSchedule?.();
     extractor.closeAll();
     await sessions.closeAll();
   });

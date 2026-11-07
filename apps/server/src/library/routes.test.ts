@@ -380,13 +380,16 @@ describe('library routes', () => {
 });
 
 describe('scheduled scan (spec scheduled-scan)', () => {
-  it('should rescan every library on the timer and stop on close', async () => {
-    const mediaRoot = await mkdtemp(join(tmpdir(), 'popcorntv-schedule-'));
-    const root = join(mediaRoot, 'films');
-    await mkdir(root);
+  async function scheduledApp(mediaRoot: string, scanIntervalMin: number) {
     const db = openDatabase(':memory:');
-    let tick: () => void = () => undefined;
-    const clearInterval = vi.fn();
+    const timer = {
+      tick: (): void => undefined,
+      setInterval: vi.fn((run: () => void) => {
+        timer.tick = run;
+        return 'timer';
+      }),
+      clearInterval: vi.fn(),
+    };
     const app = await buildApp({
       version: 'test',
       db,
@@ -398,34 +401,55 @@ describe('scheduled scan (spec scheduled-scan)', () => {
         throw new Error('FFmpeg is not used by this suite');
       },
       transcodeDir: tmpdir(),
-      scanIntervalMin: 5,
-      scheduleTimer: {
-        setInterval: (run) => {
-          tick = run;
-          return 'timer';
-        },
-        clearInterval,
-      },
+      scanIntervalMin,
+      scheduleTimer: { setInterval: timer.setInterval, clearInterval: timer.clearInterval },
       ...testAuthOptions,
     });
     sendCookie(app, createAccount(db).cookie);
-    const created = await app.inject({
-      method: 'POST',
-      url: '/libraries',
-      payload: { name: 'Films', rootPath: root, kind: 'films' },
-    });
-    const library = created.json<Library>();
-    await writeFile(join(root, 'Heat (1995).mkv'), 'x');
+    return { app, timer };
+  }
 
-    await app.ready();
-    tick();
+  it('should rescan every library on the timer and stop on close', async () => {
+    const mediaRoot = await mkdtemp(join(tmpdir(), 'popcorntv-schedule-'));
+    try {
+      const root = join(mediaRoot, 'films');
+      await mkdir(root);
+      const { app, timer } = await scheduledApp(mediaRoot, 5);
+      try {
+        const created = await app.inject({
+          method: 'POST',
+          url: '/libraries',
+          payload: { name: 'Films', rootPath: root, kind: 'films' },
+        });
+        const library = created.json<Library>();
+        await writeFile(join(root, 'Heat (1995).mkv'), 'x');
 
-    await vi.waitFor(async () => {
-      const media = await app.inject({ method: 'GET', url: `/libraries/${library.id}/media` });
-      expect(media.json<unknown[]>()).toHaveLength(1);
-    });
-    await app.close();
-    expect(clearInterval).toHaveBeenCalledWith('timer');
-    await rm(mediaRoot, { recursive: true, force: true });
+        await app.ready();
+        timer.tick();
+
+        await vi.waitFor(async () => {
+          const media = await app.inject({ method: 'GET', url: `/libraries/${library.id}/media` });
+          expect(media.json<unknown[]>()).toHaveLength(1);
+        });
+      } finally {
+        await app.close();
+      }
+      expect(timer.clearInterval).toHaveBeenCalledWith('timer');
+    } finally {
+      await rm(mediaRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('should start no timer when the interval is 0', async () => {
+    const mediaRoot = await mkdtemp(join(tmpdir(), 'popcorntv-schedule-'));
+    try {
+      const { app, timer } = await scheduledApp(mediaRoot, 0);
+      await app.ready();
+      await app.close();
+
+      expect(timer.setInterval).not.toHaveBeenCalled();
+    } finally {
+      await rm(mediaRoot, { recursive: true, force: true });
+    }
   });
 });

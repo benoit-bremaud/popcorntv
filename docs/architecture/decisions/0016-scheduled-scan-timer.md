@@ -23,7 +23,7 @@ inotify); C — an external cron calling the scan route.
 | Security    |     15 | 5 — nothing exposed                 | 5 — nothing exposed                       | 3 — one more secret             |
 | **Total**   |    100 | **460**                             | **305**                                   | **335**                         |
 
-Sensitivity: with weights 30 / 20 / 40 / 10, A (420) still leads B (350) and C (300).
+Sensitivity: with weights 30 / 20 / 40 / 10, A (420) still leads B (350) and C (330).
 
 ## Decision
 
