@@ -108,7 +108,10 @@ catalog; an empty JSON body is accepted on every route, #122); #131 continue-wat
 (ADR-0015); #132 scheduled scan (spec `docs/architecture/specs/scheduled-scan.md`,
 ADR-0016: `SCAN_INTERVAL_MIN`, default 60, `0` off, an in-process unref-ed timer runs the
 route's `scanLibrary` on every library in turn, a busy one skipped, no overlap, stopped and
-awaited in `preClose`).
+awaited in `preClose`); #133 watched marks (spec `docs/architecture/specs/watched-marks.md`,
+ADR-0017: nullable `watch_progress.watched_at`, `finished` = mark or ≥ 90 %, `PUT|DELETE
+/profiles/:profileId/media/:id/watched`, a series applies to its episodes, unwatched forgets
+the row, poster ✓ via `WatchedContext`).
 
 Server layout (flat, component diagram 03): `src/library/` holds the pure `name-parser`
 and `path-guard`, the `ffprobe` runner (only process egress), the `folder-lister` (one-level `readdir` of `MEDIA_ROOT`), the `scanner`, the `scheduler` (interval rescans, ADR-0016), the per-library

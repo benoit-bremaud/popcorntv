@@ -115,7 +115,7 @@ classDiagram
   an episode `posterPath` holds the still. `isDocumentary()` = genre id 99 present: the
   catalog's "documentaries" row is derived, `kind` stays structural. Persisted as columns
   on `media` with `genres` / `cast` as JSON.
-- `WatchProgress.isFinished()` = position ≥ 90 % of a known duration; drives "next
+- `finished` = `watchedAt` set or `WatchProgress.isFinished()` (position ≥ 90 % of a known duration); drives "next
   episode" (UC7); persisted in `watch_progress`, key `(profile_id, media_id)`, both
   foreign keys cascade.
 - `Profile` (UC8 / UC9, ADR-0008): `avatar` is a palette key (`AVATAR_COLORS`); the

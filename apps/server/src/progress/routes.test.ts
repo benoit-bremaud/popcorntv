@@ -241,6 +241,20 @@ describe('watched marks (spec watched-marks)', () => {
     expect(await list(app)).toMatchObject([{ mediaId: id, positionSec: 30, finished: true }]);
   });
 
+  it('should keep a title watched through a rewatch', async () => {
+    const { app, addMedia } = setup();
+    const id = addMedia('film', 100);
+
+    await app.inject({ method: 'PUT', url: `/profiles/default/media/${id}/watched` });
+    await app.inject({
+      method: 'PUT',
+      url: `/profiles/default/media/${id}/progress`,
+      payload: { positionSec: 5 },
+    });
+
+    expect(await list(app)).toMatchObject([{ mediaId: id, positionSec: 5, finished: true }]);
+  });
+
   it('should apply a series mark to each of its episodes', async () => {
     const { app, db, addMedia } = setup();
     const series = addMedia('series', null);
@@ -288,9 +302,10 @@ describe('watched marks (spec watched-marks)', () => {
 
     const response = await app.inject({ method: 'PUT', url });
     const removed = await app.inject({ method: 'DELETE', url });
-    expect(removed.statusCode).toBe(status);
 
     expect(response.statusCode).toBe(status);
     expect(response.json()).toMatchObject({ error });
+    expect(removed.statusCode).toBe(status);
+    expect(removed.json()).toMatchObject({ error });
   });
 });

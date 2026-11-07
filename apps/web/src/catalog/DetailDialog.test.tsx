@@ -306,6 +306,29 @@ describe('DetailDialog progress refresh and next episode', () => {
     );
     expect(api.save).toHaveBeenCalledWith('kid', 'e1', 95);
   });
+  it('shows a series watched when all its episodes are finished, and labels each one', async () => {
+    renderDetail(
+      series,
+      always,
+      vi.fn(),
+      [saved('e1', 5900, true), saved('e2', 5900, true)],
+      [{ season: 1, episodes: [pilot, second].map((e) => ({ ...e, seriesId: 'show' })) }],
+    );
+
+    expect(await screen.findByRole('button', { name: '✓ Watched' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByText('Pilot').closest('li')).toHaveTextContent('watched');
+  });
+
+  it('offers no watched toggle for a series without episodes', async () => {
+    const { progress } = renderDetail(series);
+
+    await waitFor(() => expect(progress).toHaveBeenCalled());
+
+    expect(screen.queryByRole('button', { name: 'Mark as watched' })).toBeNull();
+  });
 });
 
 describe('DetailDialog watched mark (spec watched-marks)', () => {

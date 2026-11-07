@@ -15,7 +15,7 @@
 - **R3** A title with a saved, unfinished position offers **Resume from mm:ss** next to
   **Start over** in its detail dialog. An episode's ▶ resumes at its saved position.
 - **R4** A title is *finished* when its position is ≥ 90 % of its duration
-  (`isFinished`). A finished title starts over and offers no resume.
+  (`isFinished`) or it is marked watched (`watched_at`, spec watched-marks R1). A finished title starts over and offers no resume.
 - **R5** Resume works for direct play and HLS through the same `POST /playback/sessions`.
   HLS cannot seek ahead (EVENT playlist, ADR-0006 §2), so FFmpeg starts at the offset
   (ADR-0007 §2).

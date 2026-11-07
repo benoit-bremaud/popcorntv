@@ -95,7 +95,8 @@ flowchart LR
   fail a scan.
 - Progress (#9, ADR-0007; per profile since #10, ADR-0008): `PUT
   /profiles/:profileId/media/:id/progress` and `GET /profiles/:profileId/progress` write
-  and read `watch_progress` through its own Drizzle repository; `isFinished` is pure in
+  and read `watch_progress` through its own Drizzle repository; `PUT | DELETE
+  /profiles/:profileId/media/:id/watched` set or clear the watched mark (#133, ADR-0017); `isFinished` is pure in
   `packages/shared`.
 - Subtitles (#24, ADR-0009): the `SubtitleExtractor` runs FFmpeg through the same
   injected runner, caches the unshifted WebVTT under `TRANSCODE_DIR/subtitles`; the cue
