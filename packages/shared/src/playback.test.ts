@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { StreamInfo } from './index.js';
-import { audioTracks, decidePlayback, directPlayMime, isFinished } from './playback.js';
+import {
+  audioTracks,
+  decidePlayback,
+  directPlayMime,
+  effectiveAudioIndex,
+  isFinished,
+  matchAudioTrack,
+} from './playback.js';
 
 function stream(type: StreamInfo['type'], codec: string): StreamInfo {
   return { type, codec, width: null, height: null, language: null };
@@ -114,5 +121,36 @@ describe('audioTracks', () => {
       { index: 0, codec: 'ac3', language: 'fre' },
       { index: 1, codec: 'aac', language: null },
     ]);
+  });
+});
+
+const audio = (language: string | null): StreamInfo => ({
+  type: 'audio',
+  codec: 'aac',
+  width: null,
+  height: null,
+  language,
+});
+
+describe('effectiveAudioIndex', () => {
+  it.each([
+    [1, 1],
+    [2, 0],
+  ])('plays index %i as %i in a two-track file', (index, expected) => {
+    expect(effectiveAudioIndex([audio('fre'), audio('eng')], index)).toBe(expected);
+  });
+});
+
+describe('matchAudioTrack', () => {
+  const next = [audio('eng'), audio('fre')];
+
+  it('keeps the chosen language in the next file, whatever its position', () => {
+    expect(matchAudioTrack(next, { index: 0, codec: 'aac', language: 'fre' })).toBe(1);
+  });
+
+  it('falls back to the same index without a language match, else the first', () => {
+    expect(matchAudioTrack(next, { index: 1, codec: 'aac', language: 'jpn' })).toBe(1);
+    expect(matchAudioTrack(next, { index: 1, codec: 'aac', language: null })).toBe(1);
+    expect(matchAudioTrack([audio('eng')], { index: 3, codec: 'aac', language: null })).toBe(0);
   });
 });

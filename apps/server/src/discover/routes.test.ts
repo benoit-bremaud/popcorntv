@@ -84,7 +84,7 @@ async function setup(client: TmdbClient | null = makeClient()) {
     db.insert(media).values({ id, libraryId, kind: 'film', title: 'Dune', tmdbId }).run();
     return id;
   };
-  return { app, addFilm, advance: (ms: number) => (clock += ms) };
+  return { app, db, addFilm, advance: (ms: number) => (clock += ms) };
 }
 
 describe('discover routes', () => {
@@ -153,6 +153,7 @@ describe('discover routes', () => {
   it('serves a Discover poster through the artwork cache and refuses odd names', async () => {
     const client = makeClient();
     const { app } = await setup(client);
+    await app.inject({ url: '/discover?list=trending&kind=movie' }); // Hands out /dune.jpg.
 
     const poster = await app.inject({ url: '/discover/poster/dune.jpg' });
     const again = await app.inject({ url: '/discover/poster/dune.jpg' });
@@ -160,6 +161,7 @@ describe('discover routes', () => {
 
     expect(poster.statusCode).toBe(200);
     expect(poster.headers['content-type']).toBe('image/jpeg');
+    expect(poster.headers['cache-control']).toBe('private, max-age=31536000, immutable');
     expect(again.rawPayload).toEqual(Buffer.from([0xff, 0xd8]));
     expect(client.image).toHaveBeenCalledTimes(1);
     expect(client.image).toHaveBeenCalledWith('/dune.jpg', 'w342');
@@ -171,7 +173,31 @@ describe('discover routes', () => {
       makeClient({ image: vi.fn(async () => Promise.reject(new TmdbRequestError('/i', 404))) }),
     );
 
-    expect((await app.inject({ url: '/discover/poster/x.jpg' })).statusCode).toBe(404);
+    await app.inject({ url: '/discover/search?q=dune' });
+
+    expect((await app.inject({ url: '/discover/poster/dune.jpg' })).statusCode).toBe(404);
+  });
+
+  it('never downloads a poster path it did not hand out', async () => {
+    const client = makeClient();
+    const { app } = await setup(client);
+
+    const poster = await app.inject({ url: '/discover/poster/other.jpg' });
+
+    expect(poster.json()).toEqual({ error: 'artwork_not_found' });
+    expect(client.image).not.toHaveBeenCalled();
+  });
+
+  it('answers 404 title_not_found when TMDB does not know the id', async () => {
+    const { app } = await setup(
+      makeClient({ details: vi.fn(async () => Promise.reject(new TmdbRequestError('/m', 404))) }),
+    );
+
+    const sheet = await app.inject({ url: '/discover/movie/999' });
+    const put = await app.inject({ method: 'PUT', url: '/profiles/default/wishlist/movie/999' });
+
+    expect([sheet.statusCode, put.statusCode]).toEqual([404, 404]);
+    expect(sheet.json()).toEqual({ error: 'title_not_found' });
   });
 });
 
@@ -236,6 +262,18 @@ describe('wishlist routes', () => {
         .statusCode,
     ).toBe(409);
     expect((await none.app.inject({ url: '/profiles/default/wishlist' })).statusCode).toBe(200);
+  });
+
+  it("refuses another account's profile", async () => {
+    const { app, db } = await setup();
+    const other = createAccount(db, 'neighbour', 'viewer');
+    const [theirs] = new ProfileRepository(db).list(other.userId);
+    if (theirs === undefined) throw new Error('profile missing');
+    const url = `/profiles/${theirs.id}/wishlist`;
+
+    expect((await app.inject({ url })).statusCode).toBe(404);
+    expect((await app.inject({ method: 'PUT', url: `${url}/movie/1` })).statusCode).toBe(404);
+    expect((await app.inject({ method: 'DELETE', url: `${url}/movie/1` })).statusCode).toBe(404);
   });
 
   it('answers 502 when TMDB fails while adding', async () => {

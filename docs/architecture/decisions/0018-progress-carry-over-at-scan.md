@@ -26,7 +26,7 @@ progress and re-attach it by `tmdb_id` after the enrichment; C — status quo.
 | **Total**        |    100 | **400**                                   | **370**                                      | **300**                |
 
 Sensitivity: with coverage 50, simplicity 25, risk 25, A and B tie at 400; the tie goes to A
-for its lower wrong-match risk on renames and its single pass.
+for its single pass and the absence of orphan rows.
 
 ## Decision
 

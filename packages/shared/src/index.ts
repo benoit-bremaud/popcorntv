@@ -191,6 +191,7 @@ export type ApiErrorCode =
   | 'root_in_use'
   | 'tmdb_not_configured'
   | 'tmdb_unavailable'
+  | 'title_not_found'
   | 'enrich_running'
   | 'artwork_not_found'
   | 'media_not_found'

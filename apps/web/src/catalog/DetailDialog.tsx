@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { audioTracks, decidePlayback, matchAudioTrack } from '@popcorntv/shared';
-import type { CanPlay, Media, WatchProgress } from '@popcorntv/shared';
+import type { AudioTrack, CanPlay, Media, WatchProgress } from '@popcorntv/shared';
 import { artworkUrl, loadProgress, setWatched } from '../api.js';
 import { browserCanPlay } from '../playback/can-play.js';
 import { PlayerDialog } from '../playback/PlayerDialog.js';
@@ -74,13 +74,13 @@ export function DetailDialog({
 
   const resume = (media: Media): number => resumeAt(saved?.get(media.id));
   const episodes = seasons.flatMap((season) => season.episodes);
-  // UC25: the tracks of the title, or of a series' first episode; the choice is matched by
-  // language on each played file (Next episode included).
+  // UC25: the tracks of the title, or of a series' first episode. Until the viewer picks one,
+  // every file plays its first track (direct play kept, ADR-0019); a pick is matched by
+  // language on each played file (Next episode included, spec audio-track R4).
   const tracks = audioTracks((episodes[0] ?? item).streams);
-  const [audio, setAudio] = useState(0);
-  const chosen = tracks[audio];
+  const [chosen, setChosen] = useState<AudioTrack | null>(null);
   const playingAudio =
-    playing === null || chosen === undefined ? 0 : matchAudioTrack(playing.media.streams, chosen);
+    playing === null || chosen === null ? 0 : matchAudioTrack(playing.media.streams, chosen);
   const watched = saved !== null && isWatched(item, episodes, saved);
 
   /** UC23: marks the title (a series: all its episodes) watched or not, then reloads. */
@@ -191,8 +191,8 @@ export function DetailDialog({
               <span className="muted">Audio </span>
               <select
                 className="chip"
-                value={audio}
-                onChange={(event) => setAudio(Number(event.currentTarget.value))}
+                value={chosen?.index ?? 0}
+                onChange={(event) => setChosen(tracks[Number(event.currentTarget.value)] ?? null)}
               >
                 {tracks.map((track) => (
                   <option key={track.index} value={track.index}>

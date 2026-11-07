@@ -31,6 +31,11 @@ const MAX_TITLES = 20;
 /** Discover posters are smaller than the library's `w500` (spec R8). */
 export const DISCOVER_POSTER_SIZE = 'w342';
 const CAST_SHOWN = 10;
+/**
+ * Poster paths the server has handed out and may therefore download (ADR-0020): a viewer can
+ * never make the server fetch an arbitrary TMDB path. Oldest forgotten first past this size.
+ */
+export const ISSUED_POSTERS_MAX = 2000;
 
 const kind = z.enum(DISCOVER_KINDS);
 const tmdbId = z.coerce.number().int().positive().max(2_147_483_647);
@@ -64,10 +69,35 @@ async function viaTmdb<T>(reply: FastifyReply, call: () => Promise<T>): Promise<
     return await call();
   } catch (error) {
     if (error instanceof TmdbRequestError) {
+      // TMDB answers 404 for an id it does not know: the title, not TMDB, is missing.
+      if (error.status === 404) return reply.code(404).send(apiError('title_not_found'));
       return reply.code(502).send(apiError('tmdb_unavailable'));
     }
     throw error;
   }
+}
+
+/** The sheet's facts read from TMDB `details` (spec R3). */
+async function details(
+  tmdb: TmdbClient,
+  of: (typeof DISCOVER_KINDS)[number],
+  id: number,
+): Promise<Omit<DiscoverDetails, 'mediaId'>> {
+  const body = await tmdb.details(of, id);
+  return {
+    kind: of,
+    tmdbId: body.id,
+    title: body.title,
+    year: yearOf(body.date),
+    overview: body.overview,
+    voteAverage: body.vote_average,
+    posterPath: body.poster_path,
+    genres: body.genres.map((genre) => genre.name),
+    cast: [...body.cast]
+      .sort((a, b) => a.order - b.order)
+      .slice(0, CAST_SHOWN)
+      .map((member) => member.name),
+  };
 }
 
 /**
@@ -78,6 +108,21 @@ async function viaTmdb<T>(reply: FastifyReply, call: () => Promise<T>): Promise<
 export function registerDiscoverRoutes(app: FastifyInstance, deps: DiscoverRoutesDeps): void {
   const now = deps.now ?? Date.now;
   const memo = new Map<string, { readonly at: number; readonly titles: readonly TitleFacts[] }>();
+  const issued = new Set<string>();
+
+  /** Records the poster paths of an answer so the poster route may serve them, then returns it. */
+  function issue<T extends { readonly posterPath: string | null }>(titles: T[]): T[] {
+    for (const { posterPath } of titles) {
+      if (posterPath === null) continue;
+      issued.delete(posterPath); // Re-inserted last: recently shown paths are kept longest.
+      issued.add(posterPath);
+      if (issued.size > ISSUED_POSTERS_MAX) {
+        const oldest = issued.values().next().value;
+        if (oldest !== undefined) issued.delete(oldest);
+      }
+    }
+    return titles;
+  }
 
   async function cachedList(
     list: (typeof DISCOVER_LISTS)[number],
@@ -99,7 +144,9 @@ export function registerDiscoverRoutes(app: FastifyInstance, deps: DiscoverRoute
     if (!tmdb) return reply.code(409).send(apiError('tmdb_not_configured'));
     const titles = await viaTmdb(reply, () => cachedList(query.data.list, query.data.kind, tmdb));
     if (!Array.isArray(titles)) return titles;
-    return reply.send(deps.wishlist.withMediaIds<TitleFacts>(titles) satisfies DiscoverTitle[]);
+    return reply.send(
+      issue(deps.wishlist.withMediaIds<TitleFacts>(titles)) satisfies DiscoverTitle[],
+    );
   });
 
   app.get('/discover/search', async (request, reply) => {
@@ -110,31 +157,8 @@ export function registerDiscoverRoutes(app: FastifyInstance, deps: DiscoverRoute
     const rows = await viaTmdb(reply, () => tmdb.searchTitles(query.data.q));
     if (!Array.isArray(rows)) return rows;
     const titles = rows.slice(0, MAX_TITLES).map(toFacts);
-    return reply.send(deps.wishlist.withMediaIds(titles) satisfies DiscoverTitle[]);
+    return reply.send(issue(deps.wishlist.withMediaIds(titles)) satisfies DiscoverTitle[]);
   });
-
-  /** The sheet's facts read from TMDB `details` (spec R3). */
-  async function details(
-    tmdb: TmdbClient,
-    of: (typeof DISCOVER_KINDS)[number],
-    id: number,
-  ): Promise<Omit<DiscoverDetails, 'mediaId'>> {
-    const body = await tmdb.details(of, id);
-    return {
-      kind: of,
-      tmdbId: body.id,
-      title: body.title,
-      year: yearOf(body.date),
-      overview: body.overview,
-      voteAverage: body.vote_average,
-      posterPath: body.poster_path,
-      genres: body.genres.map((genre) => genre.name),
-      cast: [...body.cast]
-        .sort((a, b) => a.order - b.order)
-        .slice(0, CAST_SHOWN)
-        .map((member) => member.name),
-    };
-  }
 
   app.get('/discover/:kind/:tmdbId', async (request, reply) => {
     const params = titleParams.safeParse(request.params);
@@ -143,7 +167,7 @@ export function registerDiscoverRoutes(app: FastifyInstance, deps: DiscoverRoute
     if (!tmdb) return reply.code(409).send(apiError('tmdb_not_configured'));
     const sheet = await viaTmdb(reply, () => details(tmdb, params.data.kind, params.data.tmdbId));
     if (!('tmdbId' in sheet)) return sheet;
-    const [withId] = deps.wishlist.withMediaIds([sheet]);
+    const [withId] = issue(deps.wishlist.withMediaIds([sheet]));
     return reply.send(withId satisfies DiscoverDetails | undefined);
   });
 
@@ -152,13 +176,17 @@ export function registerDiscoverRoutes(app: FastifyInstance, deps: DiscoverRoute
     if (!params.success) return reply.code(400).send(invalid(params.error.issues));
     const artwork = deps.artwork;
     if (!artwork) return reply.code(409).send(apiError('tmdb_not_configured'));
+    // Only a path this server handed out may reach TMDB (ADR-0020, adversarial review #127).
+    if (!issued.has(`/${params.data.file}`)) {
+      return reply.code(404).send(apiError('artwork_not_found'));
+    }
     const file = await artwork.cache(`/${params.data.file}`, DISCOVER_POSTER_SIZE, (error) =>
       request.log.warn({ err: error }, 'discover poster download failed'),
     );
     if (file === null) return reply.code(404).send(apiError('artwork_not_found'));
     const bytes = await readFile(join(deps.artworkDir, file));
     return reply
-      .header('cache-control', 'public, max-age=31536000, immutable')
+      .header('cache-control', 'private, max-age=31536000, immutable')
       .type(file.endsWith('.png') ? 'image/png' : 'image/jpeg')
       .send(bytes);
   });
@@ -169,7 +197,7 @@ export function registerDiscoverRoutes(app: FastifyInstance, deps: DiscoverRoute
     if (!deps.profiles.exists(callerOf(request).userId, params.data.profileId)) {
       return reply.code(404).send(apiError('profile_not_found'));
     }
-    return reply.send(deps.wishlist.list(params.data.profileId));
+    return reply.send(issue(deps.wishlist.list(params.data.profileId)));
   });
 
   app.put('/profiles/:profileId/wishlist/:kind/:tmdbId', async (request, reply) => {

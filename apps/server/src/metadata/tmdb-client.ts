@@ -2,9 +2,10 @@ import { z } from 'zod';
 
 /**
  * TMDB v3 client — the single HTTP egress of the server (component diagram, ADR-0003).
- * `fetch` is injected so tests assert URLs and headers without opening a socket. Only a
- * title, a year or a provider id ever appear in a request (data-flow 06); the key travels
- * in the `Authorization` header and never appears in an error.
+ * `fetch` is injected so tests assert URLs and headers without opening a socket. A request
+ * carries a title and a year, a provider id, a TMDB id or list name, or a viewer's Discover
+ * search text, never who asks (data-flow 06); the key travels in the `Authorization` header
+ * and never appears in an error.
  */
 
 /** What TMDB calls a movie or a TV series; a films library searches movies, a series library TV. */

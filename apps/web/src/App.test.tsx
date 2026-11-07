@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Profile } from '@popcorntv/shared';
 import { App } from './App.js';
+import type { DiscoverApi } from './discover/discover-api.js';
 
 const me: Profile = { id: 'default', name: 'Me', avatar: 'red' };
 const kid: Profile = { id: 'k1', name: 'Kid', avatar: 'blue' };
@@ -117,5 +118,43 @@ describe('App', () => {
 
     expect(await screen.findByRole('button', { name: 'Retry' })).toBeInTheDocument();
     expect(load).toHaveBeenCalledTimes(2);
+  });
+
+  it('switches to Discover and back to the library from "Play in my library" (UC26)', async () => {
+    const user = userEvent.setup();
+    const title = {
+      kind: 'movie',
+      tmdbId: 1,
+      title: 'Dune',
+      year: 2021,
+      overview: '',
+      voteAverage: 0,
+      posterPath: null,
+      mediaId: 'm1',
+    } as const;
+    const discover: DiscoverApi = {
+      list: vi.fn(async () => [title]),
+      search: vi.fn(async () => []),
+      details: vi.fn(async () => Promise.reject(new Error('offline'))),
+      wishlist: vi.fn(async () => []),
+      setWishlisted: vi.fn(async () => true),
+    };
+    render(
+      <App
+        load={async () => [me]}
+        storage={memoryStorage({ 'popcorntv.activeProfileId': 'default' })}
+        discover={discover}
+      />,
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Discover' }));
+    await user.click(
+      (
+        await screen.findAllByRole('button', { name: 'Dune (2021), in my library' })
+      )[0] as HTMLElement,
+    );
+    await user.click(screen.getByRole('button', { name: 'Play in my library' }));
+
+    expect(screen.getByRole('button', { name: 'Library' })).toHaveAttribute('aria-pressed', 'true');
   });
 });
