@@ -12,7 +12,8 @@ import type {
   StreamInfo,
 } from '@popcorntv/shared';
 import type { AppDatabase } from '../db/index.js';
-import { libraries, media, streams } from '../db/schema.js';
+import { libraries, media, streams, watchProgress } from '../db/schema.js';
+import { carryOverTargets } from './identity.js';
 import type { ParsedName } from './name-parser.js';
 
 /** A file-backed `media` row to write: the parsed name plus what the scanner and prober add. */
@@ -172,18 +173,49 @@ export class LibraryRepository {
   /**
    * Removes the file-backed rows of the library whose real path is not in `seenPaths`,
    * then the series rows no episode points to. The diff runs in JS so a library of any
-   * size stays under SQLite's bind-variable limit. Returns the number of files removed.
+   * size stays under SQLite's bind-variable limit. Before the cascade, the watch progress
+   * of a removed file moves to the present file holding the same title (spec
+   * progress-carry-over). Returns the number of files removed.
    */
   deleteMissing(libraryId: string, seenPaths: ReadonlySet<string>): number {
     const stored = this.db
-      .select({ id: media.id, filePath: media.filePath })
+      .select({
+        id: media.id,
+        filePath: media.filePath,
+        kind: media.kind,
+        parsedTitle: media.parsedTitle,
+        year: media.year,
+        season: media.season,
+        episode: media.episode,
+        part: media.part,
+        seriesId: media.seriesId,
+        tmdbId: media.tmdbId,
+        providerIds: media.providerIds,
+      })
       .from(media)
       .where(and(eq(media.libraryId, libraryId), isNotNull(media.filePath)))
       .all();
-    const missing = stored.flatMap((row) =>
-      row.filePath !== null && !seenPaths.has(row.filePath) ? [row.id] : [],
+    const isMissing = (row: (typeof stored)[number]): boolean =>
+      row.filePath !== null && !seenPaths.has(row.filePath);
+    const missing = stored.filter(isMissing).map((row) => row.id);
+    const targets = carryOverTargets(
+      stored.filter(isMissing),
+      stored.filter((row) => !isMissing(row)),
     );
     this.db.transaction((tx) => {
+      for (const [from, to] of targets) {
+        // The newer position wins when the new file already has one for that profile;
+        // a watched mark on either side is kept (spec progress-carry-over R4).
+        tx.run(sql`
+          INSERT INTO ${watchProgress} (profile_id, media_id, position_sec, updated_at, watched_at)
+          SELECT profile_id, ${to}, position_sec, updated_at, watched_at
+          FROM ${watchProgress} WHERE media_id = ${from}
+          ON CONFLICT (profile_id, media_id) DO UPDATE SET
+            position_sec = CASE WHEN excluded.updated_at > watch_progress.updated_at
+              THEN excluded.position_sec ELSE watch_progress.position_sec END,
+            updated_at = max(excluded.updated_at, watch_progress.updated_at),
+            watched_at = coalesce(watch_progress.watched_at, excluded.watched_at)`);
+      }
       for (let i = 0; i < missing.length; i += DELETE_CHUNK) {
         tx.delete(media)
           .where(inArray(media.id, missing.slice(i, i + DELETE_CHUNK)))
