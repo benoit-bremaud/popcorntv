@@ -30,10 +30,12 @@ scan-docker-config: ## Trivy misconfiguration scan of the Dockerfiles
 	$(TRIVY_RUN) -e TRIVY_MISCONFIG_SCANNERS=dockerfile "$(TRIVY_IMAGE)" \
 		config --cache-dir /cache --severity HIGH,CRITICAL --exit-code 1 --ignorefile .trivyignore.yaml .
 
+# No --ignore-unfixed (#110, audit SA-03): unfixed CVEs block too, unless accepted in
+# .trivyignore.yaml with an expiry, so a new unfixed Critical cannot hide.
 scan-docker-image: ## Trivy vulnerability scan: make scan-docker-image IMAGE=name:tag
 	@test -n "$(IMAGE)" || { echo "usage: make scan-docker-image IMAGE=name:tag"; exit 2; }
 	@mkdir -p "$(TRIVY_CACHE)" .trivy
 	$(TRIVY_RUN) --group-add "$$(stat -c %g /var/run/docker.sock)" -v /var/run/docker.sock:/var/run/docker.sock "$(TRIVY_IMAGE)" \
-		image --cache-dir /cache --severity HIGH,CRITICAL --ignore-unfixed --scanners vuln \
+		image --cache-dir /cache --severity HIGH,CRITICAL --scanners vuln \
 		--ignorefile .trivyignore.yaml --exit-code "$(TRIVY_EXIT)" --format "$(TRIVY_FORMAT)" \
 		$(if $(TRIVY_OUTPUT),--output "/out/$(TRIVY_OUTPUT)") "$(IMAGE)"
