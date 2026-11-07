@@ -21,8 +21,8 @@ Already filed, not re-ranked here: #124 fit / fill, #127 TMDB discover, #128 See
 Criteria and weights: household value (40), effort, 5 = small (25), needed before the
 Jellyfin removal on bb-homelab, due 2026-11-21 (25), risk and scope fit, 5 = safe (10).
 The homelab decisions D1–D4 of `02-homelab-ecosystem.md` are void for bb-homelab (its
-2026-11-07 correction): files are added and replaced by hand, no Tdarr or Bazarr runs. Total = 40·V + 25·E + 25·C +
-10·R, out of 500.
+2026-11-07 correction): files are added and replaced by hand, no Tdarr or Bazarr runs.
+Total = 40·V + 25·E + 25·C + 10·R, out of 500.
 
 | Item | Feature | Plex | Jellyfin | PopCornTV | V | E | C | R | Total |
 |---|---|---|---|---|---|---|---|---|---|

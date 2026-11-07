@@ -6,7 +6,7 @@ context: merged PRs, decisions, tags, infra events. Not a release changelog — 
 
 ## 2026-11-07 — #62 Plex / Jellyfin parity matrix
 
-- **Change** — `docs/requirements/03-plex-jellyfin-parity.md`: 18 gaps scored by MCDA
+- **Change** — `docs/requirements/03-plex-jellyfin-parity.md`: 18 features, 16 gaps scored by MCDA
   (value 40, effort 25, cut-over need 25, risk 10).
 - **Decision** — owner chose option A, file items 1–8 (440), over B, items 1–6 without
   backup and history import (420), and C, items 1–4 only (380): #131–#138 on Project #71.
