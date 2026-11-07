@@ -50,6 +50,7 @@ Main scenario:
 2. The system lists the libraries (`GET /libraries`) and the items of every library
    (`GET /libraries/:id/media`), merged into one catalog.
 3. The system shows the **home view**: a hero banner (best-rated item with a backdrop),
+   then *Continue watching* when non-empty ([continue-watching](continue-watching.md) R1),
    then the rows *Top rated*, *Films*, *Series*, *Documentaries*, *Others* (non-empty only),
    then the genre rows.
 4. The viewer picks a **type** tab (Films, Series, Documentaries, Others).

@@ -1,5 +1,6 @@
 import { DOCUMENTARY_GENRE_ID, isDocumentary } from '@popcorntv/shared';
-import type { Genre, Media } from '@popcorntv/shared';
+import type { Genre, Media, WatchProgress } from '@popcorntv/shared';
+import { resumeAt } from '../playback/resume.js';
 
 /** The catalog's type tabs (spec §2), in display order. */
 export const CATALOG_TYPES = ['films', 'series', 'documentaries', 'others'] as const;
@@ -20,9 +21,12 @@ export interface Row {
   readonly key: string;
   readonly title: string;
   readonly items: readonly Media[];
+  /** Watched fraction (0–1) per item id, for the progress bar of the cards. */
+  readonly progress?: ReadonlyMap<string, number>;
 }
 
 const TOP_RATED_LIMIT = 20;
+const CONTINUE_WATCHING_LIMIT = 20;
 
 /** Top-level items only: episodes live inside their series (spec §2). */
 export function catalogItems(media: readonly Media[]): Media[] {
@@ -155,4 +159,76 @@ export function nextEpisode(seasons: readonly Season[], current: Media): Media |
   const episodes = seasons.flatMap((season) => season.episodes);
   const index = episodes.findIndex((episode) => episode.id === current.id);
   return index === -1 ? null : (episodes[index + 1] ?? null);
+}
+
+/** Watched fraction of a progress row, 0 when the duration is unknown. */
+function fractionOf(row: WatchProgress): number {
+  return row.durationSec === null || row.durationSec <= 0
+    ? 0
+    : Math.min(row.positionSec / row.durationSec, 1);
+}
+
+/** Watched fraction to resume from, 0 when there is no resume point. */
+function resumeFraction(row: WatchProgress | undefined): number {
+  return row !== undefined && resumeAt(row) > 0 ? fractionOf(row) : 0;
+}
+
+/** What a series' most recent finished episode offers: the next one's fraction, or null. */
+function nextEpisodeFraction(
+  series: Media,
+  finished: Media,
+  media: readonly Media[],
+  saved: ReadonlyMap<string, WatchProgress>,
+): number | null {
+  const next = nextEpisode(seasonsOf(series, media), finished);
+  if (next === null) return null;
+  const nextRow = saved.get(next.id);
+  return nextRow?.finished === true ? null : resumeFraction(nextRow);
+}
+
+/**
+ * What one progress row decides for its title (R3, R4): a fraction to show it with, null to
+ * leave it out, or undefined when a barely started episode lets an older row decide.
+ */
+function decide(
+  row: WatchProgress,
+  played: Media,
+  title: Media,
+  media: readonly Media[],
+  saved: ReadonlyMap<string, WatchProgress>,
+): number | null | undefined {
+  if (resumeAt(row) > 0) return fractionOf(row);
+  if (played.kind !== 'episode') return null;
+  if (!row.finished) return undefined;
+  return nextEpisodeFraction(title, played, media, saved);
+}
+
+/**
+ * UC22 (spec continue-watching R3–R5): titles to pick up again, most recently saved first.
+ * A series appears once, decided by its most recently saved episode.
+ */
+export function continueWatchingRow(
+  media: readonly Media[],
+  progress: readonly WatchProgress[],
+): Row | null {
+  const byId = new Map(media.map((item) => [item.id, item]));
+  const saved = new Map(progress.map((row) => [row.mediaId, row]));
+  const decided = new Set<string>();
+  const fractions = new Map<string, number>();
+  const items: Media[] = [];
+  for (const row of progress) {
+    const played = byId.get(row.mediaId);
+    const title = played?.kind === 'episode' ? byId.get(played.seriesId ?? '') : played;
+    if (played === undefined || title === undefined || decided.has(title.id)) continue;
+    const fraction = decide(row, played, title, media, saved);
+    if (fraction === undefined) continue;
+    decided.add(title.id);
+    if (fraction === null) continue;
+    fractions.set(title.id, fraction);
+    items.push(title);
+    if (items.length === CONTINUE_WATCHING_LIMIT) break;
+  }
+  return items.length === 0
+    ? null
+    : { key: 'continue-watching', title: 'Continue watching', items, progress: fractions };
 }

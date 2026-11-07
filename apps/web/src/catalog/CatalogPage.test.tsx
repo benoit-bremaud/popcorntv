@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import type { Media } from '@popcorntv/shared';
+import type { Media, WatchProgress } from '@popcorntv/shared';
 import { ACTION, DOCUMENTARY, DRAMA, media, metadata } from '../test-fixtures.js';
 import { CatalogPage } from './CatalogPage.js';
 
@@ -38,8 +38,14 @@ const planet = media({
 
 const CATALOG: Media[] = [heat, alien, dark, pilot, planet];
 
-function renderPage(load: () => Promise<Media[]> = async () => CATALOG) {
-  return { user: userEvent.setup(), ...render(<CatalogPage profileId="default" load={load} />) };
+function renderPage(
+  load: () => Promise<Media[]> = async () => CATALOG,
+  progress: () => Promise<WatchProgress[]> = async () => [],
+) {
+  return {
+    user: userEvent.setup(),
+    ...render(<CatalogPage profileId="default" load={load} progress={progress} />),
+  };
 }
 
 function group(name: string): HTMLElement {
@@ -63,7 +69,16 @@ describe('CatalogPage', () => {
   });
 
   it('renders the rows without inline styles (strict style-src CSP)', async () => {
-    const { container } = renderPage();
+    const { container } = renderPage(undefined, async () => [
+      {
+        mediaId: 'alien',
+        positionSec: 600,
+        durationSec: 1200,
+        finished: false,
+        updatedAt: '2026-11-07T00:00:00.000Z',
+      },
+    ]);
+    await screen.findByRole('region', { name: 'Continue watching' });
 
     await screen.findByRole('button', { name: 'More info' });
     expect(container.querySelectorAll('.row')).not.toHaveLength(0);
@@ -224,5 +239,45 @@ describe('CatalogPage', () => {
     expect(alienPoster).toHaveTextContent('Alien');
     const heatPoster = screen.getAllByRole('button', { name: 'Heat (1995)' })[0] as HTMLElement;
     expect(heatPoster.querySelector('img')).toHaveAttribute('src', '/api/artwork/heat-poster.jpg');
+  });
+});
+
+describe('CatalogPage continue watching', () => {
+  const inProgress: WatchProgress = {
+    mediaId: 'alien',
+    positionSec: 600,
+    durationSec: 1200,
+    finished: false,
+    updatedAt: '2026-11-07T00:00:00.000Z',
+  };
+
+  it('should show the row first on the home view', async () => {
+    renderPage(undefined, async () => [inProgress]);
+
+    const row = await screen.findByRole('region', { name: 'Continue watching' });
+    expect(within(row).getByRole('button', { name: 'Alien, 50% watched' })).toBeInTheDocument();
+    expect(screen.getAllByRole('region')[0]).toBe(row);
+    expect(row.querySelector('progress')).toHaveAttribute('value', '0.5');
+    expect(document.querySelectorAll('progress')).toHaveLength(1);
+  });
+
+  it('should hide the row when nothing is in progress', async () => {
+    renderPage();
+
+    await screen.findByRole('region', { name: 'Top rated' });
+    expect(screen.queryByRole('region', { name: 'Continue watching' })).toBeNull();
+  });
+
+  it('should reload the progress when the detail dialog closes', async () => {
+    const progress = vi.fn(async () => [inProgress]);
+    const { user } = renderPage(undefined, progress);
+    const row = await screen.findByRole('region', { name: 'Continue watching' });
+
+    await user.click(within(row).getByRole('button', { name: 'Alien, 50% watched' }));
+    const dialog = await screen.findByRole('dialog');
+    const before = progress.mock.calls.length;
+    await user.click(within(dialog).getByRole('button', { name: 'Close' }));
+
+    expect(progress).toHaveBeenCalledTimes(before + 1);
   });
 });
