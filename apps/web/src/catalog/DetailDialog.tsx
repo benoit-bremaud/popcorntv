@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { audioTracks, decidePlayback } from '@popcorntv/shared';
+import { audioTracks, decidePlayback, matchAudioTrack } from '@popcorntv/shared';
 import type { CanPlay, Media, WatchProgress } from '@popcorntv/shared';
 import { artworkUrl, loadProgress, setWatched } from '../api.js';
 import { browserCanPlay } from '../playback/can-play.js';
@@ -74,9 +74,13 @@ export function DetailDialog({
 
   const resume = (media: Media): number => resumeAt(saved?.get(media.id));
   const episodes = seasons.flatMap((season) => season.episodes);
-  // UC25: the tracks of the title, or of a series' first episode (they rarely differ).
+  // UC25: the tracks of the title, or of a series' first episode; the choice is matched by
+  // language on each played file (Next episode included).
   const tracks = audioTracks((episodes[0] ?? item).streams);
   const [audio, setAudio] = useState(0);
+  const chosen = tracks[audio];
+  const playingAudio =
+    playing === null || chosen === undefined ? 0 : matchAudioTrack(playing.media.streams, chosen);
   const watched = saved !== null && isWatched(item, episodes, saved);
 
   /** UC23: marks the title (a series: all its episodes) watched or not, then reloads. */
@@ -248,8 +252,10 @@ export function DetailDialog({
           key={playing.media.id}
           item={playing.media}
           profileId={profileId}
-          directPlay={audio === 0 && decidePlayback(playing.media, canPlay).mode === 'direct'}
-          audioIndex={audio}
+          directPlay={
+            playingAudio === 0 && decidePlayback(playing.media, canPlay).mode === 'direct'
+          }
+          audioIndex={playingAudio}
           startSec={playing.startSec}
           next={nextEpisode(seasons, playing.media)}
           onNext={(episode) => setPlaying({ media: episode, startSec: resume(episode) })}

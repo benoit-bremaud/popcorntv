@@ -2,7 +2,7 @@ import { open } from 'node:fs/promises';
 import type { FileHandle } from 'node:fs/promises';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import { audioTracks, directPlayMime } from '@popcorntv/shared';
+import { directPlayMime, effectiveAudioIndex } from '@popcorntv/shared';
 import type { PlaybackStart } from '@popcorntv/shared';
 import { apiError, callerOf, invalid, MEDIA_ROUTE } from '../http.js';
 import { MAX_POSITION_SEC } from '../progress/routes.js';
@@ -66,7 +66,7 @@ export function registerSessionRoutes(app: FastifyInstance, deps: SessionRoutesD
     const streams = deps.repository.findMediaStreams(mediaId);
     // Only the default track plays directly: the browser cannot pick another (ADR-0019).
     // An index past the last track falls back to the first, so it needs no HLS either.
-    const defaultTrack = audioIndex === 0 || audioIndex >= audioTracks(streams).length;
+    const defaultTrack = effectiveAudioIndex(streams, audioIndex) === 0;
     const directPlay = body.data.directPlay && defaultTrack;
 
     // The browser's answer counts only for a file the shared rule calls direct-playable.

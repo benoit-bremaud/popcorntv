@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import { effectiveAudioIndex } from '@popcorntv/shared';
 import type { StreamInfo } from '@popcorntv/shared';
 
 /** Playlist and segment names FFmpeg writes in a session directory (spec hls-transcode §2.3). */
@@ -42,8 +43,8 @@ function audioArgs(audio: StreamInfo): string[] {
 }
 
 /**
- * FFmpeg arguments turning the first video and first audio stream of `inputPath` into an
- * HLS EVENT playlist in `outputDir`: copied when HLS-safe, re-encoded otherwise. Pure.
+ * FFmpeg arguments turning the first video stream and the chosen audio stream of `inputPath`
+ * into an HLS EVENT playlist in `outputDir`: copied when HLS-safe, re-encoded otherwise. Pure.
  * The input is the argument of `-i`, so a name starting with `-` cannot become an option.
  * `startSec > 0` seeks the input before `-i` (fast, lands on the previous keyframe) so a
  * resume starts there (ADR-0007 §2). `audioIndex` picks the audio track among the audio
@@ -60,7 +61,7 @@ export function ffmpegArgs(
   const video = first(streams, 'video');
   if (video === null) return null;
   const audios = streams.filter((stream) => stream.type === 'audio');
-  const track = audioIndex < audios.length ? audioIndex : 0;
+  const track = effectiveAudioIndex(streams, audioIndex);
   const audio = audios[track] ?? null;
   return [
     '-hide_banner',

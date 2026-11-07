@@ -322,6 +322,7 @@ describe('CatalogPage search (spec search)', () => {
 
     await user.type(await screen.findByRole('searchbox'), 'zzz');
 
-    expect(screen.getByRole('status')).toHaveTextContent('No title or person matches “zzz”.');
+    expect(screen.getByRole('status')).toHaveTextContent('No match');
+    expect(screen.getByText(/No title or person matches/)).toBeInTheDocument();
   });
 });

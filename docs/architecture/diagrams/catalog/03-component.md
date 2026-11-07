@@ -1,6 +1,6 @@
 # Component diagram — catalog (apps/web)
 
-> **Feature**: UC3 / UC4 / UC22 ([spec](../../specs/catalog-grid.md), [continue-watching](../../specs/continue-watching.md))
+> **Feature**: UC3 / UC4 / UC22 / UC24 ([spec](../../specs/catalog-grid.md), [continue-watching](../../specs/continue-watching.md))
 > **Related ADRs**: ADR-0001, ADR-0004
 
 ## Diagram
@@ -10,13 +10,14 @@ flowchart TB
   subgraph web[apps/web]
     app[App] --> page[catalog/CatalogPage]
     page --> controls[catalog/Controls]
+    page --> search["catalog/SearchBox «new #135»"]
     page --> row[catalog/PosterRow]
     page --> grid[catalog/PosterGrid]
     page --> detail[catalog/DetailDialog]
     row --> card[catalog/PosterCard]
     grid --> card
     page --> state[catalog/view-state.ts<br/>reducer, pure]
-    page --> cat[catalog/catalog.ts<br/>rows, pure]
+    page --> cat[catalog/catalog.ts<br/>rows, searchItems, pure]
     page --> api[api.ts<br/>fetch, only HTTP egress]
     tokens[(styles/tokens.css)]
   end

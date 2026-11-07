@@ -36,7 +36,7 @@ sequenceDiagram
   alt direct
     API-->>P: 200 {mode: direct, url, mime, offsetSec: 0}
   else HLS
-    API->>SM: open(path, streams, startSec)
+    API->>SM: open(path, streams, startSec, audioIndex)
     SM->>SM: ffmpeg -ss startSec -i path …
     API-->>P: 201 {mode: hls, sessionId, url, offsetSec: startSec}
   end

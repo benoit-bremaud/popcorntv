@@ -100,6 +100,23 @@ export function audioTracks(streams: readonly StreamInfo[]): AudioTrack[] {
     }));
 }
 
+/** The audio index a file actually plays: `index` when it exists, else the first. Pure. */
+export function effectiveAudioIndex(streams: readonly StreamInfo[], index: number): number {
+  return index < audioTracks(streams).length ? index : 0;
+}
+
+/**
+ * The index of the chosen track in another file (Next episode): the first track of the same
+ * language when the choice has one, else the same index; the first when absent. Pure.
+ */
+export function matchAudioTrack(streams: readonly StreamInfo[], chosen: AudioTrack): number {
+  if (chosen.language !== null) {
+    const same = audioTracks(streams).find((track) => track.language === chosen.language);
+    if (same !== undefined) return same.index;
+  }
+  return effectiveAudioIndex(streams, chosen.index);
+}
+
 /**
  * Response of `POST /playback/sessions`: 200 direct (no session) or 201 HLS session.
  * `offsetSec` is the media time at which the player's timeline starts: 0 for direct play

@@ -5,7 +5,7 @@
 
 ## Context
 
-Only what #123 and #132 add or change; new elements are marked «new».
+Only what #123, #132 and #134 add or change; new elements are marked «new».
 
 ## Diagram
 
@@ -34,6 +34,8 @@ flowchart LR
     Sched["scheduler «new #132» (setInterval, ADR-0016)"]
     Sched -->|"listLibraries"| Repo
     Sched -->|"scanLibrary"| Lock
+    Identity["identity «new #134» (carry-over keys, pure)"]
+    Repo --> Identity
   end
   Clock(["Clock (SCAN_INTERVAL_MIN)"]) --> Sched
   Api -->|"HTTP /api/libraries…"| Routes
