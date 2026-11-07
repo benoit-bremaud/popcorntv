@@ -363,4 +363,28 @@ describe('DetailDialog watched mark (spec watched-marks)', () => {
 
     expect(markWatched).toHaveBeenCalledWith('kid', 'heat', false);
   });
+
+  it('should keep the old state when the server refuses the mark', async () => {
+    const markWatched = vi.fn(async () => false);
+    const user = userEvent.setup();
+    render(
+      <DetailDialog
+        profileId="kid"
+        item={heat}
+        seasons={[]}
+        onClose={vi.fn()}
+        canPlay={always}
+        api={fakeApi()}
+        progress={async () => []}
+        markWatched={markWatched}
+      />,
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Mark as watched' }));
+
+    expect(await screen.findByRole('button', { name: 'Mark as watched' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+  });
 });

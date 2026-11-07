@@ -283,10 +283,12 @@ describe('watched marks (spec watched-marks)', () => {
       'profile_not_found',
     ],
     ['a bad id', '/profiles/default/media/nope/watched', 400, 'invalid_request'],
-  ])('should refuse %s', async (_, url, status, error) => {
+  ])('should refuse %s on PUT and DELETE', async (_, url, status, error) => {
     const { app } = setup();
 
     const response = await app.inject({ method: 'PUT', url });
+    const removed = await app.inject({ method: 'DELETE', url });
+    expect(removed.statusCode).toBe(status);
 
     expect(response.statusCode).toBe(status);
     expect(response.json()).toMatchObject({ error });

@@ -66,27 +66,26 @@ export class ProgressRepository {
     watched: boolean,
     now: Date = new Date(),
   ): boolean {
-    const row = this.db.select({ kind: media.kind }).from(media).where(eq(media.id, mediaId)).get();
-    if (row === undefined) return false;
-    const ids =
-      row.kind === 'series'
-        ? this.db
-            .select({ id: media.id })
-            .from(media)
-            .where(eq(media.seriesId, mediaId))
-            .all()
-            .map((episode) => episode.id)
-        : [mediaId];
-    if (ids.length === 0) return true;
-    if (!watched) {
-      this.db
-        .delete(watchProgress)
-        .where(and(eq(watchProgress.profileId, profileId), inArray(watchProgress.mediaId, ids)))
-        .run();
-      return true;
-    }
-    const at = now.toISOString();
-    this.db.transaction((tx) => {
+    return this.db.transaction((tx) => {
+      const row = tx.select({ kind: media.kind }).from(media).where(eq(media.id, mediaId)).get();
+      if (row === undefined) return false;
+      const ids =
+        row.kind === 'series'
+          ? tx
+              .select({ id: media.id })
+              .from(media)
+              .where(eq(media.seriesId, mediaId))
+              .all()
+              .map((episode) => episode.id)
+          : [mediaId];
+      if (ids.length === 0) return true;
+      if (!watched) {
+        tx.delete(watchProgress)
+          .where(and(eq(watchProgress.profileId, profileId), inArray(watchProgress.mediaId, ids)))
+          .run();
+        return true;
+      }
+      const at = now.toISOString();
       for (const id of ids) {
         tx.insert(watchProgress)
           .values({ profileId, mediaId: id, positionSec: 0, updatedAt: at, watchedAt: at })
@@ -96,7 +95,7 @@ export class ProgressRepository {
           })
           .run();
       }
+      return true;
     });
-    return true;
   }
 }
