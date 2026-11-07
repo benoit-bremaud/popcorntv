@@ -4,6 +4,20 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-08 — #127 discover TMDB titles and wishlist (PR #154 merged, `50c704b`)
+
+- **Conception** — spec `discover-wishlist.md` (UC26, catalog use case + component deltas),
+  ADR-0020 (MCDA A 450 / B 400 / C 200): Discover goes through the server's TMDB client, posters
+  lazily cached at `w342`, wishlist in its own table, availability joined on `media.tmdb_id`.
+  Merge of #127 Discover and the #128 idea (owner brainstorm 2026-11-07); no Seerr / Radarr /
+  Sonarr call, no download, no playback of titles not on disk; #128 stays open.
+- **Change** — TMDB client `list` / `searchTitles`; `src/discover/` routes (lists memoised
+  15 min, search, title sheet, poster route) and `wishlist` table (migration `0008_wishlist`,
+  FK cascade); web Library / Discover tabs, My list + four TMDB rows, search, title sheet
+  with wishlist toggle and "Play in my library".
+- **Checks** — typecheck, lint, format, tests green (shared 39, server 592, web 265). Full
+  local CI, E2E, SonarQube and the Opus verify round deferred to the end-of-run pass.
+
 ## 2026-11-07 — #136 choose the audio track (PR #152 merged, `adfd4c0`)
 
 - **Conception** — spec `audio-track.md` (UC25), ADR-0019: index 0 plays directly, any other
