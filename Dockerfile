@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.28
 # check=error=true
-# PopCornTV server image: builds the TypeScript workspace, ships only the runtime output,
-# runs as a non-root user with FFmpeg available for transcoding.
+# PopCornTV image: builds the TypeScript workspace, ships the server runtime output and the
+# web build (copied out by the deploy compose), runs as a non-root user with FFmpeg.
 
 # Static FFmpeg build (#110): Debian's FFmpeg packages carry unfixed decoder CVEs on both
 # Debian 12 and 13, and FFmpeg parses every media file. Upstream releases ship the fixes;
@@ -20,13 +20,16 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY packages/shared/package.json packages/shared/
 COPY apps/server/package.json apps/server/
-RUN pnpm install --frozen-lockfile --filter @popcorntv/server...
+COPY apps/web/package.json apps/web/
+RUN pnpm install --frozen-lockfile --filter @popcorntv/server... --filter @popcorntv/web...
 COPY packages/shared packages/shared
 COPY apps/server apps/server
+COPY apps/web apps/web
 # --legacy: pnpm 10 only deploys injected workspaces by default; the workspace keeps plain
 # links so edits to packages/shared are seen live in dev (no injected hard-link copies).
 RUN pnpm --filter @popcorntv/server... build \
-  && pnpm --filter @popcorntv/server --prod deploy --legacy /out
+  && pnpm --filter @popcorntv/server --prod deploy --legacy /out \
+  && pnpm --filter @popcorntv/web build
 
 FROM node:22.23.4-trixie-slim@sha256:be1e2a3dc2c4fd68cdfadad2a696a280e0d2749098bee509230174d72fb768c6
 # `apt-get upgrade` (DL3005) is deliberate: the node base image lags Debian's security
@@ -49,7 +52,10 @@ COPY --from=ffmpeg /ffmpeg /ffprobe /usr/local/bin/
 RUN v="$(ffmpeg -hide_banner -version)" && v="${v#ffmpeg version }" && test "${v%% *}" = "9.0.2"
 WORKDIR /app
 COPY --from=build --chown=1000:1000 /out /app
-RUN mkdir -p /app/data /app/media && chown 1000:1000 /app/data /app/media
+# The web build ships in the same image so web and API versions never drift (ADR-0013); the
+# reverse proxy serves it from a volume the compose `web-sync` service fills from /app/web.
+COPY --from=build --chown=1000:1000 /app/apps/web/dist /app/web
+RUN mkdir -p /app/data /app/media /srv/web && chown 1000:1000 /app/data /app/media /srv/web
 USER 1000
 ENV NODE_ENV=production PORT=3000 HOST=0.0.0.0 MEDIA_ROOT=/app/media
 EXPOSE 3000
