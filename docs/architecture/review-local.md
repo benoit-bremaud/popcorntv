@@ -1,50 +1,74 @@
-# Local review — popcorntv (fix/110-runtime-trixie-static-ffmpeg)
+# Local review — popcorntv (feat/123-library-management-web)
 
-Pre-push review of #110: runtime image moved to Debian 13 trixie-slim with a static upstream FFmpeg, and the image scan gated on unfixed CVEs.
+Pre-push review of #123 (library management from the web app) with #122 folded in.
 
 - Date: 2026-11-07
-- Commit: 0987f5f (+ SECURITY.md table alignment and this report)
-- Scope: branch diff origin/main...HEAD (`Dockerfile`, `Makefile`, `.trivyignore.yaml`, `SECURITY.md`, this file)
-- Checks run: adversarial (Opus, 2 rounds) · containers (docker-auditor) · security and correctness through the adversarial review (design, docs and tests audits: n/a, no application code changed)
-- Verdict: ship as-is · Must 0 · Should 0 · Nice 0
+- Commit: da2e8ec (+ this report)
+- Scope: branch diff origin/main...HEAD
+- Checks run: adversarial (Opus, 4 rounds) · design (architecture-guardian) · docs (through
+  design and adversarial) · tests (test-auditor) · security and correctness (through the
+  adversarial review)
+- Verdict: ship · Must 0 · Should 0 · Nice 4
 
 ## Adversarial review (#236)
 
-- Round 1 on `0af0514`: Must 1 · Should 4 · Nice 3 · unverified 1 · Push gate: closed
-- Round 2 on `0987f5f`: 8 fixed or tracked (#116) · 0 not fixed · 0 regressed · new Must 0 · **Push gate: open**; its one Nice (table alignment) applied in the next commit
-- Hosted reviewers (filled at the pre-merge run): Codex optional
+- Round 1 on `543915e`: Must 3 · Should 4 · Nice 5 · unverified 1 · Push gate: closed
+- Round 2 on `880374d`: all 3 Must fixed · new Should 3 · Push gate: open
+- Round 3 on `819dc69`: 5 fixed · 0 regressed · new Must 0 · Push gate: open
+- Round 4 on `da2e8ec`: 3 SonarQube fixes verified · 0 regressed · **Push gate: open**
+- Hosted reviewers (filled at the pre-merge run): Copilot out of credit · Codex quota refused (PR #129, 2026-11-07)
 
-## Pre-merge gate (head SHA filled at the pre-merge run)
+## Pre-merge gate (head SHA da2e8ec)
 
-| Step | Result |
-|---|---|
-| 1 Tests | ✅ shared 38 · server 521 · web 199 |
-| 2 Coverage | ✅ statements: server 97.49 % · web 99.11 % · shared 90.24 % (floor 80); docs: ⏸ deferred |
-| 3 SonarQube | ⏸ deferred to the pre-merge run (`--push`) |
-| 4 Secrets | ✅ gitleaks clean · only `.env.example` tracked · diff read: no token or personal data |
-| 5 E2E/smoke | ⏸ deferred to the pre-merge run (`--push`); container smoke done by hand: healthy, UID 1000, CapEff 0, HLS (libx264 + aac, `-ss`) and WebVTT extraction with the app's own argument builders |
+| Step         | Result                                                                                                |
+| ------------ | ----------------------------------------------------------------------------------------------------- |
+| 0 CI mirror  | ✅ `ci.yml`: typecheck, lint, format:check, test, build all green locally; CodeQL, Scorecard, dependency-review CI-only |
+| 1 Tests      | ✅ 800 (shared 38, server 542, web 220)                                                                |
+| 2 Coverage   | server 97.4 % stmts / 93.4 % branches · web 98.0 % / 92.3 % · docs ⚠️ no doc-coverage counter in this repo   |
+| 3 SonarQube  | ✅ PASSED (new coverage 95.0 %, 0 new issues, 0 % duplication)                                                                       |
+| 4 Secrets    | ✅ gitleaks clean on origin/main..HEAD · only `.env.example` tracked · diff read: nothing sensitive    |
+| 5 E2E/smoke  | ✅ Playwright catalog smoke 1/1                                                                       |
 
-- Container checks: `make lint-docker` ✅ · `docker build --check` ✅ · `make scan-docker-config` ✅ · `make scan-docker-image` (no `--ignore-unfixed`) ✅ exit 0 with `.trivyignore.yaml`, fails without it
-- Gate: `--push`: **pre-push green** — typecheck, lint, format:check, coverage and build passed; SonarQube and E2E deferred.
+- Gate: **local gate green except doc coverage (no counter)**; GitHub Actions disabled on the
+  repo, so the merge needs the owner's `MERGE_GATE_WAIVER`.
 
 ## 🔴 Must Have
 
-- `Makefile:38` `[adversarial|containers]` · waivers were inert while the scan kept `--ignore-unfixed` (audit SA-03) · fixed in `0987f5f` (flag dropped, owner MCDA option A 445/500)
-- `.trivyignore.yaml` `[containers]` · no follow-up issue per waiver · fixed: #116 cited in every statement; `purls` instead of `paths` for OS packages documented in `SECURITY.md`
+- _None._ (Round 1: ADR-0014 §1 totals wrong → corrected, owner re-decided C on the true
+  totals; auth spec §4.4 missing the new owner routes; `CLAUDE.md` layout missing
+  `folder-lister` — all fixed.)
 
 ## 🟡 Should Have
 
-_None open._ Fixed or tracked: static FFmpeg library blind spot (`SECURITY.md`), Dependabot 4-part tag (#116), decision record (PR body + `PROJECT_LOG.md`).
+- _None._ (Fixed: overlap check on real paths, concurrent-add race, admin API client tests,
+  spec/UI alignment, reasons per MCDA score, folder list marks overlapping folders taken,
+  accurate doc comments, stronger route tests.)
 
 ## 🔵 Nice to Have
 
-_None open._ Applied: trixie note on `apt-get upgrade`, ffprobe note, grouped Dependabot PR note, `SECURITY.md` table alignment.
+- `apps/server/src/library/routes.test.ts` `[adversarial]` · the concurrent-add test may pass
+  on the pre-fix code too · inject a slow `realpath` to prove the re-read.
+- `apps/server/src/library/routes.ts` `[design|adversarial]` · unreachable 404 after
+  `renameLibrary` · keep as a defensive check.
+- `apps/web/src/auth/LibrarySection.tsx` `[design|adversarial]` · library UI lives in `auth/`
+  and is ~320 lines · split `LibraryRow` / `AddLibraryForm` into `src/library/` when it grows.
+- `apps/web/src/auth/AuthGate.tsx` `[adversarial]` · no test that only an owner receives
+  `openAdmin` · the server enforces owner-only on every route.
 
 ## ⚪ Disagree / Intentional
 
-- `.trivyignore.yaml` `[containers]` · `purls` instead of `paths` · OS packages have no file path; Trivy 0.76.0 matches versionless purls (verified with and without the file)
-- `.trivyignore.yaml` `[containers]` · "delete the waivers, CI ignores unfixed" · superseded by dropping `--ignore-unfixed` (issue #110 asks for recorded waivers, not the flag)
+- `docs/architecture/specs/deploy-homelab.md` `[adversarial]` · #125 line dropped on purpose
+  (#125 closed, no Jellyfin history).
+- `apps/server/src/playback/session-routes.test.ts` `[tests]` · the helper reuses the library:
+  required by R3 (one library per root).
+- ADR-0014 §1 effort re-scored once C was written · written down openly, owner re-decided.
 
 ## Per-dimension summary
 
-- Adversarial: one Must (inert waivers) fixed, gate open · Containers: pinned FROMs, non-root, HEALTHCHECK OK; waiver hygiene fixed · Security: CVEs 7 Critical / 68 High → 0 / 15 accepted, none in the media path · Correctness: build, version check and FFmpeg features verified in the image · Out of scope: no `-protocol_whitelist` on FFmpeg calls (follow-up next to #114)
+- Adversarial: 3 rounds, gate open. · Design: no defect, no over-engineering. · Docs: comments
+  and specs aligned. · Tests: trustworthy, Shoulds fixed. · Security: owner-only routes, 403
+  tested, CSRF covers PATCH/DELETE, prototype poisoning still refused. · Correctness: race
+  closed, cascade under the lock.
+- Out of scope (pre-existing): ADR index in `docs/architecture/README.md` stops at 0002;
+  `CLAUDE.md` repo-visibility line predates ADR-0005; `POST /libraries` does not check the root
+  exists (scan reports `root_unreadable`).

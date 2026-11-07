@@ -35,8 +35,6 @@
 4. Household uses PopCornTV; Jellyfin stays stopped two weeks as the fallback, then is
    removed from bb-homelab.
 
-Importing Jellyfin's watch history is a follow-up issue (#125).
-
 ## 3. Rollback
 
 Set the previous image tag (restore the pre-upgrade archive if a migration ran), or start

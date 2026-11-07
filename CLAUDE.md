@@ -99,10 +99,15 @@ invite / reset links redeemed by `POST /auth/redeem`, owner `user-routes` for ac
 devices, links and `GET /auth/events`, last owner protected, web `RedeemForm` +
 `AdminPanel` from the account menu); #72 global rate limit (ADR-0011, spec auth R13:
 `@fastify/rate-limit` as the first root `onRequest` hook keyed on `clientKey`, 300 / min per
-client, `MEDIA_ROUTE` routes in a 3000 / min bucket, `buildApp` is async).
+client, `MEDIA_ROUTE` routes in a 3000 / min bucket, `buildApp` is async); #123 library management
+(spec `docs/architecture/specs/library-management.md`, ADR-0014: owner `GET
+/libraries/folders` lists the direct sub-folders of `MEDIA_ROOT`, `PATCH|DELETE
+/libraries/:id`, overlapping roots refused `409 root_in_use`, delete under the library lock,
+synchronous scan, web `LibrarySection` in `AdminPanel` + "Add a library" on the empty
+catalog; an empty JSON body is accepted on every route, #122).
 
 Server layout (flat, component diagram 03): `src/library/` holds the pure `name-parser`
-and `path-guard`, the `ffprobe` runner (only process egress), the `scanner`, the per-library
+and `path-guard`, the `ffprobe` runner (only process egress), the `folder-lister` (one-level `readdir` of `MEDIA_ROOT`), the `scanner`, the per-library
 `lock` (scan + included enrich and explicit enrich never overlap), the Drizzle `repository`
 and the `routes`; `src/playback/` the pure `range` parser, the
 streaming `routes`, the pure `ffmpeg-args`, the `transcoder` (only child-process egress,

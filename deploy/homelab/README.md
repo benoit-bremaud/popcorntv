@@ -55,7 +55,12 @@ the `bb-homelab` repository.
    `popcorntv.bb-homelab.local` to the `proxy-uptime-kuma` aliases. Add the site block of
    `Caddyfile`, then recreate Caddy.
 6. Read the one-time setup link in `docker logs bb-homelab-popcorntv`, create the owner
-   account, add the libraries under `/app/media`, run a scan.
+   account. On the empty catalog press "Add a library" (or account menu › Administration ›
+   Libraries), pick `films` then `series` under `/app/media` with their kind, and press
+   Scan on each. Without the web app, the API takes the session cookie:
+   `curl -X POST -H 'Content-Type: application/json' -b '__Host-pctv_session=<token>'
+   https://popcorntv.bb-homelab.local/api/libraries/<id>/scan` (an empty JSON body is
+   accepted since #122).
 7. Uptime Kuma: HTTP monitor on `https://popcorntv.bb-homelab.local/api/health`.
 
 ## Backup

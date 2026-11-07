@@ -5,18 +5,24 @@ import type {
   AuthEvent,
   AuthStatus,
   ChangePasswordBody,
+  CreateLibraryBody,
   CreateProfileBody,
   DeviceSession,
+  EnrichBody,
+  EnrichReport,
   Invitation,
   IssuedLink,
   Library,
   Media,
+  MediaFolderList,
   PlaybackSessionBody,
   PlaybackStart,
   Profile,
   ProgressBody,
   RedeemBody,
+  RenameLibraryBody,
   Role,
+  ScanReport,
   SetupBody,
   SignInBody,
   UpdateProfileBody,
@@ -287,7 +293,7 @@ async function authCall(
   fetchFn: Fetch,
   path: string,
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
-  body?: SetupBody | SignInBody | ChangePasswordBody | RedeemBody | { readonly role: Role },
+  body?: SetupBody | SignInBody | ChangePasswordBody | RedeemBody | AdminBody,
 ): Promise<{ readonly status: number; readonly body: unknown } | null> {
   try {
     const response = await fetchFn(`${API}${path}`, {
@@ -348,12 +354,15 @@ export type AdminResult<T> =
   | { readonly ok: true; readonly value: T }
   | { readonly ok: false; readonly error: ApiErrorCode | null };
 
-/** Owner administration calls (UC15–UC18); a `401` sends the gate back to sign-in. */
+/** What an owner administration call may send. */
+type AdminBody = { readonly role: Role } | CreateLibraryBody | RenameLibraryBody | EnrichBody;
+
+/** Owner administration calls (UC15–UC18, UC21); a `401` sends the gate back to sign-in. */
 async function adminCall<T>(
   fetchFn: Fetch,
   path: string,
   method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
-  body?: { readonly role: Role },
+  body?: AdminBody,
 ): Promise<AdminResult<T>> {
   const answer = await authCall(fetchFn, path, method, body);
   if (answer?.status === 401) unauthenticated();
@@ -384,6 +393,17 @@ export function adminApi(fetchFn: Fetch = (...args) => fetch(...args)) {
     invite: (role: Role) => adminCall<IssuedLink>(fetchFn, '/invitations', 'POST', { role }),
     revokeInvitation: (id: string) => adminCall<null>(fetchFn, `/invitations/${id}`, 'DELETE'),
     events: () => adminCall<AuthEvent[]>(fetchFn, '/auth/events', 'GET'),
+    // UC21 (spec library-management); UC1 and UC2 started from the same section.
+    libraries: () => adminCall<Library[]>(fetchFn, '/libraries', 'GET'),
+    folders: () => adminCall<MediaFolderList>(fetchFn, '/libraries/folders', 'GET'),
+    createLibrary: (body: CreateLibraryBody) =>
+      adminCall<Library>(fetchFn, '/libraries', 'POST', body),
+    renameLibrary: (id: string, name: string) =>
+      adminCall<Library>(fetchFn, `/libraries/${id}`, 'PATCH', { name }),
+    deleteLibrary: (id: string) => adminCall<null>(fetchFn, `/libraries/${id}`, 'DELETE'),
+    scan: (id: string) => adminCall<ScanReport>(fetchFn, `/libraries/${id}/scan`, 'POST'),
+    enrich: (id: string, refresh: boolean) =>
+      adminCall<EnrichReport>(fetchFn, `/libraries/${id}/enrich`, 'POST', { refresh }),
   };
 }
 

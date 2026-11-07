@@ -43,7 +43,7 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: 'PopCornTV', level: 1 })).toBeInTheDocument();
     await user.click(await screen.findByRole('button', { name: 'Kid' }));
 
-    expect(await screen.findByText(/Nothing to show yet/)).toBeInTheDocument();
+    expect(await screen.findByText(/Nothing to watch yet/)).toBeInTheDocument();
     expect(storage.getItem('popcorntv.activeProfileId')).toBe('k1');
     expect(screen.getByRole('button', { name: /Kid, switch profile/ })).toHaveFocus();
   });
@@ -52,7 +52,7 @@ describe('App', () => {
     const storage = memoryStorage({ 'popcorntv.activeProfileId': 'k1' });
     render(<App load={async () => [me, kid]} storage={storage} />);
 
-    expect(await screen.findByText(/Nothing to show yet/)).toBeInTheDocument();
+    expect(await screen.findByText(/Nothing to watch yet/)).toBeInTheDocument();
     expect(screen.queryByText("Who's watching?")).not.toBeInTheDocument();
   });
 

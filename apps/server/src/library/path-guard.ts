@@ -13,6 +13,11 @@ export function resolveUnderRoot(root: string, candidate: string): string | null
   return absolute;
 }
 
+/** True when one root is, contains or sits inside the other (spec library-management R3). */
+export function rootsOverlap(a: string, b: string): boolean {
+  return isAtOrUnderRoot(a, b) || isAtOrUnderRoot(b, a);
+}
+
 /** True when `candidate` is `root` itself or strictly under it (same caveats as above). */
 export function isAtOrUnderRoot(root: string, candidate: string): boolean {
   return resolve(candidate) === resolve(root) || resolveUnderRoot(root, candidate) !== null;

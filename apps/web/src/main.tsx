@@ -16,6 +16,8 @@ if (root === null) {
 
 createRoot(root).render(
   <StrictMode>
-    <AuthGate>{(_user, account) => <App account={account} />}</AuthGate>
+    <AuthGate>
+      {(_user, account, openAdmin) => <App account={account} onAddLibrary={openAdmin} />}
+    </AuthGate>
   </StrictMode>,
 );

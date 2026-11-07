@@ -178,7 +178,7 @@ describe('CatalogPage', () => {
     settleOld([]);
 
     expect(await screen.findByRole('heading', { name: 'Top rated' })).toBeInTheDocument();
-    expect(screen.queryByText(/Nothing to show yet/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Nothing to watch yet/)).not.toBeInTheDocument();
   });
 
   it('shows an error with a working Retry', async () => {
@@ -197,7 +197,24 @@ describe('CatalogPage', () => {
   it('shows the empty state when no library has items', async () => {
     renderPage(async () => [pilot]);
 
-    expect(await screen.findByText(/Nothing to show yet/)).toBeInTheDocument();
+    expect(await screen.findByText(/Nothing to watch yet/)).toBeInTheDocument();
+  });
+
+  it('offers a viewer nothing to add when the catalog is empty', async () => {
+    render(<CatalogPage profileId="default" load={async () => []} />);
+
+    expect(await screen.findByText('Nothing to watch yet.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add a library' })).toBeNull();
+  });
+
+  it('offers an owner to add a library when the catalog is empty', async () => {
+    const user = userEvent.setup();
+    const onAddLibrary = vi.fn();
+    render(<CatalogPage profileId="default" load={async () => []} onAddLibrary={onAddLibrary} />);
+
+    await user.click(await screen.findByRole('button', { name: 'Add a library' }));
+
+    expect(onAddLibrary).toHaveBeenCalledOnce();
   });
 
   it('shows the poster placeholder without artwork and the image with it', async () => {

@@ -22,8 +22,11 @@ type Gate =
   | { readonly kind: 'admin'; readonly user: User };
 
 type Props = {
-  /** The signed-in app; `account` is the header menu to place in it. */
-  readonly children: (user: User, account: ReactNode) => ReactNode;
+  /**
+   * The signed-in app; `account` is the header menu to place in it. `openAdmin` is set for
+   * an owner only: the empty catalog offers "Add a library".
+   */
+  readonly children: (user: User, account: ReactNode, openAdmin?: () => void) => ReactNode;
   readonly api?: AuthApi;
   readonly admin?: AdminApi;
   /** Injected in tests; `window.location` / `window.history` otherwise. */
@@ -81,12 +84,13 @@ export function AuthGate({
 
   if (gate.kind === 'signedIn' || gate.kind === 'admin') {
     const { user } = gate;
+    const openAdmin = () => setGate({ kind: 'admin', user });
     const account = (
       <AccountMenu
         user={user}
         api={api}
         onSignedOut={() => setGate({ kind: 'signIn' })}
-        onAdmin={() => setGate({ kind: 'admin', user })}
+        onAdmin={openAdmin}
       />
     );
     if (gate.kind === 'admin') {
@@ -108,7 +112,11 @@ export function AuthGate({
       );
     }
     // Keyed by user: another account starts from a fresh profile list.
-    return <Fragment key={gate.user.id}>{children(gate.user, account)}</Fragment>;
+    return (
+      <Fragment key={gate.user.id}>
+        {children(gate.user, account, user.role === 'owner' ? openAdmin : undefined)}
+      </Fragment>
+    );
   }
 
   return (

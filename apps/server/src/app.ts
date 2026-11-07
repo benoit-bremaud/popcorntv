@@ -99,6 +99,20 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     trustProxy: options.trustProxy ?? false,
   });
 
+  // An empty JSON body means "no body" (#122, spec library-management R8): `curl -H
+  // 'content-type: application/json' -X POST …/scan` must not fail. Anything else keeps
+  // Fastify's own parser, prototype-poisoning checks included.
+  const parseJson = app.getDefaultJsonParser('error', 'error');
+  app.removeContentTypeParser('application/json');
+  app.addContentTypeParser('application/json', { parseAs: 'string' }, (request, body, done) => {
+    const text = body.toString();
+    if (text === '') {
+      done(null, undefined);
+      return;
+    }
+    void parseJson(request, text, done);
+  });
+
   // On every reply, errors and streamed media included. The CSP and `frame-ancestors`
   // belong to whatever serves the web build.
   app.addHook('onSend', async (_request, reply, payload) => {

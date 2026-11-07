@@ -24,10 +24,16 @@ type Props = {
   readonly profileId: string;
   /** Injected in tests; defaults to the real API. */
   readonly load?: () => Promise<Media[]>;
+  /** Owners only: the empty catalog offers to add a library (spec library-management R7). */
+  readonly onAddLibrary?: () => void;
 };
 
 /** UC3 / UC4: the catalog with its dynamic controls and the detail dialog. */
-export function CatalogPage({ profileId, load = loadCatalog }: Props): React.JSX.Element {
+export function CatalogPage({
+  profileId,
+  load = loadCatalog,
+  onAddLibrary,
+}: Props): React.JSX.Element {
   const [catalog, setCatalog] = useState<Load>({ kind: 'loading' });
   const [state, dispatch] = useReducer(viewReducer, HOME);
   // `seq` numbers each opening: the native `close` event is queued as a task, so a late one
@@ -82,10 +88,15 @@ export function CatalogPage({ profileId, load = loadCatalog }: Props): React.JSX
 
   const items = catalogItems(catalog.media);
   if (items.length === 0) {
+    if (!onAddLibrary) return <p className="status muted">Nothing to watch yet.</p>;
     return (
-      <p className="status muted">
-        Nothing to show yet: add a library and scan it (POST /libraries, then /scan).
-      </p>
+      <section className="status" aria-labelledby="welcome-title">
+        <h2 id="welcome-title">Welcome to PopCornTV</h2>
+        <p className="muted">Add a library from your media folder, then scan it.</p>
+        <button type="button" className="button" onClick={onAddLibrary}>
+          Add a library
+        </button>
+      </section>
     );
   }
 

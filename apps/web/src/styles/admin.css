@@ -53,6 +53,11 @@
   min-height: var(--touch-target);
 }
 
+.admin-report {
+  display: block;
+  padding: var(--space-2) 0;
+}
+
 .admin-link {
   display: grid;
   gap: var(--space-2);
