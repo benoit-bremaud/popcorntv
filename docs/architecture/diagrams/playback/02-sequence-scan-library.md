@@ -74,7 +74,7 @@ sequenceDiagram
         end
       end
       opt No unreadable directory or file, and at least one file found
-        SC->>DB: deleteMissing(libraryId, seen) — then orphan series
+        SC->>DB: deleteMissing(libraryId, seen) — progress carried over, then orphan series
       end
       SC-->>API: ScanReport
       API-->>O: 200 {added, updated, removed, skipped[]}

@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Library } from '@popcorntv/shared';
 import { openDatabase } from '../db/index.js';
+import { watchProgress } from '../db/schema.js';
 import type { AppDatabase } from '../db/index.js';
 import type { MetadataInput } from '../metadata/matcher.js';
 import { MetadataRepository } from '../metadata/repository.js';
@@ -205,6 +206,95 @@ describe('LibraryScanner', () => {
 
     expect(report).toEqual({ added: 0, updated: 0, removed: 1, skipped: [] });
     expect(repository.listMedia(library.id).map((item) => item.title)).toEqual(['A']);
+  });
+
+  it('carries the watch progress over to a file that replaced it on another path', async () => {
+    const old = await touch(root, 'Heat (1995)/Heat (1995) WEBDL-720p.mkv');
+    await scanner.scan(library);
+    const [before] = repository.listMedia(library.id);
+    db.insert(watchProgress)
+      .values({ profileId: 'default', mediaId: before?.id ?? '', positionSec: 600, updatedAt: NOW })
+      .run();
+    await rm(old);
+    await touch(root, 'Heat (1995)/Heat (1995) Bluray-1080p.mkv');
+
+    const report = await scanner.scan(library);
+    const [after] = repository.listMedia(library.id);
+    const rows = db.select().from(watchProgress).all();
+
+    expect(report).toMatchObject({ added: 1, removed: 1 });
+    expect(rows).toEqual([
+      {
+        profileId: 'default',
+        mediaId: after?.id,
+        positionSec: 600,
+        updatedAt: NOW,
+        watchedAt: null,
+      },
+    ]);
+  });
+
+  it('keeps the newer position when the new file already has one', async () => {
+    const old = await touch(root, 'Heat (1995).mkv');
+    await scanner.scan(library);
+    const [first] = repository.listMedia(library.id);
+    await touch(root, 'Heat (1995) Remux.mkv');
+    await scanner.scan(library);
+    const second = repository.listMedia(library.id).find((item) => item.id !== first?.id);
+    db.insert(watchProgress)
+      .values([
+        { profileId: 'default', mediaId: first?.id ?? '', positionSec: 100, updatedAt: NOW },
+        {
+          profileId: 'default',
+          mediaId: second?.id ?? '',
+          positionSec: 900,
+          updatedAt: '2026-10-24T10:00:00.000Z',
+        },
+      ])
+      .run();
+    await rm(old);
+
+    await scanner.scan(library);
+
+    expect(db.select().from(watchProgress).all()).toMatchObject([
+      { mediaId: second?.id, positionSec: 900 },
+    ]);
+  });
+
+  it.each([
+    ['older', '2026-10-24T10:00:00.000Z', 900],
+    ['newer', '2026-10-20T10:00:00.000Z', 100],
+  ])('keeps the watched mark of the removed file when it is %s', async (_, newUpdatedAt, kept) => {
+    const old = await touch(root, 'Heat (1995).mkv');
+    await scanner.scan(library);
+    const [first] = repository.listMedia(library.id);
+    await touch(root, 'Heat (1995) Remux.mkv');
+    await scanner.scan(library);
+    const second = repository.listMedia(library.id).find((item) => item.id !== first?.id);
+    db.insert(watchProgress)
+      .values([
+        {
+          profileId: 'default',
+          mediaId: first?.id ?? '',
+          positionSec: 100,
+          updatedAt: NOW,
+          watchedAt: NOW,
+        },
+        {
+          profileId: 'default',
+          mediaId: second?.id ?? '',
+          positionSec: 900,
+          updatedAt: newUpdatedAt,
+        },
+      ])
+      .run();
+    await rm(old);
+
+    await scanner.scan(library);
+
+    expect(db.select().from(watchProgress).all()).toMatchObject([
+      { mediaId: second?.id, positionSec: kept, watchedAt: NOW },
+    ]);
   });
 
   it('removes a series row once its last episode is gone', async () => {

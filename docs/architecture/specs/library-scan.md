@@ -70,7 +70,9 @@ The owner calls `POST /libraries/:id/scan`.
    collecting its episodes) and created on demand; a provider tag parsed from the new
    episode that differs from the series row's replaces it and queues the series for UC2.
 8. After the walk, System deletes the `Media` rows of this library whose real path was
-   not seen, then the `series` rows no episode points to.
+   not seen, then the `series` rows no episode points to. Just before, each removed row's
+   watch progress moves to the present file holding the same title (spec
+   [progress-carry-over](progress-carry-over.md)).
 9. «include» UC2 ([tmdb-metadata.md](tmdb-metadata.md)) on the rows left without
    metadata, when `TMDB_API_KEY` is configured; its report becomes `metadata` in the
    scan report (`null` when not configured). A TMDB failure never fails the scan.
