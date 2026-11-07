@@ -4,6 +4,20 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-07 — #133 watched marks (PR #146 merged, `17f5d97`)
+
+- **Conception** — spec `watched-marks.md` (UC23), ADR-0017: nullable `watch_progress.watched_at`
+  (MCDA A 465 vs 330 / 345); `finished` = mark or ≥ 90 %; a rewatch keeps the mark; unwatched
+  forgets the row; a series mark applies to each episode.
+- **Change** — `PUT | DELETE /profiles/:profileId/media/:id/watched` in one transaction,
+  migration 0007, detail-dialog toggle, poster ✓ via `WatchedContext`, per-episode label.
+- **Gate** — server 567 / web 246 tests, SonarQube PASSED, gitleaks clean, E2E smoke green;
+  Sonnet combined review (5 Should fixed) and Opus adversarial 2 rounds (1 Must: finished rule
+  stated two ways, 6 Should fixed), gate open on `b20f75b`. Report
+  `docs/architecture/review-local.md`.
+- **Decision** — owner 2026-11-07: for the rest of the stack (#134–#136) the adversarial
+  review runs once at the end.
+
 ## 2026-11-07 — #132 scheduled library scan (PR #143 merged, `5f43064`)
 
 - **Conception** — spec `scheduled-scan.md`, ADR-0016: `SCAN_INTERVAL_MIN` (default 60, `0`
