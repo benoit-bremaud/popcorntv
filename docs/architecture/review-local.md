@@ -1,57 +1,43 @@
-# Local review — popcorntv (#132 scheduled scan)
+# Local review — popcorntv (#133 watched marks)
+
+Pre-push and pre-merge review of the watched / unwatched mark (issue #133, ADR-0017).
 
 - Date: 2026-11-07
-- Commit: b1b926f
-- Scope: branch diff origin/main...feat/132-scheduled-library-scan
-- Checks run: adversarial (Opus, 3 rounds) · design · docs · tests · security · correctness
-- Verdict: ship · Must 0 · Should 1 (deferred) · Nice 5 (deferred)
+- Commit: b20f75b
+- Scope: branch diff origin/main...feat/133-watched-marks
+- Checks run: adversarial (Opus, 2 rounds) · combined design / docs / tests / security review (Sonnet)
+- Verdict: ship · Must 0 open · Should 0 open · Nice 4 (deferred)
 
 ## Adversarial review (#236)
 
-- Round 1 on `1a1bdc2`: Must 0 · Should 5 · Nice 5 · Push gate: open
-- Round 2 on `419c8b5`: 4 fixed · 1 partly fixed · new Must 1 (FFmpeg killed only after the
-  in-flight scan on close) · Push gate: closed
-- Round 3 on `b1b926f`: all fixed · new Must 0 · **Push gate: open**
-- Hosted reviewers (filled at the pre-merge run): Copilot out of credit · Codex optional
+- Round 1 on `d8ea81e`: Must 1 (finished rule stated two ways in resume-playback R4 and the
+  class note) · Should 6 (parity row, component routes, UC23 in the auth note, CLAUDE.md,
+  series toggle tests, rewatch test) · Nice 3 · Push gate: closed
+- Round 2 on `b20f75b`: all Must and Should fixed · new Must 0 · **Push gate: open**
+- Hosted reviewers: Copilot out of credit · Codex optional
 
-## Pre-merge gate (head SHA b1b926f)
+## Combined review (Sonnet)
+
+- Must 0 · Should 5: `setWatched` not atomic (fixed `d8ea81e`, one transaction), refusal
+  tests for DELETE (fixed), refused-mark web test (fixed), repository unit test and diagram
+  check (covered through routes; diagrams fixed in round 1) · Nice 6 deferred.
+
+## Pre-merge gate (head SHA b20f75b)
 
 | Step | Result |
 |---|---|
-| 0 CI mirror | typecheck, lint, format, test, build green locally on tracked files; CodeQL, Scorecard, dependency review CI-only |
-| 1 Tests | ✅ shared 38 · server 557 · web 235 (pre-existing flaky `subtitle-extractor` timeout seen once in 9 runs) |
-| 2 Coverage | server 97.45 % stmts / 93.34 % branches / 96.32 % funcs / 98.54 % lines · web 99.05 % · shared 90.24 % · docs ⏸ deferred to the pre-merge run |
-| 3 SonarQube | ⏸ deferred to the pre-merge run (`--push`) |
-| 4 Secrets | ✅ gitleaks clean (origin/main..HEAD) · only `.env.example` tracked · diff read: nothing sensitive |
-| 5 E2E/smoke | ⏸ deferred to the pre-merge run (`--push`) |
+| 0 CI mirror | typecheck, eslint, prettier on tracked files, build green; CodeQL, Scorecard, dependency review CI-only (Actions disabled) |
+| 1 Tests | ✅ shared 38 · server 567 · web 246 |
+| 2 Coverage | server 97.5 % stmts / 93.48 % branches · web 99.07 % · shared 90.24 % |
+| 3 SonarQube | ✅ quality gate PASSED |
+| 4 Secrets | ✅ gitleaks clean (origin/main..HEAD) · diff read: nothing sensitive |
+| 5 E2E/smoke | ✅ catalog smoke 1 passed |
 
-- Gate: `--push`: **pre-push green**, SonarQube, E2E and doc coverage deferred
+- Gate: **green**
 
-## 🔴 Must Have
+## 🔵 Nice to have (deferred)
 
-_None._
-
-## 🟡 Should Have
-
-- `apps/server/src/app.ts:271` `[adversarial|tests]` · no test pins "kill FFmpeg before awaiting
-  the scan" on close · follow-up test with a blocked probe and a `kill` spy
-
-## 🔵 Nice to Have
-
-- `apps/server/src/config.ts:118` `[correctness]` · `Number()` accepts `0x10` or `1e1` as minutes
-- `apps/server/src/app.ts:251` `[correctness]` · `buildApp` does not bound `scanIntervalMin`
-- `docs/architecture/specs/scheduled-scan.md` `[docs]` · owner 409 while a scheduled run holds the lock
-- `docs/requirements/02-homelab-ecosystem.md:139` `[docs]` · point "rescan by hand" to #132
-- `apps/server/src/config.ts:116` `[security]` · warn when an invalid value falls back to 60
-
-## ⚪ Disagree / Intentional
-
-- `apps/server/src/library/scheduler.ts` `[adversarial]` · a tick during a run is dropped, not
-  queued · spec R4
-
-## Per-dimension summary
-
-- Adversarial: 1 Must found and fixed in round 2, gate open in round 3 · Design: flat, no
-  over-engineering · Docs: spec, ADR-0016, diagrams, CLAUDE.md aligned · Tests: stop, overlap,
-  unref and interval 0 now pinned · Security: no new route, input or egress · Correctness:
-  deleted-library and shutdown races closed
+- Spec summary says an episode can be marked; the UI offers the toggle on films and series only.
+- A refused mark gives no visible feedback (matches spec 2a).
+- New web test names use "shows…" / "offers…" instead of "should…".
+- `watchedIds` is O(items × media) for series; fine at current scale.
