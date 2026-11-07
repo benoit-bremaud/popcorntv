@@ -18,7 +18,7 @@ export function PosterCard({ item, onOpen, progress }: Props): React.JSX.Element
     <button
       type="button"
       className="poster"
-      aria-label={watched > 0 ? `${name}, ${watched} % watched` : name}
+      aria-label={watched > 0 ? `${name}, ${watched}% watched` : name}
       onClick={(event) => onOpen(item, event.currentTarget)}
     >
       {poster === null ? (

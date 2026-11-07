@@ -251,6 +251,12 @@ describe('continueWatchingRow', () => {
     expect(row?.progress?.get('s')).toBe(0);
   });
 
+  it('should show the next episode with its own resume progress', () => {
+    const row = continueWatchingRow(all, [saved('e', 95, true), saved('e2', 30)]);
+
+    expect(row?.progress?.get('s')).toBe(0.3);
+  });
+
   it('should let an older episode decide when the latest is barely started', () => {
     const row = continueWatchingRow(all, [saved('e2', 5), saved('e', 95, true)]);
 

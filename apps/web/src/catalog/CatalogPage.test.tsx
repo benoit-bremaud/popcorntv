@@ -255,7 +255,7 @@ describe('CatalogPage continue watching', () => {
     renderPage(undefined, async () => [inProgress]);
 
     const row = await screen.findByRole('region', { name: 'Continue watching' });
-    expect(within(row).getByRole('button', { name: 'Alien, 50 % watched' })).toBeInTheDocument();
+    expect(within(row).getByRole('button', { name: 'Alien, 50% watched' })).toBeInTheDocument();
     expect(screen.getAllByRole('region')[0]).toBe(row);
     expect(row.querySelector('progress')).toHaveAttribute('value', '0.5');
     expect(document.querySelectorAll('progress')).toHaveLength(1);
@@ -273,7 +273,7 @@ describe('CatalogPage continue watching', () => {
     const { user } = renderPage(undefined, progress);
     const row = await screen.findByRole('region', { name: 'Continue watching' });
 
-    await user.click(within(row).getByRole('button', { name: 'Alien, 50 % watched' }));
+    await user.click(within(row).getByRole('button', { name: 'Alien, 50% watched' }));
     const dialog = await screen.findByRole('dialog');
     const before = progress.mock.calls.length;
     await user.click(within(dialog).getByRole('button', { name: 'Close' }));
