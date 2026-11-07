@@ -77,6 +77,8 @@ export function LibrarySection({ api }: Props): React.JSX.Element {
     null,
   );
   const [report, setReport] = useState<string | null>(null);
+  /** Add is disabled while a create is in flight: a double click must not send two. */
+  const [adding, setAdding] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -107,6 +109,7 @@ export function LibrarySection({ api }: Props): React.JSX.Element {
   async function add(event: React.FormEvent): Promise<void> {
     event.preventDefault();
     const rootPath = selected === OTHER ? path.trim() : selected;
+    setAdding(true);
     await act(
       () => api.createLibrary({ name: name.trim() || suggestion, rootPath, kind }),
       (library) => {
@@ -116,6 +119,7 @@ export function LibrarySection({ api }: Props): React.JSX.Element {
         setReport(`${library.name} added: scan it to fill the catalog.`);
       },
     );
+    setAdding(false);
   }
 
   async function scan(library: Library): Promise<void> {
@@ -305,7 +309,7 @@ export function LibrarySection({ api }: Props): React.JSX.Element {
             ))}
           </select>
         </label>
-        <button type="submit" className="button">
+        <button type="submit" className="button" disabled={adding}>
           Add
         </button>
       </form>

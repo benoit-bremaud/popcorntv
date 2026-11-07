@@ -61,9 +61,21 @@ export function registerLibraryRoutes(app: FastifyInstance, deps: LibraryRoutesD
     // the scanner walks them: a link to another library's folder overlaps it too.
     const real = (path: string) => realpath(path).catch(() => path);
     const realRoot = await real(rootPath);
-    const others = await Promise.all(deps.repository.listLibraries().map((l) => real(l.rootPath)));
-    if (others.some((other) => rootsOverlap(other, rootPath) || rootsOverlap(other, realRoot)))
-      return reply.code(409).send(apiError('root_in_use'));
+    const realOf = new Map(
+      await Promise.all(
+        deps.repository.listLibraries().map(async (l) => [l.id, await real(l.rootPath)] as const),
+      ),
+    );
+    // Re-read after the awaits and insert with none in between: two concurrent adds of the
+    // same root cannot both pass. A library added meanwhile is compared on its stored path.
+    const overlaps = deps.repository
+      .listLibraries()
+      .some((l) =>
+        [l.rootPath, realOf.get(l.id) ?? l.rootPath].some(
+          (other) => rootsOverlap(other, rootPath) || rootsOverlap(other, realRoot),
+        ),
+      );
+    if (overlaps) return reply.code(409).send(apiError('root_in_use'));
     const library: Library = deps.repository.createLibrary(body.data);
     return reply.code(201).send(library);
   });

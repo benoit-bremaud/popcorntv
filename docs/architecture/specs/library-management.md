@@ -28,7 +28,8 @@
   artwork (shared by digest) are never touched. The web asks the owner to type the
   library's name before it sends the request.
 - **R6** Scan progress (ADR-0014 §2): the request stays synchronous. While it runs the Scan and
-  Refresh buttons of every library are disabled and show "Scanning…"; at the end the
+  Refresh buttons of every library are disabled, and the running one reads "Scanning…" or
+  "Refreshing…"; the Add button is disabled while an add is sent. At the end the
   report shows added / updated / removed / skipped counts and the metadata summary. A
   `409` shows "A scan or a refresh of this library is already running."
 - **R7** First run (ADR-0014 §4): an owner whose catalog is empty sees a welcome panel with

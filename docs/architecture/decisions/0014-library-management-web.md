@@ -37,8 +37,9 @@ scores 3 / 5 / 4; the true totals were A 395, B 410, C 400, so B led. Effort mea
 work left; once C was written and tested it was re-scored (A 2, B 4, C 5), the other
 scores unchanged, and the owner chose again on the totals above.
 
-Sensitivity: B overtakes C only when security weighs about half the total; A only when UX
-passes about 45. **C chosen**: it covers the real layout in one click and avoids the
+Sensitivity: C stays first while security stays at or below about 41 (UX losing the
+points; at 42 / 23, B 416 and C 415) and while UX stays at or below about 38 (effort losing
+the points; at 39 / 6, A 407 and C 406). **C chosen**: it covers the real layout in one click and avoids the
 typed-path error made during #60.
 
 ## 2. Scan progress

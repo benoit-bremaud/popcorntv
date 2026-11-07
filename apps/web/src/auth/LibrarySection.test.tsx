@@ -107,6 +107,25 @@ describe('LibrarySection', () => {
     expect(await screen.findByText(/metadata: 3 matched, 0 unknown, 0 failed/)).toBeInTheDocument();
   });
 
+  it('labels the running refresh and disables the scan meanwhile', async () => {
+    let finish: () => void = () => undefined;
+    const enrich = vi.fn(
+      () =>
+        new Promise<Awaited<ReturnType<AdminApi['enrich']>>>((resolve) => {
+          finish = () =>
+            resolve({ ok: true, value: { matched: 0, unmatched: [], failed: [], skipped: 0 } });
+        }),
+    );
+    const { user } = section({ enrich });
+
+    await user.click(await screen.findByRole('button', { name: 'Refresh metadata' }));
+
+    expect(screen.getByRole('button', { name: 'Refreshing…' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Scan' })).toBeDisabled();
+    finish();
+    expect(await screen.findByRole('button', { name: 'Refresh metadata' })).toBeEnabled();
+  });
+
   it('refreshes the metadata of a library', async () => {
     const { api, user } = section();
 

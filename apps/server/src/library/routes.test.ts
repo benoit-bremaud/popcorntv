@@ -183,6 +183,19 @@ describe('library routes', () => {
       expect(response.json()).toEqual({ error: 'root_in_use' });
     });
 
+    it('creates only one of two concurrent adds of the same root', async () => {
+      const add = () =>
+        app.inject({
+          method: 'POST',
+          url: '/libraries',
+          payload: { name: 'Films', rootPath: root, kind: 'films' },
+        });
+
+      const statuses = (await Promise.all([add(), add()])).map((r) => r.statusCode).sort();
+
+      expect(statuses).toEqual([201, 409]);
+    });
+
     it('refuses a link to another library root with 409 root_in_use', async () => {
       await createLibrary();
       await symlink(root, join(mediaRoot, 'films-link'));
