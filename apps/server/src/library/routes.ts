@@ -121,12 +121,7 @@ export function registerLibraryRoutes(app: FastifyInstance, deps: LibraryRoutesD
     const library = loadLibrary(request.params, deps.repository);
     if (!library.ok) return reply.code(library.status).send(library.body);
     try {
-      // The lock spans the include too: the enrichment must see the rows this scan wrote.
-      const report: ScanReport = await deps.lock.run(library.value.id, async () => {
-        const scanned = await deps.scanner.scan(library.value);
-        const metadata = await includeEnrich(deps.enrich, library.value, request.log);
-        return { ...scanned, metadata };
-      });
+      const report = await scanLibrary(deps, library.value, request.log);
       return reply.code(200).send(report);
     } catch (error) {
       if (error instanceof RootUnreadableError)
@@ -141,6 +136,24 @@ export function registerLibraryRoutes(app: FastifyInstance, deps: LibraryRoutesD
     if (!library.ok) return reply.code(library.status).send(library.body);
     const items: Media[] = deps.repository.listMedia(library.value.id);
     return reply.code(200).send(items);
+  });
+}
+
+/**
+ * UC1 with its «include» of UC2, under the library lock; shared by the scan route and the
+ * schedule (spec scheduled-scan R2). The lock spans the include too: the enrichment must
+ * see the rows this scan wrote.
+ * @throws {LibraryBusyError} | {RootUnreadableError}
+ */
+export async function scanLibrary(
+  deps: Pick<LibraryRoutesDeps, 'lock' | 'scanner' | 'enrich'>,
+  library: Library,
+  log: FastifyInstance['log'],
+): Promise<ScanReport> {
+  return deps.lock.run(library.id, async () => {
+    const scanned = await deps.scanner.scan(library);
+    const metadata = await includeEnrich(deps.enrich, library, log);
+    return { ...scanned, metadata };
   });
 }
 

@@ -378,3 +378,54 @@ describe('library routes', () => {
     });
   });
 });
+
+describe('scheduled scan (spec scheduled-scan)', () => {
+  it('should rescan every library on the timer and stop on close', async () => {
+    const mediaRoot = await mkdtemp(join(tmpdir(), 'popcorntv-schedule-'));
+    const root = join(mediaRoot, 'films');
+    await mkdir(root);
+    const db = openDatabase(':memory:');
+    let tick: () => void = () => undefined;
+    const clearInterval = vi.fn();
+    const app = await buildApp({
+      version: 'test',
+      db,
+      probe: async () => ({ durationSec: 60, streams: [] }),
+      mediaRoot,
+      tmdb: null,
+      artworkDir: join(mediaRoot, 'artwork'),
+      transcoder: () => {
+        throw new Error('FFmpeg is not used by this suite');
+      },
+      transcodeDir: tmpdir(),
+      scanIntervalMin: 5,
+      scheduleTimer: {
+        setInterval: (run) => {
+          tick = run;
+          return 'timer';
+        },
+        clearInterval,
+      },
+      ...testAuthOptions,
+    });
+    sendCookie(app, createAccount(db).cookie);
+    const created = await app.inject({
+      method: 'POST',
+      url: '/libraries',
+      payload: { name: 'Films', rootPath: root, kind: 'films' },
+    });
+    const library = created.json<Library>();
+    await writeFile(join(root, 'Heat (1995).mkv'), 'x');
+
+    await app.ready();
+    tick();
+
+    await vi.waitFor(async () => {
+      const media = await app.inject({ method: 'GET', url: `/libraries/${library.id}/media` });
+      expect(media.json<unknown[]>()).toHaveLength(1);
+    });
+    await app.close();
+    expect(clearInterval).toHaveBeenCalledWith('timer');
+    await rm(mediaRoot, { recursive: true, force: true });
+  });
+});

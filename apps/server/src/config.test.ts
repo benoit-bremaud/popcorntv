@@ -21,6 +21,7 @@ describe('loadConfig', () => {
       artworkDir: resolve('data/artwork'),
       publicUrl: 'http://localhost:5173',
       trustProxy: null,
+      scanIntervalMin: 60,
     });
   });
 
@@ -40,6 +41,7 @@ describe('loadConfig', () => {
         ARTWORK_DIR: '/tmp/art',
         PUBLIC_URL: ' https://tv.example.org/ ',
         TRUST_PROXY: '172.18.0.0/16, 10.0.0.2',
+        SCAN_INTERVAL_MIN: '0',
       }),
     ).toEqual({
       port: 8080,
@@ -55,6 +57,7 @@ describe('loadConfig', () => {
       artworkDir: '/tmp/art',
       publicUrl: 'https://tv.example.org',
       trustProxy: '172.18.0.0/16,10.0.0.2',
+      scanIntervalMin: 0,
     });
   });
 
@@ -121,5 +124,15 @@ describe('loadConfig', () => {
     ['http://localhost:5173', null, false],
   ])('warns for PUBLIC_URL %j and TRUST_PROXY %j: %j', (publicUrl, trustProxy, warns) => {
     expect(trustProxyWarning({ publicUrl, trustProxy }) !== null).toBe(warns);
+  });
+});
+
+describe('SCAN_INTERVAL_MIN', () => {
+  it.each(['-5', '1.5', 'often', ' ', '40000'])('should fall back to 60 for %j', (value) => {
+    expect(loadConfig({ ...BASE, SCAN_INTERVAL_MIN: value }).scanIntervalMin).toBe(60);
+  });
+
+  it('should accept the largest interval a timer can hold', () => {
+    expect(loadConfig({ ...BASE, SCAN_INTERVAL_MIN: '35791' }).scanIntervalMin).toBe(35791);
   });
 });

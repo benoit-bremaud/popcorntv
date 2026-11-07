@@ -31,7 +31,10 @@ flowchart LR
     Routes --> Guard
     Routes --> Repo
     Routes --> Lock
+    Sched["scheduler «new #132» (setInterval, ADR-0016)"]
+    Sched -->|"scanLibrary"| Lock
   end
+  Clock(["Clock (SCAN_INTERVAL_MIN)"]) --> Sched
   Api -->|"HTTP /api/libraries…"| Routes
   Folders -->|"fs.readdir"| FS[("MEDIA_ROOT")]
 ```
