@@ -13,9 +13,12 @@ flowchart LR
     uc3a((Narrow by type))
     uc3b((Narrow by genre))
     uc4((UC4 Open a title))
+    uc9((UC9 Continue watching))
   end
   viewer --- uc3
   viewer --- uc4
+  viewer --- uc9
+  uc9 -. include .-> uc4
   uc3a -. extend .-> uc3
   uc3b -. extend .-> uc3a
 ```

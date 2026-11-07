@@ -18,7 +18,7 @@ export function PosterRow({ row, onOpen }: Props): React.JSX.Element {
       <ul className="row__track">
         {row.items.map((item) => (
           <li key={item.id}>
-            <PosterCard item={item} onOpen={onOpen} />
+            <PosterCard item={item} onOpen={onOpen} progress={row.progress?.get(item.id)} />
           </li>
         ))}
       </ul>

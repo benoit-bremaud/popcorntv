@@ -581,3 +581,21 @@
   bottom: calc(var(--space-6) * 2);
   animation: fade var(--duration-overlay) var(--ease-out) both;
 }
+
+/* Continue watching progress (spec continue-watching R6) */
+.poster__progress {
+  position: absolute;
+  right: var(--space-2);
+  bottom: var(--space-2);
+  left: var(--space-2);
+  height: var(--space-1);
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+}
+
+.poster__progress-fill {
+  display: block;
+  height: 100%;
+  background: var(--color-accent);
+}

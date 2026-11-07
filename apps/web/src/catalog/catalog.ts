@@ -1,5 +1,6 @@
 import { DOCUMENTARY_GENRE_ID, isDocumentary } from '@popcorntv/shared';
-import type { Genre, Media } from '@popcorntv/shared';
+import type { Genre, Media, WatchProgress } from '@popcorntv/shared';
+import { resumeAt } from '../playback/resume.js';
 
 /** The catalog's type tabs (spec §2), in display order. */
 export const CATALOG_TYPES = ['films', 'series', 'documentaries', 'others'] as const;
@@ -20,9 +21,12 @@ export interface Row {
   readonly key: string;
   readonly title: string;
   readonly items: readonly Media[];
+  /** Watched fraction (0–1) per item id, for the progress bar of the cards. */
+  readonly progress?: ReadonlyMap<string, number>;
 }
 
 const TOP_RATED_LIMIT = 20;
+const CONTINUE_WATCHING_LIMIT = 20;
 
 /** Top-level items only: episodes live inside their series (spec §2). */
 export function catalogItems(media: readonly Media[]): Media[] {
@@ -155,4 +159,47 @@ export function nextEpisode(seasons: readonly Season[], current: Media): Media |
   const episodes = seasons.flatMap((season) => season.episodes);
   const index = episodes.findIndex((episode) => episode.id === current.id);
   return index === -1 ? null : (episodes[index + 1] ?? null);
+}
+
+/** Watched fraction of a progress row, 0 when the duration is unknown. */
+function fractionOf(row: WatchProgress): number {
+  return row.durationSec === null || row.durationSec <= 0
+    ? 0
+    : Math.min(row.positionSec / row.durationSec, 1);
+}
+
+/**
+ * UC9 (spec continue-watching R3–R5): titles to pick up again, most recently saved first.
+ * A series appears once, decided by its most recently saved episode.
+ */
+export function continueWatchingRow(
+  media: readonly Media[],
+  progress: readonly WatchProgress[],
+): Row | null {
+  const byId = new Map(media.map((item) => [item.id, item]));
+  const saved = new Map(progress.map((row) => [row.mediaId, row]));
+  const seen = new Set<string>();
+  const items: Media[] = [];
+  const fractions = new Map<string, number>();
+  for (const row of progress) {
+    const played = byId.get(row.mediaId);
+    if (played === undefined) continue;
+    const title = played.kind === 'episode' ? byId.get(played.seriesId ?? '') : played;
+    if (title === undefined || seen.has(title.id)) continue;
+    seen.add(title.id);
+    if (resumeAt(row) > 0) {
+      fractions.set(title.id, fractionOf(row));
+    } else if (row.finished && played.kind === 'episode') {
+      const next = nextEpisode(seasonsOf(title, media), played);
+      if (next === null || saved.get(next.id)?.finished === true) continue;
+      fractions.set(title.id, 0);
+    } else {
+      continue;
+    }
+    items.push(title);
+    if (items.length === CONTINUE_WATCHING_LIMIT) break;
+  }
+  return items.length === 0
+    ? null
+    : { key: 'continue-watching', title: 'Continue watching', items, progress: fractions };
 }

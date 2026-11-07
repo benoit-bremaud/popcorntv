@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import type { WatchProgress } from '@popcorntv/shared';
 import { ACTION, DOCUMENTARY, DRAMA, media, metadata } from '../test-fixtures.js';
 import {
   availableGenres,
   byGenreRows,
   availableTypes,
   catalogItems,
+  continueWatchingRow,
   genreRows,
   heroItem,
   homeRows,
@@ -195,5 +197,80 @@ describe('nextEpisode', () => {
   it('returns null after the last episode or for a title outside the list', () => {
     expect(nextEpisode(seasons, s2e1)).toBeNull();
     expect(nextEpisode(seasons, media({ id: 'film', title: 'Film' }))).toBeNull();
+  });
+});
+
+describe('continueWatchingRow', () => {
+  const ep2 = media({
+    id: 'e2',
+    title: 'Lies',
+    kind: 'episode',
+    seriesId: 's',
+    season: 1,
+    episode: 2,
+  });
+  const all = [film, series, episode, ep2, unknown];
+  const saved = (mediaId: string, positionSec: number, finished = false): WatchProgress => ({
+    mediaId,
+    positionSec,
+    durationSec: 100,
+    finished,
+    updatedAt: '2026-11-07T00:00:00.000Z',
+  });
+
+  it('should return null when nothing is in progress', () => {
+    expect(continueWatchingRow(all, [])).toBeNull();
+  });
+
+  it('should list resumable titles in progress order with their fraction', () => {
+    const row = continueWatchingRow(all, [saved('u', 20), saved('f', 50)]);
+
+    expect(row?.items.map((item) => item.id)).toEqual(['u', 'f']);
+    expect(row?.progress?.get('f')).toBe(0.5);
+  });
+
+  it.each([
+    ['a finished film', saved('f', 95, true)],
+    ['a barely started film', saved('f', 5)],
+    ['a media no longer in the catalog', saved('gone', 50)],
+  ])('should leave out %s', (_, row) => {
+    expect(continueWatchingRow(all, [row])).toBeNull();
+  });
+
+  it('should show a series once, from its most recent episode', () => {
+    const row = continueWatchingRow(all, [saved('e2', 30), saved('e', 40)]);
+
+    expect(row?.items.map((item) => item.id)).toEqual(['s']);
+    expect(row?.progress?.get('s')).toBe(0.3);
+  });
+
+  it('should offer the next episode after a finished one', () => {
+    const row = continueWatchingRow(all, [saved('e', 95, true)]);
+
+    expect(row?.items.map((item) => item.id)).toEqual(['s']);
+    expect(row?.progress?.get('s')).toBe(0);
+  });
+
+  it('should leave out a series whose next episode is finished or missing', () => {
+    expect(continueWatchingRow(all, [saved('e', 95, true), saved('e2', 95, true)])).toBeNull();
+    expect(continueWatchingRow(all, [saved('e2', 95, true)])).toBeNull();
+  });
+
+  it('should keep a zero fraction when the duration is unknown', () => {
+    const row = continueWatchingRow(all, [{ ...saved('f', 50), durationSec: null }]);
+
+    expect(row?.progress?.get('f')).toBe(0);
+  });
+
+  it('should keep at most 20 titles', () => {
+    const films = Array.from({ length: 25 }, (_, index) =>
+      media({ id: `m${index}`, title: `M${index}` }),
+    );
+    const row = continueWatchingRow(
+      films,
+      films.map((item) => saved(item.id, 50)),
+    );
+
+    expect(row?.items).toHaveLength(20);
   });
 });

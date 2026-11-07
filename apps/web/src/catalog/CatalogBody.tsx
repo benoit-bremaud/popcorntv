@@ -11,6 +11,7 @@ import {
 } from './catalog.js';
 import { PosterGrid } from './PosterGrid.js';
 import { PosterRow } from './PosterRow.js';
+import type { Row } from './catalog.js';
 import type { ViewState } from './view-state.js';
 
 /** Opens a title; `trigger` gets the focus back on close. */
@@ -20,16 +21,24 @@ type Props = {
   readonly items: readonly Media[];
   readonly state: ViewState;
   readonly onOpen: OpenHandler;
+  /** UC9: shown first on the home view only (spec continue-watching R1). */
+  readonly continueWatching?: Row | null;
 };
 
 /**
  * Rows or grid for the current view state (state diagram 05). Rows stay direct children of
  * `.view`: the entrance stagger in `catalog.css` counts them with `:nth-child`.
  */
-export function CatalogBody({ items, state, onOpen }: Props): React.JSX.Element {
+export function CatalogBody({
+  items,
+  state,
+  onOpen,
+  continueWatching = null,
+}: Props): React.JSX.Element {
   if (state.type === 'all') {
     return (
       <>
+        {continueWatching !== null && <PosterRow row={continueWatching} onOpen={onOpen} />}
         {homeRows(items).map((row) => (
           <PosterRow key={row.key} row={row} onOpen={onOpen} />
         ))}
