@@ -4,6 +4,14 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-07 — #132 scheduled library scan (PR #143 merged, `5f43064`)
+
+- **Conception** — spec `scheduled-scan.md`, ADR-0016: `SCAN_INTERVAL_MIN` (default 60, `0`
+  off), an in-process unref-ed timer runs the route's `scanLibrary` on each library in turn,
+  a busy library is skipped, runs never overlap, the timer is stopped and awaited in
+  `preClose`.
+- **Follow-ups** — #144 (pin the FFmpeg kill before the scheduled-scan wait on close).
+
 ## 2026-11-07 — #131 continue-watching row (PR #141 merged, `3a61d0f`)
 
 - **Conception** — spec `continue-watching.md` (UC22), sequence `catalog/06`, ADR-0015: the
