@@ -24,6 +24,26 @@ export interface Library {
 /** Body of `POST /libraries`. */
 export type CreateLibraryBody = Omit<Library, 'id'>;
 
+/** Body of `PATCH /libraries/:id`: only the name changes (kind and root are fixed). */
+export interface RenameLibraryBody {
+  readonly name: string;
+}
+
+/** One direct sub-folder of `MEDIA_ROOT` offered when adding a library (ADR-0014 §1). */
+export interface MediaFolder {
+  readonly name: string;
+  /** Absolute path, ready for `CreateLibraryBody.rootPath`. */
+  readonly path: string;
+  /** The library whose root is exactly this folder, or null. */
+  readonly libraryId: string | null;
+}
+
+/** Response of `GET /libraries/folders`. */
+export interface MediaFolderList {
+  readonly root: string;
+  readonly folders: readonly MediaFolder[];
+}
+
 /** Media kinds, single source for the SQLite enum. */
 export const MEDIA_KINDS = ['film', 'episode', 'series', 'unknown'] as const;
 
@@ -168,6 +188,7 @@ export type ApiErrorCode =
   | 'library_not_found'
   | 'root_unreadable'
   | 'scan_running'
+  | 'root_in_use'
   | 'tmdb_not_configured'
   | 'enrich_running'
   | 'artwork_not_found'

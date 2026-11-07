@@ -74,13 +74,17 @@ describe('playback session routes', () => {
 
   async function scanned(name: string): Promise<Media> {
     await writeFile(join(root, name), 'bytes');
-    const library = (
-      await app.inject({
-        method: 'POST',
-        url: '/libraries',
-        payload: { name: 'Films', rootPath: root, kind: 'films' },
-      })
-    ).json<Library>();
+    // One library per root (spec library-management R3): reuse it on a second call.
+    const existing = (await app.inject({ method: 'GET', url: '/libraries' })).json<Library[]>();
+    const library =
+      existing[0] ??
+      (
+        await app.inject({
+          method: 'POST',
+          url: '/libraries',
+          payload: { name: 'Films', rootPath: root, kind: 'films' },
+        })
+      ).json<Library>();
     await app.inject({ method: 'POST', url: `/libraries/${library.id}/scan` });
     const list = await app.inject({ method: 'GET', url: `/libraries/${library.id}/media` });
     const item = list.json<Media[]>().find((media) => media.relativePath === name);

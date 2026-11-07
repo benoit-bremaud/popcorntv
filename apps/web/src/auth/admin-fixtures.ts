@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import type { Account, AuthEvent, Invitation } from '@popcorntv/shared';
+import type { Account, AuthEvent, Invitation, Library } from '@popcorntv/shared';
 import type { AdminApi } from '../api.js';
 
 /** Test double of the owner administration API: every call succeeds unless overridden. */
@@ -20,6 +20,13 @@ export const kidAccount: Account = {
   createdAt: '2026-11-02T10:00:00.000Z',
   lastLoginAt: null,
   activeSessions: 0,
+};
+
+export const filmsLibrary: Library = {
+  id: 'l1',
+  name: 'Films',
+  rootPath: '/app/media/films',
+  kind: 'films',
 };
 
 const ok = <T>(value: T) => Promise.resolve({ ok: true as const, value });
@@ -64,6 +71,33 @@ export function fakeAdminApi(overrides: Partial<AdminApi> = {}): AdminApi {
           usernameTried: 'mallory',
         },
       ]),
+    ),
+    libraries: vi.fn(() => ok<Library[]>([filmsLibrary])),
+    folders: vi.fn(() =>
+      ok({
+        root: '/app/media',
+        folders: [
+          { name: 'films', path: '/app/media/films', libraryId: 'l1' },
+          { name: 'series', path: '/app/media/series', libraryId: null },
+        ],
+      }),
+    ),
+    createLibrary: vi.fn(() =>
+      ok<Library>({ id: 'l2', name: 'Series', rootPath: '/app/media/series', kind: 'series' }),
+    ),
+    renameLibrary: vi.fn(() => ok<Library>({ ...filmsLibrary, name: 'Movies' })),
+    deleteLibrary: vi.fn(() => ok(null)),
+    scan: vi.fn(() =>
+      ok({
+        added: 3,
+        updated: 1,
+        removed: 0,
+        skipped: [{ path: 'x.txt', reason: 'extra' as const }],
+        metadata: { matched: 3, unmatched: [], failed: [], skipped: 0 },
+      }),
+    ),
+    enrich: vi.fn(() =>
+      ok({ matched: 2, unmatched: [{ title: 'Zzz', year: null }], failed: [], skipped: 1 }),
     ),
     ...overrides,
   };

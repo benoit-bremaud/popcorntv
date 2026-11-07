@@ -23,7 +23,8 @@ type Gate =
 
 type Props = {
   /** The signed-in app; `account` is the header menu to place in it. */
-  readonly children: (user: User, account: ReactNode) => ReactNode;
+  /** `openAdmin` is set for an owner only: the empty catalog offers "Add a library". */
+  readonly children: (user: User, account: ReactNode, openAdmin?: () => void) => ReactNode;
   readonly api?: AuthApi;
   readonly admin?: AdminApi;
   /** Injected in tests; `window.location` / `window.history` otherwise. */
@@ -108,7 +109,8 @@ export function AuthGate({
       );
     }
     // Keyed by user: another account starts from a fresh profile list.
-    return <Fragment key={gate.user.id}>{children(gate.user, account)}</Fragment>;
+    const openAdmin = user.role === 'owner' ? () => setGate({ kind: 'admin', user }) : undefined;
+    return <Fragment key={gate.user.id}>{children(gate.user, account, openAdmin)}</Fragment>;
   }
 
   return (

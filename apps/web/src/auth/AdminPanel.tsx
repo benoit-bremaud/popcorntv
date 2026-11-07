@@ -13,6 +13,7 @@ import type {
 import type { AdminApi, AdminResult } from '../api.js';
 import { authMessage } from './auth-api.js';
 import { useFocusedTitle } from './form-hooks.js';
+import { LibrarySection } from './LibrarySection.js';
 
 type Props = {
   readonly api: AdminApi;
@@ -45,7 +46,7 @@ export function adminMessage(error: ApiErrorCode | null): string {
 const when = (iso: string | null) => (iso === null ? 'never' : new Date(iso).toLocaleString());
 
 /**
- * UC15–UC18: invite a person, manage accounts (role, reset link, devices, deletion) and
+ * UC21: manage libraries (scan and refresh included). UC15–UC18: invite a person, manage accounts (role, reset link, devices, deletion) and
  * review sign-in activity. Owner only; the server enforces it again on every route.
  */
 export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
@@ -133,6 +134,8 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
           />
         </output>
       )}
+
+      <LibrarySection api={api} />
 
       <h3 className="admin-title">Invite a person</h3>
       <div className="admin-row">

@@ -553,6 +553,27 @@ describe('access control (spec auth R1, R2, R7)', () => {
     expect(list.statusCode).toBe(200);
   });
 
+  it.each([
+    ['GET', '/libraries/folders'],
+    ['PATCH', '/libraries/00000000-0000-4000-8000-000000000000'],
+    ['DELETE', '/libraries/00000000-0000-4000-8000-000000000000'],
+  ] as const)('answers 403 forbidden to a viewer on %s %s', async (method, url) => {
+    const db = openDatabase(':memory:');
+    createAccount(db);
+    const viewer = createAccount(db, 'kid', 'viewer');
+    const h = await harness({ db });
+
+    const response = await h.app.inject({
+      method,
+      url,
+      headers: { cookie: viewer.cookie },
+      payload: method === 'PATCH' ? { name: 'X' } : undefined,
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toEqual({ error: 'forbidden' });
+  });
+
   it('applies a role change on the next request', async () => {
     const db = openDatabase(':memory:');
     createAccount(db);

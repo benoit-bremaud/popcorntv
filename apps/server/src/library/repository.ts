@@ -64,6 +64,20 @@ export class LibraryRepository {
     return this.db.select(libraryColumns).from(libraries).all();
   }
 
+  /** Renames a library; the updated library, or null when it does not exist. */
+  renameLibrary(id: string, name: string): Library | null {
+    this.db.update(libraries).set({ name }).where(eq(libraries.id, id)).run();
+    return this.findLibrary(id);
+  }
+
+  /**
+   * Deletes a library; the schema cascades to its media, their streams and the progress on
+   * them. False when it did not exist.
+   */
+  deleteLibrary(id: string): boolean {
+    return this.db.delete(libraries).where(eq(libraries.id, id)).run().changes > 0;
+  }
+
   /** The library with this id, or null. */
   findLibrary(id: string): Library | null {
     return this.db.select(libraryColumns).from(libraries).where(eq(libraries.id, id)).get() ?? null;

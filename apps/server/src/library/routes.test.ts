@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -163,5 +163,174 @@ describe('library routes', () => {
     expect(second.statusCode).toBe(409);
     expect(second.json()).toEqual({ error: 'scan_running' });
     expect((await first).statusCode).toBe(200);
+  });
+
+  describe('management (spec library-management)', () => {
+    it.each([
+      ['the same root', () => root],
+      ['a root inside it', () => join(root, 'sub')],
+      ['a root containing it', () => mediaRoot],
+    ])('refuses %s with 409 root_in_use', async (_label, other) => {
+      await createLibrary();
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/libraries',
+        payload: { name: 'Again', rootPath: other(), kind: 'series' },
+      });
+
+      expect(response.statusCode).toBe(409);
+      expect(response.json()).toEqual({ error: 'root_in_use' });
+    });
+
+    it('accepts a sibling root', async () => {
+      await createLibrary();
+      await mkdir(join(mediaRoot, 'films-old'));
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/libraries',
+        payload: { name: 'Old', rootPath: join(mediaRoot, 'films-old'), kind: 'films' },
+      });
+
+      expect(response.statusCode).toBe(201);
+    });
+
+    it('lists the direct sub-folders of MEDIA_ROOT without links, files or hidden folders', async () => {
+      const library = await createLibrary();
+      await mkdir(join(mediaRoot, 'series'));
+      await mkdir(join(mediaRoot, '.trash'));
+      await mkdir(join(root, 'nested'));
+      await writeFile(join(mediaRoot, 'readme.txt'), 'x');
+      await symlink('/etc', join(mediaRoot, 'etc-link'));
+
+      const response = await app.inject({ method: 'GET', url: '/libraries/folders' });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual({
+        root: mediaRoot,
+        folders: [
+          { name: 'films', path: root, libraryId: library.id },
+          { name: 'series', path: join(mediaRoot, 'series'), libraryId: null },
+        ],
+      });
+    });
+
+    it('answers an empty folder list when MEDIA_ROOT cannot be read', async () => {
+      await rm(mediaRoot, { recursive: true, force: true });
+
+      const response = await app.inject({ method: 'GET', url: '/libraries/folders' });
+
+      expect(response.json()).toEqual({ root: mediaRoot, folders: [] });
+    });
+
+    it('renames a library and keeps its kind and root', async () => {
+      const library = await createLibrary();
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/libraries/${library.id}`,
+        payload: { name: '  Movies  ', kind: 'series', rootPath: '/etc' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual({ ...library, name: 'Movies' });
+    });
+
+    it('rejects an empty name', async () => {
+      const library = await createLibrary();
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/libraries/${library.id}`,
+        payload: { name: ' ' },
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json<ApiError>().error).toBe('invalid_request');
+    });
+
+    it('deletes a library with its media', async () => {
+      const library = await createLibrary();
+      await writeFile(join(root, 'Heat (1995).mkv'), 'x');
+      await app.inject({ method: 'POST', url: `/libraries/${library.id}/scan` });
+
+      const deleted = await app.inject({ method: 'DELETE', url: `/libraries/${library.id}` });
+      const list = await app.inject({ method: 'GET', url: '/libraries' });
+      const media = await app.inject({ method: 'GET', url: `/libraries/${library.id}/media` });
+
+      expect(deleted.statusCode).toBe(204);
+      expect(list.json()).toEqual([]);
+      expect(media.statusCode).toBe(404);
+      // The files themselves are never touched.
+      await expect(rm(join(root, 'Heat (1995).mkv'))).resolves.toBeUndefined();
+    });
+
+    it.each(['PATCH', 'DELETE'] as const)(
+      '%s answers 404 for an unknown library',
+      async (method) => {
+        const response = await app.inject({
+          method,
+          url: `/libraries/${crypto.randomUUID()}`,
+          payload: { name: 'X' },
+        });
+
+        expect(response.statusCode).toBe(404);
+        expect(response.json()).toEqual({ error: 'library_not_found' });
+      },
+    );
+
+    it('refuses to delete a library while it is being scanned', async () => {
+      const library = await createLibrary();
+      await writeFile(join(root, 'Heat (1995).mkv'), 'x');
+      let release: () => void = () => undefined;
+      probe.mockImplementationOnce(
+        () => new Promise((resolve) => (release = () => resolve({ durationSec: 1, streams: [] }))),
+      );
+
+      const scan = app.inject({ method: 'POST', url: `/libraries/${library.id}/scan` });
+      await vi.waitFor(() => expect(probe).toHaveBeenCalledTimes(1));
+      const deleted = await app.inject({ method: 'DELETE', url: `/libraries/${library.id}` });
+      release();
+
+      expect(deleted.statusCode).toBe(409);
+      expect(deleted.json()).toEqual({ error: 'scan_running' });
+      expect((await scan).statusCode).toBe(200);
+    });
+
+    it('scans when sent an empty JSON body (#122)', async () => {
+      const library = await createLibrary();
+
+      const scan = await app.inject({
+        method: 'POST',
+        url: `/libraries/${library.id}/scan`,
+        headers: { 'content-type': 'application/json' },
+        payload: '',
+      });
+
+      expect(scan.statusCode).toBe(200);
+    });
+
+    it('still rejects a malformed JSON body', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/libraries',
+        headers: { 'content-type': 'application/json' },
+        payload: '{"name":',
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    it('still rejects a prototype-poisoning JSON body', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/libraries',
+        headers: { 'content-type': 'application/json' },
+        payload: '{"__proto__":{"x":1}}',
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
   });
 });

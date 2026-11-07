@@ -24,6 +24,8 @@ type Props = {
   readonly storage?: Storage;
   /** The signed-in account's menu (sign out, change password), shown in the header. */
   readonly account?: ReactNode;
+  /** Owners only: opens the library section from the empty catalog (spec library-management R7). */
+  readonly onAddLibrary?: () => void;
 };
 
 /** The web player shell: brand header, "Who's watching?" (UC8 / UC9), then the catalog. */
@@ -32,6 +34,7 @@ export function App({
   profileApi,
   storage,
   account,
+  onAddLibrary,
 }: Props): React.JSX.Element {
   const [view, setView] = useState<View>({ kind: 'loading' });
   const [profiles, setProfiles] = useState<readonly Profile[]>([]);
@@ -128,7 +131,9 @@ export function App({
             api={profileApi}
           />
         )}
-        {view.kind === 'active' && <CatalogPage profileId={view.profile.id} />}
+        {view.kind === 'active' && (
+          <CatalogPage profileId={view.profile.id} onAddLibrary={onAddLibrary} />
+        )}
       </main>
     </>
   );
