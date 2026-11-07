@@ -1,8 +1,17 @@
 # Homelab ecosystem around PopCornTV
 
-What each media tool of the owner's homelab does, how it relates to PopCornTV, and the
+What each media tool of a reference homelab does, how it relates to PopCornTV, and the
 decisions taken on 2026-11-05 (issue #26): PopCornTV replaces Jellyfin only, coexists with
 everything else and calls none of it.
+
+> **Correction 2026-11-07 (#60).** The inventory below is a colleague's stack, taken by
+> mistake for the owner's. The owner's `bb-homelab` dashboard lists n8n, Jellyfin,
+> Vaultwarden and Uptime Kuma (plus Caddy and, since #60, PopCornTV); Jellyfin is its only
+> media service. The triage, D1–D4 and the consequences below were scored on that stack and
+> do not apply to bb-homelab; re-score them if any of these tools is ever installed. The
+> Seerr link and the Maintainerr audit are dropped. The scheduled library scan and #62 still
+> apply, since files are added and replaced by hand. The owner decided not to install
+> Maintainerr (MCDA: not installed 500, install later 455, install now 45).
 
 ## Inventory
 
@@ -55,7 +64,7 @@ decision below inherits that limit; see Consequences.
 | Radarr, Sonarr | Kept | None, never called | The 2026-10-23 decision. Their API key is an unscoped admin key, so a compromised PopCornTV could delete the library. |
 | Bazarr | Kept | None | It writes sidecar `.srt` files; the scanner reads embedded tracks only (ADR-0009 §1). A Tdarr flow muxes them into the files (D3). |
 | Tdarr | Kept | None | Works on files upstream. A remux to MP4 makes most files direct-playable, since only `mp4`, `m4v` and `webm` containers direct-play (`decidePlayback`, ADR-0005); an MKV always goes through HLS, streams copied when H.264/AAC (ADR-0006). D4 sets the flow. |
-| Maintainerr | Kept | None | Reads watch history from Plex. Exporting `watch_progress` would break profiles spec R6 (history never sent out); doing retention in PopCornTV would mean deleting files. Caveat: once the household watches in PopCornTV, Plex no longer sees that viewing, so any "not watched for N days" rule would delete titles the family does watch. The rules must be audited before the cut-over (#60). |
+| Maintainerr | Kept | None | Reads watch history from Plex. Exporting `watch_progress` would break profiles spec R6 (history never sent out); doing retention in PopCornTV would mean deleting files. Caveat: once the household watches in PopCornTV, Plex no longer sees that viewing, so any "not watched for N days" rule would delete titles the family does watch. The rules must be audited before the cut-over (#60; void for bb-homelab, see correction). |
 | Tunarr | Kept | None | Reads Plex, Jellyfin, Emby or local files. Plex stays, nothing to do. |
 | Uptime Kuma | Kept | Probe on `/api/health` through Caddy | Zero code; `/health` stays public after #18 (auth spec § 4.3). Checklist of #60. |
 | Grafana | Kept | None | Server metrics. No application metrics need today (YAGNI). |
@@ -132,6 +141,8 @@ exists.
 
 ## Consequences
 
+Void for bb-homelab except the #62 item and the scheduled scan (see correction).
+
 - #26 closes with this document.
 - To add on #62 (parity matrix) at merge: a cut-over prerequisite, resume progress survives
   a file replaced on another path by a Radarr / Sonarr upgrade or a Tdarr remux
@@ -154,5 +165,5 @@ exists.
   Radarr, Sonarr, Seerr, Tautulli and others.
 - Tunarr reads Plex, Jellyfin, Emby and local files.
 - Not checked, not needed after D1: the Radarr / Sonarr v3 add payloads.
-- Not checked: which Maintainerr rules the owner runs, and Bazarr's re-download behaviour
+- Not checked (moot, see correction): which Maintainerr rules run, and Bazarr's re-download behaviour
   after a mux.

@@ -28,13 +28,14 @@
 
 1. Move the media to `/mnt/appdata/media`, deploy, create the owner, scan, enrich.
 2. QA pass on the Pi: sign-in, catalog, direct play, HLS, subtitles, resume, headers.
-3. Audit the Maintainerr rules: keep only rules not based on watch state (added date,
-   request, tags) or switch them to dry-run, since Plex stops seeing the viewing that moves
-   to PopCornTV (`docs/requirements/02-homelab-ecosystem.md`).
+3. Maintainerr: nothing to audit; it is not installed on bb-homelab and the owner decided on
+   2026-11-07 not to install it. If it is ever installed, keep only rules not based on watch
+   state, since its media server no longer sees the viewing done in PopCornTV
+   (`docs/requirements/02-homelab-ecosystem.md`).
 4. Household uses PopCornTV; Jellyfin stays stopped two weeks as the fallback, then is
    removed from bb-homelab.
 
-Watch history import and the Tdarr and Bazarr flows are follow-up issues.
+Importing Jellyfin's watch history is a follow-up issue (#125).
 
 ## 3. Rollback
 
