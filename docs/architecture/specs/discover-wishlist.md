@@ -32,10 +32,12 @@ whether the title is already on disk, and keeps a per-profile wishlist whose ent
   (manual or scheduled, ADR-0016) and its enrichment give a media that `tmdb_id`.
 - **R7** `wishlist` rows are keyed by `(profile_id, kind, tmdb_id)` and cascade with the
   profile. The wishlist routes work without TMDB except `PUT`.
-- **R8** Posters are served by `GET /discover/poster/:file` (`[A-Za-z0-9]+.jpg|png`): the
+- **R8** Posters are served by `GET /discover/poster/:file` (`[A-Za-z0-9]+.jpg|png`), only
+  for a path the server handed out in a Discover answer (else `404 artwork_not_found`): the
   artwork cache downloads `w342` once through the TMDB client, the browser never contacts
-  TMDB (ADR-0020).
-- **R9** Errors: `400 invalid_request`, `404 profile_not_found`, `409 tmdb_not_configured`,
+  TMDB, the answer is `Cache-Control: private` (ADR-0020).
+- **R9** Errors: `400 invalid_request`, `404 profile_not_found` / `title_not_found` (an id
+  TMDB does not know), `409 tmdb_not_configured`,
   `502 tmdb_unavailable` when TMDB fails. The web shows a muted line instead of a row.
 - **R10** Out of scope: requests to Seerr / Radarr / Sonarr (#128), downloads, playback of
   titles not on disk. Done when the client, the repository, the routes, the web helpers and

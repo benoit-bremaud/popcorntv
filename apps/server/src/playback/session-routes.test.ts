@@ -176,6 +176,18 @@ describe('playback session routes', () => {
     expect(response.json<PlaybackStart>().mode).toBe('direct');
   });
 
+  it.each([-1, 100, 1.5, '1'])('refuses audioIndex %j with 400', async (audioIndex) => {
+    const media = await scanned('Heat (1995).mp4');
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/playback/sessions',
+      payload: { mediaId: media.id, directPlay: true, audioIndex },
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+
   it('starts HLS when the browser cannot direct-play an MP4', async () => {
     const media = await scanned('Heat (1995).mp4');
 

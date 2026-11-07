@@ -123,8 +123,8 @@ select in `DetailDialog` matched by language on each played episode); #127 Disco
 `docs/architecture/specs/discover-wishlist.md`, ADR-0020: `src/discover/` routes over the
 TMDB client — `GET /discover?list=trending|popular&kind=movie|tv` memoised 15 min,
 `/discover/search`, `/discover/:kind/:tmdbId`, lazy `w342` posters through the artwork cache
-at `/discover/poster/:file` — per-profile `wishlist` table (FK cascade), `PUT|DELETE
-/profiles/:profileId/wishlist/:kind/:tmdbId` reads the facts from TMDB, "Available" is a join
+at `/discover/poster/:file` for handed-out paths only — per-profile `wishlist` table (FK cascade), `PUT|DELETE
+/profiles/:profileId/wishlist/:kind/:tmdbId` (`PUT` reads the facts from TMDB), "Available" is a join
 on `media.tmdb_id`, web Library / Discover tabs, "Play in my library" opens the library
 dialog; no Seerr request, #128).
 
@@ -134,7 +134,8 @@ and `path-guard`, the `ffprobe` runner (only process egress), the `folder-lister
 and the `routes`; `src/playback/` the pure `range` parser, the
 streaming `routes`, the pure `ffmpeg-args`, the `transcoder` (only child-process egress,
 `spawn` injected), the `session-manager` and the `session-routes`; `src/progress/` the `watch_progress`
-`repository` and its `routes`; `src/profiles/` the `profiles` `repository` and its `routes`; `src/metadata/` the `tmdb-client` (only HTTP egress,
+`repository` and its `routes`; `src/profiles/` the `profiles` `repository` and its `routes`; `src/discover/` the `wishlist-repository`
+(and the local `tmdb_id` match) and the Discover `routes` (ADR-0020); `src/metadata/` the `tmdb-client` (only HTTP egress,
 `fetch` injected), the pure `matcher` (match + map), the `artwork-cache`, its
 `repository`, the `service` and the `routes`; `src/auth/` the `hasher` (only argon2 import), the `token` helpers, the `setup-token`, the
 in-memory `limiter`, the `user` / `session` / `token` / `event` repositories, the access `hook`, the

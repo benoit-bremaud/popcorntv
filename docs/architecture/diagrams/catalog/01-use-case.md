@@ -26,7 +26,7 @@ flowchart LR
   viewer --- uc26
   uc26 --- tmdb
   uc26a -. extend .-> uc26
-  uc26 -. extend .-> uc4
+  uc4 -. extend .-> uc26
   uc24 -. include .-> uc4
   uc22 -. include .-> uc4
   uc3a -. extend .-> uc3
@@ -38,5 +38,5 @@ flowchart LR
 - *Narrow by genre* extends *Narrow by type*: genre options exist only once a type is
   chosen (progressive disclosure, state diagram 05).
 - *Watch a title* (UC5, #7) will extend UC4 from the detail dialog.
-- *Keep a wishlist* extends UC26 from the title sheet; UC26 extends UC4 only when the title
-  is on disk (**Play in my library**). TMDB is a secondary actor reached by the server.
+- *Keep a wishlist* extends UC26 from the title sheet; UC4 extends UC26 at the extension point
+  *title on disk* (**Play in my library**). TMDB is a secondary actor reached by the server.

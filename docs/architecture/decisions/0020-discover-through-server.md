@@ -23,7 +23,7 @@ stored as `watch_progress`-like rows on fake media.
 | ---------------- | -----: | ----------------------------------------- | --------------------------------------- | ------------------------------------------- |
 | Security/privacy |     35 | 5 — one egress, key and viewer IP hidden  | 5 — same                                | 1 — key in the browser, IP leaked to TMDB    |
 | Responsiveness   |     25 | 4 — list answers at once, posters stream  | 2 — first list waits for 20 downloads   | 4 — direct, but no cache                     |
-| Simplicity       |     25 | 4 — two route modules, one table          | 4 — same, plus a fan-out                | 2 — fake media rows pollute the catalog      |
+| Simplicity       |     25 | 4 — one route module, one table            | 4 — same, plus a fan-out                | 2 — fake media rows pollute the catalog      |
 | Consistency      |     15 | 5 — reuses client, cache and FK cascade   | 5 — same                                | 1 — bypasses the component diagram           |
 | **Total**        |    100 | **450**                                   | **400**                                 | **200**                                      |
 
@@ -36,12 +36,17 @@ Sensitivity: with weights 20 / 30 / 30 / 20, A = 100 + 120 + 120 + 100 = 440, B 
 ## Decision
 
 A. Migration `0008_wishlist`; module `src/discover/` (`wishlist-repository`, `routes`);
-the TMDB client gains `list` and `searchTitles`; lists are memoised 15 minutes in the
-routes so a page load costs at most four TMDB calls per quarter hour.
+the TMDB client gains `list` and `searchTitles`; the four lists are memoised 15 minutes in
+the routes, so they cost at most four TMDB calls per quarter hour (searches, sheets, wishlist
+adds and each new poster are one call each). The poster route only downloads a path the
+server itself handed out in a list, search, sheet or wishlist answer (the last 2000), so a
+viewer can neither make the server fetch arbitrary paths nor flood the TMDB queue
+(adversarial review #127).
 
 ## Consequences
 
 - Availability needs no scan hook: it is a join, always current.
 - Discover posters share `ARTWORK_DIR` with library artwork (digest names, no collision);
-  the folder grows with browsing, bounded by what viewers open.
+  the folder grows with what viewers browse, at most one `w342` file per poster shown, and
+  has no eviction yet (follow-up).
 - Without `TMDB_API_KEY` the Discover rows show a muted line; My list still loads.

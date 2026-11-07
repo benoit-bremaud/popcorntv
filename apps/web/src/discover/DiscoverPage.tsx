@@ -28,6 +28,24 @@ type Props = {
   readonly api?: DiscoverApi;
 };
 
+/** One TMDB row, or `failed` when the server refused or was unreachable (spec R9). */
+async function loadRow(
+  api: DiscoverApi,
+  list: DiscoverList,
+  kind: DiscoverKind,
+): Promise<RowState> {
+  try {
+    return await api.list(list, kind);
+  } catch {
+    return 'failed';
+  }
+}
+
+/** `rows` with the row at `index` replaced. */
+function replaceAt(rows: readonly RowState[], index: number, state: RowState): readonly RowState[] {
+  return rows.map((row, at) => (at === index ? state : row));
+}
+
 /** Key of a title in the wishlist lookup. */
 export function titleKey(title: Pick<DiscoverTitle, 'kind' | 'tmdbId'>): string {
   return `${title.kind}:${title.tmdbId}`;
@@ -56,9 +74,9 @@ export function DiscoverPage({
   useEffect(() => {
     void refreshWishlist();
     DISCOVER_ROWS.forEach(({ list, kind }, index) => {
-      const settle = (state: RowState): void =>
-        setRows((current) => current.map((row, at) => (at === index ? state : row)));
-      api.list(list, kind).then(settle, () => settle('failed'));
+      void loadRow(api, list, kind).then((state) =>
+        setRows((current) => replaceAt(current, index, state)),
+      );
     });
   }, [api, refreshWishlist]);
 
@@ -67,7 +85,7 @@ export function DiscoverPage({
     setOpen(title);
   }, []);
 
-  async function submit(event: React.FormEvent): Promise<void> {
+  async function submit(event: React.SyntheticEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     const text = query.trim();
     if (text === '') {
@@ -92,6 +110,7 @@ export function DiscoverPage({
         <form onSubmit={(event) => void submit(event)}>
           <input
             type="search"
+            maxLength={100}
             className="search__input"
             aria-label="Search TMDB titles"
             placeholder="Search films and series to discover"

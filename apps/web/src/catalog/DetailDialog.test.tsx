@@ -477,4 +477,64 @@ describe('DetailDialog audio track (spec audio-track)', () => {
     await screen.findByRole('button', { name: '▶ Play' });
     expect(screen.queryByRole('combobox')).toBeNull();
   });
+
+  describe('in a series whose episodes order their tracks differently', () => {
+    const track = (language: string) =>
+      ({ type: 'audio', codec: 'aac', width: null, height: null, language }) as const;
+    const episode = (id: string, number: number, languages: readonly string[]): Media =>
+      media({
+        id,
+        title: `Ep ${number}`,
+        kind: 'episode',
+        season: 1,
+        episode: number,
+        relativePath: `Show/S01E0${number}.mp4`,
+        streams: [H264_AAC[0] as Media['streams'][number], ...languages.map(track)],
+      });
+    const show = media({ id: 'show', title: 'Show', kind: 'series' });
+
+    it('should keep direct play on the first track while nothing was picked', async () => {
+      const first = episode('e1', 1, ['eng']);
+      const fifth = episode('e5', 5, ['fre', 'eng']);
+      const { user, api } = renderDetail(
+        show,
+        always,
+        vi.fn(),
+        [],
+        [{ season: 1, episodes: [first, fifth] }],
+      );
+
+      await user.click(await screen.findByRole('button', { name: 'Play Ep 5, episode 5' }));
+
+      expect(screen.queryByRole('combobox')).toBeNull();
+      expect(api.start).toHaveBeenCalledWith({
+        mediaId: 'e5',
+        directPlay: true,
+        startSec: 0,
+        audioIndex: 0,
+      });
+    });
+
+    it('should match the picked language on another episode', async () => {
+      const first = episode('e1', 1, ['eng', 'fre']);
+      const second = episode('e2', 2, ['fre', 'eng']);
+      const { user, api } = renderDetail(
+        show,
+        always,
+        vi.fn(),
+        [],
+        [{ season: 1, episodes: [first, second] }],
+      );
+
+      await user.selectOptions(await screen.findByRole('combobox'), 'eng (aac)');
+      await user.click(screen.getByRole('button', { name: 'Play Ep 2, episode 2' }));
+
+      expect(api.start).toHaveBeenCalledWith({
+        mediaId: 'e2',
+        directPlay: false,
+        startSec: 0,
+        audioIndex: 1,
+      });
+    });
+  });
 });

@@ -97,8 +97,9 @@ sequenceDiagram
   and the `language` parameter and retries once on `429` after `Retry-After` (capped at
   10 s). The key only ever travels in the header: a `TmdbRequestError` carries the path
   and the status, nothing else.
-- Only `query` (title), `year` / `first_air_date_year` and a provider id ever appear in a
-  request (data-flow 06).
+- Only `query` (title), `year` / `first_air_date_year` and a provider id appear in an
+  enrichment request; Discover adds list names, TMDB ids and the viewer's search text,
+  never who is asking (data-flow 06).
 - Matcher and mapper are pure: fixtures in, typed values out, no I/O. An episode's
   `tmdbId` is the series id (TMDB episode ids are not stored).
 - The client validates the TMDB path before building a URL; the cache names files by the

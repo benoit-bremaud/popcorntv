@@ -39,8 +39,9 @@ Owner.
 
 - A TMDB failure (network, 5xx, malformed payload) on one title never aborts the run nor
   the scan that included it: the title is reported `failed`, the next one is processed.
-- Only the title and the year (and the provider id read from the file name) are ever sent
-  to TMDB; the key travels in a header and is never written to a log or an error body.
+- Enrichment only sends the title and the year (and the provider id read from the file
+  name); Discover adds list names, TMDB ids and the search text a viewer types (#127, never
+  who asks); the key travels in a header and is never written to a log or an error body.
 - No file is written outside `data/artwork`; artwork file names are digests, never a
   string received from the provider.
 

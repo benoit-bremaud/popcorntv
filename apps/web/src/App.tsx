@@ -87,6 +87,8 @@ export function App({
 
   function pick(profile: Profile): void {
     rememberProfileId(profile.id, storage);
+    // A title Discover asked to open belongs to the previous visit, not to this profile.
+    setTab({ kind: 'library', openMediaId: null });
     picked.current = true;
     setView({ kind: 'active', profile });
   }
