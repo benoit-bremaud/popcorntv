@@ -4,6 +4,31 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-07 — #110 runtime image off the unfixed Debian 12 FFmpeg stack (PR #117 merged, `af69563`)
+
+- **Change** — both Dockerfile stages on `node:22.23.4-trixie-slim` (tag + digest); `ffmpeg`
+  / `ffprobe` copied from the static upstream build `mwader/static-ffmpeg:9.0.2-1` (tag +
+  digest) with a build-time version check. `make scan-docker-image` drops
+  `--ignore-unfixed` (audit SA-03): the 13 remaining unfixed HIGH CVEs (util-linux, systemd,
+  ncurses, sqlite, zlib, perl, libacl) are waived in `.trivyignore.yaml` by `purls`
+  (OS packages have no path), expiry 2027-02-07, re-check #116. `SECURITY.md` documents the
+  static FFmpeg blind spot (its ~50 bundled libraries are invisible to Trivy).
+- **Decision** — MCDA measured with Trivy 0.76.0 on throwaway images (HIGH/CRITICAL,
+  distinct CVEs, npm excluded): Debian 12 + its FFmpeg 7 C / 68 H (18 FFmpeg); A Debian 13
+  + its FFmpeg 1 C / 53 H (17 FFmpeg, unfixed by Debian); **B Debian 13 + static FFmpeg**
+  0 C / 13 H, 489 MB; C distroless + static 0 C / 2 H. Scores B 360, A 350, C 300 (sensitive
+  to the Trivy-visibility weight). Dropping `--ignore-unfixed`: option A 445 vs a separate
+  report-only scan 335 vs status quo 300.
+- **Reviews** — adversarial (Opus) 2 rounds: 1 Must fixed (waivers inert while the scan
+  kept `--ignore-unfixed`), 3 Should fixed or tracked in #116 (static library blind spot,
+  Dependabot and the 4-part `9.0.2-1` tag, decision record). docker-auditor: one Must, a
+  follow-up issue per waiver (#116). Codex: no finding. Follow-up #118
+  (`-protocol_whitelist` on FFmpeg / ffprobe calls).
+- **Gate** — 38 shared + 521 server + 199 web tests, server coverage 97.5 %, SonarQube
+  PASSED, smoke 1/1, Hadolint, `docker build --check`, Trivy config and image clean,
+  gitleaks clean, CI green. In the container: healthy, UID 1000, CapEff 0, HLS transcode
+  (libx264 + aac, `-ss`) and WebVTT extraction checked with the app's own argument builders.
+
 ## 2026-11-06 — #109 security audit before the homelab exposure (PR #113 merged, `11a5b4a`)
 
 - **Change** — report `docs/security/reports/2026-11-06-security-audit.md` (audited commit
