@@ -7,7 +7,7 @@ import { apiError, invalid, loadLibrary } from '../http.js';
 import { listSubFolders } from './folder-lister.js';
 import { LibraryBusyError } from './lock.js';
 import type { LibraryLock } from './lock.js';
-import { isAtOrUnderRoot } from './path-guard.js';
+import { isAtOrUnderRoot, rootsOverlap } from './path-guard.js';
 import type { LibraryRepository } from './repository.js';
 import { RootUnreadableError } from './scanner.js';
 import type { LibraryScanner } from './scanner.js';
@@ -57,10 +57,8 @@ export function registerLibraryRoutes(app: FastifyInstance, deps: LibraryRoutesD
     if (!body.success) return reply.code(400).send(invalid(body.error.issues));
     const rootPath = body.data.rootPath;
     // Spec R3: overlapping roots would list every title twice.
-    const overlaps = deps.repository
-      .listLibraries()
-      .some((l) => isAtOrUnderRoot(l.rootPath, rootPath) || isAtOrUnderRoot(rootPath, l.rootPath));
-    if (overlaps) return reply.code(409).send(apiError('root_in_use'));
+    if (deps.repository.listLibraries().some((l) => rootsOverlap(l.rootPath, rootPath)))
+      return reply.code(409).send(apiError('root_in_use'));
     const library: Library = deps.repository.createLibrary(body.data);
     return reply.code(201).send(library);
   });
@@ -71,7 +69,7 @@ export function registerLibraryRoutes(app: FastifyInstance, deps: LibraryRoutesD
     const libraries = deps.repository.listLibraries();
     const folders = (await listSubFolders(deps.mediaRoot)).map((folder) => ({
       ...folder,
-      libraryId: libraries.find((l) => l.rootPath === folder.path)?.id ?? null,
+      libraryId: libraries.find((l) => rootsOverlap(l.rootPath, folder.path))?.id ?? null,
     }));
     return { root: deps.mediaRoot, folders };
   });
@@ -90,7 +88,7 @@ export function registerLibraryRoutes(app: FastifyInstance, deps: LibraryRoutesD
     const library = loadLibrary(request.params, deps.repository);
     if (!library.ok) return reply.code(library.status).send(library.body);
     try {
-      // Under the lock: a scan in flight would re-insert rows into a deleted library.
+      // Under the lock: a scan or enrichment in flight would fail mid-run on the foreign key.
       const deleted = await deps.lock.run(library.value.id, async () =>
         deps.repository.deleteLibrary(library.value.id),
       );

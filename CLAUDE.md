@@ -107,7 +107,7 @@ synchronous scan, web `LibrarySection` in `AdminPanel` + "Add a library" on the 
 catalog; an empty JSON body is accepted on every route, #122).
 
 Server layout (flat, component diagram 03): `src/library/` holds the pure `name-parser`
-and `path-guard`, the `ffprobe` runner (only process egress), the `scanner`, the per-library
+and `path-guard`, the `ffprobe` runner (only process egress), the `folder-lister` (one-level `readdir` of `MEDIA_ROOT`), the `scanner`, the per-library
 `lock` (scan + included enrich and explicit enrich never overlap), the Drizzle `repository`
 and the `routes`; `src/playback/` the pure `range` parser, the
 streaming `routes`, the pure `ffmpeg-args`, the `transcoder` (only child-process egress,

@@ -34,7 +34,7 @@ export interface MediaFolder {
   readonly name: string;
   /** Absolute path, ready for `CreateLibraryBody.rootPath`. */
   readonly path: string;
-  /** The library whose root is exactly this folder, or null. */
+  /** The library whose root is, contains or sits inside this folder (R3), or null. */
   readonly libraryId: string | null;
 }
 

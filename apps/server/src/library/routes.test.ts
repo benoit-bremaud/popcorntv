@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -183,7 +183,7 @@ describe('library routes', () => {
       expect(response.json()).toEqual({ error: 'root_in_use' });
     });
 
-    it('accepts a sibling root', async () => {
+    it('accepts a sibling root that shares a name prefix', async () => {
       await createLibrary();
       await mkdir(join(mediaRoot, 'films-old'));
 
@@ -214,6 +214,16 @@ describe('library routes', () => {
           { name: 'series', path: join(mediaRoot, 'series'), libraryId: null },
         ],
       });
+    });
+
+    it('marks every folder as taken when a library is rooted at MEDIA_ROOT', async () => {
+      const library = await createLibrary(mediaRoot);
+
+      const response = await app.inject({ method: 'GET', url: '/libraries/folders' });
+
+      expect(response.json<{ folders: { libraryId: string | null }[] }>().folders).toEqual([
+        expect.objectContaining({ libraryId: library.id }),
+      ]);
     });
 
     it('answers an empty folder list when MEDIA_ROOT cannot be read', async () => {
@@ -263,7 +273,7 @@ describe('library routes', () => {
       expect(list.json()).toEqual([]);
       expect(media.statusCode).toBe(404);
       // The files themselves are never touched.
-      await expect(rm(join(root, 'Heat (1995).mkv'))).resolves.toBeUndefined();
+      await expect(access(join(root, 'Heat (1995).mkv'))).resolves.toBeUndefined();
     });
 
     it.each(['PATCH', 'DELETE'] as const)(
@@ -290,8 +300,12 @@ describe('library routes', () => {
 
       const scan = app.inject({ method: 'POST', url: `/libraries/${library.id}/scan` });
       await vi.waitFor(() => expect(probe).toHaveBeenCalledTimes(1));
-      const deleted = await app.inject({ method: 'DELETE', url: `/libraries/${library.id}` });
-      release();
+      let deleted;
+      try {
+        deleted = await app.inject({ method: 'DELETE', url: `/libraries/${library.id}` });
+      } finally {
+        release();
+      }
 
       expect(deleted.statusCode).toBe(409);
       expect(deleted.json()).toEqual({ error: 'scan_running' });
@@ -329,8 +343,11 @@ describe('library routes', () => {
         headers: { 'content-type': 'application/json' },
         payload: '{"__proto__":{"x":1}}',
       });
+      const list = await app.inject({ method: 'GET', url: '/libraries' });
 
       expect(response.statusCode).toBe(400);
+      expect(response.json<ApiError>().error).toBe('invalid_request');
+      expect(list.json()).toEqual([]);
     });
   });
 });

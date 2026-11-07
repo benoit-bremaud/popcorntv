@@ -200,6 +200,13 @@ describe('CatalogPage', () => {
     expect(await screen.findByText(/Nothing to watch yet/)).toBeInTheDocument();
   });
 
+  it('offers a viewer nothing to add when the catalog is empty', async () => {
+    render(<CatalogPage profileId="default" load={async () => []} />);
+
+    expect(await screen.findByText('Nothing to watch yet.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add a library' })).toBeNull();
+  });
+
   it('offers an owner to add a library when the catalog is empty', async () => {
     const user = userEvent.setup();
     const onAddLibrary = vi.fn();

@@ -138,6 +138,27 @@ describe('LibrarySection', () => {
     expect(api.renameLibrary).toHaveBeenCalledWith('l1', 'Movies');
   });
 
+  it.each([
+    ['renameLibrary', 'Rename Films'],
+    ['deleteLibrary', 'Delete Films'],
+  ] as const)('shows a refusal of %s', async (call, button) => {
+    const refused = vi.fn(() =>
+      Promise.resolve({ ok: false as const, error: 'library_not_found' as const }),
+    );
+    const { user } = section({ [call]: refused });
+
+    await user.click(await screen.findByRole('button', { name: button }));
+    if (call === 'renameLibrary') {
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+    } else {
+      await user.type(screen.getByLabelText('Type Films to confirm'), 'Films');
+      await user.click(screen.getByRole('button', { name: 'Delete Films and its catalog' }));
+    }
+
+    expect(refused).toHaveBeenCalledWith('l1', ...(call === 'renameLibrary' ? ['Films'] : []));
+    expect(await screen.findByRole('alert')).toHaveTextContent('no longer exists');
+  });
+
   it('deletes a library only once its name is typed', async () => {
     const { api, user } = section();
 

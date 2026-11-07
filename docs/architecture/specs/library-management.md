@@ -15,8 +15,8 @@
   enforces it on every route (`config.access: 'owner'`, ADR-0010).
 - **R2** Folder choice (ADR-0014 §1): `GET /libraries/folders` lists the direct
   sub-folders of `MEDIA_ROOT`, one level, directories only — symbolic links and names
-  starting with `.` are left out — sorted by name, each with the id of the library that
-  already uses it (or null). The form also takes an absolute path typed by hand
+  starting with `.` are left out — sorted by name, each with the id of the library whose
+  root overlaps it (R3), or null; the form offers only the free ones. The form also takes an absolute path typed by hand
   ("Other folder"), validated by the existing `MEDIA_ROOT` guard.
 - **R3** A new library's root may not equal, contain or sit inside another library's root:
   `409 root_in_use`. Two libraries over the same files would list every title twice.
@@ -27,8 +27,8 @@
   their streams and every profile's progress on them. Media files on disk and the cached
   artwork (shared by digest) are never touched. The web asks the owner to type the
   library's name before it sends the request.
-- **R6** Scan progress (ADR-0014 §2): the request stays synchronous. While it runs the
-  library's Scan and Refresh buttons are disabled and show "Scanning…"; at the end the
+- **R6** Scan progress (ADR-0014 §2): the request stays synchronous. While it runs the Scan and
+  Refresh buttons of every library are disabled and show "Scanning…"; at the end the
   report shows added / updated / removed / skipped counts and the metadata summary. A
   `409` shows "A scan or a refresh of this library is already running."
 - **R7** First run (ADR-0014 §4): an owner whose catalog is empty sees a welcome panel with
@@ -48,7 +48,7 @@ or presses "Add a library" on the empty catalog.
 2. The owner picks a folder from the list (or types a path), a name (pre-filled from the
    folder name) and a kind, then confirms.
 3. The server checks the path (R2) and the overlap (R3), stores the library, answers 201.
-4. The web offers "Scan now"; the owner starts it (UC1, R6). The catalog reloads after the
+4. The web tells the owner to scan it; the owner presses its Scan button (UC1, R6). The catalog reloads after the
    scan.
 5. Later, the owner renames a library (R4), refreshes its metadata (UC2) or deletes it
    (R5).
@@ -56,7 +56,7 @@ or presses "Add a library" on the empty catalog.
 ### Extensions
 
 - 3a. The path is not absolute or not under `MEDIA_ROOT` → 400 `invalid_request`; the web
-  shows the reason under the field.
+  shows the reason above the list.
 - 3b. The root overlaps another library → 409 `root_in_use`; the web names the conflict.
 - 4a. The root is unreadable → 409 `root_unreadable` (UC1).
 - 5a. A scan or refresh of that library is running → 409 `scan_running` /

@@ -30,6 +30,6 @@ flowchart LR
 
 ## Notes
 
-- UC21 covers add, rename and delete; the "Scan now" offer after an add starts UC1 as a
+- UC21 covers add, rename and delete; the Scan button pressed after an add starts UC1 as a
   separate goal, not an «include».
 - The empty-catalog welcome panel is an entry point to UC21, not a use case.

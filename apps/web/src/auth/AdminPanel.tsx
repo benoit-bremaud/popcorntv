@@ -46,7 +46,8 @@ export function adminMessage(error: ApiErrorCode | null): string {
 const when = (iso: string | null) => (iso === null ? 'never' : new Date(iso).toLocaleString());
 
 /**
- * UC21: manage libraries (scan and refresh included). UC15–UC18: invite a person, manage accounts (role, reset link, devices, deletion) and
+ * UC21: manage libraries (scan and refresh included). UC15–UC18: invite a person,
+ * manage accounts (role, reset link, devices, deletion) and
  * review sign-in activity. Owner only; the server enforces it again on every route.
  */
 export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {

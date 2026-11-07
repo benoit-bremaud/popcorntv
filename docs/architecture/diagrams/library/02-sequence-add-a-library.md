@@ -36,7 +36,7 @@ sequenceDiagram
   else accepted
     Routes->>Repo: createLibrary(body)
     Routes-->>Web: 201 Library
-    Owner->>Web: Scan now
+    Owner->>Web: Scan
     Web->>Routes: POST /libraries/:id/scan (empty body)
     Routes->>Lock: run(id, scan + include enrich)
     alt library busy
