@@ -4,6 +4,19 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-07 — #136 choose the audio track (PR #152 merged, `adfd4c0`)
+
+- **Conception** — spec `audio-track.md` (UC25), ADR-0019: index 0 plays directly, any other
+  track goes through HLS with `-map 0:a:N`; an index past the last track falls back to 0.
+- **Change** — pure `audioTracks` / `effectiveAudioIndex` / `matchAudioTrack` in
+  `packages/shared`, `audioIndex` 0–99 on `POST /playback/sessions`, Audio select in
+  `DetailDialog`, matched by language on each played episode (Next episode included).
+- **Stack review** — Opus adversarial over #134–#136 (Must 2, Should 7): fixed the stale
+  FFmpeg docblock, ADR-0018 identity wording and its sensitivity tie (400/400), UML deltas
+  (`identity`, `SearchBox`, `audioIndex` in the resume sequence), a persistent search live
+  region, `CLAUDE.md` state. Verify round, full local CI, E2E and SonarQube deferred to the end
+  of the feature run at the owner's request (2026-11-07).
+
 ## 2026-11-07 — #135 search titles and people (PR #150 merged, `9be4696`)
 
 - **Conception** — spec `search.md` (UC24, catalog use cases): client-side search over the
