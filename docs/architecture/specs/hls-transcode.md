@@ -42,7 +42,8 @@ can run `canPlayType`).
 
 ### 2.2 Remux vs transcode, per stream (ADR-0006 §1)
 
-First video stream and first audio stream only (same rule as direct play).
+First video stream; the audio stream chosen by `audioIndex` (spec audio-track R3), the
+first by default.
 
 | Stream | Copied when codec is | Otherwise |
 | ------ | -------------------- | --------- |

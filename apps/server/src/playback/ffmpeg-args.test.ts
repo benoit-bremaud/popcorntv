@@ -48,6 +48,18 @@ describe('ffmpegArgs', () => {
     expect(args.at(-1)).toBe('/t/index.m3u8');
   });
 
+  it('maps the chosen audio track and encodes it by its own codec', () => {
+    const streams = [stream('video', 'h264'), stream('audio', 'aac'), stream('audio', 'ac3')];
+
+    const args = ffmpegArgs('/m/a.mkv', streams, '/t', 0, 1) ?? [];
+    const outOfRange = ffmpegArgs('/m/a.mkv', streams, '/t', 0, 5) ?? [];
+
+    expect(args.filter((arg) => arg.startsWith('0:a'))).toEqual(['0:a:1']);
+    expect(valueOf(args, '-c:a')).toBe('aac');
+    expect(valueOf(args, '-ac')).toBe('2');
+    expect(outOfRange.filter((arg) => arg.startsWith('0:a'))).toEqual(['0:a:0']);
+  });
+
   it('keeps a hostile file name as the value of -i', () => {
     const args = ffmpegArgs('-y.mkv', [stream('video', 'h264')], '/t') ?? [];
 

@@ -75,6 +75,29 @@ export interface PlaybackSessionBody {
   readonly directPlay: boolean;
   /** Where to resume, in seconds of media time (spec resume-playback §2.2); default 0. */
   readonly startSec?: number;
+  /**
+   * Audio track to play, numbered among the file's audio streams (spec audio-track R2);
+   * default 0. Any other track is served through HLS (ADR-0019).
+   */
+  readonly audioIndex?: number;
+}
+
+/** One audio track of a file, numbered among its audio streams (spec audio-track R1). */
+export interface AudioTrack {
+  readonly index: number;
+  readonly codec: string;
+  readonly language: string | null;
+}
+
+/** The audio tracks of a file, in stream order. Pure. */
+export function audioTracks(streams: readonly StreamInfo[]): AudioTrack[] {
+  return streams
+    .filter((stream) => stream.type === 'audio')
+    .map((stream, index) => ({
+      index,
+      codec: stream.codec.toLowerCase(),
+      language: stream.language,
+    }));
 }
 
 /**

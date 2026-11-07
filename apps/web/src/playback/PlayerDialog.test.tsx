@@ -282,7 +282,12 @@ describe('PlayerDialog resume and progress', () => {
 
     fireEvent.loadedMetadata(element);
 
-    expect(api.start).toHaveBeenCalledWith({ mediaId: 'heat', directPlay: true, startSec: 754 });
+    expect(api.start).toHaveBeenCalledWith({
+      mediaId: 'heat',
+      directPlay: true,
+      startSec: 754,
+      audioIndex: 0,
+    });
     expect(element.currentTime).toBe(754);
   });
 

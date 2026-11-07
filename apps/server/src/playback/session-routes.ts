@@ -2,7 +2,7 @@ import { open } from 'node:fs/promises';
 import type { FileHandle } from 'node:fs/promises';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import { directPlayMime } from '@popcorntv/shared';
+import { audioTracks, directPlayMime } from '@popcorntv/shared';
 import type { PlaybackStart } from '@popcorntv/shared';
 import { apiError, callerOf, invalid, MEDIA_ROUTE } from '../http.js';
 import { MAX_POSITION_SEC } from '../progress/routes.js';
@@ -22,6 +22,7 @@ const startBody = z.object({
   mediaId: z.uuid(),
   directPlay: z.boolean(),
   startSec: z.int().min(0).max(MAX_POSITION_SEC).default(0),
+  audioIndex: z.int().min(0).max(99).default(0),
 });
 const sessionParams = z.object({ id: z.uuid() });
 const fileParams = z.object({ id: z.uuid(), file: z.string() });
@@ -56,13 +57,17 @@ export function registerSessionRoutes(app: FastifyInstance, deps: SessionRoutesD
   app.post('/playback/sessions', async (request, reply) => {
     const body = startBody.safeParse(request.body);
     if (!body.success) return reply.code(400).send(invalid(body.error.issues));
-    const { mediaId, directPlay } = body.data;
+    const { mediaId, audioIndex } = body.data;
     const stored = deps.repository.findMediaFile(mediaId);
     if (stored === null) return reply.code(404).send(apiError('media_not_found'));
     // At or past the end, FFmpeg would write nothing and hold a slot: start over instead.
     const pastEnd = stored.durationSec !== null && body.data.startSec >= stored.durationSec;
     const startSec = pastEnd ? 0 : body.data.startSec;
     const streams = deps.repository.findMediaStreams(mediaId);
+    // Only the default track plays directly: the browser cannot pick another (ADR-0019).
+    // An index past the last track falls back to the first, so it needs no HLS either.
+    const defaultTrack = audioIndex === 0 || audioIndex >= audioTracks(streams).length;
+    const directPlay = body.data.directPlay && defaultTrack;
 
     // The browser's answer counts only for a file the shared rule calls direct-playable.
     const mime = directPlay ? directPlayMime({ relativePath: stored.filePath, streams }) : null;
@@ -79,7 +84,13 @@ export function registerSessionRoutes(app: FastifyInstance, deps: SessionRoutesD
 
     const input = await confinedPath(stored.filePath, stored.rootPath, deps.mediaRoot);
     if (input === null) return reply.code(404).send(apiError('media_not_found'));
-    const result = await deps.sessions.open(callerOf(request), input, streams, startSec);
+    const result = await deps.sessions.open(
+      callerOf(request),
+      input,
+      streams,
+      startSec,
+      audioIndex,
+    );
     if (result.kind !== 'ready') {
       const { status, code } = START_ERRORS[result.kind];
       return reply.code(status).send(apiError(code));

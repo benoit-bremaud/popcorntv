@@ -24,9 +24,9 @@ sequenceDiagram
 
   V->>W: Press Play
   W->>W: decidePlayback(media, canPlayType)
-  W->>API: POST /playback/sessions {mediaId, directPlay}
+  W->>API: POST /playback/sessions {mediaId, directPlay, audioIndex}
   API->>API: find media (404 media_not_found)
-  alt directPlay and directPlayMime(media) ≠ null
+  alt directPlay and default audio track and directPlayMime(media) ≠ null
     API-->>W: 200 {mode: direct, url: /media/:id/file}
     W->>API: GET /media/:id/file (Range) — #7 flow, path guard there
   else HLS

@@ -33,6 +33,7 @@ flowchart LR
       UC6(("Resume a title"))
       UC7(("Play the next episode"))
       UC10(("Turn on subtitles"))
+      UC25(("Choose the audio track"))
       UC23(("Mark a title watched"))
     end
     subgraph Profiles ["Profiles domain"]
@@ -49,6 +50,7 @@ flowchart LR
   Viewer --> UC22
   Viewer --> UC23
   Viewer --> UC24
+  Viewer --> UC25
   Viewer --> UC5
   Viewer --> UC6
   Viewer --> UC7

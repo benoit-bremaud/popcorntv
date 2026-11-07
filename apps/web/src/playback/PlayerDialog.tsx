@@ -40,6 +40,8 @@ type Props = {
   readonly directPlay: boolean;
   /** Media time to resume at (UC6); 0 starts over. */
   readonly startSec?: number;
+  /** Audio track among the file's audio streams (spec audio-track R2); 0 is the default. */
+  readonly audioIndex?: number;
   /** The episode after this one (UC7), offered once this one is finished or ended. */
   readonly next?: Media | null;
   /** Plays `next`; this player's session is already ended and its position saved. */
@@ -62,6 +64,7 @@ export function PlayerDialog({
   profileId,
   directPlay,
   startSec = 0,
+  audioIndex = 0,
   next = null,
   onNext,
   onClose,
@@ -93,7 +96,7 @@ export function PlayerDialog({
   const started = useRef<ReturnType<PlaybackApi['start']> | null>(null);
 
   useEffect(() => {
-    started.current ??= api.start({ mediaId: item.id, directPlay, startSec });
+    started.current ??= api.start({ mediaId: item.id, directPlay, startSec, audioIndex });
     let active = true;
     const run = async (): Promise<void> => {
       const result = await started.current;

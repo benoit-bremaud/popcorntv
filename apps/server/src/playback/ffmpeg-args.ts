@@ -46,17 +46,22 @@ function audioArgs(audio: StreamInfo): string[] {
  * HLS EVENT playlist in `outputDir`: copied when HLS-safe, re-encoded otherwise. Pure.
  * The input is the argument of `-i`, so a name starting with `-` cannot become an option.
  * `startSec > 0` seeks the input before `-i` (fast, lands on the previous keyframe) so a
- * resume starts there (ADR-0007 §2). Null when there is no video stream.
+ * resume starts there (ADR-0007 §2). `audioIndex` picks the audio track among the audio
+ * streams, the first one when out of range (spec audio-track R3). Null when there is no
+ * video stream.
  */
 export function ffmpegArgs(
   inputPath: string,
   streams: readonly StreamInfo[],
   outputDir: string,
   startSec = 0,
+  audioIndex = 0,
 ): string[] | null {
   const video = first(streams, 'video');
   if (video === null) return null;
-  const audio = first(streams, 'audio');
+  const audios = streams.filter((stream) => stream.type === 'audio');
+  const track = audioIndex < audios.length ? audioIndex : 0;
+  const audio = audios[track] ?? null;
   return [
     '-hide_banner',
     '-nostdin',
@@ -68,7 +73,7 @@ export function ffmpegArgs(
     // Capital V skips attached pictures (cover art stored as a video stream).
     '-map',
     '0:V:0',
-    ...(audio === null ? [] : ['-map', '0:a:0']),
+    ...(audio === null ? [] : ['-map', `0:a:${track}`]),
     ...videoArgs(video),
     ...(audio === null ? [] : audioArgs(audio)),
     '-sn',

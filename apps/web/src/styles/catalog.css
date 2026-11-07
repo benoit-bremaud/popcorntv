@@ -643,3 +643,11 @@
   outline: var(--focus-ring);
   outline-offset: 2px;
 }
+
+/* Audio track choice (spec audio-track R4) */
+.detail__audio {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
+}
