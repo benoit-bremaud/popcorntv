@@ -4,8 +4,8 @@
 # #110: unfixed HIGH CVEs in Debian 13 base packages of the runtime image. None is in the
 # media path (FFmpeg is a static upstream build, see Dockerfile); the container runs one
 # non-root Node process and never calls these tools on untrusted input. Debian has no fix
-# yet (status affected / fix_deferred); CI scans with --ignore-unfixed, so these entries
-# document the accepted risk for the full scan and expire for a re-check.
+# yet (status affected / fix_deferred). The image scan runs without --ignore-unfixed, so
+# each entry is what keeps it green; re-check before expiry in #116.
 vulnerabilities:
   - id: CVE-2026-76642
     purls: &util-linux
@@ -19,53 +19,53 @@ vulnerabilities:
       - pkg:deb/debian/libuuid1
       - pkg:deb/debian/liblastlog2-2
     expired_at: 2027-02-07
-    statement: util-linux tools and libraries from the base image; the app never runs mount, login or blkid. #110.
+    statement: 'util-linux tools and libraries from the base image; the app never runs mount, login or blkid. Re-check: #116.'
   - id: CVE-2026-78408
     purls: *util-linux
     expired_at: 2027-02-07
-    statement: util-linux tools and libraries from the base image; the app never runs mount, login or blkid. #110.
+    statement: 'util-linux tools and libraries from the base image; the app never runs mount, login or blkid. Re-check: #116.'
   - id: CVE-2026-78409
     purls: *util-linux
     expired_at: 2027-02-07
-    statement: util-linux tools and libraries from the base image; the app never runs mount, login or blkid. #110.
+    statement: 'util-linux tools and libraries from the base image; the app never runs mount, login or blkid. Re-check: #116.'
   - id: CVE-2026-78410
     purls: *util-linux
     expired_at: 2027-02-07
-    statement: util-linux tools and libraries from the base image; the app never runs mount, login or blkid. #110.
+    statement: 'util-linux tools and libraries from the base image; the app never runs mount, login or blkid. Re-check: #116.'
   - id: CVE-2026-54369
     purls: [pkg:deb/debian/libacl1]
     expired_at: 2027-02-07
-    statement: ACL library of coreutils; the app sets no ACL and reads no attacker-controlled ACL. #110.
+    statement: 'ACL library of coreutils; the app sets no ACL and reads no attacker-controlled ACL. Re-check: #116.'
   - id: CVE-2026-16742
     purls: [pkg:deb/debian/libsystemd0, pkg:deb/debian/libudev1]
     expired_at: 2027-02-07
-    statement: systemd client libraries; no systemd or udev runs in the container. #110.
+    statement: 'systemd client libraries; no systemd or udev runs in the container. Re-check: #116.'
   - id: CVE-2025-69720
     purls: [pkg:deb/debian/libtinfo6, pkg:deb/debian/ncurses-base, pkg:deb/debian/ncurses-bin]
     expired_at: 2027-02-07
-    statement: ncurses terminfo; the server has no terminal UI and reads no untrusted terminfo. #110.
+    statement: 'ncurses terminfo; the server has no terminal UI and reads no untrusted terminfo. Re-check: #116.'
   - id: CVE-2026-119373
     purls: &sqlite [pkg:deb/debian/libsqlite3-0]
     expired_at: 2027-02-07
-    statement: Debian libsqlite3 is unused; better-sqlite3 bundles and statically links its own SQLite. #110.
+    statement: 'Debian libsqlite3 is unused; better-sqlite3 bundles and statically links its own SQLite. Re-check: #116.'
   - id: CVE-2026-119374
     purls: *sqlite
     expired_at: 2027-02-07
-    statement: Debian libsqlite3 is unused; better-sqlite3 bundles and statically links its own SQLite. #110.
+    statement: 'Debian libsqlite3 is unused; better-sqlite3 bundles and statically links its own SQLite. Re-check: #116.'
   - id: CVE-2026-119379
     purls: *sqlite
     expired_at: 2027-02-07
-    statement: Debian libsqlite3 is unused; better-sqlite3 bundles and statically links its own SQLite. #110.
+    statement: 'Debian libsqlite3 is unused; better-sqlite3 bundles and statically links its own SQLite. Re-check: #116.'
   - id: CVE-2026-76844
     purls: &zlib [pkg:deb/debian/zlib1g]
     expired_at: 2027-02-07
-    statement: System zlib; Node bundles its own zlib and FFmpeg is static, so no untrusted stream reaches it. #110.
+    statement: 'System zlib; Node bundles its own zlib and FFmpeg is static, so no untrusted stream reaches it. Re-check: #116.'
   - id: CVE-2026-85091
     purls: *zlib
     expired_at: 2027-02-07
-    statement: System zlib; Node bundles its own zlib and FFmpeg is static, so no untrusted stream reaches it. #110.
+    statement: 'System zlib; Node bundles its own zlib and FFmpeg is static, so no untrusted stream reaches it. Re-check: #116.'
   - id: CVE-2026-9538
     purls: [pkg:deb/debian/perl-base]
     expired_at: 2027-02-07
-    statement: perl-base is needed by dpkg only; the app never runs Perl. Debian status fix_deferred. #110.
+    statement: 'perl-base is needed by dpkg only; the app never runs Perl. Debian status fix_deferred. Re-check: #116.'
 misconfigurations: []

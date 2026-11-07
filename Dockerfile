@@ -32,8 +32,9 @@ FROM node:22.23.4-trixie-slim@sha256:be1e2a3dc2c4fd68cdfadad2a696a280e0d2749098b
 # `apt-get upgrade` (DL3005) is deliberate: the node base image lags Debian's security
 # updates (17 fixed HIGH/CRITICAL CVEs in perl, pcre2, gnutls, libcap on 2026-10-23) and
 # the weekly Trivy scan blocks on them; the upgrade is reproducible per base image digest.
-# Keep while the base can lag Debian security (it did on 2026-10-23 and 2026-11-06);
-# re-check on each base bump.
+# Keep while the base can lag Debian security (it did on bookworm on 2026-10-23 and
+# 2026-11-06; trixie digest be1e2a3d had nothing to upgrade on 2026-11-07); re-check on
+# each base bump.
 # hadolint ignore=DL3008,DL3005
 RUN apt-get update \
   && apt-get upgrade -y --no-install-recommends \
@@ -42,8 +43,9 @@ RUN apt-get update \
   && rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 COPY --from=ffmpeg /ffmpeg /ffprobe /usr/local/bin/
 # Fail the build if the binary drifts from the pinned release: a Dependabot bump of the
-# ffmpeg tag must update this version too, after a look at the FFmpeg security page.
-# No pipe (DL4006).
+# ffmpeg tag fails here until a manual commit updates this version too (grouped PR
+# included), after a look at the FFmpeg security page (#116). ffprobe ships from the same
+# image. No pipe (DL4006).
 RUN v="$(ffmpeg -hide_banner -version)" && v="${v#ffmpeg version }" && test "${v%% *}" = "9.0.2"
 WORKDIR /app
 COPY --from=build --chown=1000:1000 /out /app
