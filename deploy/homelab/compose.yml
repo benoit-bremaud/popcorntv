@@ -13,12 +13,20 @@ services:
       PUBLIC_URL: https://popcorntv.bb-homelab.local
       # Caddy's fixed address on the proxy network (spec deploy-homelab R4).
       TRUST_PROXY: 10.203.60.2
+      # Rebuildable caches live outside /app/data, which the nightly backup archives paused.
+      ARTWORK_DIR: /app/cache/artwork
+      TRANSCODE_DIR: /app/cache/transcode
     # Pattern Y bind mounts; create_host_path: false refuses to start when the HDD
     # (mounted with nofail) is missing, instead of writing to the SD card.
     volumes:
       - type: bind
         source: /mnt/appdata/popcorntv/data
         target: /app/data
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /mnt/appdata/popcorntv/cache
+        target: /app/cache
         bind:
           create_host_path: false
       # Interim media path until the media disk is mounted at /mnt/media (bb-homelab #47).
@@ -53,7 +61,7 @@ services:
       - >-
         mkdir -p /srv/web/assets
         && cp -RL /app/web/assets/. /srv/web/assets/
-        && cp -L /app/web/index.html /app/web/favicon.svg /srv/web/
+        && find /app/web -maxdepth 1 -type f -exec cp -L {} /srv/web/ +
         && find /srv/web/assets -type f -mtime +30 -delete
     volumes:
       - popcorntv-web:/srv/web

@@ -26,7 +26,8 @@ flowchart LR
     end
     Sync["«container» web-sync (one-shot, no network)"]
     WebVol[("«volume» popcorntv-web")]
-    Data[("«folder» /mnt/appdata/popcorntv/data — SQLite, artwork, transcode")]
+    Data[("«folder» /mnt/appdata/popcorntv/data — SQLite")]
+    Cache[("«folder» /mnt/appdata/popcorntv/cache — artwork, transcode")]
     Media[("«folder» /mnt/appdata/media, read-only")]
     Kuma["«container» bb-homelab-uptime-kuma"]
     Backup["«cron» appdata-backup.sh 03:25"]
@@ -38,6 +39,7 @@ flowchart LR
   Site -->|"reads"| WebVol
   Sync -->|"copies /app/web"| WebVol
   App --> Data
+  App --> Cache
   App --> Media
   App -->|"HTTPS"| TMDB
   Kuma -->|"GET /api/health"| Site

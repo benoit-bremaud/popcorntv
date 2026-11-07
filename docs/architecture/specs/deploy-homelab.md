@@ -16,7 +16,8 @@
 - **R4** `TRUST_PROXY` is Caddy's fixed address `10.203.60.2` on the external
   `bb-homelab-proxy-popcorntv` /29 network, shared with Caddy only.
 - **R5** Media are mounted read-only from `/mnt/appdata/media`; data live in
-  `/mnt/appdata/popcorntv/data`, owned by uid 1000; no bind mount creates its host path.
+  `/mnt/appdata/popcorntv/data` and rebuildable caches in `/mnt/appdata/popcorntv/cache`,
+  both owned by uid 1000; no bind mount creates its host path.
 - **R6** The nightly bb-homelab backup archives `/app/data` with the container paused and
   pings a Kuma Push monitor; an upgrade starts with the same backup.
 - **R7** Uptime Kuma probes `/api/health` through Caddy.

@@ -14,7 +14,8 @@ bb-homelab internal CA.
 | Path | Content | Mode |
 |---|---|---|
 | `/mnt/appdata/media` | movie and series folders, moved from `/mnt/appdata/jellyfin/media`; interim until `/mnt/media` (bb-homelab #47) | read-only in the app |
-| `/mnt/appdata/popcorntv/data` | SQLite database, artwork, transcode folders | owned by uid 1000 |
+| `/mnt/appdata/popcorntv/data` | SQLite database (backed up) | owned by uid 1000 |
+| `/mnt/appdata/popcorntv/cache` | artwork and transcode folders, rebuilt by a scan or a Play | owned by uid 1000 |
 | volume `popcorntv-web` | web build copied from the image by `web-sync` | read-only in Caddy |
 
 The files in this folder are the reference; the live compose service and Caddy block live in
@@ -26,7 +27,7 @@ the `bb-homelab` repository.
 
    ```bash
    sudo mv /mnt/appdata/jellyfin/media /mnt/appdata/media
-   sudo install -d -o 1000 -g 1000 /mnt/appdata/popcorntv/data
+   sudo install -d -o 1000 -g 1000 /mnt/appdata/popcorntv/data /mnt/appdata/popcorntv/cache
    ```
 
    Update the upload paths in the bb-homelab docs that still name the Jellyfin media tree.
@@ -67,7 +68,8 @@ its URL in `~/.config/bb-homelab/kuma-push-popcorntv`, then add to `crontab -e`:
 25 3 * * * mkdir -p /home/benoit/backups/popcorntv && KUMA_PUSH_URL="$(cat /home/benoit/.config/bb-homelab/kuma-push-popcorntv)" /home/benoit/bb-homelab/storage/scripts/appdata-backup.sh popcorntv bb-homelab-popcorntv /app/data >> /home/benoit/backups/popcorntv/backup.log 2>&1
 ```
 
-The pause makes the database and its WAL a consistent set. Media are not backed up here.
+The pause makes the database and its WAL a consistent set. Caches and media are not backed
+up here.
 
 ## Upgrade
 
@@ -76,7 +78,9 @@ The pause makes the database and its WAL a consistent set. Media are not backed 
    the new web build before the app starts; migrations run at start.
 
 Roll back by setting the previous tag; if the new version migrated the database, restore
-the archive taken in step 1 first.
+the archive taken in step 1 first: stop the app, put back `popcorntv.sqlite` with its
+`-wal` and `-shm` files together (bb-homelab `storage/APPDATA-BACKUP.md`, restore section),
+then start it.
 
 ## Jellyfin retirement
 
