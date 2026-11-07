@@ -1,0 +1,49 @@
+# Reference compose for the bb-homelab deployment (ADR-0013). The live copy lives in the
+# bb-homelab repository; keep both in step. No app port is published: Caddy is the only
+# entry point and reaches the app over the `popcorntv` network.
+services:
+  popcorntv:
+    image: popcorntv:${POPCORNTV_VERSION:?set POPCORNTV_VERSION}
+    container_name: bb-homelab-popcorntv
+    env_file:
+      - popcorntv.env
+    environment:
+      HOST: 0.0.0.0
+      MEDIA_ROOT: /app/media
+      PUBLIC_URL: https://popcorntv.bb-homelab.local
+      # Caddy's fixed address on the popcorntv network (spec homelab-deploy R4).
+      TRUST_PROXY: 10.203.60.2
+    volumes:
+      - /mnt/appdata/popcorntv/data:/app/data
+      - /mnt/appdata/media:/app/media:ro
+    networks:
+      popcorntv:
+        ipv4_address: 10.203.60.3
+    depends_on:
+      web-sync:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # One-shot: copies the web build of this image version into the volume Caddy serves, so
+  # the web app and the API always come from the same image.
+  web-sync:
+    image: popcorntv:${POPCORNTV_VERSION:?set POPCORNTV_VERSION}
+    container_name: bb-homelab-popcorntv-web-sync
+    entrypoint: ['/bin/sh', '-c']
+    command: ['find /srv/web -mindepth 1 -delete && cp -a /app/web/. /srv/web/']
+    volumes:
+      - popcorntv-web:/srv/web
+    network_mode: none
+    restart: 'no'
+
+networks:
+  # Holds Caddy and the app only, so TRUST_PROXY can name Caddy's address alone.
+  popcorntv:
+    name: popcorntv
+    ipam:
+      config:
+        - subnet: 10.203.60.0/29
+
+volumes:
+  popcorntv-web:
+    name: popcorntv-web
