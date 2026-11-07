@@ -4,6 +4,32 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-07 — #60 homelab deployment replacing Jellyfin, with #46 headers (PR #120 merged, `8d3546d`)
+
+- **Change** — the image also builds and ships `apps/web` (`/app/web`). `deploy/homelab/`
+  holds the reference compose (external `bb-homelab-proxy-popcorntv` 10.203.60.0/29,
+  `TRUST_PROXY` 10.203.60.2, read-only, `cap_drop: ALL`, binds with `create_host_path:
+  false`, caches in `/app/cache` out of the backup, one-shot `web-sync` copying the web build
+  into the `popcorntv-web` volume), the Caddy block (`tailnet_only`, CSP, HSTS, XFO, COOP,
+  Permissions-Policy, immutable `/assets`, no SPA fallback there) and the deploy guide.
+  ADR-0013, `diagrams/deploy/08-deployment-prod.md`, spec `deploy-homelab.md`. The live
+  config is bb-homelab #240 (PR #242 `a8ec3a7`, log #244).
+- **Decisions** (owner MCDA) — exposure through the bb-homelab Caddy 410 vs Tailscale
+  Serve 390 vs own Caddy 240; live config in bb-homelab 440 vs all in popcorntv 290; web
+  build in the image + volume 450 vs rsync 395 vs Fastify static 305; backup by
+  `appdata-backup.sh` 500; media moved to `/mnt/appdata/media` 410 (interim until
+  `/mnt/media`, bb-homelab #47); Jellyfin removed two weeks after cut-over 420. Jellyfin was
+  home-only and already stopped. Maintainerr audit placed before the household switch.
+- **Reviews** — adversarial (Opus) 3 rounds: 7 Must fixed (tailnet guard, external
+  network and volume, XFO + COOP, backup path, Kuma alias, tailnet-only wording,
+  Maintainerr order), then 0 Must. bb-homelab session caught a GNU `find -exec` order bug in
+  `web-sync` (fixed `7564a28`). Codex: usage limit, no review.
+- **Gate** — typecheck, lint, format, coverage, build, smoke 1/1, SonarQube PASSED,
+  Hadolint, Trivy config + image, gitleaks clean; local stack behind caddy:2.11.8 passed a
+  Playwright run (setup, scan, direct play MP4, HLS HEVC/AC-3) with zero CSP violations.
+  **Waiver**: GitHub Actions is disabled on the repo, so no CI ran; owner approved the merge
+  on the local gate. Pi deployment and QA on the Pi follow the merge.
+
 ## 2026-11-07 — #110 runtime image off the unfixed Debian 12 FFmpeg stack (PR #117 merged, `af69563`)
 
 - **Change** — both Dockerfile stages on `node:22.23.4-trixie-slim` (tag + digest); `ffmpeg`
