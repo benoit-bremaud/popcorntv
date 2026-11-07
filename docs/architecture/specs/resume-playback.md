@@ -15,7 +15,7 @@
 - **R3** A title with a saved, unfinished position offers **Resume from mm:ss** next to
   **Start over** in its detail dialog. An episode's ▶ resumes at its saved position.
 - **R4** A title is *finished* when its position is ≥ 90 % of its duration
-  (`isFinished`). A finished title starts over and offers no resume.
+  (`isFinished`) or it is marked watched (`watched_at`, spec watched-marks R1). A finished title starts over and offers no resume.
 - **R5** Resume works for direct play and HLS through the same `POST /playback/sessions`.
   HLS cannot seek ahead (EVENT playlist, ADR-0006 §2), so FFmpeg starts at the offset
   (ADR-0007 §2).
@@ -52,7 +52,9 @@ Primary key `(profile_id, media_id)`: one row per profile and title, upserted.
 ### 2.3 Finished
 
 `isFinished({ positionSec, durationSec })` (packages/shared, pure) = `durationSec` known
-and `> 0` and `positionSec ≥ 0.9 × durationSec`. Unknown duration → never finished.
+and `> 0` and `positionSec ≥ 0.9 × durationSec`. Unknown duration → never finished by
+position. The `finished` flag of `GET /progress` is also true when the title is marked
+watched (`watched_at`, spec watched-marks R1), duration or not.
 
 ### 2.4 Resume offer
 
@@ -81,7 +83,8 @@ Main scenario:
 Extensions:
 
 - 2a. **Start over** (or replaying a finished title) → `startSec: 0`; the old position,
-  `finished` included, is overwritten by the next save.
+  `finished` included, is overwritten by the next save, unless the title is marked watched
+  (`watched_at`, spec watched-marks): it stays finished until unmarked.
 - 4a. HLS input seeking lands on the keyframe before the offset when the video is copied:
   the picture starts up to one keyframe interval early while `offsetSec` still says
   `startSec`, so saved positions can run that much ahead. Accepted (ADR-0007 §2);

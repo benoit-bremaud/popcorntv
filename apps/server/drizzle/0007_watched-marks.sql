@@ -1,0 +1,1 @@
+ALTER TABLE `watch_progress` ADD `watched_at` text;

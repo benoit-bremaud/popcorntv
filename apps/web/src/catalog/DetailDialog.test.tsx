@@ -306,4 +306,108 @@ describe('DetailDialog progress refresh and next episode', () => {
     );
     expect(api.save).toHaveBeenCalledWith('kid', 'e1', 95);
   });
+  it('shows a series watched when all its episodes are finished, and labels each one', async () => {
+    renderDetail(
+      series,
+      always,
+      vi.fn(),
+      [saved('e1', 5900, true), saved('e2', 5900, true)],
+      [{ season: 1, episodes: [pilot, second].map((e) => ({ ...e, seriesId: 'show' })) }],
+    );
+
+    expect(await screen.findByRole('button', { name: '✓ Watched' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByText('Pilot').closest('li')).toHaveTextContent('watched');
+  });
+
+  it('offers no watched toggle for a series without episodes', async () => {
+    const { progress } = renderDetail(series);
+
+    await waitFor(() => expect(progress).toHaveBeenCalled());
+
+    expect(screen.queryByRole('button', { name: 'Mark as watched' })).toBeNull();
+  });
+});
+
+describe('DetailDialog watched mark (spec watched-marks)', () => {
+  const finished: WatchProgress = {
+    mediaId: 'heat',
+    positionSec: 0,
+    durationSec: null,
+    finished: true,
+    updatedAt: '2026-11-07T00:00:00.000Z',
+  };
+
+  it('should mark a film watched, then show it pressed after the reload', async () => {
+    const markWatched = vi.fn(async () => true);
+    const progress = vi.fn().mockResolvedValueOnce([]).mockResolvedValue([finished]);
+    const user = userEvent.setup();
+    render(
+      <DetailDialog
+        profileId="kid"
+        item={heat}
+        seasons={[]}
+        onClose={vi.fn()}
+        canPlay={always}
+        api={fakeApi()}
+        progress={progress}
+        markWatched={markWatched}
+      />,
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Mark as watched' }));
+
+    expect(markWatched).toHaveBeenCalledWith('kid', 'heat', true);
+    expect(await screen.findByRole('button', { name: '✓ Watched' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
+
+  it('should unmark a watched film', async () => {
+    const markWatched = vi.fn(async () => true);
+    const user = userEvent.setup();
+    render(
+      <DetailDialog
+        profileId="kid"
+        item={heat}
+        seasons={[]}
+        onClose={vi.fn()}
+        canPlay={always}
+        api={fakeApi()}
+        progress={async () => [finished]}
+        markWatched={markWatched}
+      />,
+    );
+
+    await user.click(await screen.findByRole('button', { name: '✓ Watched' }));
+
+    expect(markWatched).toHaveBeenCalledWith('kid', 'heat', false);
+  });
+
+  it('should keep the old state when the server refuses the mark', async () => {
+    const markWatched = vi.fn(async () => false);
+    const user = userEvent.setup();
+    render(
+      <DetailDialog
+        profileId="kid"
+        item={heat}
+        seasons={[]}
+        onClose={vi.fn()}
+        canPlay={always}
+        api={fakeApi()}
+        progress={async () => []}
+        markWatched={markWatched}
+      />,
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Mark as watched' }));
+
+    expect(await screen.findByRole('button', { name: 'Mark as watched' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+  });
 });

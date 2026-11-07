@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import Fastify from 'fastify';
 import type { MediaKind, WatchProgress } from '@popcorntv/shared';
@@ -183,5 +184,128 @@ describe('progress routes', () => {
 
     expect(put.statusCode).toBe(404);
     expect(get.json()).toEqual({ error: 'profile_not_found' });
+  });
+});
+
+describe('watched marks (spec watched-marks)', () => {
+  it.each(['PUT', 'DELETE'] as const)(
+    "should answer 404 profile_not_found to %s on another user's profile",
+    async (method) => {
+      const { app, db, addMedia } = setup();
+      const id = addMedia('film', 100);
+      const guest = createAccount(db, 'guest', 'viewer');
+      const guestProfile = new ProfileRepository(db).list(guest.userId)[0];
+      if (!guestProfile) throw new Error('setup');
+
+      const response = await app.inject({
+        method,
+        url: `/profiles/${guestProfile.id}/media/${id}/watched`,
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(response.json()).toEqual({ error: 'profile_not_found' });
+    },
+  );
+
+  const list = async (app: ReturnType<typeof setup>['app']) =>
+    (await app.inject({ method: 'GET', url: '/profiles/default/progress' })).json<
+      WatchProgress[]
+    >();
+
+  it('should mark a film watched, keep it finished, then forget it when unmarked', async () => {
+    const { app, addMedia } = setup();
+    const id = addMedia('film', null);
+    const url = `/profiles/default/media/${id}/watched`;
+
+    const put = await app.inject({ method: 'PUT', url });
+    const marked = await list(app);
+    const del = await app.inject({ method: 'DELETE', url });
+
+    expect(put.statusCode).toBe(204);
+    expect(marked).toMatchObject([{ mediaId: id, positionSec: 0, finished: true }]);
+    expect(del.statusCode).toBe(204);
+    expect(await list(app)).toEqual([]);
+  });
+
+  it('should keep the saved position when marking watched', async () => {
+    const { app, addMedia } = setup();
+    const id = addMedia('film', 100);
+    await app.inject({
+      method: 'PUT',
+      url: `/profiles/default/media/${id}/progress`,
+      payload: { positionSec: 30 },
+    });
+
+    await app.inject({ method: 'PUT', url: `/profiles/default/media/${id}/watched` });
+
+    expect(await list(app)).toMatchObject([{ mediaId: id, positionSec: 30, finished: true }]);
+  });
+
+  it('should keep a title watched through a rewatch', async () => {
+    const { app, addMedia } = setup();
+    const id = addMedia('film', 100);
+
+    await app.inject({ method: 'PUT', url: `/profiles/default/media/${id}/watched` });
+    await app.inject({
+      method: 'PUT',
+      url: `/profiles/default/media/${id}/progress`,
+      payload: { positionSec: 5 },
+    });
+
+    expect(await list(app)).toMatchObject([{ mediaId: id, positionSec: 5, finished: true }]);
+  });
+
+  it('should apply a series mark to each of its episodes', async () => {
+    const { app, db, addMedia } = setup();
+    const series = addMedia('series', null);
+    const episodes = [addMedia('episode', 100), addMedia('episode', 100)];
+    for (const id of episodes)
+      db.update(media).set({ seriesId: series }).where(eq(media.id, id)).run();
+
+    await app.inject({ method: 'PUT', url: `/profiles/default/media/${series}/watched` });
+    const marked = await list(app);
+    await app.inject({ method: 'DELETE', url: `/profiles/default/media/${series}/watched` });
+
+    expect(marked.map((row) => row.mediaId).sort()).toEqual([...episodes].sort());
+    expect(marked.every((row) => row.finished)).toBe(true);
+    expect(await list(app)).toEqual([]);
+  });
+
+  it('should answer 204 for a series with no episode yet', async () => {
+    const { app, addMedia } = setup();
+    const series = addMedia('series', null);
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: `/profiles/default/media/${series}/watched`,
+    });
+
+    expect(response.statusCode).toBe(204);
+  });
+
+  it.each([
+    [
+      'an unknown media',
+      '/profiles/default/media/00000000-0000-4000-8000-000000000000/watched',
+      404,
+      'media_not_found',
+    ],
+    [
+      'an unknown profile',
+      '/profiles/00000000-0000-4000-8000-000000000001/media/00000000-0000-4000-8000-000000000000/watched',
+      404,
+      'profile_not_found',
+    ],
+    ['a bad id', '/profiles/default/media/nope/watched', 400, 'invalid_request'],
+  ])('should refuse %s on PUT and DELETE', async (_, url, status, error) => {
+    const { app } = setup();
+
+    const response = await app.inject({ method: 'PUT', url });
+    const removed = await app.inject({ method: 'DELETE', url });
+
+    expect(response.statusCode).toBe(status);
+    expect(response.json()).toMatchObject({ error });
+    expect(removed.statusCode).toBe(status);
+    expect(removed.json()).toMatchObject({ error });
   });
 });

@@ -121,6 +121,7 @@ export interface WatchProgress {
   readonly mediaId: string;
   readonly positionSec: number;
   readonly durationSec: number | null;
+  /** ≥ 90 % of the duration, or marked watched by hand (spec watched-marks R1). */
   readonly finished: boolean;
   /** ISO timestamp of the last save. */
   readonly updatedAt: string;

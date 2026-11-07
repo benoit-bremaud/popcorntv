@@ -186,6 +186,27 @@ export async function saveProgress(
   }
 }
 
+/**
+ * `PUT | DELETE /profiles/:profileId/media/:id/watched` (spec watched-marks R2, R3); a
+ * series applies to its episodes. False when the server refused or was unreachable.
+ */
+export async function setWatched(
+  profileId: string,
+  mediaId: string,
+  value: boolean,
+  fetchFn: Fetch = fetch,
+): Promise<boolean> {
+  try {
+    const response = await fetchFn(
+      `${API}${profilePath(profileId)}/media/${encodeURIComponent(mediaId)}/watched`,
+      { method: value ? 'PUT' : 'DELETE' },
+    );
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
 /** `GET /profiles/:profileId/progress`; an unreachable server means "nothing to resume". */
 export async function loadProgress(
   profileId: string,

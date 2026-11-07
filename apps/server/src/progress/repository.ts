@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import { isFinished } from '@popcorntv/shared';
 import type { WatchProgress } from '@popcorntv/shared';
 import type { AppDatabase } from '../db/index.js';
@@ -42,12 +42,60 @@ export class ProgressRepository {
         positionSec: watchProgress.positionSec,
         durationSec: media.durationSec,
         updatedAt: watchProgress.updatedAt,
+        watchedAt: watchProgress.watchedAt,
       })
       .from(watchProgress)
       .innerJoin(media, eq(media.id, watchProgress.mediaId))
       .where(eq(watchProgress.profileId, profileId))
       .orderBy(desc(watchProgress.updatedAt))
       .all()
-      .map((row) => ({ ...row, finished: isFinished(row) }));
+      .map(({ watchedAt, ...row }) => ({
+        ...row,
+        finished: watchedAt !== null || isFinished(row),
+      }));
+  }
+
+  /**
+   * Marks a playable media watched (keeping its position) or unwatched (forgetting it); a
+   * `series` row applies to each of its episodes (spec watched-marks R2, R3). False for an
+   * unknown media; the caller checks the profile exists.
+   */
+  setWatched(
+    profileId: string,
+    mediaId: string,
+    watched: boolean,
+    now: Date = new Date(),
+  ): boolean {
+    return this.db.transaction((tx) => {
+      const row = tx.select({ kind: media.kind }).from(media).where(eq(media.id, mediaId)).get();
+      if (row === undefined) return false;
+      const ids =
+        row.kind === 'series'
+          ? tx
+              .select({ id: media.id })
+              .from(media)
+              .where(eq(media.seriesId, mediaId))
+              .all()
+              .map((episode) => episode.id)
+          : [mediaId];
+      if (ids.length === 0) return true;
+      if (!watched) {
+        tx.delete(watchProgress)
+          .where(and(eq(watchProgress.profileId, profileId), inArray(watchProgress.mediaId, ids)))
+          .run();
+        return true;
+      }
+      const at = now.toISOString();
+      for (const id of ids) {
+        tx.insert(watchProgress)
+          .values({ profileId, mediaId: id, positionSec: 0, updatedAt: at, watchedAt: at })
+          .onConflictDoUpdate({
+            target: [watchProgress.profileId, watchProgress.mediaId],
+            set: { updatedAt: at, watchedAt: at },
+          })
+          .run();
+      }
+      return true;
+    });
   }
 }
