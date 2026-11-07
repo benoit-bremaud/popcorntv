@@ -174,6 +174,13 @@ describe('owner administration client', () => {
     await api.invite('viewer');
     await api.revokeInvitation('i1');
     await api.events();
+    await api.libraries();
+    await api.folders();
+    await api.createLibrary({ name: 'Films', rootPath: '/m/films', kind: 'films' });
+    await api.renameLibrary('l1', 'Movies');
+    await api.deleteLibrary('l1');
+    await api.scan('l1');
+    await api.enrich('l1', true);
 
     expect(fetchFn.mock.calls.map(([url, init]) => `${init?.method} ${url}`)).toEqual([
       'GET /api/users',
@@ -188,8 +195,23 @@ describe('owner administration client', () => {
       'POST /api/invitations',
       'DELETE /api/invitations/i1',
       'GET /api/auth/events',
+      'GET /api/libraries',
+      'GET /api/libraries/folders',
+      'POST /api/libraries',
+      'PATCH /api/libraries/l1',
+      'DELETE /api/libraries/l1',
+      'POST /api/libraries/l1/scan',
+      'POST /api/libraries/l1/enrich',
     ]);
-    expect(fetchFn.mock.calls[1]?.[1]?.body).toBe('{"role":"owner"}');
+    const bodies = fetchFn.mock.calls.map(([, init]) => init?.body);
+    expect(bodies[1]).toBe('{"role":"owner"}');
+    expect(bodies.slice(-5)).toEqual([
+      '{"name":"Films","rootPath":"/m/films","kind":"films"}',
+      '{"name":"Movies"}',
+      undefined,
+      undefined,
+      '{"refresh":true}',
+    ]);
   });
 
   it('returns the value, the error code, or null when offline', async () => {

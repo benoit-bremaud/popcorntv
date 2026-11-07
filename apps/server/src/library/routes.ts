@@ -1,3 +1,4 @@
+import { realpath } from 'node:fs/promises';
 import { isAbsolute, resolve } from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
@@ -56,8 +57,12 @@ export function registerLibraryRoutes(app: FastifyInstance, deps: LibraryRoutesD
     const body = createLibraryBody.safeParse(request.body);
     if (!body.success) return reply.code(400).send(invalid(body.error.issues));
     const rootPath = body.data.rootPath;
-    // Spec R3: overlapping roots would list every title twice.
-    if (deps.repository.listLibraries().some((l) => rootsOverlap(l.rootPath, rootPath)))
+    // Spec R3: overlapping roots would list every title twice. Compared on real paths, as
+    // the scanner walks them: a link to another library's folder overlaps it too.
+    const real = (path: string) => realpath(path).catch(() => path);
+    const realRoot = await real(rootPath);
+    const others = await Promise.all(deps.repository.listLibraries().map((l) => real(l.rootPath)));
+    if (others.some((other) => rootsOverlap(other, rootPath) || rootsOverlap(other, realRoot)))
       return reply.code(409).send(apiError('root_in_use'));
     const library: Library = deps.repository.createLibrary(body.data);
     return reply.code(201).send(library);

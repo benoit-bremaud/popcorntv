@@ -183,6 +183,20 @@ describe('library routes', () => {
       expect(response.json()).toEqual({ error: 'root_in_use' });
     });
 
+    it('refuses a link to another library root with 409 root_in_use', async () => {
+      await createLibrary();
+      await symlink(root, join(mediaRoot, 'films-link'));
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/libraries',
+        payload: { name: 'Link', rootPath: join(mediaRoot, 'films-link'), kind: 'films' },
+      });
+
+      expect(response.statusCode).toBe(409);
+      expect(response.json()).toEqual({ error: 'root_in_use' });
+    });
+
     it('accepts a sibling root that shares a name prefix', async () => {
       await createLibrary();
       await mkdir(join(mediaRoot, 'films-old'));

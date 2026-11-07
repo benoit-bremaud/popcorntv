@@ -188,9 +188,10 @@ answers `401` without a session, so the route map is not probeable.
 
 ### 4.4 Roles on existing routes
 
-- Owner only: `POST /libraries`, `POST /libraries/:id/scan`, `POST
-  /libraries/:id/enrich`, and the user and invitation routes.
-- Viewer and owner: `GET /libraries…`, `GET /media…` (file, subtitles), `GET
+- Owner only: `POST /libraries`, `GET /libraries/folders`, `PATCH|DELETE /libraries/:id`,
+  `POST /libraries/:id/scan`, `POST /libraries/:id/enrich` (spec library-management), and
+  the user and invitation routes.
+- Viewer and owner: `GET /libraries`, `GET /libraries/:id/media`, `GET /media…` (file, subtitles), `GET
   /artwork/:file`, `/playback/sessions…` (own sessions only), the profile and progress
   routes for their own profiles (UC9 for every user, ADR-0010 §5).
 - `GET /libraries` keeps exposing `rootPath` to viewers: the household already knows the

@@ -37,7 +37,8 @@
   "no body": `POST /libraries/:id/scan` then answers 200, never 400
   `FST_ERR_CTP_EMPTY_JSON_BODY`. A non-empty body that is not JSON stays 400.
 - **R9** Done when the owner adds, scans, refreshes, renames and deletes a library from
-  the web, with tests on the repository, the routes, the API client and the screens.
+  the web, with tests on the routes (the repository through them), the API client and the
+  screens.
 
 ## 2. UC21 — Manage libraries
 
@@ -57,7 +58,9 @@ or presses "Add a library" on the empty catalog.
 
 - 3a. The path is not absolute or not under `MEDIA_ROOT` → 400 `invalid_request`; the web
   shows the reason above the list.
-- 3b. The root overlaps another library → 409 `root_in_use`; the web names the conflict.
+- 3b. The root overlaps another library → 409 `root_in_use`; the web explains that the
+  folder overlaps another library. Roots are compared on their real paths, so a link to
+  another library's folder overlaps it too.
 - 4a. The root is unreadable → 409 `root_unreadable` (UC1).
 - 5a. A scan or refresh of that library is running → 409 `scan_running` /
   `enrich_running`; nothing changes.

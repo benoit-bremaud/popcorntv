@@ -66,7 +66,10 @@ export function LibrarySection({ api }: Props): React.JSX.Element {
   const [name, setName] = useState('');
   const [kind, setKind] = useState<LibraryKind>('films');
   /** The library a scan or a refresh is running on (ADR-0014 §2: synchronous request). */
-  const [busy, setBusy] = useState<string | null>(null);
+  const [busy, setBusy] = useState<{
+    readonly id: string;
+    readonly action: 'scan' | 'enrich';
+  } | null>(null);
   const [renaming, setRenaming] = useState<{ readonly id: string; readonly name: string } | null>(
     null,
   );
@@ -116,7 +119,7 @@ export function LibrarySection({ api }: Props): React.JSX.Element {
   }
 
   async function scan(library: Library): Promise<void> {
-    setBusy(library.id);
+    setBusy({ id: library.id, action: 'scan' });
     setReport(null);
     await act(
       () => api.scan(library.id),
@@ -126,7 +129,7 @@ export function LibrarySection({ api }: Props): React.JSX.Element {
   }
 
   async function enrich(library: Library): Promise<void> {
-    setBusy(library.id);
+    setBusy({ id: library.id, action: 'enrich' });
     setReport(null);
     await act(
       () => api.enrich(library.id, true),
@@ -147,7 +150,7 @@ export function LibrarySection({ api }: Props): React.JSX.Element {
       <ul className="admin-list" aria-label="Libraries">
         {libraries.length === 0 && <li className="muted">No library yet.</li>}
         {libraries.map((library) => {
-          const running = busy === library.id;
+          const running = busy?.id === library.id ? busy.action : null;
           return (
             <li key={library.id} className="admin-item">
               {renaming?.id === library.id ? (
@@ -194,7 +197,7 @@ export function LibrarySection({ api }: Props): React.JSX.Element {
                 disabled={busy !== null}
                 onClick={() => void scan(library)}
               >
-                {running ? 'Scanning…' : 'Scan'}
+                {running === 'scan' ? 'Scanning…' : 'Scan'}
               </button>
               <button
                 type="button"
@@ -202,7 +205,7 @@ export function LibrarySection({ api }: Props): React.JSX.Element {
                 disabled={busy !== null}
                 onClick={() => void enrich(library)}
               >
-                Refresh metadata
+                {running === 'enrich' ? 'Refreshing…' : 'Refresh metadata'}
               </button>
               <button
                 type="button"
