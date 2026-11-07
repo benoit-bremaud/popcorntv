@@ -1,8 +1,11 @@
 # Reference site block for the bb-homelab Caddy (ADR-0013, issue #46). The Caddy container
-# joins the `popcorntv` network at 10.203.60.2 and mounts the `popcorntv-web` volume
-# read-only at /srv/popcorntv-web.
+# joins `bb-homelab-proxy-popcorntv` at 10.203.60.2 and mounts the `popcorntv-web` volume
+# read-only at /srv/popcorntv-web. The `tailnet_only` snippet is defined at the top of the
+# bb-homelab Caddyfile.
 popcorntv.bb-homelab.local {
 	tls internal
+	import tailnet_only /api/health
+
 	encode zstd gzip
 
 	header {
@@ -11,6 +14,8 @@ popcorntv.bb-homelab.local {
 		# its demuxer in a blob: worker.
 		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self' data:; media-src 'self' blob:; worker-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
 		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+		X-Frame-Options "DENY"
+		Cross-Origin-Opener-Policy "same-origin"
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "no-referrer"
 		-Server
@@ -21,8 +26,16 @@ popcorntv.bb-homelab.local {
 		reverse_proxy 10.203.60.3:3000
 	}
 
+	# Hashed build assets: cached for good, and a missing one is a 404, never index.html.
+	handle /assets/* {
+		root * /srv/popcorntv-web
+		header Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+
 	handle {
 		root * /srv/popcorntv-web
+		header Cache-Control "no-cache"
 		try_files {path} /index.html
 		file_server
 	}

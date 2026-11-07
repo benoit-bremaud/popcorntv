@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.28
 # check=error=true
-# PopCornTV server image: builds the TypeScript workspace, ships only the runtime output,
-# runs as a non-root user with FFmpeg available for transcoding.
+# PopCornTV image: builds the TypeScript workspace, ships the server runtime output and the
+# web build (copied out by the deploy compose), runs as a non-root user with FFmpeg.
 
 # Static FFmpeg build (#110): Debian's FFmpeg packages carry unfixed decoder CVEs on both
 # Debian 12 and 13, and FFmpeg parses every media file. Upstream releases ship the fixes;
