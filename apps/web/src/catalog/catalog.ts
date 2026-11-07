@@ -195,7 +195,10 @@ export function continueWatchingRow(
       const next = nextEpisode(seasonsOf(title, media), played);
       const nextRow = next === null ? undefined : saved.get(next.id);
       if (next === null || nextRow?.finished === true) continue;
-      fractions.set(title.id, nextRow === undefined ? 0 : fractionOf(nextRow));
+      fractions.set(
+        title.id,
+        nextRow !== undefined && resumeAt(nextRow) > 0 ? fractionOf(nextRow) : 0,
+      );
     } else {
       continue;
     }

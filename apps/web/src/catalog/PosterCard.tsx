@@ -12,11 +12,13 @@ type Props = {
 export function PosterCard({ item, onOpen, progress }: Props): React.JSX.Element {
   const poster = item.metadata?.posterPath ?? null;
   const rating = item.metadata?.voteAverage ?? null;
+  const name = item.year === null ? item.title : `${item.title} (${item.year})`;
+  const watched = progress !== undefined && progress > 0 ? Math.round(progress * 100) : 0;
   return (
     <button
       type="button"
       className="poster"
-      aria-label={item.year === null ? item.title : `${item.title} (${item.year})`}
+      aria-label={watched > 0 ? `${name}, ${watched} % watched` : name}
       onClick={(event) => onOpen(item, event.currentTarget)}
     >
       {poster === null ? (
@@ -31,8 +33,8 @@ export function PosterCard({ item, onOpen, progress }: Props): React.JSX.Element
           ★ {rating.toFixed(1)}
         </span>
       )}
-      {progress !== undefined && progress > 0 && (
-        <progress className="poster__progress" max={1} value={progress} aria-label="Watched" />
+      {watched > 0 && (
+        <progress className="poster__progress" max={1} value={progress} aria-hidden="true" />
       )}
     </button>
   );
