@@ -4,6 +4,29 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-07 — #123 library management from the web app, with #122 (PR #129 merged, `91b4c4f`)
+
+- **Conception** — brainstorm against Plex, Jellyfin and Netflix; spec
+  `library-management.md` (UC21), ADR-0014 (four MCDA choices: sub-folders of `MEDIA_ROOT`
+  plus a typed path, synchronous scan, delete in scope, empty-catalog welcome), UML under
+  `diagrams/library/`.
+- **Change** — owner routes `GET /libraries/folders`, `PATCH|DELETE /libraries/:id`; roots
+  overlapping on real paths refused `409 root_in_use`; delete under the library lock (DB
+  cascade, files untouched); web `LibrarySection` in Administration and "Add a library" on the
+  empty catalog. #122: an empty JSON body is no body on every route; deploy guide step 6.
+- **Correction** — ADR-0014 §1 totals were miscomputed when first shown (B led at 410); the
+  owner re-decided on true totals with effort re-scored once C was written (C 415).
+- **Gate** — 800 tests, server 97.4 % / web 98 % stmts, SonarQube PASSED (new coverage
+  95 %), gitleaks clean, Playwright smoke 1/1, adversarial review 4 rounds (3 Must fixed),
+  Codex quota refused. Merged with `MERGE_GATE_WAIVER` (Actions disabled, no doc-coverage
+  counter) on the owner's yes.
+- **Gotcha** — `sonar-scanner` defaults to SonarCloud here: pass
+  `-Dsonar.host.url=http://localhost:9000` and run it from the repo root after
+  `pnpm coverage`.
+- **Follow-ups** — #127 Discover TMDB titles, #128 request through Seerr (owner configures
+  everything behind Seerr; no content source in PopCornTV); scheduled scan and background
+  scan progress to file when needed.
+
 ## 2026-11-07 — #60 deployed and verified on bb-homelab
 
 - **Deploy** — image `popcorntv:8d3546d` built on the Pi; app and Caddy healthy; TMDB read
