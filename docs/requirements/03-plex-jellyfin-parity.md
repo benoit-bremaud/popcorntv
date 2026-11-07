@@ -27,7 +27,7 @@ Total = 40·V + 25·E + 25·C + 10·R, out of 500.
 | Item | Feature | Plex | Jellyfin | PopCornTV | V | E | C | R | Total |
 |---|---|---|---|---|---|---|---|---|---|
 | 1 | Continue-watching row (in-progress titles, next episode) | yes | yes | done — #131, home row joined in the browser (ADR-0015) | 5 | 5 | 4 | 5 | **475** |
-| 2 | Scheduled or watched-folder library scan (files added by hand) | yes | yes | missing — manual scan only | 4 | 4 | 5 | 5 | **435** |
+| 2 | Scheduled or watched-folder library scan (files added by hand) | yes | yes | done — #132, in-process timer rescans every library (ADR-0016) | 4 | 4 | 5 | 5 | **435** |
 | 3 | Watched / unwatched marks, set by hand and at the end of playback | yes | yes | missing | 4 | 4 | 4 | 5 | **410** |
 | 4 | Resume progress survives a file replaced by hand on another path | yes | partial | missing — row cascades on media delete | 4 | 3 | 5 | 4 | **400** |
 | 5 | Search by title and person | yes | yes | missing | 4 | 4 | 3 | 5 | **385** |

@@ -62,6 +62,9 @@ curl -b jar -X POST localhost:3000/libraries/<id>/scan     # {added, updated, re
 curl -b jar localhost:3000/libraries/<id>/media            # films / episodes with streams + metadata
 ```
 
+Every library is also rescanned every `SCAN_INTERVAL_MIN` minutes (default 60, `0` disables),
+so files added by hand show up without a manual scan.
+
 ### Metadata from TMDB
 
 Set `TMDB_API_KEY` to your free **API Read Access Token** (the long `eyJ…` token from

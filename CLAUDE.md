@@ -104,10 +104,14 @@ client, `MEDIA_ROUTE` routes in a 3000 / min bucket, `buildApp` is async); #123 
 /libraries/folders` lists the direct sub-folders of `MEDIA_ROOT`, `PATCH|DELETE
 /libraries/:id`, overlapping roots refused `409 root_in_use`, delete under the library lock,
 synchronous scan, web `LibrarySection` in `AdminPanel` + "Add a library" on the empty
-catalog; an empty JSON body is accepted on every route, #122).
+catalog; an empty JSON body is accepted on every route, #122); #131 continue-watching row
+(ADR-0015); #132 scheduled scan (spec `docs/architecture/specs/scheduled-scan.md`,
+ADR-0016: `SCAN_INTERVAL_MIN`, default 60, `0` off, an in-process unref-ed timer runs the
+route's `scanLibrary` on every library in turn, a busy one skipped, no overlap, stopped and
+awaited in `preClose`).
 
 Server layout (flat, component diagram 03): `src/library/` holds the pure `name-parser`
-and `path-guard`, the `ffprobe` runner (only process egress), the `folder-lister` (one-level `readdir` of `MEDIA_ROOT`), the `scanner`, the per-library
+and `path-guard`, the `ffprobe` runner (only process egress), the `folder-lister` (one-level `readdir` of `MEDIA_ROOT`), the `scanner`, the `scheduler` (interval rescans, ADR-0016), the per-library
 `lock` (scan + included enrich and explicit enrich never overlap), the Drizzle `repository`
 and the `routes`; `src/playback/` the pure `range` parser, the
 streaming `routes`, the pure `ffmpeg-args`, the `transcoder` (only child-process egress,

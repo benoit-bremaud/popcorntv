@@ -1,11 +1,11 @@
-# Component diagram — library — delta for library management
+# Component diagram — library — delta for library management and scheduled scan
 
 > **Feature**: Library management — [spec](../../specs/library-management.md)
-> **Related ADRs**: ADR-0014 · Full structure: [playback component](../playback/03-component.md)
+> **Related ADRs**: ADR-0014, ADR-0016 · Full structure: [playback component](../playback/03-component.md)
 
 ## Context
 
-Only what #123 adds or changes; new elements are marked «new».
+Only what #123 and #132 add or change; new elements are marked «new».
 
 ## Diagram
 
@@ -31,7 +31,11 @@ flowchart LR
     Routes --> Guard
     Routes --> Repo
     Routes --> Lock
+    Sched["scheduler «new #132» (setInterval, ADR-0016)"]
+    Sched -->|"listLibraries"| Repo
+    Sched -->|"scanLibrary"| Lock
   end
+  Clock(["Clock (SCAN_INTERVAL_MIN)"]) --> Sched
   Api -->|"HTTP /api/libraries…"| Routes
   Folders -->|"fs.readdir"| FS[("MEDIA_ROOT")]
 ```

@@ -31,6 +31,8 @@ export interface ServerConfig {
    * in this list may set the client IP through `X-Forwarded-For`. Null trusts no peer.
    */
   readonly trustProxy: string | null;
+  /** Minutes between two automatic rescans of every library; 0 disables them (spec scheduled-scan R1). */
+  readonly scanIntervalMin: number;
 }
 
 /** The `.env.example` value: a copied example file must not count as a configured key. */
@@ -55,6 +57,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): ServerConfig {
     artworkDir: resolve(env['ARTWORK_DIR'] ?? 'data/artwork'),
     publicUrl,
     trustProxy: parseTrustProxy(env['TRUST_PROXY']),
+    scanIntervalMin: scanInterval(env['SCAN_INTERVAL_MIN'], 60),
   };
 }
 
@@ -106,6 +109,16 @@ function isAddressOrCidr(entry: string): boolean {
   if (prefix === undefined) return true;
   const bits = Number(prefix);
   return /^[1-9]\d{0,2}$/.test(prefix) && bits <= (family === 4 ? 32 : 128);
+}
+
+/** Node caps a timer delay at 2³¹−1 ms; a longer one would fire every millisecond. */
+const MAX_SCAN_INTERVAL_MIN = Math.floor((2 ** 31 - 1) / 60_000);
+
+/** Whole minutes from 0 (disabled) to the timer cap, else the fallback. */
+function scanInterval(value: string | undefined, fallback: number): number {
+  if (value === undefined || value.trim() === '') return fallback;
+  const n = Number(value);
+  return Number.isSafeInteger(n) && n >= 0 && n <= MAX_SCAN_INTERVAL_MIN ? n : fallback;
 }
 
 /** A finite integer ≥ 1, else the fallback: the session limit guards CPU and disk. */

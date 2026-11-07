@@ -31,6 +31,7 @@ const app = await buildApp({
   transcodeMaxSessions: config.transcodeMaxSessions,
   publicUrl: config.publicUrl,
   trustProxy: config.trustProxy,
+  scanIntervalMin: config.scanIntervalMin,
   logger: true,
 });
 

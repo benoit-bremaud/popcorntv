@@ -16,7 +16,8 @@ System (PopCornTV server). User-goal level.
 
 ## Primary actor
 
-Owner.
+Owner. The Clock also starts UC1 every `SCAN_INTERVAL_MIN` minutes (spec scheduled-scan,
+ADR-0016).
 
 ## Stakeholders and interests
 

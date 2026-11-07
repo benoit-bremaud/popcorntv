@@ -1,74 +1,57 @@
-# Local review — popcorntv (feat/123-library-management-web)
-
-Pre-push review of #123 (library management from the web app) with #122 folded in.
+# Local review — popcorntv (#132 scheduled scan)
 
 - Date: 2026-11-07
-- Commit: da2e8ec (+ this report)
-- Scope: branch diff origin/main...HEAD
-- Checks run: adversarial (Opus, 4 rounds) · design (architecture-guardian) · docs (through
-  design and adversarial) · tests (test-auditor) · security and correctness (through the
-  adversarial review)
-- Verdict: ship · Must 0 · Should 0 · Nice 4
+- Commit: b1b926f
+- Scope: branch diff origin/main...feat/132-scheduled-library-scan
+- Checks run: adversarial (Opus, 3 rounds) · design · docs · tests · security · correctness
+- Verdict: ship · Must 0 · Should 1 (deferred) · Nice 5 (deferred)
 
 ## Adversarial review (#236)
 
-- Round 1 on `543915e`: Must 3 · Should 4 · Nice 5 · unverified 1 · Push gate: closed
-- Round 2 on `880374d`: all 3 Must fixed · new Should 3 · Push gate: open
-- Round 3 on `819dc69`: 5 fixed · 0 regressed · new Must 0 · Push gate: open
-- Round 4 on `da2e8ec`: 3 SonarQube fixes verified · 0 regressed · **Push gate: open**
-- Hosted reviewers (filled at the pre-merge run): Copilot out of credit · Codex quota refused (PR #129, 2026-11-07)
+- Round 1 on `1a1bdc2`: Must 0 · Should 5 · Nice 5 · Push gate: open
+- Round 2 on `419c8b5`: 4 fixed · 1 partly fixed · new Must 1 (FFmpeg killed only after the
+  in-flight scan on close) · Push gate: closed
+- Round 3 on `b1b926f`: all fixed · new Must 0 · **Push gate: open**
+- Hosted reviewers (filled at the pre-merge run): Copilot out of credit · Codex optional
 
-## Pre-merge gate (head SHA da2e8ec)
+## Pre-merge gate (head SHA b1b926f)
 
-| Step         | Result                                                                                                |
-| ------------ | ----------------------------------------------------------------------------------------------------- |
-| 0 CI mirror  | ✅ `ci.yml`: typecheck, lint, format:check, test, build all green locally; CodeQL, Scorecard, dependency-review CI-only |
-| 1 Tests      | ✅ 800 (shared 38, server 542, web 220)                                                                |
-| 2 Coverage   | server 97.4 % stmts / 93.4 % branches · web 98.0 % / 92.3 % · docs ⚠️ no doc-coverage counter in this repo   |
-| 3 SonarQube  | ✅ PASSED (new coverage 95.0 %, 0 new issues, 0 % duplication)                                                                       |
-| 4 Secrets    | ✅ gitleaks clean on origin/main..HEAD · only `.env.example` tracked · diff read: nothing sensitive    |
-| 5 E2E/smoke  | ✅ Playwright catalog smoke 1/1                                                                       |
+| Step | Result |
+|---|---|
+| 0 CI mirror | typecheck, lint, format, test, build green locally on tracked files; CodeQL, Scorecard, dependency review CI-only |
+| 1 Tests | ✅ shared 38 · server 557 · web 235 (pre-existing flaky `subtitle-extractor` timeout seen once in 9 runs) |
+| 2 Coverage | server 97.45 % stmts / 93.34 % branches / 96.32 % funcs / 98.54 % lines · web 99.05 % · shared 90.24 % · docs ⏸ deferred to the pre-merge run |
+| 3 SonarQube | ⏸ deferred to the pre-merge run (`--push`) |
+| 4 Secrets | ✅ gitleaks clean (origin/main..HEAD) · only `.env.example` tracked · diff read: nothing sensitive |
+| 5 E2E/smoke | ⏸ deferred to the pre-merge run (`--push`) |
 
-- Gate: **local gate green except doc coverage (no counter)**; GitHub Actions disabled on the
-  repo, so the merge needs the owner's `MERGE_GATE_WAIVER`.
+- Gate: `--push`: **pre-push green**, SonarQube, E2E and doc coverage deferred
 
 ## 🔴 Must Have
 
-- _None._ (Round 1: ADR-0014 §1 totals wrong → corrected, owner re-decided C on the true
-  totals; auth spec §4.4 missing the new owner routes; `CLAUDE.md` layout missing
-  `folder-lister` — all fixed.)
+_None._
 
 ## 🟡 Should Have
 
-- _None._ (Fixed: overlap check on real paths, concurrent-add race, admin API client tests,
-  spec/UI alignment, reasons per MCDA score, folder list marks overlapping folders taken,
-  accurate doc comments, stronger route tests.)
+- `apps/server/src/app.ts:271` `[adversarial|tests]` · no test pins "kill FFmpeg before awaiting
+  the scan" on close · follow-up test with a blocked probe and a `kill` spy
 
 ## 🔵 Nice to Have
 
-- `apps/server/src/library/routes.test.ts` `[adversarial]` · the concurrent-add test may pass
-  on the pre-fix code too · inject a slow `realpath` to prove the re-read.
-- `apps/server/src/library/routes.ts` `[design|adversarial]` · unreachable 404 after
-  `renameLibrary` · keep as a defensive check.
-- `apps/web/src/auth/LibrarySection.tsx` `[design|adversarial]` · library UI lives in `auth/`
-  and is ~320 lines · split `LibraryRow` / `AddLibraryForm` into `src/library/` when it grows.
-- `apps/web/src/auth/AuthGate.tsx` `[adversarial]` · no test that only an owner receives
-  `openAdmin` · the server enforces owner-only on every route.
+- `apps/server/src/config.ts:118` `[correctness]` · `Number()` accepts `0x10` or `1e1` as minutes
+- `apps/server/src/app.ts:251` `[correctness]` · `buildApp` does not bound `scanIntervalMin`
+- `docs/architecture/specs/scheduled-scan.md` `[docs]` · owner 409 while a scheduled run holds the lock
+- `docs/requirements/02-homelab-ecosystem.md:139` `[docs]` · point "rescan by hand" to #132
+- `apps/server/src/config.ts:116` `[security]` · warn when an invalid value falls back to 60
 
 ## ⚪ Disagree / Intentional
 
-- `docs/architecture/specs/deploy-homelab.md` `[adversarial]` · #125 line dropped on purpose
-  (#125 closed, no Jellyfin history).
-- `apps/server/src/playback/session-routes.test.ts` `[tests]` · the helper reuses the library:
-  required by R3 (one library per root).
-- ADR-0014 §1 effort re-scored once C was written · written down openly, owner re-decided.
+- `apps/server/src/library/scheduler.ts` `[adversarial]` · a tick during a run is dropped, not
+  queued · spec R4
 
 ## Per-dimension summary
 
-- Adversarial: 3 rounds, gate open. · Design: no defect, no over-engineering. · Docs: comments
-  and specs aligned. · Tests: trustworthy, Shoulds fixed. · Security: owner-only routes, 403
-  tested, CSRF covers PATCH/DELETE, prototype poisoning still refused. · Correctness: race
-  closed, cascade under the lock.
-- Out of scope (pre-existing): ADR index in `docs/architecture/README.md` stops at 0002;
-  `CLAUDE.md` repo-visibility line predates ADR-0005; `POST /libraries` does not check the root
-  exists (scan reports `root_unreadable`).
+- Adversarial: 1 Must found and fixed in round 2, gate open in round 3 · Design: flat, no
+  over-engineering · Docs: spec, ADR-0016, diagrams, CLAUDE.md aligned · Tests: stop, overlap,
+  unref and interval 0 now pinned · Security: no new route, input or egress · Correctness:
+  deleted-library and shutdown races closed

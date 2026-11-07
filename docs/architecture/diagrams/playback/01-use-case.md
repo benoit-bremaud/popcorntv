@@ -15,6 +15,7 @@ structured — see `03-component.md`.
 flowchart LR
   Viewer((Viewer))
   Owner((Owner))
+  Clock((Clock))
   TMDB(("TMDB (external)"))
   subgraph SYSTEM ["PopCornTV"]
     subgraph Library ["Library domain"]
@@ -38,6 +39,7 @@ flowchart LR
     end
   end
   Owner --> UC1
+  Clock -->|"every SCAN_INTERVAL_MIN (#132)"| UC1
   Owner --> UC2
   Owner --> UC9
   Viewer --> UC3

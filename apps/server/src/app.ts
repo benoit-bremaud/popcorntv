@@ -2,7 +2,7 @@ import { join } from 'node:path';
 import rateLimit from '@fastify/rate-limit';
 import Fastify from 'fastify';
 import type { FastifyError, FastifyInstance, FastifyRequest } from 'fastify';
-import type { ApiError, HealthResponse } from '@popcorntv/shared';
+import type { ApiError, HealthResponse, Library } from '@popcorntv/shared';
 import { apiError } from './http.js';
 import { EventRepository } from './auth/event-repository.js';
 import { Argon2Hasher, HasherBusyError } from './auth/hasher.js';
@@ -19,7 +19,8 @@ import type { AppDatabase } from './db/index.js';
 import type { Prober } from './library/ffprobe.js';
 import { LibraryRepository } from './library/repository.js';
 import { LibraryLock } from './library/lock.js';
-import { registerLibraryRoutes } from './library/routes.js';
+import { registerLibraryRoutes, scanLibrary } from './library/routes.js';
+import { startScanSchedule } from './library/scheduler.js';
 import { LibraryScanner } from './library/scanner.js';
 import { ArtworkCache } from './metadata/artwork-cache.js';
 import { MetadataRepository } from './metadata/repository.js';
@@ -72,6 +73,13 @@ export interface AppOptions {
    * from `X-Forwarded-For` (spec auth §5).
    */
   readonly trustProxy?: string | null;
+  /** Minutes between automatic rescans (`ServerConfig.scanIntervalMin`); 0 or absent disables them. */
+  readonly scanIntervalMin?: number;
+  /** Timer boundary of the scan schedule; injected by tests. */
+  readonly scheduleTimer?: {
+    readonly setInterval: (run: () => void, ms: number) => unknown;
+    readonly clearInterval: (handle: unknown) => void;
+  };
   /** Injected so tests hash fast; argon2id with the spec parameters otherwise. */
   readonly hasher?: Hasher;
   /**
@@ -186,13 +194,9 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
         logger: app.log,
       })
     : null;
-  registerLibraryRoutes(app, {
-    repository,
-    scanner,
-    lock,
-    mediaRoot: options.mediaRoot,
-    enrich: metadata ? (library) => metadata.enrich(library) : null,
-  });
+  const enrich = metadata ? (library: Library) => metadata.enrich(library) : null;
+  registerLibraryRoutes(app, { repository, scanner, lock, mediaRoot: options.mediaRoot, enrich });
+  let stopSchedule: (() => Promise<void>) | null = null;
   registerMetadataRoutes(app, {
     repository,
     service: metadata,
@@ -242,6 +246,15 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   // Sessions live in memory: directories left by a previous run belong to no one.
   app.addHook('onReady', async () => {
     await sessions.clean();
+    if ((options.scanIntervalMin ?? 0) > 0) {
+      stopSchedule = startScanSchedule({
+        intervalMin: options.scanIntervalMin ?? 0,
+        libraries: () => repository.listLibraries(),
+        scan: (library) => scanLibrary({ lock, scanner, enrich }, library, app.log),
+        logger: app.log,
+        ...options.scheduleTimer,
+      });
+    }
     const now = new Date();
     sessionRepository.purge(now);
     events.purge(now);
@@ -256,8 +269,9 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   });
   // preClose runs before the server waits for open responses (a film stream can last hours).
   app.addHook('preClose', async () => {
+    // Kill FFmpeg first: a scan in flight may outlast the shutdown deadline.
     extractor.closeAll();
-    await sessions.closeAll();
+    await Promise.all([sessions.closeAll(), stopSchedule?.()]);
   });
 
   return app;
