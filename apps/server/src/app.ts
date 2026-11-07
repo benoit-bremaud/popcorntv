@@ -269,9 +269,9 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   });
   // preClose runs before the server waits for open responses (a film stream can last hours).
   app.addHook('preClose', async () => {
-    await stopSchedule?.();
+    // Kill FFmpeg first: a scan in flight may outlast the shutdown deadline.
     extractor.closeAll();
-    await sessions.closeAll();
+    await Promise.all([sessions.closeAll(), stopSchedule?.()]);
   });
 
   return app;

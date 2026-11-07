@@ -181,10 +181,13 @@ describe('startScanSchedule', () => {
       logger: logger(),
     });
 
-    const handle = spy.mock.results[0]?.value as ReturnType<typeof globalThis.setInterval>;
-    expect(spy).toHaveBeenCalledWith(expect.any(Function), 60_000);
-    expect(handle.hasRef()).toBe(false);
-    await stop();
-    spy.mockRestore();
+    try {
+      const handle = spy.mock.results[0]?.value as ReturnType<typeof globalThis.setInterval>;
+      expect(spy).toHaveBeenCalledWith(expect.any(Function), 60_000);
+      expect(handle.hasRef()).toBe(false);
+    } finally {
+      await stop();
+      spy.mockRestore();
+    }
   });
 });
