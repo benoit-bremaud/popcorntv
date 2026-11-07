@@ -4,6 +4,27 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-07 — #60 deployed and verified on bb-homelab
+
+- **Deploy** — image `popcorntv:8d3546d` built on the Pi; app and Caddy healthy; TMDB read
+  token set by the owner (never seen by the agent); owner account created from the one-time
+  setup link; libraries `Films` and `Séries` created under `/app/media` and scanned.
+- **QA on the Pi** (Chrome over the tailnet) — TMDB match in French, catalog rows, direct
+  play MP4, HLS of a HEVC/AC-3 test MKV (made on the Pi), embedded French subtitles, resume
+  from 0:39 with subtitles shifted (`offsetSec=39`), CSP/HSTS/XFO headers. Test clip removed.
+- **Ops** — Uptime Kuma HTTP monitor `PopCornTV` on `/api/health` (up); Push monitor
+  `backup-popcorntv` (new token) and cron 03:25; first backup ran, 8 KB archive, heartbeat
+  received.
+- **Correction** — the homelab inventory of #26 was a colleague's stack; the owner's
+  dashboard lists n8n, Jellyfin, Vaultwarden, Uptime Kuma; Jellyfin is the only media service.
+  Owner decision: no Maintainerr (not installed 500, later 455, now 45); spec
+  `deploy-homelab` §2 step 3 and `02-homelab-ecosystem.md` amended, D1–D4 void for bb-homelab.
+- **Found** — `POST /libraries/:id/scan` answers 400 `FST_ERR_CTP_EMPTY_JSON_BODY` when sent
+  `Content-Type: application/json` with an empty body (Fastify default; send `{}`); no
+  library UI yet; no video fit/fill control. Jellyfin removal due 2026-11-21. Issues #122
+  (scan body), #123 (library UI), #124 (fit/fill), #125 (watch history import); bb-homelab
+  #245 (Jellyfin removal), #246 (dashboard tile).
+
 ## 2026-11-07 — #60 homelab deployment replacing Jellyfin, with #46 headers (PR #120 merged, `8d3546d`)
 
 - **Change** — the image also builds and ships `apps/web` (`/app/web`). `deploy/homelab/`
