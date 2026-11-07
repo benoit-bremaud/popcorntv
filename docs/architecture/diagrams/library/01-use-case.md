@@ -34,6 +34,8 @@ flowchart LR
 
 - UC21 covers add, rename and delete; the Scan button pressed after an add starts UC1 as a
   separate goal, not an «include».
+- A rescan carries the watch progress of a replaced file over to its successor (#134,
+  spec [progress-carry-over](../../specs/progress-carry-over.md)).
 - The Clock is a time actor: every `SCAN_INTERVAL_MIN` minutes it starts UC1 on each
   library (#132, ADR-0016, spec [scheduled-scan](../../specs/scheduled-scan.md)).
 - The empty-catalog welcome panel is an entry point to UC21, not a use case.
