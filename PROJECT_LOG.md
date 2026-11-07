@@ -4,6 +4,21 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-07 — #131 continue-watching row (PR #141 merged, `3a61d0f`)
+
+- **Conception** — spec `continue-watching.md` (UC22), sequence `catalog/06`, ADR-0015: the
+  row is joined in the browser from `GET /profiles/:profileId/progress` and the loaded catalog
+  (MCDA A 485 vs new route 290, enriched `/progress` 345). No server change.
+- **Change** — pure `continueWatchingRow`: resumable titles, one card per series decided by
+  its latest episode, next episode after a finished one, a barely started episode defers to
+  an older one, newest first, max 20; first row of the home view; reloaded when the detail
+  dialog closes; native `<progress>` (no inline style) and "N% watched" in the card name.
+- **Gate** — web 235 tests 99 % stmts, SonarQube PASSED after splitting the function
+  (cognitive complexity), gitleaks clean, adversarial review 3 rounds (3 Must fixed: UC9 id
+  collision, inline style, stale catalog-grid step). No E2E run. Merged with
+  `MERGE_GATE_WAIVER` (Actions disabled), owner yes in chat.
+- **Follow-ups** — #140 (reload after the player's last save).
+
 ## 2026-11-07 — #62 Plex / Jellyfin parity matrix
 
 - **Change** — `docs/requirements/03-plex-jellyfin-parity.md`: 18 features, 16 gaps scored by MCDA
