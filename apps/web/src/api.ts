@@ -7,6 +7,10 @@ import type {
   ChangePasswordBody,
   CreateLibraryBody,
   CreateProfileBody,
+  DiscoverDetails,
+  DiscoverKind,
+  DiscoverList,
+  DiscoverTitle,
   DeviceSession,
   EnrichBody,
   EnrichReport,
@@ -28,6 +32,7 @@ import type {
   UpdateProfileBody,
   User,
   WatchProgress,
+  WishlistEntry,
 } from '@popcorntv/shared';
 
 /** Prefix the dev server (and the production reverse proxy) forwards to the API. */
@@ -216,6 +221,75 @@ export async function loadProgress(
     return await getList<WatchProgress>(fetchFn, `${profilePath(profileId)}/progress`);
   } catch {
     return [];
+  }
+}
+
+/** URL of a Discover poster served by `GET /discover/poster/:file` (spec discover-wishlist R8). */
+export function posterUrl(posterPath: string): string {
+  return `${API}/discover/poster/${encodeURIComponent(posterPath.replace(/^\//, ''))}`;
+}
+
+/** `GET /discover?list=&kind=` (UC26 R1); throws `ApiRequestError` like the catalog load. */
+export async function loadDiscover(
+  list: DiscoverList,
+  kind: DiscoverKind,
+  fetchFn: Fetch = fetch,
+): Promise<DiscoverTitle[]> {
+  return getList<DiscoverTitle>(fetchFn, `/discover?list=${list}&kind=${kind}`);
+}
+
+/** `GET /discover/search?q=` (UC26 R2). */
+export async function searchDiscover(
+  query: string,
+  fetchFn: Fetch = fetch,
+): Promise<DiscoverTitle[]> {
+  return getList<DiscoverTitle>(fetchFn, `/discover/search?q=${encodeURIComponent(query)}`);
+}
+
+/** `GET /discover/:kind/:tmdbId` (UC26 R3): the title sheet. */
+export async function loadDiscoverDetails(
+  kind: DiscoverKind,
+  tmdbId: number,
+  fetchFn: Fetch = fetch,
+): Promise<DiscoverDetails> {
+  const path = `/discover/${kind}/${tmdbId}`;
+  let response: Response;
+  try {
+    response = watched(await fetchFn(`${API}${path}`));
+  } catch {
+    throw new ApiRequestError(path, null);
+  }
+  if (!response.ok) throw new ApiRequestError(path, response.status);
+  return (await response.json()) as DiscoverDetails;
+}
+
+/** `GET /profiles/:profileId/wishlist` (UC26 R6); an unreachable server means an empty list. */
+export async function loadWishlist(
+  profileId: string,
+  fetchFn: Fetch = fetch,
+): Promise<WishlistEntry[]> {
+  try {
+    return await getList<WishlistEntry>(fetchFn, `${profilePath(profileId)}/wishlist`);
+  } catch {
+    return [];
+  }
+}
+
+/** `PUT | DELETE /profiles/:profileId/wishlist/:kind/:tmdbId` (UC26 R5); false when refused. */
+export async function setWishlisted(
+  profileId: string,
+  kind: DiscoverKind,
+  tmdbId: number,
+  value: boolean,
+  fetchFn: Fetch = fetch,
+): Promise<boolean> {
+  try {
+    const response = await fetchFn(`${API}${profilePath(profileId)}/wishlist/${kind}/${tmdbId}`, {
+      method: value ? 'PUT' : 'DELETE',
+    });
+    return watched(response).ok;
+  } catch {
+    return false;
   }
 }
 

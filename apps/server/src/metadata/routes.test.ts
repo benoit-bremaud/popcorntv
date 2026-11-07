@@ -16,6 +16,8 @@ function makeClient(): TmdbClient {
   return {
     search: vi.fn(async () => [{ id: 603, year: 1999 }]),
     findByImdb: vi.fn(async () => []),
+    list: vi.fn(async () => []),
+    searchTitles: vi.fn(async () => []),
     details: vi.fn(async () => ({
       id: 603,
       title: 'The Matrix',

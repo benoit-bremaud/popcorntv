@@ -5,6 +5,7 @@ import { AuthGate } from './auth/AuthGate.js';
 import '@fontsource-variable/inter';
 import './styles/tokens.css';
 import './styles/catalog.css';
+import './styles/discover.css';
 import './styles/profiles.css';
 import './styles/auth.css';
 import './styles/admin.css';

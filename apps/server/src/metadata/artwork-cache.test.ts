@@ -7,7 +7,15 @@ import type { TmdbClient } from './tmdb-client.js';
 
 function makeClient(image: TmdbClient['image']): TmdbClient {
   const unused = () => Promise.reject(new Error('not used by the cache'));
-  return { image, search: unused, findByImdb: unused, details: unused, season: unused };
+  return {
+    image,
+    search: unused,
+    findByImdb: unused,
+    details: unused,
+    season: unused,
+    list: unused,
+    searchTitles: unused,
+  };
 }
 
 describe('ArtworkCache', () => {

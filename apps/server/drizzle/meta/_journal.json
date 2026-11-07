@@ -57,6 +57,13 @@
       "when": 1794067527275,
       "tag": "0007_watched-marks",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1794092495587,
+      "tag": "0008_wishlist",
+      "breakpoints": true
     }
   ]
 }

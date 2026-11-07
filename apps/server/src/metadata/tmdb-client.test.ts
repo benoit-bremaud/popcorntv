@@ -396,4 +396,68 @@ describe('createTmdbClient', () => {
 
     await expect(makeClient(fetch).image('/a.jpg', 'w500')).rejects.toMatchObject({ status: 410 });
   });
+
+  it('reads the trending and popular lists of a kind (UC26)', async () => {
+    const fetch = makeFetch({
+      '/trending/movie/week': () =>
+        jsonResponse({
+          results: [
+            {
+              id: 1,
+              title: 'Dune',
+              release_date: '2021-09-15',
+              vote_average: 7.8,
+              poster_path: '/d.jpg',
+            },
+            { id: 2, title: '' },
+          ],
+        }),
+      '/tv/popular': () => jsonResponse({ results: [{ id: 3, name: 'Dark', overview: 'Time.' }] }),
+    });
+    const client = makeClient(fetch);
+
+    expect(await client.list('trending', 'movie')).toEqual([
+      {
+        kind: 'movie',
+        id: 1,
+        title: 'Dune',
+        year: 2021,
+        overview: '',
+        vote_average: 7.8,
+        poster_path: '/d.jpg',
+      },
+    ]);
+    expect(await client.list('popular', 'tv')).toEqual([
+      {
+        kind: 'tv',
+        id: 3,
+        title: 'Dark',
+        year: null,
+        overview: 'Time.',
+        vote_average: 0,
+        poster_path: null,
+      },
+    ]);
+  });
+
+  it('searches films and series with /search/multi and drops people', async () => {
+    const fetch = makeFetch({
+      '/search/multi': () =>
+        jsonResponse({
+          results: [
+            { id: 1, media_type: 'movie', title: 'Alien', release_date: '1979-05-25' },
+            { id: 2, media_type: 'person', name: 'Sigourney Weaver' },
+            { id: 3, media_type: 'tv', name: 'Alien: Earth', first_air_date: '2025-08-12' },
+          ],
+        }),
+    });
+
+    const results = await makeClient(fetch).searchTitles('alien');
+
+    expect(results.map(({ kind, id, year }) => ({ kind, id, year }))).toEqual([
+      { kind: 'movie', id: 1, year: 1979 },
+      { kind: 'tv', id: 3, year: 2025 },
+    ]);
+    expect(requestedUrl(fetch).searchParams.get('query')).toBe('alien');
+  });
 });

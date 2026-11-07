@@ -24,6 +24,8 @@ import { startScanSchedule } from './library/scheduler.js';
 import { LibraryScanner } from './library/scanner.js';
 import { ArtworkCache } from './metadata/artwork-cache.js';
 import { MetadataRepository } from './metadata/repository.js';
+import { registerDiscoverRoutes } from './discover/routes.js';
+import { WishlistRepository } from './discover/wishlist-repository.js';
 import { registerMetadataRoutes } from './metadata/routes.js';
 import { MetadataService } from './metadata/service.js';
 import { ProgressRepository } from './progress/repository.js';
@@ -186,14 +188,16 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   const repository = new LibraryRepository(options.db);
   const lock = new LibraryLock();
   const scanner = new LibraryScanner(repository, options.probe, options.mediaRoot);
-  const metadata = options.tmdb
-    ? new MetadataService({
-        repository: new MetadataRepository(options.db),
-        client: options.tmdb,
-        artwork: new ArtworkCache(options.artworkDir, options.tmdb),
-        logger: app.log,
-      })
-    : null;
+  const artwork = options.tmdb ? new ArtworkCache(options.artworkDir, options.tmdb) : null;
+  const metadata =
+    options.tmdb && artwork
+      ? new MetadataService({
+          repository: new MetadataRepository(options.db),
+          client: options.tmdb,
+          artwork,
+          logger: app.log,
+        })
+      : null;
   const enrich = metadata ? (library: Library) => metadata.enrich(library) : null;
   registerLibraryRoutes(app, { repository, scanner, lock, mediaRoot: options.mediaRoot, enrich });
   let stopSchedule: (() => Promise<void>) | null = null;
@@ -243,6 +247,13 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     origin: cookie.origin,
   });
   registerProgressRoutes(app, { progress: new ProgressRepository(options.db), profiles });
+  registerDiscoverRoutes(app, {
+    tmdb: options.tmdb,
+    artwork,
+    artworkDir: options.artworkDir,
+    wishlist: new WishlistRepository(options.db),
+    profiles,
+  });
   // Sessions live in memory: directories left by a previous run belong to no one.
   app.addHook('onReady', async () => {
     await sessions.clean();
