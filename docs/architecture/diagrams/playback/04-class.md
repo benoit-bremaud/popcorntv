@@ -83,6 +83,7 @@ classDiagram
     +string mediaId
     +int positionSec
     +Date updatedAt
+    +Date? watchedAt
     +isFinished() bool
   }
   class PlaybackDecider {

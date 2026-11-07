@@ -196,6 +196,8 @@ export const watchProgress = sqliteTable(
       .references(() => media.id, { onDelete: 'cascade' }),
     positionSec: integer('position_sec').notNull(),
     updatedAt: text('updated_at').notNull(),
+    /** Set when the profile marked the title watched by hand (spec watched-marks R2). */
+    watchedAt: text('watched_at'),
   },
   (table) => [primaryKey({ columns: [table.profileId, table.mediaId] })],
 );

@@ -1,5 +1,7 @@
+import { useContext } from 'react';
 import type { Media } from '@popcorntv/shared';
 import { artworkUrl } from '../api.js';
+import { WatchedContext } from './watched-context.js';
 
 type Props = {
   readonly item: Media;
@@ -12,7 +14,9 @@ type Props = {
 export function PosterCard({ item, onOpen, progress }: Props): React.JSX.Element {
   const poster = item.metadata?.posterPath ?? null;
   const rating = item.metadata?.voteAverage ?? null;
-  const name = item.year === null ? item.title : `${item.title} (${item.year})`;
+  const seen = useContext(WatchedContext).has(item.id);
+  const title = item.year === null ? item.title : `${item.title} (${item.year})`;
+  const name = seen ? `${title}, watched` : title;
   const watched = progress !== undefined && progress > 0 ? Math.round(progress * 100) : 0;
   return (
     <button
@@ -27,6 +31,11 @@ export function PosterCard({ item, onOpen, progress }: Props): React.JSX.Element
         </span>
       ) : (
         <img className="poster__image" src={artworkUrl(poster)} alt="" loading="lazy" />
+      )}
+      {seen && (
+        <span className="poster__watched" aria-hidden="true">
+          ✓
+        </span>
       )}
       {rating !== null && (
         <span className="poster__rating" aria-hidden="true">

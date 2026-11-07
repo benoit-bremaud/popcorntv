@@ -232,3 +232,30 @@ export function continueWatchingRow(
     ? null
     : { key: 'continue-watching', title: 'Continue watching', items, progress: fractions };
 }
+
+/**
+ * Whether a profile has watched a title (spec watched-marks R4): a film when its progress is
+ * finished, a series when it has episodes and every one is finished.
+ */
+export function isWatched(
+  item: Media,
+  media: readonly Media[],
+  saved: ReadonlyMap<string, WatchProgress>,
+): boolean {
+  if (item.kind !== 'series') return saved.get(item.id)?.finished === true;
+  const episodes = seasonsOf(item, media).flatMap((season) => season.episodes);
+  return episodes.length > 0 && episodes.every((episode) => saved.get(episode.id)?.finished);
+}
+
+/** Ids of the top-level titles a profile has watched, for the poster marks (R4). */
+export function watchedIds(
+  media: readonly Media[],
+  progress: readonly WatchProgress[],
+): ReadonlySet<string> {
+  const saved = new Map(progress.map((row) => [row.mediaId, row]));
+  return new Set(
+    catalogItems(media)
+      .filter((item) => isWatched(item, media, saved))
+      .map((item) => item.id),
+  );
+}

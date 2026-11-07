@@ -307,3 +307,60 @@ describe('DetailDialog progress refresh and next episode', () => {
     expect(api.save).toHaveBeenCalledWith('kid', 'e1', 95);
   });
 });
+
+describe('DetailDialog watched mark (spec watched-marks)', () => {
+  const finished: WatchProgress = {
+    mediaId: 'heat',
+    positionSec: 0,
+    durationSec: null,
+    finished: true,
+    updatedAt: '2026-11-07T00:00:00.000Z',
+  };
+
+  it('should mark a film watched, then show it pressed after the reload', async () => {
+    const markWatched = vi.fn(async () => true);
+    const progress = vi.fn().mockResolvedValueOnce([]).mockResolvedValue([finished]);
+    const user = userEvent.setup();
+    render(
+      <DetailDialog
+        profileId="kid"
+        item={heat}
+        seasons={[]}
+        onClose={vi.fn()}
+        canPlay={always}
+        api={fakeApi()}
+        progress={progress}
+        markWatched={markWatched}
+      />,
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Mark as watched' }));
+
+    expect(markWatched).toHaveBeenCalledWith('kid', 'heat', true);
+    expect(await screen.findByRole('button', { name: '✓ Watched' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
+
+  it('should unmark a watched film', async () => {
+    const markWatched = vi.fn(async () => true);
+    const user = userEvent.setup();
+    render(
+      <DetailDialog
+        profileId="kid"
+        item={heat}
+        seasons={[]}
+        onClose={vi.fn()}
+        canPlay={always}
+        api={fakeApi()}
+        progress={async () => [finished]}
+        markWatched={markWatched}
+      />,
+    );
+
+    await user.click(await screen.findByRole('button', { name: '✓ Watched' }));
+
+    expect(markWatched).toHaveBeenCalledWith('kid', 'heat', false);
+  });
+});

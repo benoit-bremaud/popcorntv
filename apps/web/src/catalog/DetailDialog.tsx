@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { decidePlayback } from '@popcorntv/shared';
 import type { CanPlay, Media, WatchProgress } from '@popcorntv/shared';
-import { artworkUrl, loadProgress } from '../api.js';
+import { artworkUrl, loadProgress, setWatched } from '../api.js';
 import { browserCanPlay } from '../playback/can-play.js';
 import { PlayerDialog } from '../playback/PlayerDialog.js';
 import type { PlaybackApi } from '../playback/PlayerDialog.js';
 import { formatPosition, resumeAt } from '../playback/resume.js';
-import { nextEpisode } from './catalog.js';
+import { isWatched, nextEpisode } from './catalog.js';
 import type { Season } from './catalog.js';
 
 type Props = {
@@ -21,6 +21,8 @@ type Props = {
   readonly api?: PlaybackApi;
   /** `GET /profiles/:profileId/progress`; injected by tests. */
   readonly progress?: typeof loadProgress;
+  /** `PUT | DELETE …/watched`; injected by tests. */
+  readonly markWatched?: typeof setWatched;
 };
 
 /** What the player plays and where it starts. */
@@ -50,6 +52,7 @@ export function DetailDialog({
   canPlay = browserCanPlay,
   api,
   progress = loadProgress,
+  markWatched = setWatched,
 }: Props): React.JSX.Element {
   const ref = useRef<HTMLDialogElement>(null);
   const [playing, setPlaying] = useState<Playing | null>(null);
@@ -70,6 +73,14 @@ export function DetailDialog({
   }, []);
 
   const resume = (media: Media): number => resumeAt(saved?.get(media.id));
+  const episodes = seasons.flatMap((season) => season.episodes);
+  const watched = saved !== null && isWatched(item, episodes, saved);
+
+  /** UC23: marks the title (a series: all its episodes) watched or not, then reloads. */
+  async function toggleWatched(): Promise<void> {
+    await markWatched(profileId, item.id, !watched);
+    await refreshProgress();
+  }
   // The Play button that opened the player gets the focus back when it closes (spec step 6).
   const trigger = useRef<HTMLButtonElement | null>(null);
 
@@ -158,6 +169,16 @@ export function DetailDialog({
               )}
             </div>
           )}
+          {saved !== null && (playable(item) || episodes.length > 0) && (
+            <button
+              type="button"
+              className="chip"
+              aria-pressed={watched}
+              onClick={() => void toggleWatched()}
+            >
+              {watched ? '✓ Watched' : 'Mark as watched'}
+            </button>
+          )}
           {metadata !== null && metadata.genres.length > 0 && (
             <ul className="detail__genres" aria-label="Genres">
               {metadata.genres.map((genre) => (
@@ -179,6 +200,9 @@ export function DetailDialog({
                 {season.episodes.map((episode) => (
                   <li key={episode.id}>
                     <span className="muted">{episode.episode ?? '–'}</span> {episode.title}
+                    {saved?.get(episode.id)?.finished === true && (
+                      <span className="muted"> · watched</span>
+                    )}
                     {playable(episode) && saved !== null && (
                       <button
                         type="button"

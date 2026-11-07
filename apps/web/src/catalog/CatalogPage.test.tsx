@@ -281,3 +281,21 @@ describe('CatalogPage continue watching', () => {
     expect(progress).toHaveBeenCalledTimes(before + 1);
   });
 });
+
+describe('CatalogPage watched marks', () => {
+  it('should name a watched poster as watched', async () => {
+    renderPage(undefined, async () => [
+      {
+        mediaId: 'alien',
+        positionSec: 0,
+        durationSec: null,
+        finished: true,
+        updatedAt: '2026-11-07T00:00:00.000Z',
+      },
+    ]);
+
+    expect(
+      (await screen.findAllByRole('button', { name: 'Alien, watched' })).length,
+    ).toBeGreaterThan(0);
+  });
+});

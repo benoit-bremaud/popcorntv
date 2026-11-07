@@ -6,6 +6,7 @@ import {
   availableTypes,
   catalogItems,
   continueWatchingRow,
+  watchedIds,
   heroItem,
   ofType,
   seasonsOf,
@@ -16,6 +17,7 @@ import type { OpenHandler } from './CatalogBody.js';
 import { Controls } from './Controls.js';
 import { DetailDialog } from './DetailDialog.js';
 import { HOME, viewReducer } from './view-state.js';
+import { WatchedContext } from './watched-context.js';
 import type { CatalogView } from './view-state.js';
 
 type Load = { kind: 'loading' } | { kind: 'failed' } | { kind: 'ready'; media: Media[] };
@@ -129,7 +131,7 @@ export function CatalogPage({
   const heroBackdrop = hero?.metadata?.backdropPath ?? null;
 
   return (
-    <>
+    <WatchedContext value={watchedIds(catalog.media, saved)}>
       {hero !== null && heroBackdrop !== null && (
         <section className="hero">
           <img className="hero__image" src={artworkUrl(heroBackdrop)} alt="" />
@@ -172,6 +174,6 @@ export function CatalogPage({
           onClose={() => onClose(open.seq)}
         />
       )}
-    </>
+    </WatchedContext>
   );
 }

@@ -13,7 +13,8 @@ const progressBody = z.object({ positionSec: z.int().min(0).max(MAX_POSITION_SEC
 /**
  * UC6 per profile (spec resume-playback §2.2, spec profiles §4.2):
  * `PUT /profiles/:profileId/media/:id/progress` (204 | 400 | 404 `profile_not_found` /
- * `media_not_found`) and `GET /profiles/:profileId/progress`.
+ * `media_not_found`), `GET /profiles/:profileId/progress`, and `PUT | DELETE
+ * /profiles/:profileId/media/:id/watched` (204 | 400 | 404, spec watched-marks R2, R3).
  */
 export function registerProgressRoutes(
   app: FastifyInstance,
@@ -44,4 +45,23 @@ export function registerProgressRoutes(
     }
     return reply.send(deps.progress.list(params.data.profileId));
   });
+
+  for (const method of ['PUT', 'DELETE'] as const) {
+    app.route({
+      method,
+      url: '/profiles/:profileId/media/:id/watched',
+      handler: (request, reply) => {
+        const params = mediaParams.safeParse(request.params);
+        if (!params.success) return reply.code(400).send(invalid(params.error.issues));
+        if (!deps.profiles.exists(callerOf(request).userId, params.data.profileId)) {
+          return reply.code(404).send(apiError('profile_not_found'));
+        }
+        const { profileId, id } = params.data;
+        if (!deps.progress.setWatched(profileId, id, method === 'PUT')) {
+          return reply.code(404).send(apiError('media_not_found'));
+        }
+        return reply.code(204).send();
+      },
+    });
+  }
 }

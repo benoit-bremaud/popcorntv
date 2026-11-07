@@ -7,6 +7,8 @@ import {
   availableTypes,
   catalogItems,
   continueWatchingRow,
+  isWatched,
+  watchedIds,
   genreRows,
   heroItem,
   homeRows,
@@ -285,5 +287,42 @@ describe('continueWatchingRow', () => {
     );
 
     expect(row?.items).toHaveLength(20);
+  });
+});
+
+describe('watched marks', () => {
+  const ep2 = media({
+    id: 'e2',
+    title: 'Lies',
+    kind: 'episode',
+    seriesId: 's',
+    season: 1,
+    episode: 2,
+  });
+  const empty = media({ id: 'empty', title: 'Empty', kind: 'series' });
+  const all = [film, series, episode, ep2, empty];
+  const done = (mediaId: string, finished = true): WatchProgress => ({
+    mediaId,
+    positionSec: 0,
+    durationSec: null,
+    finished,
+    updatedAt: '2026-11-07T00:00:00.000Z',
+  });
+
+  it('should count a series watched only when every episode is finished', () => {
+    const half = new Map([['e', done('e')]]);
+    const full = new Map([
+      ['e', done('e')],
+      ['e2', done('e2')],
+    ]);
+
+    expect(isWatched(series, all, half)).toBe(false);
+    expect(isWatched(series, all, full)).toBe(true);
+    expect(isWatched(empty, all, full)).toBe(false);
+  });
+
+  it('should list the watched top-level titles', () => {
+    expect([...watchedIds(all, [done('f'), done('e'), done('e2')])].sort()).toEqual(['f', 's']);
+    expect(watchedIds(all, [done('f', false)]).size).toBe(0);
   });
 });

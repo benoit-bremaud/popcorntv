@@ -10,6 +10,7 @@ import {
   loadCatalog,
   loadProgress,
   saveProgress,
+  setWatched,
   onUnauthenticated,
   sendHeartbeat,
   startPlayback,
@@ -256,5 +257,28 @@ describe('fire-and-forget calls after the session ended', () => {
 
     expect(listener).toHaveBeenCalledTimes(2);
     onUnauthenticated(() => undefined);
+  });
+});
+
+describe('setWatched', () => {
+  it.each([
+    [true, 'PUT'],
+    [false, 'DELETE'],
+  ])('should send %s as %s', async (value, method) => {
+    const fetchFn = vi.fn(async () => new Response(null, { status: 204 }));
+
+    expect(await setWatched('kid', 'm 1', value, fetchFn)).toBe(true);
+    expect(fetchFn).toHaveBeenCalledWith('/api/profiles/kid/media/m%201/watched', { method });
+  });
+
+  it('should report a refusal or an unreachable server', async () => {
+    expect(
+      await setWatched('kid', 'm', true, async () => new Response(null, { status: 404 })),
+    ).toBe(false);
+    expect(
+      await setWatched('kid', 'm', true, async () => {
+        throw new TypeError('offline');
+      }),
+    ).toBe(false);
   });
 });
