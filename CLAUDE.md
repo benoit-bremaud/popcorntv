@@ -119,7 +119,14 @@ and cast names, accent- and case-folded, title matches first, the results grid r
 rows); #136 audio track (spec `docs/architecture/specs/audio-track.md`, ADR-0019: pure
 `audioTracks` / `effectiveAudioIndex` / `matchAudioTrack` in `packages/shared`, `audioIndex`
 0–99 on `POST /playback/sessions`, a non-default track forces HLS with `-map 0:a:N`, Audio
-select in `DetailDialog` matched by language on each played episode).
+select in `DetailDialog` matched by language on each played episode); #127 Discover + wishlist (spec
+`docs/architecture/specs/discover-wishlist.md`, ADR-0020: `src/discover/` routes over the
+TMDB client — `GET /discover?list=trending|popular&kind=movie|tv` memoised 15 min,
+`/discover/search`, `/discover/:kind/:tmdbId`, lazy `w342` posters through the artwork cache
+at `/discover/poster/:file` — per-profile `wishlist` table (FK cascade), `PUT|DELETE
+/profiles/:profileId/wishlist/:kind/:tmdbId` reads the facts from TMDB, "Available" is a join
+on `media.tmdb_id`, web Library / Discover tabs, "Play in my library" opens the library
+dialog; no Seerr request, #128).
 
 Server layout (flat, component diagram 03): `src/library/` holds the pure `name-parser`
 and `path-guard`, the `ffprobe` runner (only process egress), the `folder-lister` (one-level `readdir` of `MEDIA_ROOT`), the `scanner`, the pure `identity` (carry-over keys, ADR-0018), the `scheduler` (interval rescans, ADR-0016), the per-library

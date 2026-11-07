@@ -190,6 +190,7 @@ export type ApiErrorCode =
   | 'scan_running'
   | 'root_in_use'
   | 'tmdb_not_configured'
+  | 'tmdb_unavailable'
   | 'enrich_running'
   | 'artwork_not_found'
   | 'media_not_found'
@@ -222,6 +223,7 @@ export interface ApiError {
 }
 
 export * from './auth.js';
+export * from './discover.js';
 export * from './playback.js';
 export * from './profiles.js';
 export * from './subtitles.js';

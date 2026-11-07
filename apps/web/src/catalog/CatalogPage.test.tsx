@@ -53,6 +53,19 @@ function group(name: string): HTMLElement {
 }
 
 describe('CatalogPage', () => {
+  it('opens the title Discover asked for once the catalog is loaded (UC26)', async () => {
+    render(
+      <CatalogPage
+        profileId="default"
+        load={async () => CATALOG}
+        progress={async () => []}
+        openMediaId="heat"
+      />,
+    );
+
+    expect(await screen.findByRole('dialog', { name: 'Heat' })).toBeInTheDocument();
+  });
+
   it('shows the home view: hero, top rated, type rows and genre rows', async () => {
     renderPage();
 

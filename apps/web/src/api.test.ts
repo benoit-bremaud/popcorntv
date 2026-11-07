@@ -6,6 +6,12 @@ import {
   updateProfile,
   ApiRequestError,
   artworkUrl,
+  loadDiscover,
+  loadDiscoverDetails,
+  loadWishlist,
+  posterUrl,
+  searchDiscover,
+  setWishlisted,
   subtitleUrl,
   loadCatalog,
   loadProgress,
@@ -280,5 +286,57 @@ describe('setWatched', () => {
         throw new TypeError('offline');
       }),
     ).toBe(false);
+  });
+});
+
+describe('Discover helpers (UC26)', () => {
+  it('builds the URLs of lists, search, sheet and posters', async () => {
+    const fetchFn = vi.fn<typeof fetch>(async () => respond([]));
+    await loadDiscover('trending', 'tv', fetchFn);
+    await searchDiscover('la haine', fetchFn);
+    expect(fetchFn.mock.calls.map((call) => call[0])).toEqual([
+      '/api/discover?list=trending&kind=tv',
+      '/api/discover/search?q=la%20haine',
+    ]);
+    expect(posterUrl('/abc.jpg')).toBe('/api/discover/poster/abc.jpg');
+  });
+
+  it('loads a title sheet, and throws on an error status or a network failure', async () => {
+    await expect(
+      loadDiscoverDetails('movie', 7, async () => respond({ tmdbId: 7 })),
+    ).resolves.toEqual({
+      tmdbId: 7,
+    });
+    await expect(
+      loadDiscoverDetails('movie', 7, async () => respond({}, 502)),
+    ).rejects.toMatchObject({
+      status: 502,
+    });
+    await expect(
+      loadDiscoverDetails('movie', 7, async () => Promise.reject(new TypeError('offline'))),
+    ).rejects.toMatchObject({ status: null });
+  });
+
+  it('reads the wishlist, empty when the server fails', async () => {
+    await expect(loadWishlist('p 1', async () => respond([{ tmdbId: 1 }]))).resolves.toEqual([
+      { tmdbId: 1 },
+    ]);
+    await expect(loadWishlist('p1', async () => respond({}, 500))).resolves.toEqual([]);
+  });
+
+  it('adds with PUT, removes with DELETE, false when refused or offline', async () => {
+    const fetchFn = vi.fn(async () => new Response(null, { status: 204 }));
+    await expect(setWishlisted('p1', 'movie', 3, true, fetchFn)).resolves.toBe(true);
+    await expect(setWishlisted('p1', 'tv', 4, false, fetchFn)).resolves.toBe(true);
+    expect(fetchFn.mock.calls).toEqual([
+      ['/api/profiles/p1/wishlist/movie/3', { method: 'PUT' }],
+      ['/api/profiles/p1/wishlist/tv/4', { method: 'DELETE' }],
+    ]);
+    await expect(setWishlisted('p1', 'tv', 4, true, async () => respond({}, 409))).resolves.toBe(
+      false,
+    );
+    await expect(
+      setWishlisted('p1', 'tv', 4, true, async () => Promise.reject(new TypeError('offline'))),
+    ).resolves.toBe(false);
   });
 });

@@ -3,6 +3,8 @@ import type { ReactNode } from 'react';
 import type { Profile } from '@popcorntv/shared';
 import { loadProfiles } from './api.js';
 import { CatalogPage } from './catalog/CatalogPage.js';
+import { DiscoverPage } from './discover/DiscoverPage.js';
+import type { DiscoverApi } from './discover/discover-api.js';
 import { rememberProfileId, rememberedProfileId } from './profiles/active-profile.js';
 import { Avatar } from './profiles/Avatar.js';
 import { ManageProfiles } from './profiles/ManageProfiles.js';
@@ -26,7 +28,13 @@ type Props = {
   readonly account?: ReactNode;
   /** Owners only: opens the library section from the empty catalog (spec library-management R7). */
   readonly onAddLibrary?: () => void;
+  /** Injected in tests; defaults to the real Discover API (UC26). */
+  readonly discover?: DiscoverApi;
 };
+
+/** The two catalog tabs: the files on disk, or TMDB titles beyond them (UC26). */
+type Tab =
+  { readonly kind: 'library'; readonly openMediaId: string | null } | { readonly kind: 'discover' };
 
 /** The web player shell: brand header, "Who's watching?" (UC8 / UC9), then the catalog. */
 export function App({
@@ -35,8 +43,10 @@ export function App({
   storage,
   account,
   onAddLibrary,
+  discover,
 }: Props): React.JSX.Element {
   const [view, setView] = useState<View>({ kind: 'loading' });
+  const [tab, setTab] = useState<Tab>({ kind: 'library', openMediaId: null });
   const [profiles, setProfiles] = useState<readonly Profile[]>([]);
   /** Only the latest load may set `profiles` (two quick writes, two refreshes). */
   const latest = useRef(0);
@@ -132,7 +142,39 @@ export function App({
           />
         )}
         {view.kind === 'active' && (
-          <CatalogPage profileId={view.profile.id} onAddLibrary={onAddLibrary} />
+          <>
+            <nav className="tabs" aria-label="Catalog">
+              <button
+                type="button"
+                className="chip"
+                aria-pressed={tab.kind === 'library'}
+                onClick={() => setTab({ kind: 'library', openMediaId: null })}
+              >
+                Library
+              </button>
+              <button
+                type="button"
+                className="chip"
+                aria-pressed={tab.kind === 'discover'}
+                onClick={() => setTab({ kind: 'discover' })}
+              >
+                Discover
+              </button>
+            </nav>
+            {tab.kind === 'library' ? (
+              <CatalogPage
+                profileId={view.profile.id}
+                onAddLibrary={onAddLibrary}
+                openMediaId={tab.openMediaId}
+              />
+            ) : (
+              <DiscoverPage
+                profileId={view.profile.id}
+                api={discover}
+                onPlayInLibrary={(mediaId) => setTab({ kind: 'library', openMediaId: mediaId })}
+              />
+            )}
+          </>
         )}
       </main>
     </>

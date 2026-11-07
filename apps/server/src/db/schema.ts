@@ -11,6 +11,7 @@ import {
 import {
   AUTH_EVENT_KINDS,
   AVATAR_COLORS,
+  DISCOVER_KINDS,
   LIBRARY_KINDS,
   MEDIA_KINDS,
   ROLES,
@@ -200,4 +201,27 @@ export const watchProgress = sqliteTable(
     watchedAt: text('watched_at'),
   },
   (table) => [primaryKey({ columns: [table.profileId, table.mediaId] })],
+);
+
+/**
+ * A profile's wishlist (UC26, ADR-0020): one row per TMDB title, with the facts the row
+ * shows read from TMDB when added. Availability is not stored: it is a join on
+ * `media.tmdb_id` at read time (spec discover-wishlist R6).
+ */
+export const wishlist = sqliteTable(
+  'wishlist',
+  {
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    kind: text('kind', { enum: DISCOVER_KINDS }).notNull(),
+    tmdbId: integer('tmdb_id').notNull(),
+    title: text('title').notNull(),
+    year: integer('year'),
+    overview: text('overview').notNull(),
+    voteAverage: real('vote_average').notNull(),
+    posterPath: text('poster_path'),
+    addedAt: text('added_at').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.profileId, table.kind, table.tmdbId] })],
 );

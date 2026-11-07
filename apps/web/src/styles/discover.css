@@ -1,0 +1,47 @@
+/* UC26 Discover (spec discover-wishlist): tokens only, posters reuse `.poster` and `.row`. */
+.tabs {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.poster__badge {
+  position: absolute;
+  bottom: var(--space-2);
+  left: var(--space-2);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+}
+
+.sheet {
+  display: grid;
+  grid-template-columns: minmax(0, 12rem) 1fr;
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.sheet__poster {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+}
+
+.sheet__badge {
+  color: var(--color-accent-text);
+  font-weight: var(--weight-bold);
+}
+
+@media (width < 40rem) {
+  .sheet {
+    grid-template-columns: 1fr;
+  }
+
+  .sheet__poster {
+    max-width: 10rem;
+  }
+}

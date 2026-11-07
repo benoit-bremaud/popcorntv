@@ -34,6 +34,8 @@ type Props = {
   readonly progress?: typeof loadProgress;
   /** Owners only: the empty catalog offers to add a library (spec library-management R7). */
   readonly onAddLibrary?: () => void;
+  /** Opened once the catalog is loaded: Discover's "Play in my library" (UC26 R4). */
+  readonly openMediaId?: string | null;
 };
 
 /** UC3 / UC4: the catalog with its dynamic controls and the detail dialog. */
@@ -42,6 +44,7 @@ export function CatalogPage({
   load = loadCatalog,
   progress = loadProgress,
   onAddLibrary,
+  openMediaId = null,
 }: Props): React.JSX.Element {
   const [catalog, setCatalog] = useState<Load>({ kind: 'loading' });
   const [state, dispatch] = useReducer(viewReducer, HOME);
@@ -89,6 +92,17 @@ export function CatalogPage({
     openings.current += 1;
     setOpen({ item, seq: openings.current });
   }, []);
+
+  // UC26: the title Discover asked for opens once, as soon as the catalog has it.
+  const opened = useRef<string | null>(null);
+  useEffect(() => {
+    if (catalog.kind !== 'ready' || openMediaId === null || opened.current === openMediaId) return;
+    opened.current = openMediaId;
+    const item = catalog.media.find((candidate) => candidate.id === openMediaId);
+    if (item === undefined) return;
+    openings.current += 1;
+    setOpen({ item, seq: openings.current });
+  }, [catalog, openMediaId]);
 
   const onClose = useCallback(
     (seq: number) => {

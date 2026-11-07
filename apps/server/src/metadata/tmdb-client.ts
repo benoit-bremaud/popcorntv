@@ -54,7 +54,22 @@ export interface TmdbEpisode {
   readonly vote_count: number;
 }
 
-/** The five operations UC2 needs; the metadata service depends on this, tests inject a fake. */
+/** A list or search row reduced to what Discover shows (UC26, ADR-0020). */
+export interface TmdbSummary {
+  readonly kind: TmdbKind;
+  readonly id: number;
+  readonly title: string;
+  /** Release (movie) or first-air (TV) year, null when TMDB has no date. */
+  readonly year: number | null;
+  readonly overview: string;
+  readonly vote_average: number;
+  readonly poster_path: string | null;
+}
+
+/** The Discover lists (spec discover-wishlist R1). */
+export type TmdbList = 'trending' | 'popular';
+
+/** The operations UC2 and UC26 need; the metadata service and Discover depend on this, tests inject a fake. */
 export interface TmdbClient {
   /** `/search/movie` or `/search/tv`; `year` filters the release / first-air year when set. */
   search(kind: TmdbKind, title: string, year: number | null): Promise<readonly TmdbCandidate[]>;
@@ -64,6 +79,10 @@ export interface TmdbClient {
   details(kind: TmdbKind, id: number): Promise<TmdbTitleDetails>;
   /** `/tv/{id}/season/{n}`. */
   season(seriesId: number, season: number): Promise<readonly TmdbEpisode[]>;
+  /** `/trending/{kind}/week` or `/{kind}/popular`, first page. */
+  list(list: TmdbList, kind: TmdbKind): Promise<readonly TmdbSummary[]>;
+  /** `/search/multi`, films and series only (people dropped). */
+  searchTitles(query: string): Promise<readonly TmdbSummary[]>;
   /** Image bytes for a TMDB path (`/abc.jpg`) at a size (`w500`); base URL from `/configuration`. */
   image(path: string, size: string): Promise<Uint8Array>;
 }
@@ -169,6 +188,40 @@ const seasonResponse = z.object({
     }),
   ),
 });
+const summaryRow = z.object({
+  id: z.number().int(),
+  media_type: z.string().max(NAME_MAX).optional(),
+  title: z.string().max(NAME_MAX).optional(),
+  name: z.string().max(NAME_MAX).optional(),
+  release_date: nullableString,
+  first_air_date: nullableString,
+  overview: z.string().max(TEXT_MAX).optional().default(''),
+  vote_average: z.number().optional().default(0),
+  poster_path: nullableString,
+});
+const summaryResponse = z.object({ results: z.array(summaryRow) });
+
+/** A row as `kind`, or null when it is neither a movie nor a series (a person) or untitled. */
+function toSummary(row: z.infer<typeof summaryRow>, kind: string | undefined): TmdbSummary | null {
+  if (kind !== 'movie' && kind !== 'tv') return null;
+  const title = (kind === 'movie' ? row.title : row.name) ?? '';
+  if (title === '') return null;
+  return {
+    kind,
+    id: row.id,
+    title,
+    year: toCandidate(row).year,
+    overview: row.overview,
+    vote_average: row.vote_average,
+    poster_path: row.poster_path ?? null,
+  };
+}
+
+/** Drops the rows `toSummary` refused. */
+function summaries(rows: readonly (TmdbSummary | null)[]): readonly TmdbSummary[] {
+  return rows.filter((row): row is TmdbSummary => row !== null);
+}
+
 const configurationResponse = z.object({
   images: z.object({ secure_base_url: z.url() }),
 });
@@ -364,6 +417,18 @@ export function createTmdbClient(options: TmdbClientOptions): TmdbClient {
         air_date: episode.air_date ?? null,
         runtime: episode.runtime ?? null,
       }));
+    },
+
+    async list(list, kind) {
+      const path = list === 'trending' ? `/trending/${kind}/week` : `/${kind}/popular`;
+      const body = await parsed(path, {}, summaryResponse);
+      return summaries(body.results.map((row) => toSummary(row, kind)));
+    },
+
+    async searchTitles(query) {
+      const params = { query, include_adult: 'false' };
+      const body = await parsed('/search/multi', params, summaryResponse);
+      return summaries(body.results.map((row) => toSummary(row, row.media_type)));
     },
 
     async image(path, size) {
