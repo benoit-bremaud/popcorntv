@@ -168,6 +168,41 @@ function fractionOf(row: WatchProgress): number {
     : Math.min(row.positionSec / row.durationSec, 1);
 }
 
+/** Watched fraction to resume from, 0 when there is no resume point. */
+function resumeFraction(row: WatchProgress | undefined): number {
+  return row !== undefined && resumeAt(row) > 0 ? fractionOf(row) : 0;
+}
+
+/** What a series' most recent finished episode offers: the next one's fraction, or null. */
+function nextEpisodeFraction(
+  series: Media,
+  finished: Media,
+  media: readonly Media[],
+  saved: ReadonlyMap<string, WatchProgress>,
+): number | null {
+  const next = nextEpisode(seasonsOf(series, media), finished);
+  if (next === null) return null;
+  const nextRow = saved.get(next.id);
+  return nextRow?.finished === true ? null : resumeFraction(nextRow);
+}
+
+/**
+ * What one progress row decides for its title (R3, R4): a fraction to show it with, null to
+ * leave it out, or undefined when a barely started episode lets an older row decide.
+ */
+function decide(
+  row: WatchProgress,
+  played: Media,
+  title: Media,
+  media: readonly Media[],
+  saved: ReadonlyMap<string, WatchProgress>,
+): number | null | undefined {
+  if (resumeAt(row) > 0) return fractionOf(row);
+  if (played.kind !== 'episode') return null;
+  if (!row.finished) return undefined;
+  return nextEpisodeFraction(title, played, media, saved);
+}
+
 /**
  * UC22 (spec continue-watching R3–R5): titles to pick up again, most recently saved first.
  * A series appears once, decided by its most recently saved episode.
@@ -178,30 +213,18 @@ export function continueWatchingRow(
 ): Row | null {
   const byId = new Map(media.map((item) => [item.id, item]));
   const saved = new Map(progress.map((row) => [row.mediaId, row]));
-  const seen = new Set<string>();
-  const items: Media[] = [];
+  const decided = new Set<string>();
   const fractions = new Map<string, number>();
+  const items: Media[] = [];
   for (const row of progress) {
     const played = byId.get(row.mediaId);
-    if (played === undefined) continue;
-    const title = played.kind === 'episode' ? byId.get(played.seriesId ?? '') : played;
-    if (title === undefined || seen.has(title.id)) continue;
-    // A barely started episode does not decide for its series: an older row does (R4).
-    if (played.kind === 'episode' && !row.finished && resumeAt(row) === 0) continue;
-    seen.add(title.id);
-    if (resumeAt(row) > 0) {
-      fractions.set(title.id, fractionOf(row));
-    } else if (row.finished && played.kind === 'episode') {
-      const next = nextEpisode(seasonsOf(title, media), played);
-      const nextRow = next === null ? undefined : saved.get(next.id);
-      if (next === null || nextRow?.finished === true) continue;
-      fractions.set(
-        title.id,
-        nextRow !== undefined && resumeAt(nextRow) > 0 ? fractionOf(nextRow) : 0,
-      );
-    } else {
-      continue;
-    }
+    const title = played?.kind === 'episode' ? byId.get(played.seriesId ?? '') : played;
+    if (played === undefined || title === undefined || decided.has(title.id)) continue;
+    const fraction = decide(row, played, title, media, saved);
+    if (fraction === undefined) continue;
+    decided.add(title.id);
+    if (fraction === null) continue;
+    fractions.set(title.id, fraction);
     items.push(title);
     if (items.length === CONTINUE_WATCHING_LIMIT) break;
   }

@@ -5,7 +5,7 @@ type Props = {
   readonly item: Media;
   readonly onOpen: (item: Media, trigger: HTMLElement) => void;
   /** Watched fraction (0–1); a native `<progress>` is drawn when it is above 0. */
-  readonly progress?: number | undefined;
+  readonly progress?: number;
 };
 
 /** One poster; a button so it is reachable and activable by keyboard (UC4 step 1). */
