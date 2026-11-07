@@ -9,6 +9,7 @@ import {
   watchedIds,
   heroItem,
   ofType,
+  searchItems,
   seasonsOf,
   topRated,
 } from './catalog.js';
@@ -16,6 +17,8 @@ import { CatalogBody } from './CatalogBody.js';
 import type { OpenHandler } from './CatalogBody.js';
 import { Controls } from './Controls.js';
 import { DetailDialog } from './DetailDialog.js';
+import { PosterGrid } from './PosterGrid.js';
+import { SearchBox } from './SearchBox.js';
 import { HOME, viewReducer } from './view-state.js';
 import { WatchedContext } from './watched-context.js';
 import type { CatalogView } from './view-state.js';
@@ -42,6 +45,7 @@ export function CatalogPage({
 }: Props): React.JSX.Element {
   const [catalog, setCatalog] = useState<Load>({ kind: 'loading' });
   const [state, dispatch] = useReducer(viewReducer, HOME);
+  const [query, setQuery] = useState('');
   // `seq` numbers each opening: the native `close` event is queued as a task, so a late one
   // from a previous opening must not close a title reopened in the meantime.
   const [open, setOpen] = useState<{ item: Media; seq: number } | null>(null);
@@ -127,7 +131,9 @@ export function CatalogPage({
   const typed = state.type === 'all' ? items : ofType(items, state.type);
   const views: CatalogView[] =
     topRated(typed, 1).length > 0 ? ['genre', 'top-rated', 'a-z'] : ['genre', 'a-z'];
-  const hero = state.type === 'all' ? heroItem(items) : null;
+  const searching = query.trim() !== '';
+  const results = searchItems(items, query);
+  const hero = state.type === 'all' && !searching ? heroItem(items) : null;
   const heroBackdrop = hero?.metadata?.backdropPath ?? null;
 
   return (
@@ -148,22 +154,29 @@ export function CatalogPage({
           </div>
         </section>
       )}
-      <Controls
-        state={state}
-        types={types}
-        views={views}
-        genres={availableGenres(typed)}
-        dispatch={dispatch}
-      />
-      {/* Keyed by the view state: each new choice fades its content in. */}
-      <div className="view" key={JSON.stringify(state)}>
-        <CatalogBody
-          items={items}
-          state={state}
-          onOpen={onOpen}
-          continueWatching={continueWatchingRow(catalog.media, saved)}
-        />
-      </div>
+      <SearchBox query={query} onChange={setQuery} />
+      {searching ? (
+        <SearchResults query={query.trim()} items={results} onOpen={onOpen} />
+      ) : (
+        <>
+          <Controls
+            state={state}
+            types={types}
+            views={views}
+            genres={availableGenres(typed)}
+            dispatch={dispatch}
+          />
+          {/* Keyed by the view state: each new choice fades its content in. */}
+          <div className="view" key={JSON.stringify(state)}>
+            <CatalogBody
+              items={items}
+              state={state}
+              onOpen={onOpen}
+              continueWatching={continueWatchingRow(catalog.media, saved)}
+            />
+          </div>
+        </>
+      )}
       {open !== null && (
         <DetailDialog
           key={open.seq}
@@ -176,4 +189,18 @@ export function CatalogPage({
       )}
     </WatchedContext>
   );
+}
+
+type SearchResultsProps = {
+  readonly query: string;
+  readonly items: readonly Media[];
+  readonly onOpen: (item: Media, trigger: HTMLElement) => void;
+};
+
+/** UC24: the matching titles, or a polite "no match" status. */
+function SearchResults({ query, items, onOpen }: SearchResultsProps): React.JSX.Element {
+  if (items.length === 0) {
+    return <output className="status muted">No title or person matches “{query}”.</output>;
+  }
+  return <PosterGrid title={`Results for “${query}”`} items={items} onOpen={onOpen} />;
 }

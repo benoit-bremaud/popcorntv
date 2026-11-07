@@ -30,7 +30,7 @@ Total = 40·V + 25·E + 25·C + 10·R, out of 500.
 | 2 | Scheduled or watched-folder library scan (files added by hand) | yes | yes | done — #132, in-process timer rescans every library (ADR-0016) | 4 | 4 | 5 | 5 | **435** |
 | 3 | Watched / unwatched marks, set by hand and at the end of playback | yes | yes | done — #133, `watched_at` set by hand; the end of playback is still the ≥ 90 % test (ADR-0017) | 4 | 4 | 4 | 5 | **410** |
 | 4 | Resume progress survives a file replaced by hand on another path | yes | partial | done — #134, progress carried over to the same title at scan (ADR-0018) | 4 | 3 | 5 | 4 | **400** |
-| 5 | Search by title and person | yes | yes | missing | 4 | 4 | 3 | 5 | **385** |
+| 5 | Search by title and person | yes | yes | done — #135, client-side search on titles and cast | 4 | 4 | 3 | 5 | **385** |
 | 6 | Audio track choice (language) | yes | yes | missing — HLS maps the first audio stream, direct play leaves it to the browser | 4 | 3 | 4 | 4 | **375** |
 | 7 | Database backup and restore | yes | yes | done at homelab level — nightly `appdata-backup.sh`, ADR-0013 §4 | — | — | — | — | — |
 | 8 | One-shot import of Jellyfin watch history | n/a | n/a | not needed — no Jellyfin history (#125 closed) | — | — | — | — | — |

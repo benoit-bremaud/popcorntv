@@ -299,3 +299,29 @@ describe('CatalogPage watched marks', () => {
     ).toBeGreaterThan(0);
   });
 });
+
+describe('CatalogPage search (spec search)', () => {
+  it('should show the matching titles and people, then clear with Escape', async () => {
+    const { user } = renderPage();
+    const box = await screen.findByRole('searchbox', { name: 'Search titles and people' });
+
+    await user.type(box, 'pacino');
+
+    const results = screen.getByRole('region', { name: 'Results for “pacino”' });
+    expect(within(results).getByRole('button', { name: 'Heat (1995)' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'More info' })).toBeNull();
+
+    await user.keyboard('{Escape}');
+
+    expect(box).toHaveValue('');
+    expect(await screen.findByRole('button', { name: 'More info' })).toBeInTheDocument();
+  });
+
+  it('should say when nothing matches', async () => {
+    const { user } = renderPage();
+
+    await user.type(await screen.findByRole('searchbox'), 'zzz');
+
+    expect(screen.getByRole('status')).toHaveTextContent('No title or person matches “zzz”.');
+  });
+});

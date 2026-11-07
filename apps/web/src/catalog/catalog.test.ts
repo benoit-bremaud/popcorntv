@@ -14,6 +14,7 @@ import {
   homeRows,
   ofGenre,
   nextEpisode,
+  searchItems,
   seasonsOf,
   topRated,
   typeOf,
@@ -324,5 +325,38 @@ describe('watched marks', () => {
   it('should list the watched top-level titles', () => {
     expect([...watchedIds(all, [done('f'), done('e'), done('e2')])].sort()).toEqual(['f', 's']);
     expect(watchedIds(all, [done('f', false)]).size).toBe(0);
+  });
+});
+
+describe('searchItems', () => {
+  const amelie = media({
+    id: 'am',
+    title: 'Amélie',
+    metadata: metadata({
+      cast: [{ name: 'Audrey Tautou', character: 'Amélie', profilePath: null }],
+    }),
+  });
+  const heat = media({
+    id: 'h',
+    title: 'Heat',
+    metadata: metadata({ cast: [{ name: 'Al Pacino', character: 'Hanna', profilePath: null }] }),
+  });
+  const audrey = media({ id: 'au', title: 'Audrey', metadata: null });
+
+  it('should find titles without case or accents', () => {
+    expect(searchItems([heat, amelie], '  AMELIE ').map((item) => item.id)).toEqual(['am']);
+  });
+
+  it('should find people, after the title matches', () => {
+    expect(searchItems([heat, amelie, audrey], 'audrey').map((item) => item.id)).toEqual([
+      'au',
+      'am',
+    ]);
+    expect(searchItems([heat, amelie], 'pacino').map((item) => item.id)).toEqual(['h']);
+  });
+
+  it('should find nothing for an empty query or no match', () => {
+    expect(searchItems([heat], '   ')).toEqual([]);
+    expect(searchItems([heat], 'zzz')).toEqual([]);
   });
 });
