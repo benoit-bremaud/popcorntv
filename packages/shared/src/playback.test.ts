@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { StreamInfo } from './index.js';
-import { decidePlayback, directPlayMime, isFinished } from './playback.js';
+import { audioTracks, decidePlayback, directPlayMime, isFinished } from './playback.js';
 
 function stream(type: StreamInfo['type'], codec: string): StreamInfo {
   return { type, codec, width: null, height: null, language: null };
@@ -98,5 +98,21 @@ describe('isFinished', () => {
   it('is never true without a positive duration', () => {
     expect(isFinished({ positionSec: 5000, durationSec: null })).toBe(false);
     expect(isFinished({ positionSec: 0, durationSec: 0 })).toBe(false);
+  });
+});
+
+describe('audioTracks', () => {
+  it('numbers the audio streams in order with their language', () => {
+    const streams: StreamInfo[] = [
+      { type: 'video', codec: 'h264', width: 1920, height: 1080, language: null },
+      { type: 'audio', codec: 'AC3', width: null, height: null, language: 'fre' },
+      { type: 'subtitle', codec: 'srt', width: null, height: null, language: 'eng' },
+      { type: 'audio', codec: 'aac', width: null, height: null, language: null },
+    ];
+
+    expect(audioTracks(streams)).toEqual([
+      { index: 0, codec: 'ac3', language: 'fre' },
+      { index: 1, codec: 'aac', language: null },
+    ]);
   });
 });

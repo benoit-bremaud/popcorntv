@@ -14,7 +14,8 @@ Jellyfin cut-over.
 ## Options
 
 A — at scan time, before the delete, move the progress to the present file of the same
-identity (provider ids, else parsed title + year, episode numbers); B — keep orphaned
+identity (TMDB id + part, or parsed title + year + part; an episode by series, season and
+episode; a file matching two present files carries nothing); B — keep orphaned
 progress and re-attach it by `tmdb_id` after the enrichment; C — status quo.
 
 | Criterion        | Weight | A                                         | B                                            | C                      |
@@ -24,7 +25,8 @@ progress and re-attach it by `tmdb_id` after the enrichment; C — status quo.
 | Wrong-match risk |     25 | 4 — ambiguous matches carry nothing       | 4 — TMDB ids can be wrong too                | 5 — nothing to get wrong |
 | **Total**        |    100 | **400**                                   | **370**                                      | **300**                |
 
-Sensitivity: with coverage weighted 50, A (400) and B (395) are close; A stays first.
+Sensitivity: with coverage 50, simplicity 25, risk 25, A and B tie at 400; the tie goes to A
+for its lower wrong-match risk on renames and its single pass.
 
 ## Decision
 

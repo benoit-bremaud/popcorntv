@@ -113,9 +113,13 @@ ADR-0017: nullable `watch_progress.watched_at`, `finished` = mark or ≥ 90 %, `
 /profiles/:profileId/media/:id/watched`, a series applies to its episodes, unwatched forgets
 the row, poster ✓ via `WatchedContext`); #134 progress carry-over (spec
 `docs/architecture/specs/progress-carry-over.md`, ADR-0018: before missing rows are pruned,
-their `watch_progress` moves to the one present file of the same title, pure `identity`); #135 search (spec `docs/architecture/specs/search.md`: client-side
-`searchItems` over titles and cast names, accent- and case-folded, title matches first, the
-results grid replaces the rows).
+their `watch_progress` moves to the one present file of the same title, pure `identity`);
+#135 search (spec `docs/architecture/specs/search.md`: client-side `searchItems` over titles
+and cast names, accent- and case-folded, title matches first, the results grid replaces the
+rows); #136 audio track (spec `docs/architecture/specs/audio-track.md`, ADR-0019: pure
+`audioTracks` / `effectiveAudioIndex` / `matchAudioTrack` in `packages/shared`, `audioIndex`
+0–99 on `POST /playback/sessions`, a non-default track forces HLS with `-map 0:a:N`, Audio
+select in `DetailDialog` matched by language on each played episode).
 
 Server layout (flat, component diagram 03): `src/library/` holds the pure `name-parser`
 and `path-guard`, the `ffprobe` runner (only process egress), the `folder-lister` (one-level `readdir` of `MEDIA_ROOT`), the `scanner`, the pure `identity` (carry-over keys, ADR-0018), the `scheduler` (interval rescans, ADR-0016), the per-library

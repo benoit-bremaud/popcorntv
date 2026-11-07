@@ -155,6 +155,8 @@ export function CatalogPage({
         </section>
       )}
       <SearchBox query={query} onChange={setQuery} />
+      {/* Always mounted, so screen readers announce each new count (spec search R3). */}
+      <output className="visually-hidden">{searching ? searchStatus(results.length) : ''}</output>
       {searching ? (
         <SearchResults query={query.trim()} items={results} onOpen={onOpen} />
       ) : (
@@ -197,17 +199,16 @@ type SearchResultsProps = {
   readonly onOpen: (item: Media, trigger: HTMLElement) => void;
 };
 
-/** UC24: the matching titles, or a polite "no match" status. */
+/** The announced search status: the result count, or that nothing matches. */
+function searchStatus(count: number): string {
+  if (count === 0) return 'No match';
+  return `${count} ${count === 1 ? 'result' : 'results'}`;
+}
+
+/** UC24: the matching titles, or a visible "no match" line. */
 function SearchResults({ query, items, onOpen }: SearchResultsProps): React.JSX.Element {
   if (items.length === 0) {
-    return <output className="status muted">No title or person matches “{query}”.</output>;
+    return <p className="status muted">No title or person matches “{query}”.</p>;
   }
-  return (
-    <>
-      <output className="visually-hidden">
-        {items.length} {items.length === 1 ? 'result' : 'results'}
-      </output>
-      <PosterGrid title={`Results for “${query}”`} items={items} onOpen={onOpen} />
-    </>
-  );
+  return <PosterGrid title={`Results for “${query}”`} items={items} onOpen={onOpen} />;
 }

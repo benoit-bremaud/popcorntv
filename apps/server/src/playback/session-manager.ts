@@ -96,6 +96,7 @@ export class SessionManager {
     inputPath: string,
     streams: readonly StreamInfo[],
     startSec = 0,
+    audioIndex = 0,
   ): Promise<OpenResult> {
     // Known before any take-over: a title without video must not end someone's stream.
     if (!streams.some((stream) => stream.type === 'video')) return { kind: 'not_playable' };
@@ -122,7 +123,7 @@ export class SessionManager {
     } finally {
       this.starting -= 1;
     }
-    const args = ffmpegArgs(inputPath, streams, dir, startSec);
+    const args = ffmpegArgs(inputPath, streams, dir, startSec, audioIndex);
     if (args === null) {
       await this.remove(dir);
       return { kind: 'not_playable' };

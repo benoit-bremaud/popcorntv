@@ -32,11 +32,11 @@ sequenceDiagram
   end
   V->>D: Resume (startSec) or Start over (0)
   D->>P: open(item, startSec)
-  P->>API: POST /playback/sessions {mediaId, directPlay, startSec}
+  P->>API: POST /playback/sessions {mediaId, directPlay, startSec, audioIndex}
   alt direct
     API-->>P: 200 {mode: direct, url, mime, offsetSec: 0}
   else HLS
-    API->>SM: open(path, streams, startSec)
+    API->>SM: open(path, streams, startSec, audioIndex)
     SM->>SM: ffmpeg -ss startSec -i path …
     API-->>P: 201 {mode: hls, sessionId, url, offsetSec: startSec}
   end

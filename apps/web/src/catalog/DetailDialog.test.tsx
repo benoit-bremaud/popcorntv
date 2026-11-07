@@ -117,7 +117,12 @@ describe('DetailDialog playback', () => {
 
     await user.click(await screen.findByRole('button', { name: '▶ Play' }));
 
-    expect(api.start).toHaveBeenCalledWith({ mediaId: 'heat', directPlay: false, startSec: 0 });
+    expect(api.start).toHaveBeenCalledWith({
+      mediaId: 'heat',
+      directPlay: false,
+      startSec: 0,
+      audioIndex: 0,
+    });
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Another title is being transcoded. Try again later.',
     );
@@ -128,7 +133,12 @@ describe('DetailDialog playback', () => {
 
     await user.click(await screen.findByRole('button', { name: '▶ Play' }));
 
-    expect(api.start).toHaveBeenCalledWith({ mediaId: 'mkv', directPlay: false, startSec: 0 });
+    expect(api.start).toHaveBeenCalledWith({
+      mediaId: 'mkv',
+      directPlay: false,
+      startSec: 0,
+      audioIndex: 0,
+    });
   });
 
   it('offers no Play button for a file without video', () => {
@@ -196,7 +206,12 @@ describe('DetailDialog resume', () => {
 
     await user.click(await screen.findByRole('button', { name: '▶ Resume from 12:34' }));
 
-    expect(api.start).toHaveBeenCalledWith({ mediaId: 'heat', directPlay: true, startSec: 754 });
+    expect(api.start).toHaveBeenCalledWith({
+      mediaId: 'heat',
+      directPlay: true,
+      startSec: 754,
+      audioIndex: 0,
+    });
   });
 
   it('starts over from 0 on request', async () => {
@@ -204,7 +219,12 @@ describe('DetailDialog resume', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Start over' }));
 
-    expect(api.start).toHaveBeenCalledWith({ mediaId: 'heat', directPlay: true, startSec: 0 });
+    expect(api.start).toHaveBeenCalledWith({
+      mediaId: 'heat',
+      directPlay: true,
+      startSec: 0,
+      audioIndex: 0,
+    });
   });
 
   it('offers a plain Play for a finished title', async () => {
@@ -213,7 +233,12 @@ describe('DetailDialog resume', () => {
     await user.click(await screen.findByRole('button', { name: '▶ Play' }));
 
     expect(screen.queryByRole('button', { name: 'Start over' })).toBeNull();
-    expect(api.start).toHaveBeenCalledWith({ mediaId: 'heat', directPlay: true, startSec: 0 });
+    expect(api.start).toHaveBeenCalledWith({
+      mediaId: 'heat',
+      directPlay: true,
+      startSec: 0,
+      audioIndex: 0,
+    });
   });
 
   it('resumes an episode at its own position', async () => {
@@ -239,7 +264,12 @@ describe('DetailDialog resume', () => {
       await screen.findByRole('button', { name: 'Resume Pilot, episode 1 from 1:05' }),
     );
 
-    expect(api.start).toHaveBeenCalledWith({ mediaId: 'e1', directPlay: true, startSec: 65 });
+    expect(api.start).toHaveBeenCalledWith({
+      mediaId: 'e1',
+      directPlay: true,
+      startSec: 65,
+      audioIndex: 0,
+    });
   });
 });
 
@@ -302,7 +332,12 @@ describe('DetailDialog progress refresh and next episode', () => {
     await user.click(await screen.findByRole('button', { name: 'Next episode: Second ▶' }));
 
     await waitFor(() =>
-      expect(api.start).toHaveBeenLastCalledWith({ mediaId: 'e2', directPlay: true, startSec: 40 }),
+      expect(api.start).toHaveBeenLastCalledWith({
+        mediaId: 'e2',
+        directPlay: true,
+        startSec: 40,
+        audioIndex: 0,
+      }),
     );
     expect(api.save).toHaveBeenCalledWith('kid', 'e1', 95);
   });
@@ -409,5 +444,37 @@ describe('DetailDialog watched mark (spec watched-marks)', () => {
       'aria-pressed',
       'false',
     );
+  });
+});
+
+describe('DetailDialog audio track (spec audio-track)', () => {
+  it('should play the chosen track through HLS', async () => {
+    const dual = media({
+      id: 'dual',
+      title: 'Dual',
+      relativePath: 'Dual.mp4',
+      streams: [
+        ...H264_AAC,
+        { type: 'audio', codec: 'ac3', width: null, height: null, language: 'fre' },
+      ],
+    });
+    const { user, api } = renderDetail(dual);
+
+    await user.selectOptions(await screen.findByRole('combobox'), 'fre (ac3)');
+    await user.click(screen.getByRole('button', { name: '▶ Play' }));
+
+    expect(api.start).toHaveBeenCalledWith({
+      mediaId: 'dual',
+      directPlay: false,
+      startSec: 0,
+      audioIndex: 1,
+    });
+  });
+
+  it('should offer no choice for a single track', async () => {
+    renderDetail(heat);
+
+    await screen.findByRole('button', { name: '▶ Play' });
+    expect(screen.queryByRole('combobox')).toBeNull();
   });
 });

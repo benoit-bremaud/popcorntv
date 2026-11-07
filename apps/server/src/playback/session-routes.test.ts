@@ -19,6 +19,8 @@ function stream(type: StreamInfo['type'], codec: string): StreamInfo {
 /** Streams the fake prober reports: by extension, audio only for a "Concert" file. */
 function probedStreams(path: string): readonly StreamInfo[] {
   if (path.includes('Concert')) return [stream('audio', 'flac')];
+  if (path.includes('Dual'))
+    return [stream('video', 'h264'), stream('audio', 'aac'), stream('audio', 'ac3')];
   return path.endsWith('.mp4')
     ? [stream('video', 'h264'), stream('audio', 'aac')]
     : [stream('video', 'hevc'), stream('audio', 'ac3')];
@@ -145,6 +147,33 @@ describe('playback session routes', () => {
       offsetSec: 0,
     });
     expect(spawned).toHaveLength(0);
+  });
+
+  it('starts HLS mapping the chosen audio track, even for a direct-playable file', async () => {
+    const media = await scanned('Dual (1995).mp4');
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/playback/sessions',
+      payload: { mediaId: media.id, directPlay: true, audioIndex: 1 },
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json<PlaybackStart>().mode).toBe('hls');
+    expect(spawned[0]?.filter((arg) => arg.startsWith('0:a'))).toEqual(['0:a:1']);
+  });
+
+  it('plays directly when the chosen audio track does not exist', async () => {
+    const media = await scanned('Heat (1995).mp4');
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/playback/sessions',
+      payload: { mediaId: media.id, directPlay: true, audioIndex: 1 },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json<PlaybackStart>().mode).toBe('direct');
   });
 
   it('starts HLS when the browser cannot direct-play an MP4', async () => {
