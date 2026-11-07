@@ -4,6 +4,18 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-07 — #135 search titles and people (PR #150 merged, `9be4696`)
+
+- **Conception** — spec `search.md` (UC24, catalog use cases): client-side search over the
+  loaded catalog like the rows (ADR-0015); case and accents folded; a title matches on its
+  name or a cast name (TMDB stores no crew); title matches first, then person matches, A–Z.
+- **Change** — pure `searchItems` in `catalog.ts`, `SearchBox` (`<search>`, Escape clears),
+  results grid replaces hero, controls and rows; result count announced to screen readers.
+- **Gate** — coverage server 97.5 % / web 99 %, SonarQube PASSED (after removing a duplicate
+  `.visually-hidden` selector), gitleaks clean, E2E smoke green; Sonnet combined review
+  (Must 0, 3 Should fixed, 2 answered). Opus adversarial review deferred to the end of the
+  #134–#136 stack. Report `docs/architecture/review-local.md`.
+
 ## 2026-11-07 — #134 progress carry-over at scan (PR #148 merged, `9849002`)
 
 - **Conception** — spec `progress-carry-over.md` (UC1 extension, UC6), ADR-0018: before missing
