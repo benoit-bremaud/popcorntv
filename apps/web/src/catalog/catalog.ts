@@ -259,3 +259,25 @@ export function watchedIds(
       .map((item) => item.id),
   );
 }
+
+/** Lower case without accents, so "amelie" finds "Amélie" (spec search R2). */
+function fold(text: string): string {
+  return text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+}
+
+/**
+ * UC24 (spec search R2, R3): top-level items whose title or a cast member's name contains
+ * the query; title matches first, each group A–Z. An empty query finds nothing.
+ */
+export function searchItems(items: readonly Media[], query: string): Media[] {
+  const needle = fold(query.trim());
+  if (needle === '') return [];
+  const byTitle = items.filter((item) => fold(item.title).includes(needle));
+  const titled = new Set(byTitle);
+  const byPerson = items.filter(
+    (item) =>
+      !titled.has(item) &&
+      (item.metadata?.cast.some((member) => fold(member.name).includes(needle)) ?? false),
+  );
+  return [...sortByTitle(byTitle), ...sortByTitle(byPerson)];
+}

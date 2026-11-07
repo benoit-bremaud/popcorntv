@@ -26,6 +26,7 @@ flowchart LR
       UC3(("Browse the catalog"))
       UC4(("Open a title's details"))
       UC22(("Continue watching"))
+      UC24(("Search titles and people"))
     end
     subgraph Watch ["Watch domain"]
       UC5(("Watch a title"))
@@ -47,6 +48,7 @@ flowchart LR
   Viewer --> UC4
   Viewer --> UC22
   Viewer --> UC23
+  Viewer --> UC24
   Viewer --> UC5
   Viewer --> UC6
   Viewer --> UC7
