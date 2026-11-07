@@ -110,7 +110,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       done(null, undefined);
       return;
     }
-    parseJson(request, text, done);
+    void parseJson(request, text, done);
   });
 
   // On every reply, errors and streamed media included. The CSP and `frame-ancestors`

@@ -106,8 +106,8 @@ export function registerLibraryRoutes(app: FastifyInstance, deps: LibraryRoutesD
     if (!library.ok) return reply.code(library.status).send(library.body);
     try {
       // Under the lock: a scan or enrichment in flight would fail mid-run on the foreign key.
-      const deleted = await deps.lock.run(library.value.id, async () =>
-        deps.repository.deleteLibrary(library.value.id),
+      const deleted = await deps.lock.run(library.value.id, () =>
+        Promise.resolve(deps.repository.deleteLibrary(library.value.id)),
       );
       if (!deleted) return reply.code(404).send(apiError('library_not_found'));
       return reply.code(204).send();

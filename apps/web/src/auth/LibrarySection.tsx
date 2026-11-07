@@ -106,7 +106,7 @@ export function LibrarySection({ api }: Props): React.JSX.Element {
   const selectedName = free.find((candidate) => candidate.path === selected)?.name;
   const suggestion = selectedName === undefined ? '' : suggestedName(selectedName);
 
-  async function add(event: React.FormEvent): Promise<void> {
+  async function add(event: React.SyntheticEvent<HTMLFormElement, SubmitEvent>): Promise<void> {
     event.preventDefault();
     const rootPath = selected === OTHER ? path.trim() : selected;
     setAdding(true);
