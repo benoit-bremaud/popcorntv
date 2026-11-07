@@ -61,7 +61,7 @@ services:
       - >-
         mkdir -p /srv/web/assets
         && cp -RL /app/web/assets/. /srv/web/assets/
-        && find /app/web -maxdepth 1 -type f -exec cp -L {} /srv/web/ +
+        && find /app/web -maxdepth 1 -type f -exec cp -L -t /srv/web/ {} +
         && find /srv/web/assets -type f -mtime +30 -delete
     volumes:
       - popcorntv-web:/srv/web
