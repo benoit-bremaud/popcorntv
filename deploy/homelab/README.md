@@ -15,7 +15,7 @@ bb-homelab internal CA.
 |---|---|---|
 | `/mnt/appdata/media` | movie and series folders, moved from `/mnt/appdata/jellyfin/media`; interim until `/mnt/media` (bb-homelab #47) | read-only in the app |
 | `/mnt/appdata/popcorntv/data` | SQLite database (backed up) | owned by uid 1000 |
-| `/mnt/appdata/popcorntv/cache` | artwork and transcode folders, rebuilt by a scan or a Play | owned by uid 1000 |
+| `/mnt/appdata/popcorntv/cache` | artwork and transcode folders; transcode rebuilt by a Play, artwork by `POST /api/libraries/<id>/enrich` with `{"refresh":true}` | owned by uid 1000 |
 | volume `popcorntv-web` | web build copied from the image by `web-sync` | read-only in Caddy |
 
 The files in this folder are the reference; the live compose service and Caddy block live in
@@ -80,7 +80,8 @@ up here.
 Roll back by setting the previous tag; if the new version migrated the database, restore
 the archive taken in step 1 first: stop the app, put back `popcorntv.sqlite` with its
 `-wal` and `-shm` files together (bb-homelab `storage/APPDATA-BACKUP.md`, restore section),
-then start it.
+then start it. On a new disk, refresh each library's metadata the same way to fetch the
+artwork again.
 
 ## Jellyfin retirement
 
