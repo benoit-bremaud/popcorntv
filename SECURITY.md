@@ -15,7 +15,7 @@ vulnerability). Do not open a public issue for a vulnerability.
 | OSSF Scorecard    | Repository hygiene                              | no       |
 | Hadolint          | Dockerfile lint (`make lint-docker`)            | yes      |
 | Trivy config      | Dockerfile misconfigurations                    | yes      |
-| Trivy image       | HIGH/CRITICAL CVEs in the built image (fixed or not) | yes      |
+| Trivy image       | HIGH/CRITICAL CVEs, fixed or not, in the image  | yes      |
 | SonarQube         | Quality gate + coverage (local, pre-merge)      | yes      |
 
 Accepted Trivy findings live in `.trivyignore.yaml`, each scoped (`paths`), time-boxed
