@@ -8,8 +8,11 @@ context: merged PRs, decisions, tags, infra events. Not a release changelog — 
 
 - **Change** — `docs/requirements/03-plex-jellyfin-parity.md`: 18 gaps scored by MCDA
   (value 40, effort 25, cut-over need 25, risk 10).
-- **Decision** — owner chose option A (440 vs 420 / 380): file items 1–8 as #131–#138 on
-  Project #71 (Todo); items 9–17 wait for the cut-over, item 18 is out of scope.
+- **Decision** — owner chose option A, file items 1–8 (440), over B, items 1–6 without
+  backup and history import (420), and C, items 1–4 only (380): #131–#138 on Project #71.
+- **Correction** — the adversarial review found items 7 and 8 already settled (backup by
+  ADR-0013 §4, no Jellyfin history per #125) and D1–D4 void for bb-homelab: #137 and #138
+  filed in error, `.srt` sidecars re-scored as a gap (250).
 
 ## 2026-11-07 — #123 library management from the web app, with #122 (PR #129 merged, `91b4c4f`)
 
