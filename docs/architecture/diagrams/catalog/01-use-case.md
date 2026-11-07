@@ -1,6 +1,6 @@
 # Use case diagram — catalog
 
-> **Feature**: UC3 Browse the catalog, UC4 Open a title ([spec](../../specs/catalog-grid.md))
+> **Feature**: UC3 Browse the catalog, UC4 Open a title ([spec](../../specs/catalog-grid.md)), UC22 Continue watching ([spec](../../specs/continue-watching.md))
 > **Related ADRs**: ADR-0004
 
 ## Diagram
@@ -13,12 +13,12 @@ flowchart LR
     uc3a((Narrow by type))
     uc3b((Narrow by genre))
     uc4((UC4 Open a title))
-    uc9((UC9 Continue watching))
+    uc22((UC22 Continue watching))
   end
   viewer --- uc3
   viewer --- uc4
-  viewer --- uc9
-  uc9 -. include .-> uc4
+  viewer --- uc22
+  uc22 -. include .-> uc4
   uc3a -. extend .-> uc3
   uc3b -. extend .-> uc3a
 ```

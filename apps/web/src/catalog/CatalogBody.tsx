@@ -21,7 +21,7 @@ type Props = {
   readonly items: readonly Media[];
   readonly state: ViewState;
   readonly onOpen: OpenHandler;
-  /** UC9: shown first on the home view only (spec continue-watching R1). */
+  /** UC22: shown first on the home view only (spec continue-watching R1). */
   readonly continueWatching?: Row | null;
 };
 

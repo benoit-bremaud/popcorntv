@@ -4,7 +4,7 @@ import { artworkUrl } from '../api.js';
 type Props = {
   readonly item: Media;
   readonly onOpen: (item: Media, trigger: HTMLElement) => void;
-  /** Watched fraction (0–1); a progress bar is drawn when it is above 0. */
+  /** Watched fraction (0–1); a native `<progress>` is drawn when it is above 0. */
   readonly progress?: number | undefined;
 };
 
@@ -32,12 +32,7 @@ export function PosterCard({ item, onOpen, progress }: Props): React.JSX.Element
         </span>
       )}
       {progress !== undefined && progress > 0 && (
-        <span className="poster__progress" aria-hidden="true">
-          <span
-            className="poster__progress-fill"
-            style={{ width: `${Math.round(progress * 100)}%` }}
-          />
-        </span>
+        <progress className="poster__progress" max={1} value={progress} aria-label="Watched" />
       )}
     </button>
   );

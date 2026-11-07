@@ -56,5 +56,5 @@ flowchart LR
   stands for it.
 - UC16 and UC15 share the single-use link mechanism; it is an implementation detail
   (sequence and class diagrams), not an «include».
-- Existing use cases UC3–UC10 now require a signed-in Viewer; UC1 and UC2 are owner-only;
+- Existing use cases UC3–UC10 (and UC22, #131) now require a signed-in Viewer; UC1 and UC2 are owner-only;
   UC9 (manage profiles) applies to each user's own profiles (spec §4.4).

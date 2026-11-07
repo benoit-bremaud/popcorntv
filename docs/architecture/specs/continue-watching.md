@@ -1,4 +1,4 @@
-# UC9 — Continue watching
+# UC22 — Continue watching
 
 The catalog home opens with a row of the active profile's titles to pick up again.
 
@@ -19,7 +19,9 @@ The catalog home opens with a row of the active profile's titles to pick up agai
 - **R4** A series appears once, decided by its most recently saved episode:
   - that episode can be resumed → the series is shown with that episode's progress;
   - that episode is finished and a next episode exists (`nextEpisode`) that is not
-    finished → the series is shown, progress empty (the next episode starts);
+    finished → the series is shown with the next episode's progress (empty when not started);
+  - that episode is barely started (under 10 s) → it is skipped and the next older
+    episode of the series decides;
   - otherwise the series is left out.
 - **R5** Items keep the progress order (most recently saved first), at most 20.
 - **R6** Each card shows a progress bar (position / duration; hidden when the duration is

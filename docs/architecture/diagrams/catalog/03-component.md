@@ -1,6 +1,6 @@
 # Component diagram — catalog (apps/web)
 
-> **Feature**: UC3 / UC4 ([spec](../../specs/catalog-grid.md))
+> **Feature**: UC3 / UC4 / UC22 ([spec](../../specs/catalog-grid.md))
 > **Related ADRs**: ADR-0001, ADR-0004
 
 ## Diagram
@@ -20,10 +20,11 @@ flowchart TB
     page --> api[api.ts<br/>fetch, only HTTP egress]
     tokens[(styles/tokens.css)]
   end
-  shared[packages/shared<br/>Media, isDocumentary]
+  shared[packages/shared<br/>Media, isDocumentary, WatchProgress]
   cat --> shared
+  cat --> resume[playback/resume.ts<br/>resumeAt, pure]
   api --> shared
-  api -->|/api/libraries, /api/libraries/:id/media| server[apps/server]
+  api -->|/api/libraries, /api/libraries/:id/media, /api/profiles/:profileId/progress| server[apps/server]
   card -->|/api/artwork/:file| server
 ```
 

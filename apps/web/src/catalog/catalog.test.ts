@@ -251,6 +251,13 @@ describe('continueWatchingRow', () => {
     expect(row?.progress?.get('s')).toBe(0);
   });
 
+  it('should let an older episode decide when the latest is barely started', () => {
+    const row = continueWatchingRow(all, [saved('e2', 5), saved('e', 95, true)]);
+
+    expect(row?.items.map((item) => item.id)).toEqual(['s']);
+    expect(row?.progress?.get('s')).toBe(0.05);
+  });
+
   it('should leave out a series whose next episode is finished or missing', () => {
     expect(continueWatchingRow(all, [saved('e', 95, true), saved('e2', 95, true)])).toBeNull();
     expect(continueWatchingRow(all, [saved('e2', 95, true)])).toBeNull();

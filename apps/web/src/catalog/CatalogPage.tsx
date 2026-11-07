@@ -25,7 +25,7 @@ type Props = {
   readonly profileId: string;
   /** Injected in tests; defaults to the real API. */
   readonly load?: () => Promise<Media[]>;
-  /** `GET /profiles/:profileId/progress`; injected in tests (UC9). */
+  /** `GET /profiles/:profileId/progress`; injected in tests (UC22). */
   readonly progress?: typeof loadProgress;
   /** Owners only: the empty catalog offers to add a library (spec library-management R7). */
   readonly onAddLibrary?: () => void;
@@ -50,7 +50,7 @@ export function CatalogPage({
   const [saved, setSaved] = useState<readonly WatchProgress[]>([]);
   const progressRequest = useRef(0);
 
-  // UC9: only the latest progress request may set the row (spec continue-watching R7).
+  // UC22: only the latest progress request may set the row (spec continue-watching R7).
   const fetchProgress = useCallback(async () => {
     const request = ++progressRequest.current;
     const rows = await progress(profileId);
@@ -168,6 +168,7 @@ export function CatalogPage({
           item={open.item}
           seasons={seasonsOf(open.item, catalog.media)}
           profileId={profileId}
+          progress={progress}
           onClose={() => onClose(open.seq)}
         />
       )}

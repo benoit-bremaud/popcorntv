@@ -169,7 +169,7 @@ function fractionOf(row: WatchProgress): number {
 }
 
 /**
- * UC9 (spec continue-watching R3–R5): titles to pick up again, most recently saved first.
+ * UC22 (spec continue-watching R3–R5): titles to pick up again, most recently saved first.
  * A series appears once, decided by its most recently saved episode.
  */
 export function continueWatchingRow(
@@ -186,13 +186,16 @@ export function continueWatchingRow(
     if (played === undefined) continue;
     const title = played.kind === 'episode' ? byId.get(played.seriesId ?? '') : played;
     if (title === undefined || seen.has(title.id)) continue;
+    // A barely started episode does not decide for its series: an older row does (R4).
+    if (played.kind === 'episode' && !row.finished && resumeAt(row) === 0) continue;
     seen.add(title.id);
     if (resumeAt(row) > 0) {
       fractions.set(title.id, fractionOf(row));
     } else if (row.finished && played.kind === 'episode') {
       const next = nextEpisode(seasonsOf(title, media), played);
-      if (next === null || saved.get(next.id)?.finished === true) continue;
-      fractions.set(title.id, 0);
+      const nextRow = next === null ? undefined : saved.get(next.id);
+      if (next === null || nextRow?.finished === true) continue;
+      fractions.set(title.id, nextRow === undefined ? 0 : fractionOf(nextRow));
     } else {
       continue;
     }

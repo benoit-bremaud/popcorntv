@@ -23,10 +23,10 @@ next episode.
 | ----------- | -----: | ----------------------------------- | --------------------------------------- | ------------------------------ |
 | Simplicity  |     30 | 5 — one pure function, no route     | 2 — route, contract, tests              | 3 — wider contract, one user   |
 | Reuse       |     25 | 5 — `nextEpisode`, `resumeAt` reused | 2 — next-episode rule duplicated server | 3 — partly duplicated          |
-| Performance |     15 | 4 — O(n) over data already loaded   | 5 — SQL                                 | 4                              |
+| Performance |     15 | 4 — O(n) over data already loaded   | 5 — SQL                                 | 4 — SQL, larger payload        |
 | Security    |     15 | 5 — no new surface                  | 3 — new route to guard                  | 4 — wider payload              |
-| Testability |     15 | 5 — unit test of a pure function    | 4                                       | 4                              |
-| **Total**   |    100 | **485**                             | **295**                                 | **340**                        |
+| Testability |     15 | 5 — unit test of a pure function    | 4 — route test with a database          | 4 — route test with a database |
+| **Total**   |    100 | **485**                             | **290**                                 | **345**                        |
 
 Sensitivity: with performance weighted 40 (others scaled down), A still leads. Scores are
 estimates; the facts (route, repository order, catalog content) were checked in the code.

@@ -1,6 +1,6 @@
 # Sequence diagram — catalog — continue watching
 
-> **Feature**: UC9 ([spec](../../specs/continue-watching.md))
+> **Feature**: UC22 ([spec](../../specs/continue-watching.md))
 > **Related ADRs**: ADR-0007, ADR-0015
 
 ## Diagram

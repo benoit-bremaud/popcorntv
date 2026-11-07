@@ -69,7 +69,16 @@ describe('CatalogPage', () => {
   });
 
   it('renders the rows without inline styles (strict style-src CSP)', async () => {
-    const { container } = renderPage();
+    const { container } = renderPage(undefined, async () => [
+      {
+        mediaId: 'alien',
+        positionSec: 600,
+        durationSec: 1200,
+        finished: false,
+        updatedAt: '2026-11-07T00:00:00.000Z',
+      },
+    ]);
+    await screen.findByRole('region', { name: 'Continue watching' });
 
     await screen.findByRole('button', { name: 'More info' });
     expect(container.querySelectorAll('.row')).not.toHaveLength(0);
@@ -248,6 +257,11 @@ describe('CatalogPage continue watching', () => {
     const row = await screen.findByRole('region', { name: 'Continue watching' });
     expect(within(row).getByRole('button', { name: 'Alien' })).toBeInTheDocument();
     expect(screen.getAllByRole('region')[0]).toBe(row);
+    expect(within(row).getByRole('progressbar', { name: 'Watched' })).toHaveAttribute(
+      'value',
+      '0.5',
+    );
+    expect(screen.getAllByRole('progressbar')).toHaveLength(1);
   });
 
   it('should hide the row when nothing is in progress', async () => {
@@ -264,8 +278,9 @@ describe('CatalogPage continue watching', () => {
 
     await user.click(within(row).getByRole('button', { name: 'Alien' }));
     const dialog = await screen.findByRole('dialog');
+    const before = progress.mock.calls.length;
     await user.click(within(dialog).getByRole('button', { name: 'Close' }));
 
-    expect(progress).toHaveBeenCalledTimes(2);
+    expect(progress).toHaveBeenCalledTimes(before + 1);
   });
 });
