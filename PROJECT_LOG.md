@@ -4,6 +4,21 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-08 — end-of-run review of #127 and #136 (PR #158 merged, `77a1f0a`)
+
+- **Review** — Opus adversarial over #127 and #136 (17 findings, table in
+  `docs/architecture/review-local.md`). Fixed: Discover posters served only for paths the server
+  handed out (allowlist, max 2000), TMDB 404 → `404 title_not_found`, private immutable poster
+  cache, audio choice kept at track 0 (direct play) until the viewer picks one, Discover →
+  "Play in my library" resets the tab, `maxLength` on the search, UML and doc deltas.
+  Disagreed: keep the poster route in the `MEDIA_ROUTE` bucket.
+- **Checks** — full local CI green: typecheck, lint, format, tests (shared 45, server 599,
+  web 268), coverage (shared 100 % — was 75 % since #136 —, server 98.48 %, web 98.56 %),
+  build, gitleaks, E2E smoke, SonarQube gate passed (S7721, S2004, S1874 fixed).
+- **Follow-ups** — #156 Discover caches and limits, #157 audio and identity polish.
+- **Decision** — `tmdb-key`: one TMDB key shared by staging and prod (owner, 2026-11-08); the
+  serial client and memoised lists stay far below TMDB's ~50 req/s per IP.
+
 ## 2026-11-08 — #127 discover TMDB titles and wishlist (PR #154 merged, `50c704b`)
 
 - **Conception** — spec `discover-wishlist.md` (UC26, catalog use case + component deltas),
