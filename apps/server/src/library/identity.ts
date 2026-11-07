@@ -27,7 +27,9 @@ export function identityKeys(row: MediaIdentity): string[] {
   }
   const part = row.part ?? '';
   const tmdb = row.tmdbId === null ? row.providerIds.tmdb : String(row.tmdbId);
-  const keys = [`${row.kind}|${row.parsedTitle.toLowerCase()}|${row.year ?? ''}|${part}`];
+  const keys = [
+    `${row.kind}|${row.parsedTitle.normalize('NFC').toLowerCase()}|${row.year ?? ''}|${part}`,
+  ];
   return tmdb === undefined ? keys : [...keys, `tmdb|${tmdb}|${part}`];
 }
 

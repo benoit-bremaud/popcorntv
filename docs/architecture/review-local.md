@@ -1,43 +1,30 @@
-# Local review — popcorntv (#133 watched marks)
+# Local review — popcorntv (#134 progress carry-over)
 
-Pre-push and pre-merge review of the watched / unwatched mark (issue #133, ADR-0017).
+Pre-push and pre-merge review of the progress carry-over at scan (issue #134, ADR-0018).
 
 - Date: 2026-11-07
-- Commit: b20f75b
-- Scope: branch diff origin/main...feat/133-watched-marks
-- Checks run: adversarial (Opus, 2 rounds) · combined design / docs / tests / security review (Sonnet)
-- Verdict: ship · Must 0 open · Should 0 open · Nice 4 (deferred)
-
-## Adversarial review (#236)
-
-- Round 1 on `d8ea81e`: Must 1 (finished rule stated two ways in resume-playback R4 and the
-  class note) · Should 6 (parity row, component routes, UC23 in the auth note, CLAUDE.md,
-  series toggle tests, rewatch test) · Nice 3 · Push gate: closed
-- Round 2 on `b20f75b`: all Must and Should fixed · new Must 0 · **Push gate: open**
-- Hosted reviewers: Copilot out of credit · Codex optional
+- Scope: branch diff origin/main...feat/134-progress-survives-path-change
+- Checks run: combined design / docs / tests / security review (Sonnet)
+- Adversarial review (Opus): deferred to one pass over the #134–#136 stack after #136
+  (owner rule 2026-11-07)
+- Verdict: ship · Must 0 · Should 6 fixed or recorded · Nice 4 deferred
 
 ## Combined review (Sonnet)
 
-- Must 0 · Should 5: `setWatched` not atomic (fixed `d8ea81e`, one transaction), refusal
-  tests for DELETE (fixed), refused-mark web test (fixed), repository unit test and diagram
-  check (covered through routes; diagrams fixed in round 1) · Nice 6 deferred.
+- Must 0
+- Should 6, all addressed: carry-over skipped when nothing is missing; watched mark kept on
+  either side recorded in R4 as an accepted edge case; deliberate delete beside a kept copy
+  recorded in R3; title key NFC-normalised; CLAUDE.md current state; R1 / R5 duplicate
+  sentence removed
+- Nice 4 deferred: ADR-0018 sensitivity weights, kind prefix on the TMDB key, `it.each`
+  labels in `scanner.test.ts`, no security finding
 
-## Pre-merge gate (head SHA b20f75b)
+## Pre-merge gate
 
 | Step | Result |
 |---|---|
-| 0 CI mirror | typecheck, eslint, prettier on tracked files, build green; CodeQL, Scorecard, dependency review CI-only (Actions disabled) |
-| 1 Tests | ✅ shared 38 · server 567 · web 246 |
-| 2 Coverage | server 97.5 % stmts / 93.48 % branches · web 99.07 % · shared 90.24 % |
-| 3 SonarQube | ✅ quality gate PASSED |
-| 4 Secrets | ✅ gitleaks clean (origin/main..HEAD) · diff read: nothing sensitive |
-| 5 E2E/smoke | ✅ catalog smoke 1 passed |
-
-- Gate: **green**
-
-## 🔵 Nice to have (deferred)
-
-- Spec summary says an episode can be marked; the UI offers the toggle on films and series only.
-- A refused mark gives no visible feedback (matches spec 2a).
-- New web test names use "shows…" / "offers…" instead of "should…".
-- `watchedIds` is O(items × media) for series; fine at current scale.
+| CI mirror | typecheck, eslint, prettier on tracked files, build green; CodeQL, Scorecard, dependency review CI-only (Actions disabled) |
+| Tests and coverage | Vitest green; statements shared 90.2 % · server 97.5 % · web 99.1 % |
+| E2E smoke | Playwright catalog smoke green |
+| SonarQube | quality gate passed |
+| Secrets | gitleaks on origin/main..HEAD: no leaks |

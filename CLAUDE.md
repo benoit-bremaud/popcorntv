@@ -111,7 +111,9 @@ route's `scanLibrary` on every library in turn, a busy one skipped, no overlap, 
 awaited in `preClose`); #133 watched marks (spec `docs/architecture/specs/watched-marks.md`,
 ADR-0017: nullable `watch_progress.watched_at`, `finished` = mark or ≥ 90 %, `PUT|DELETE
 /profiles/:profileId/media/:id/watched`, a series applies to its episodes, unwatched forgets
-the row, poster ✓ via `WatchedContext`).
+the row, poster ✓ via `WatchedContext`); #134 progress carry-over (spec
+`docs/architecture/specs/progress-carry-over.md`, ADR-0018: before missing rows are pruned,
+their `watch_progress` moves to the one present file of the same title, pure `identity`).
 
 Server layout (flat, component diagram 03): `src/library/` holds the pure `name-parser`
 and `path-guard`, the `ffprobe` runner (only process egress), the `folder-lister` (one-level `readdir` of `MEDIA_ROOT`), the `scanner`, the pure `identity` (carry-over keys, ADR-0018), the `scheduler` (interval rescans, ADR-0016), the per-library

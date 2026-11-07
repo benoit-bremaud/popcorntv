@@ -197,11 +197,15 @@ export class LibraryRepository {
       .all();
     const isMissing = (row: (typeof stored)[number]): boolean =>
       row.filePath !== null && !seenPaths.has(row.filePath);
-    const missing = stored.filter(isMissing).map((row) => row.id);
-    const targets = carryOverTargets(
-      stored.filter(isMissing),
-      stored.filter((row) => !isMissing(row)),
-    );
+    const removed = stored.filter(isMissing);
+    const missing = removed.map((row) => row.id);
+    const targets =
+      removed.length === 0
+        ? new Map<string, string>()
+        : carryOverTargets(
+            removed,
+            stored.filter((row) => !isMissing(row)),
+          );
     this.db.transaction((tx) => {
       for (const [from, to] of targets) {
         // The newer position wins when the new file already has one for that profile;
