@@ -14,7 +14,6 @@ cast member's name, matches.
 - **R2** Matching runs in the browser over the loaded catalog (like the rows, ADR-0015):
   case and accents are ignored; a top-level title matches when its title or one of its
   cast names contains the query. TMDB stores no crew, so directors are not searchable.
-- **R3** Results: title matches first, then person matches, each A–Z, in one grid titled
-  *Results for "…"*. The hero, the controls and the rows are hidden while a query is set.
+- **R3** Results: title matches first, then person matches, each A–Z (`localeCompare`, browser locale), in one grid titled
+  *Results for "…"*, with the result count announced to screen readers. The hero, the controls and the rows are hidden while a query is set.
 - **R4** No match → a status message *No title or person matches "…"*.
-- **R5** Done when `searchItems` and the page behaviour have tests.

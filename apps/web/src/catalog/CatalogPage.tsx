@@ -202,5 +202,12 @@ function SearchResults({ query, items, onOpen }: SearchResultsProps): React.JSX.
   if (items.length === 0) {
     return <output className="status muted">No title or person matches “{query}”.</output>;
   }
-  return <PosterGrid title={`Results for “${query}”`} items={items} onOpen={onOpen} />;
+  return (
+    <>
+      <output className="visually-hidden">
+        {items.length} {items.length === 1 ? 'result' : 'results'}
+      </output>
+      <PosterGrid title={`Results for “${query}”`} items={items} onOpen={onOpen} />
+    </>
+  );
 }

@@ -1,30 +1,18 @@
-# Local review — popcorntv (#134 progress carry-over)
+# Local review — #135 search titles and people
 
-Pre-push and pre-merge review of the progress carry-over at scan (issue #134, ADR-0018).
+Pre-push review of `feat/135-search-titles-people`, 2026-11-07: one Sonnet general-purpose review (design, docs, tests, security); the Opus adversarial review runs once at the end of the #134–#136 stack (owner rule 2026-11-07).
 
-- Date: 2026-11-07
-- Scope: branch diff origin/main...feat/134-progress-survives-path-change
-- Checks run: combined design / docs / tests / security review (Sonnet)
-- Adversarial review (Opus): deferred to one pass over the #134–#136 stack after #136
-  (owner rule 2026-11-07)
-- Verdict: ship · Must 0 · Should 6 fixed or recorded · Nice 4 deferred
+## Findings
 
-## Combined review (Sonnet)
+| # | Level | Finding | Outcome |
+|---|---|---|---|
+| 1 | Should | Result count not announced to screen readers | Fixed: visually hidden `<output>` with the count, spec R3 |
+| 2 | Should | `byTitle.includes` makes the person pass O(n²) | Fixed: a `Set` of title matches |
+| 3 | Should | Spec R3 "A–Z" did not name the collation | Fixed: `localeCompare`, browser locale |
+| 4 | Should | Search state across a dialog open and close | No change: the query lives in `CatalogPage`, which stays mounted |
+| 5 | Should | UC24 `include` UC4 questioned | No change: same pattern as UC22, opening a result is the goal's step |
+| 6 | Nice | Escape during IME composition clears the field | Fixed: `isComposing` guard |
+| 7 | Nice | R5 was a task note | Fixed: removed from the spec |
+| 8 | Nice | Extra tests (whitespace query, multi-word, accented names) | Deferred |
 
-- Must 0
-- Should 6, all addressed: carry-over skipped when nothing is missing; watched mark kept on
-  either side recorded in R4 as an accepted edge case; deliberate delete beside a kept copy
-  recorded in R3; title key NFC-normalised; CLAUDE.md current state; R1 / R5 duplicate
-  sentence removed
-- Nice 4 deferred: ADR-0018 sensitivity weights, kind prefix on the TMDB key, `it.each`
-  labels in `scanner.test.ts`, no security finding
-
-## Pre-merge gate
-
-| Step | Result |
-|---|---|
-| CI mirror | typecheck, eslint, prettier on tracked files, build green; CodeQL, Scorecard, dependency review CI-only (Actions disabled) |
-| Tests and coverage | Vitest green; statements shared 90.2 % · server 97.5 % · web 99.1 % |
-| E2E smoke | Playwright catalog smoke green |
-| SonarQube | quality gate passed |
-| Secrets | gitleaks on origin/main..HEAD: no leaks |
+No Must. No security finding: React escapes the query and cast names; nothing leaves the browser.

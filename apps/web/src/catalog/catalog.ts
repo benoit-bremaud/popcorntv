@@ -273,9 +273,10 @@ export function searchItems(items: readonly Media[], query: string): Media[] {
   const needle = fold(query.trim());
   if (needle === '') return [];
   const byTitle = items.filter((item) => fold(item.title).includes(needle));
+  const titled = new Set(byTitle);
   const byPerson = items.filter(
     (item) =>
-      !byTitle.includes(item) &&
+      !titled.has(item) &&
       (item.metadata?.cast.some((member) => fold(member.name).includes(needle)) ?? false),
   );
   return [...sortByTitle(byTitle), ...sortByTitle(byPerson)];

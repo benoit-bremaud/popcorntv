@@ -15,7 +15,7 @@ export function SearchBox({ query, onChange }: Props): React.JSX.Element {
         value={query}
         onChange={(event) => onChange(event.currentTarget.value)}
         onKeyDown={(event) => {
-          if (event.key === 'Escape') onChange('');
+          if (event.key === 'Escape' && !event.nativeEvent.isComposing) onChange('');
         }}
       />
     </search>
