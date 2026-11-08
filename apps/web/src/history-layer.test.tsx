@@ -295,7 +295,7 @@ describe('useHistoryLayer', () => {
     push.mockRestore();
   });
 
-  it('two closes in a row before the first Back lands leave no stale entry', async () => {
+  it('closing the player then the detail by their buttons leaves no stale entry', async () => {
     render(<Stack />);
     act(() => screen.getByText('Play').click());
     act(() => screen.getByText('Close player').click());
