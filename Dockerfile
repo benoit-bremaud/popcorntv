@@ -59,7 +59,10 @@ COPY --from=build --chown=1000:1000 /app/apps/web/dist /app/web
 RUN mkdir -p /app/data /app/cache /app/media /srv/web \
   && chown 1000:1000 /app/data /app/cache /app/media /srv/web
 USER 1000
-ENV NODE_ENV=production PORT=3000 HOST=0.0.0.0 MEDIA_ROOT=/app/media
+# The running build shown in the account menu (#162): the release tag, else the commit SHA,
+# passed as `--build-arg APP_VERSION=$(git describe --tags --always)`.
+ARG APP_VERSION=dev
+ENV NODE_ENV=production PORT=3000 HOST=0.0.0.0 MEDIA_ROOT=/app/media APP_VERSION=${APP_VERSION}
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD ["node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]

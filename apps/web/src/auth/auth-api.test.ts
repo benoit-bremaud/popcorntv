@@ -4,6 +4,7 @@ import {
   adminApi,
   changePassword,
   loadAuthStatus,
+  loadVersion,
   onUnauthenticated,
   redeem,
   setUpOwner,
@@ -81,6 +82,16 @@ describe('auth API client', () => {
     expect(await signOut(false, async () => respond({ error: 'internal' }, 500))).toBe(false);
     expect(fetchFn).toHaveBeenNthCalledWith(1, '/api/auth/session', { method: 'DELETE' });
     expect(fetchFn).toHaveBeenNthCalledWith(2, '/api/auth/sessions', { method: 'DELETE' });
+  });
+
+  it('reads the running version, null when the server cannot say', async () => {
+    expect(await loadVersion(async () => respond({ version: 'v1.2.0' }))).toBe('v1.2.0');
+    expect(await loadVersion(async () => respond({ error: 'unauthenticated' }, 401))).toBeNull();
+    expect(
+      await loadVersion(async () => {
+        throw new TypeError('offline');
+      }),
+    ).toBeNull();
   });
 
   it('changes the password', async () => {

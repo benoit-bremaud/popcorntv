@@ -38,11 +38,24 @@ describe('buildApp', () => {
     await app.close();
   });
 
-  it('GET /health reports ok with the running version', async () => {
+  it('GET /health reports ok and nothing about the build (#92)', async () => {
     const response = await app.inject({ method: 'GET', url: '/health' });
 
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual({ status: 'ok', version: '0.0.0-test' });
+    expect(response.json()).toEqual({ status: 'ok' });
+  });
+
+  it('GET /version gives a signed-in caller the running build', async () => {
+    const response = await app.inject({ method: 'GET', url: '/version' });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({ version: '0.0.0-test' });
+  });
+
+  it('GET /version tells an anonymous caller nothing', async () => {
+    const response = await app.inject({ method: 'GET', url: '/version', headers: { cookie: '' } });
+
+    expect(response.statusCode).toBe(401);
   });
 
   it('answers 500 { error: internal } without echoing an unexpected error', async () => {

@@ -1,5 +1,13 @@
 import type { ApiErrorCode } from '@popcorntv/shared';
-import { changePassword, loadAuthStatus, redeem, setUpOwner, signIn, signOut } from '../api.js';
+import {
+  changePassword,
+  loadAuthStatus,
+  loadVersion,
+  redeem,
+  setUpOwner,
+  signIn,
+  signOut,
+} from '../api.js';
 
 /** The auth calls the screens make; injected in tests, the real API by default. */
 export interface AuthApi {
@@ -9,6 +17,7 @@ export interface AuthApi {
   readonly signIn: typeof signIn;
   readonly signOut: typeof signOut;
   readonly changePassword: typeof changePassword;
+  readonly version: typeof loadVersion;
 }
 
 export const defaultAuthApi: AuthApi = {
@@ -18,6 +27,7 @@ export const defaultAuthApi: AuthApi = {
   signIn,
   signOut,
   changePassword,
+  version: loadVersion,
 };
 
 /** What to tell the person for an auth error code; null means the server was unreachable. */

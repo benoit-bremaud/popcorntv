@@ -28,6 +28,7 @@ flowchart LR
       UC14(("Sign out"))
       UC19(("Change my password"))
       UC20(("Set a new password from a reset link"))
+      UC27(("See which build runs"))
     end
     subgraph Admin["Household administration"]
       UC15(("Invite a person"))
@@ -41,6 +42,7 @@ flowchart LR
   Viewer --> UC14
   Viewer --> UC19
   Viewer --> UC20
+  Viewer --> UC27
   Guest --> UC12
   Owner --> UC11
   Owner --> UC15

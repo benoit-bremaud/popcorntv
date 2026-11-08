@@ -2,7 +2,7 @@ import { join } from 'node:path';
 import rateLimit from '@fastify/rate-limit';
 import Fastify from 'fastify';
 import type { FastifyError, FastifyInstance, FastifyRequest } from 'fastify';
-import type { ApiError, HealthResponse, Library } from '@popcorntv/shared';
+import type { ApiError, HealthResponse, Library, VersionResponse } from '@popcorntv/shared';
 import { apiError } from './http.js';
 import { EventRepository } from './auth/event-repository.js';
 import { OneLinePerRequest, registerRequestLog } from './logging.js';
@@ -186,11 +186,13 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   const sessionRepository = new SessionRepository(options.db);
   registerAuthHook(app, { sessions: sessionRepository, cookie });
 
-  // Docker polls it; it reads nothing, so it counts in the larger media bucket.
+  // Docker polls it; it reads nothing, so it counts in the larger media bucket. Public, so it
+  // tells nothing about the build (#92).
   app.get('/health', { config: { access: 'public', rateBucket: 'media' } }, (): HealthResponse => ({
     status: 'ok',
-    version: options.version,
   }));
+  // Signed-in callers only: the account menu shows which build runs (spec app-version).
+  app.get('/version', (): VersionResponse => ({ version: options.version }));
 
   const repository = new LibraryRepository(options.db);
   const lock = new LibraryLock();

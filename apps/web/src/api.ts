@@ -31,6 +31,7 @@ import type {
   SignInBody,
   UpdateProfileBody,
   User,
+  VersionResponse,
   WatchProgress,
   WishlistEntry,
 } from '@popcorntv/shared';
@@ -503,3 +504,14 @@ export function adminApi(fetchFn: Fetch = (...args) => fetch(...args)) {
 }
 
 export type AdminApi = ReturnType<typeof adminApi>;
+
+/** `GET /version` (spec app-version): the running build, or null when it cannot be read. */
+export async function loadVersion(fetchFn: Fetch = fetch): Promise<string | null> {
+  try {
+    const response = await fetchFn(`${API}/version`);
+    if (!response.ok) return null;
+    return ((await response.json()) as VersionResponse).version;
+  } catch {
+    return null;
+  }
+}

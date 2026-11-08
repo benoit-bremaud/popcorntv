@@ -17,6 +17,7 @@ function fakeApi(overrides: Partial<AuthApi> = {}): AuthApi {
     signIn: vi.fn(async () => ({ ok: true as const, user: owner })),
     signOut: vi.fn(async () => true),
     changePassword: vi.fn(async () => ({ ok: true as const })),
+    version: vi.fn(async (): Promise<string | null> => null),
     ...overrides,
   };
 }

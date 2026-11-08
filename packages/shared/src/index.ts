@@ -3,6 +3,10 @@
 /** Response of `GET /health` — liveness only, never depends on the database or FFmpeg. */
 export interface HealthResponse {
   readonly status: 'ok';
+}
+
+/** Response of `GET /version` (signed-in callers, spec app-version): the build baked in the image. */
+export interface VersionResponse {
   readonly version: string;
 }
 

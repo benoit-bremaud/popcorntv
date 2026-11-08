@@ -134,7 +134,10 @@ dialog; no Seerr request, #128); #182 logging (spec `docs/architecture/specs/log
 ADR-0021: `LOG_LEVEL` validated, pino redact, one `http.request` line per answer through
 the `OneLinePerRequest` log controller, `event: "<domain>.<action>"` on every domain line,
 `auth_events` mirrored into the log by `EventRepository.record` without `usernameTried`,
-`scripts/log-coverage.mjs` in `pnpm lint` refuses a silent `catch`).
+`scripts/log-coverage.mjs` in `pnpm lint` refuses a silent `catch`); #162 + #92 running version (spec
+`docs/architecture/specs/app-version.md`, ADR-0022: `APP_VERSION` build argument, `dev`
+by default, signed-in `GET /version`, `/health` answers `{ status }` only, shown in the
+account menu).
 
 Server layout (flat, component diagram 03): `src/library/` holds the pure `name-parser`
 and `path-guard`, the `ffprobe` runner (only process egress), the `folder-lister` (one-level `readdir` of `MEDIA_ROOT`), the `scanner`, the pure `identity` (carry-over keys, ADR-0018), the `scheduler` (interval rescans, ADR-0016), the per-library

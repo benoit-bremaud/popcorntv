@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { PASSWORD_MAX, PASSWORD_MIN } from '@popcorntv/shared';
 import type { User } from '@popcorntv/shared';
 import type { AuthApi } from './auth-api.js';
@@ -6,7 +6,7 @@ import { authMessage } from './auth-api.js';
 
 type Props = {
   readonly user: User;
-  readonly api: Pick<AuthApi, 'signOut' | 'changePassword'>;
+  readonly api: Pick<AuthApi, 'signOut' | 'changePassword' | 'version'>;
   /** The session is over on this device: back to the sign-in form. */
   readonly onSignedOut: () => void;
   /** Owners only: opens the household administration (UC15–UC18). */
@@ -20,6 +20,18 @@ export function AccountMenu({ user, api, onSignedOut, onAdmin }: Props): React.J
   const [next, setNext] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [version, setVersion] = useState<string | null>(null);
+
+  // Which build runs (#162): read once, the menu simply omits it when the server cannot say.
+  useEffect(() => {
+    let live = true;
+    void api.version().then((value) => {
+      if (live) setVersion(value);
+    });
+    return () => {
+      live = false;
+    };
+  }, [api]);
 
   async function signOut(everywhere: boolean): Promise<void> {
     setBusy(true);
@@ -122,6 +134,7 @@ export function AccountMenu({ user, api, onSignedOut, onAdmin }: Props): React.J
             </button>
           </>
         )}
+        {version && <p className="account-version">PopCornTV {version}</p>}
       </div>
     </details>
   );
