@@ -322,7 +322,11 @@ describe('wishlist routes', () => {
     ];
 
     it.each(broken)('answers 502 tmdb_unavailable on %s', async (_label, answer) => {
-      const client = createTmdbClient({ apiKey: 'k', language: 'en-US', fetch: vi.fn(answer) });
+      const client = createTmdbClient({
+        apiKey: 'tmdb-secret-test-key',
+        language: 'en-US',
+        fetch: vi.fn(answer),
+      });
       const { app, failures, tmdbFailures } = await setup(client);
 
       const routes = [
@@ -339,6 +343,7 @@ describe('wishlist routes', () => {
 
       expect(failures).toEqual([]);
       expect(tmdbFailures).toHaveLength(routes.length);
+      expect(tmdbFailures.join('\n')).not.toContain('tmdb-secret-test-key');
       expect((await app.inject({ url: '/profiles/default/wishlist' })).json()).toEqual([]);
     });
   });

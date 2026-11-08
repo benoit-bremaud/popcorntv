@@ -499,6 +499,40 @@ describe('createTmdbClient', () => {
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
+  it('reports a body cut short by the timeout as status 0, not an invalid shape (#179)', async () => {
+    const cause = new DOMException('timed out', 'TimeoutError');
+    const body = new ReadableStream<Uint8Array>({ pull: (controller) => controller.error(cause) });
+    const fetch = vi.fn<FetchFn>(async () => new Response(body));
+
+    await expect(makeClient(fetch).details('movie', 1)).rejects.toMatchObject({ status: 0, cause });
+  });
+
+  it('reports an image download that cannot reach TMDB as status 0 (#179)', async () => {
+    const cause = new TypeError('fetch failed');
+    const fetch = vi.fn<FetchFn>(async (input) =>
+      String(input).includes('/configuration')
+        ? jsonResponse({ images: { secure_base_url: 'https://image.tmdb.org/t/p/' } })
+        : Promise.reject(cause),
+    );
+
+    await expect(makeClient(fetch).image('/a.jpg', 'w500')).rejects.toMatchObject({
+      status: 0,
+      path: '/image/a.jpg',
+      cause,
+    });
+  });
+
+  it('adds no cause to an error status answer (#179)', async () => {
+    const fetch = makeFetch({ '/movie/1': () => jsonResponse({}, 503) });
+
+    const error = await makeClient(fetch)
+      .details('movie', 1)
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(TmdbRequestError);
+    expect(Object.hasOwn(error as object, 'cause')).toBe(false);
+  });
+
   it('serves the next call after a network failure (#179)', async () => {
     const fetch = vi
       .fn<FetchFn>()

@@ -101,7 +101,7 @@ export class TmdbRequestError extends Error {
     readonly status: number,
     cause?: unknown,
   ) {
-    super(`TMDB ${path} answered ${status}`, { cause });
+    super(`TMDB ${path} answered ${status}`, cause === undefined ? undefined : { cause });
     this.name = 'TmdbRequestError';
   }
 }
@@ -307,6 +307,15 @@ export function createTmdbClient(options: TmdbClientOptions): TmdbClient {
     }
   }
 
+  /** `fetch` whose network failure, timeout or abort becomes `TmdbRequestError(path, 0)` (#179). */
+  async function reach(path: string, url: URL | string, init: RequestInit): Promise<Response> {
+    try {
+      return await options.fetch(url, init);
+    } catch (error) {
+      throw new TmdbRequestError(path, 0, error);
+    }
+  }
+
   async function request(
     path: string,
     params: Record<string, string>,
@@ -317,16 +326,10 @@ export function createTmdbClient(options: TmdbClientOptions): TmdbClient {
       url.searchParams.set(key, value);
     }
     const outcome = await serial(async (): Promise<{ retryAfter: number } | { body: unknown }> => {
-      let response: Response;
-      try {
-        response = await options.fetch(url, {
-          headers: { Authorization: `Bearer ${options.apiKey}`, Accept: 'application/json' },
-          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-        });
-      } catch (error) {
-        // Network failure, timeout or abort: TMDB is unreachable, not a server bug (#179).
-        throw new TmdbRequestError(path, 0, error);
-      }
+      const response = await reach(path, url, {
+        headers: { Authorization: `Bearer ${options.apiKey}`, Accept: 'application/json' },
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
       if (response.status === 429 && !retried) {
         const retryAfter = Number.parseInt(response.headers.get('retry-after') ?? '1', 10);
         await response.body?.cancel(); // Release the connection before waiting.
@@ -339,8 +342,9 @@ export function createTmdbClient(options: TmdbClientOptions): TmdbClient {
       try {
         return { body: await response.json() };
       } catch (error) {
-        // A body that is not JSON, or cut short, is an unexpected shape like a schema miss (#179).
-        throw new TmdbRequestError(path, 200, error);
+        // Not JSON: an unexpected shape like a schema miss; a timeout or reset mid-body is
+        // TMDB unreachable (#179).
+        throw new TmdbRequestError(path, error instanceof SyntaxError ? 200 : 0, error);
       }
     });
     if ('body' in outcome) return outcome.body;
@@ -451,7 +455,7 @@ export function createTmdbClient(options: TmdbClientOptions): TmdbClient {
       const base = await imageBase();
       const bytes = await serial(async () => {
         // No redirect: the pinned host must be the one that serves the bytes.
-        const response = await options.fetch(`${base}${size}${path}`, {
+        const response = await reach(`/image${path}`, `${base}${size}${path}`, {
           redirect: 'error',
           signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
         });
