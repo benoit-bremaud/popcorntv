@@ -63,16 +63,29 @@ function yearOf(date: string): number | null {
   return Number.isNaN(year) ? null : year;
 }
 
-/** Runs a TMDB call; a TMDB failure becomes `502 tmdb_unavailable` (spec R9). */
-async function viaTmdb<T>(reply: FastifyReply, call: () => Promise<T>): Promise<T | FastifyReply> {
+/**
+ * Marks an answer `viaTmdb` already sent. It never returns the reply itself: a Fastify 5 reply is
+ * thenable, so an async function returning it resolves to `undefined` (#178).
+ */
+const SENT = Symbol('sent');
+
+/**
+ * Runs a TMDB call; on a TMDB failure it sends `404 title_not_found` or `502 tmdb_unavailable`
+ * (spec R9) and returns `SENT`.
+ */
+async function viaTmdb<T>(reply: FastifyReply, call: () => Promise<T>): Promise<T | typeof SENT> {
   try {
     return await call();
   } catch (error) {
     if (error instanceof TmdbRequestError) {
       // TMDB answers 404 for an id it does not know: the title, not TMDB, is missing.
-      if (error.status === 404) return reply.code(404).send(apiError('title_not_found'));
-      reply.log.warn({ event: 'discover.tmdb.failed', err: error }, 'TMDB unavailable');
-      return reply.code(502).send(apiError('tmdb_unavailable'));
+      if (error.status === 404) {
+        reply.code(404).send(apiError('title_not_found'));
+      } else {
+        reply.log.warn({ event: 'discover.tmdb.failed', err: error }, 'TMDB unavailable');
+        reply.code(502).send(apiError('tmdb_unavailable'));
+      }
+      return SENT;
     }
     throw error;
   }
@@ -144,7 +157,7 @@ export function registerDiscoverRoutes(app: FastifyInstance, deps: DiscoverRoute
     const tmdb = deps.tmdb;
     if (!tmdb) return reply.code(409).send(apiError('tmdb_not_configured'));
     const titles = await viaTmdb(reply, () => cachedList(query.data.list, query.data.kind, tmdb));
-    if (!Array.isArray(titles)) return titles;
+    if (titles === SENT) return reply;
     return reply.send(
       issue(deps.wishlist.withMediaIds<TitleFacts>(titles)) satisfies DiscoverTitle[],
     );
@@ -156,7 +169,7 @@ export function registerDiscoverRoutes(app: FastifyInstance, deps: DiscoverRoute
     const tmdb = deps.tmdb;
     if (!tmdb) return reply.code(409).send(apiError('tmdb_not_configured'));
     const rows = await viaTmdb(reply, () => tmdb.searchTitles(query.data.q));
-    if (!Array.isArray(rows)) return rows;
+    if (rows === SENT) return reply;
     const titles = rows.slice(0, MAX_TITLES).map(toFacts);
     return reply.send(issue(deps.wishlist.withMediaIds(titles)) satisfies DiscoverTitle[]);
   });
@@ -167,7 +180,7 @@ export function registerDiscoverRoutes(app: FastifyInstance, deps: DiscoverRoute
     const tmdb = deps.tmdb;
     if (!tmdb) return reply.code(409).send(apiError('tmdb_not_configured'));
     const sheet = await viaTmdb(reply, () => details(tmdb, params.data.kind, params.data.tmdbId));
-    if (!('tmdbId' in sheet)) return sheet;
+    if (sheet === SENT) return reply;
     const [withId] = issue(deps.wishlist.withMediaIds([sheet]));
     return reply.send(withId satisfies DiscoverDetails | undefined);
   });
@@ -215,7 +228,7 @@ export function registerDiscoverRoutes(app: FastifyInstance, deps: DiscoverRoute
     const { profileId, kind: of, tmdbId: id } = params.data;
     // The server reads the facts itself: the client sends no title data (spec R5).
     const sheet = await viaTmdb(reply, () => details(tmdb, of, id));
-    if (!('tmdbId' in sheet)) return sheet;
+    if (sheet === SENT) return reply;
     deps.wishlist.add(profileId, {
       kind: sheet.kind,
       tmdbId: sheet.tmdbId,

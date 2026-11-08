@@ -4,6 +4,19 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-08 — Pi deploy of `0698684`, FULL QA pass, #178 fix (PR #180 merged, `9d21ab0`)
+
+- **Deploy** — Pi rebuilt from `0698684` (was `bbde01d`), backup taken first, healthy; Discover
+  works with the real TMDB key.
+- **QA full** — report `docs/architecture/qa/2026-11-08-full-pass-pi.md`, first coverage ledger
+  `docs/testing/qa-matrix.md` (25 flows). No Must; issues #163–#177 (5 Should, 10 Nice), #55
+  re-observed. Not covered: SEC rows, 320/390 px, offline, viewer role, multi-audio, series.
+- **Server logs** — three TypeErrors on Discover TMDB error paths → #178 fixed in PR #180
+  (`viaTmdb` returns a `SENT` sentinel, a thenable reply resolved to `undefined`); Opus
+  adversarial + verify, gate open, SonarQube passed. #179 filed (malformed TMDB body → 500).
+- **Backlog** — #160 end-of-film / ratings / favourites / recommendations, #161 brainstorming,
+  #162 show the running version.
+
 ## 2026-11-08 — end-of-run review of #127 and #136 (PR #158 merged, `77a1f0a`)
 
 - **Review** — Opus adversarial over #127 and #136 (17 findings, table in
