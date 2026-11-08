@@ -1,8 +1,9 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Profile } from '@popcorntv/shared';
 import { App } from './App.js';
+import { media } from './test-fixtures.js';
 import type { DiscoverApi } from './discover/discover-api.js';
 
 const me: Profile = { id: 'default', name: 'Me', avatar: 'red' };
@@ -156,5 +157,60 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: 'Play in my library' }));
 
     expect(screen.getByRole('button', { name: 'Library' })).toHaveAttribute('aria-pressed', 'true');
+  });
+  it('keeps one history entry from the sheet to the detail on "Play in my library" (#169)', async () => {
+    const user = userEvent.setup();
+    const dune = media({ id: 'm1', title: 'Dune', libraryId: 'lib-1' });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url.endsWith('/libraries')) {
+          return Response.json([{ id: 'lib-1', name: 'Films', rootPath: '/m', kind: 'films' }]);
+        }
+        if (url.endsWith('/libraries/lib-1/media')) return Response.json([dune]);
+        return Response.json([]);
+      }),
+    );
+    const title = {
+      kind: 'movie',
+      tmdbId: 1,
+      title: 'Dune',
+      year: 2021,
+      overview: '',
+      voteAverage: 0,
+      posterPath: null,
+      mediaId: 'm1',
+    } as const;
+    const discover: DiscoverApi = {
+      list: vi.fn(async () => [title]),
+      search: vi.fn(async () => []),
+      details: vi.fn(async () => Promise.reject(new Error('offline'))),
+      wishlist: vi.fn(async () => []),
+      setWishlisted: vi.fn(async () => true),
+    };
+    render(
+      <App
+        load={async () => [me]}
+        storage={memoryStorage({ 'popcorntv.activeProfileId': 'default' })}
+        discover={discover}
+      />,
+    );
+    await user.click(await screen.findByRole('button', { name: 'Discover' }));
+    await user.click(
+      (
+        await screen.findAllByRole('button', { name: 'Dune (2021), in my library' })
+      )[0] as HTMLElement,
+    );
+    const push = vi.spyOn(history, 'pushState');
+
+    await user.click(screen.getByRole('button', { name: 'Play in my library' }));
+
+    expect(await screen.findByRole('dialog', { name: 'Dune' })).toBeInTheDocument();
+    expect(history.state).toEqual({ pctvLayer: 1 });
+    expect(push).not.toHaveBeenCalled();
+    history.back();
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Dune' })).toBeNull());
+    expect(history.state).toBeNull();
+    push.mockRestore();
   });
 });

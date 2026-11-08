@@ -8,6 +8,7 @@ import type { PlaybackApi } from '../playback/PlayerDialog.js';
 import { formatPosition, resumeAt } from '../playback/resume.js';
 import { isWatched, nextEpisode } from './catalog.js';
 import type { Season } from './catalog.js';
+import { useHistoryLayer } from '../history-layer.js';
 
 type Props = {
   readonly item: Media;
@@ -44,7 +45,7 @@ function episodeName(episode: Media): string {
   return episode.episode === null ? episode.title : `${episode.title}, episode ${episode.episode}`;
 }
 
-/** UC4: a modal `<dialog>` over the catalog; Escape or the close button close it. */
+/** UC4: a modal `<dialog>` over the catalog; Escape, the close button or Back close it. */
 export function DetailDialog({
   item,
   seasons,
@@ -56,6 +57,8 @@ export function DetailDialog({
   markWatched = setWatched,
 }: Props): React.JSX.Element {
   const ref = useRef<HTMLDialogElement>(null);
+  // Back closes the layer; a close by button or Escape leaves its entry (ADR-0024).
+  useHistoryLayer(ref);
   const [playing, setPlaying] = useState<Playing | null>(null);
   /** Null until the first load: Play waits for it, so a resume point is never skipped. */
   const [saved, setSaved] = useState<ReadonlyMap<string, WatchProgress> | null>(null);
@@ -127,7 +130,7 @@ export function DetailDialog({
       ref={ref}
       className="detail"
       aria-labelledby={titleId}
-      // Every close path (button, Escape) ends in the native `close` event, fired once the
+      // Every close path (button, Escape, Back) ends in the native `close` event, fired once the
       // modal is no longer inert, so the caller can move the focus back. React propagates
       // `close` up its tree, so the nested player's own close must not end the detail too.
       onClose={(event) => {

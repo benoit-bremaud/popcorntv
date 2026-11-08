@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { DiscoverTitle, WishlistEntry } from '@popcorntv/shared';
@@ -96,6 +96,20 @@ describe('DiscoverPage', () => {
 
     expect(api.setWishlisted).toHaveBeenCalledWith('p1', 'movie', 1, true);
     expect(api.wishlist).toHaveBeenCalledTimes(2);
+  });
+
+  it('closes the sheet on browser Back and gives the focus back (#169)', async () => {
+    const user = userEvent.setup();
+    render(<DiscoverPage profileId="p1" onPlayInLibrary={() => undefined} api={makeApi()} />);
+    const poster = await screen.findByRole('button', { name: 'Dune (2021)' });
+    await user.click(poster);
+    expect(history.state).toEqual({ pctvLayer: 1 });
+
+    history.back();
+
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Dune' })).toBeNull());
+    expect(history.state).toBeNull();
+    expect(poster).toHaveFocus();
   });
 
   it('shows ✓ In my list for a listed title and removes it', async () => {

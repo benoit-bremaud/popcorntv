@@ -43,7 +43,7 @@ sequenceDiagram
       API-->>P: 404 media_not_found
       P-->>V: "This file could not be played"
     end
-    V->>P: Close (button / Escape)
+    V->>P: Close (button / Escape / Back)
     P-->>D: focus back on Play
   else unsupported
     PD-->>D: {mode: unsupported}
