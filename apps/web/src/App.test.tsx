@@ -45,7 +45,9 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: 'PopCornTV', level: 1 })).toBeInTheDocument();
     await user.click(await screen.findByRole('button', { name: 'Kid' }));
 
-    expect((await screen.findAllByText(/Nothing to watch yet/)).length).toBeGreaterThan(0);
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent('Nothing to watch yet.'),
+    );
     expect(storage.getItem('popcorntv.activeProfileId')).toBe('k1');
     expect(screen.getByRole('button', { name: /Kid, switch profile/ })).toHaveFocus();
   });
@@ -54,7 +56,9 @@ describe('App', () => {
     const storage = memoryStorage({ 'popcorntv.activeProfileId': 'k1' });
     render(<App load={async () => [me, kid]} storage={storage} />);
 
-    expect((await screen.findAllByText(/Nothing to watch yet/)).length).toBeGreaterThan(0);
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent('Nothing to watch yet.'),
+    );
     expect(screen.queryByText("Who's watching?")).not.toBeInTheDocument();
   });
 
