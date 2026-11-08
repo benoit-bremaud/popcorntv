@@ -4,6 +4,18 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-09 — #174 readable device name (PR #244 merged, `a86b248`)
+
+- USA-06: the admin device list shows "Chrome on Linux" via the pure web `deviceLabel`,
+  the raw User-Agent as a tooltip and as the fallback for an unknown agent; "Unknown
+  device" when blank. MCDA option A (owner, 450/500): own regex matcher over bowser (360)
+  and ua-parser-js (355, AGPL v2); recorded in the auth spec, no ADR.
+- Chromium forks (Edge, Opera incl. iOS `OPT`, Samsung) matched before Chrome; Tizen TVs
+  named; linear Safari pattern after Sonar S8786. `04-class` `userAgent: string?`.
+- Gate green (web 399 tests, e2e, gitleaks), SonarQube passed, adversarial review round 2
+  open (3 Should + 3 Nice fixed; touch devices cannot open the tooltip, accepted).
+  Staging replay pending in `docs/architecture/qa/2026-11-09-issue-174-device-label.md`.
+
 ## 2026-11-09 — #173 profile picker names: false positive, guarded (PR #241 merged, `9ed16f7`)
 
 - A11Y-02 "MMe" was a reading artefact (most likely `textContent`): the avatar initial has
