@@ -4,6 +4,23 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-08 — #204 local staging instance (PR #207 merged, `6ee2daf`)
+
+- **Decision** — owner rule 2026-11-08: no Pi redeploy per brick; QA passes run on a local
+  staging instance, the owner alone decides Pi deploys. Staging on the dev machine is a
+  derogation to the global "staging on the prod platform" rule (Pi build ~15 min), recorded in
+  `docs/architecture/diagrams/deploy/08-deployment-staging.md`. MCDA: Caddy mirroring the Pi
+  450/500 vs app + Vite dev 300 vs API only 200, owner approval.
+- **Infra** — `make staging-up | staging-logs | staging-down | staging-reset`; image built from
+  `git archive HEAD` (`popcorntv:staging-<sha>`), `deploy/staging/compose.yml` copies the Pi
+  service behind Caddy `tls internal` on `https://localhost:8443`, network `10.203.204.0/24`
+  (Docker's 172.x pools are all taken on the dev machine), `.env.staging` gitignored. The image
+  now creates `/app/cache` (uid 1000) for fresh named volumes; Caddy needs `NET_BIND_SERVICE`
+  back under `cap_drop: ALL`. Spec deploy-homelab §2: QA on staging first, smoke on the Pi.
+- **Gate** — staging healthy from a clean HEAD, Hadolint, Trivy config, Prettier, lint,
+  gitleaks, SonarQube passed; Opus adversarial (2 Must + 4 Should fixed), verify round open
+  (1 Should fixed). Codex review: out of credit.
+
 ## 2026-11-08 — #182 logging audit (PR #205 merged, `eae975a`)
 
 - **Audit** — 18 log calls in 9 server files, `LOG_LEVEL` ignored, audit events in the
