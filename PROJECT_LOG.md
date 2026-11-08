@@ -4,6 +4,21 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-08 — #164 account menu closes on Escape and outside click (PR #227 merged, `e28c34a`)
+
+- MCDA option A (owner, 480/500 vs `useDismiss` hook 420, `popover` API 205): `AccountMenu`
+  adds document `keydown` / `pointerdown` listeners while open. Escape closes it, focus back
+  on the summary only when it was inside (search box / poster keep focus), skipped while a
+  `dialog[open]` is above (ADR-0024) or during IME composition; pointer-down outside closes
+  without swallowing the click; Administration closes it; failed sign-out keeps it open.
+  No spec or ADR change.
+- Tests: 12 new jsdom cases; gate green (Sonar PASSED, e2e 2/2, gitleaks).
+- Review: Opus adversarial 2 rounds — Escape stole focus from the search box (fixed), two QA
+  steps described impossible flows (rewritten).
+- QA: `docs/testing/qa-matrix.md` § Account menu checks; report
+  `docs/architecture/qa/2026-11-08-account-menu-164.md`, staging replay pending (no owner
+  credentials).
+
 ## 2026-11-08 — #163 library root checked on create (PR #223 merged, `a49457d`)
 
 - MCDA option B (owner, 410/500 vs 400 `invalid_request` 365): `POST /libraries` runs the
