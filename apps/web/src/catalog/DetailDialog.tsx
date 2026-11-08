@@ -14,7 +14,8 @@ type Props = {
   readonly seasons: readonly Season[];
   /** The active profile: progress is read and saved for it (UC8). */
   readonly profileId: string;
-  readonly onClose: () => void;
+  /** Called with the player's last save, so the caller reloads once it landed (#140). */
+  readonly onClose: (lastSave: Promise<void>) => void;
   /** The browser's decoder check; injected by tests (jsdom decodes nothing). */
   readonly canPlay?: CanPlay;
   /** Playback server calls; injected by tests. */
@@ -96,11 +97,15 @@ export function DetailDialog({
     setPlaying({ media, startSec });
   }
 
+  /** The player's latest save, handed to `onClose` (spec continue-watching R7). */
+  const lastSave = useRef<Promise<void>>(Promise.resolve());
+
   /** Reloads the offer once the player's last save has landed (spec step 7). */
-  async function stop(lastSave: Promise<void>): Promise<void> {
+  async function stop(landed: Promise<void>): Promise<void> {
+    lastSave.current = landed;
     setPlaying(null);
     trigger.current?.focus();
-    await lastSave;
+    await landed;
     await refreshProgress();
   }
 
@@ -126,7 +131,7 @@ export function DetailDialog({
       // modal is no longer inert, so the caller can move the focus back. React propagates
       // `close` up its tree, so the nested player's own close must not end the detail too.
       onClose={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        if (event.target === event.currentTarget) onClose(lastSave.current);
       }}
     >
       <div className="detail__panel">

@@ -44,3 +44,13 @@ re-encoded) and one with a text subtitle track:
 4. The server log shows `playback.session.opened` with `offsetSec` ≤ `startSec` and no
    `playback.keyframe.failed`.
 
+## Continue watching checks (#140)
+
+Replay on every pass that touches the catalog, the detail dialog or the player:
+
+1. Play a film from the row for a minute, close the player then the detail dialog at once
+   (Escape twice): the row shows the new position without another dialog close.
+2. Same with the network throttled (DevTools "Slow 4G"): the row updates once the last
+   `PUT …/progress` answers, never to the older position.
+3. Open and close a detail dialog without playing: the row reloads at once.
+4. Open and close two titles quickly in turn: the row keeps the latest answer.

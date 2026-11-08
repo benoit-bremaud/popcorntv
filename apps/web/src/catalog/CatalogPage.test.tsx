@@ -1,8 +1,9 @@
-import { render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { Media, WatchProgress } from '@popcorntv/shared';
 import { ACTION, DOCUMENTARY, DRAMA, media, metadata } from '../test-fixtures.js';
+import type { PlaybackApi } from '../playback/PlayerDialog.js';
 import { CatalogPage } from './CatalogPage.js';
 
 const heat = media({
@@ -292,6 +293,107 @@ describe('CatalogPage continue watching', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Close' }));
 
     expect(progress).toHaveBeenCalledTimes(before + 1);
+  });
+
+  /** A server double whose saves stay pending until `land` is called (#140). */
+  function slowSaves(): { api: PlaybackApi; land: () => void } {
+    let resolve: () => void = () => undefined;
+    const pending = new Promise<void>((done) => {
+      resolve = done;
+    });
+    return {
+      api: {
+        start: async ({ mediaId, startSec = 0 }) => ({
+          mode: 'direct',
+          url: `/api/media/${mediaId}/file`,
+          mime: 'video/mp4',
+          startSec,
+          offsetSec: 0,
+        }),
+        heartbeat: async () => undefined,
+        stop: async () => undefined,
+        save: () => pending,
+      },
+      land: () => resolve(),
+    };
+  }
+
+  /** Opens Alien from the row, plays it, then closes the player and the detail. */
+  async function watchAndClose(progress: () => Promise<WatchProgress[]>, api: PlaybackApi) {
+    const user = userEvent.setup();
+    const playable: Media = {
+      ...alien,
+      streams: [{ type: 'video', codec: 'h264', width: 1920, height: 1080, language: null }],
+    };
+    render(
+      <CatalogPage
+        profileId="default"
+        load={async () => CATALOG.map((item) => (item.id === 'alien' ? playable : item))}
+        progress={progress}
+        playback={api}
+      />,
+    );
+    const row = await screen.findByRole('region', { name: 'Continue watching' });
+    await user.click(within(row).getByRole('button', { name: 'Alien, 50% watched' }));
+    const detail = await screen.findByRole('dialog', { name: 'Alien' });
+    await user.click(await within(detail).findByRole('button', { name: /Resume|Play/ }));
+    const player = await screen.findByRole('dialog', { name: 'Playing Alien' });
+    await waitFor(() => expect(player.querySelector('video')).not.toBeNull());
+    fireEvent.loadedMetadata(player.querySelector('video') as HTMLVideoElement);
+    await user.click(within(player).getByRole('button', { name: 'Close player' }));
+    await user.click(within(detail).getByRole('button', { name: 'Close' }));
+    return user;
+  }
+
+  it("should reload the row only once the player's last save landed (#140)", async () => {
+    const later = { ...inProgress, positionSec: 900 };
+    let rows: WatchProgress[] = [inProgress];
+    const progress = vi.fn(async () => rows);
+    const { api, land } = slowSaves();
+    await watchAndClose(progress, api);
+    const before = progress.mock.calls.length;
+
+    await act(async () => {
+      await new Promise((done) => setTimeout(done, 20));
+    });
+    expect(progress).toHaveBeenCalledTimes(before);
+
+    rows = [later];
+    await act(async () => {
+      land();
+    });
+
+    expect(await screen.findByRole('button', { name: 'Alien, 75% watched' })).toBeInTheDocument();
+  });
+
+  it('should keep the newer row when a stale reload answers last', async () => {
+    let answer: (rows: WatchProgress[]) => void = () => undefined;
+    const progress = vi
+      .fn<() => Promise<WatchProgress[]>>()
+      .mockResolvedValueOnce([inProgress])
+      .mockImplementationOnce(
+        () =>
+          new Promise((done) => {
+            answer = done;
+          }),
+      )
+      .mockResolvedValue([{ ...inProgress, positionSec: 900 }]);
+    const user = userEvent.setup();
+    render(<CatalogPage profileId="default" load={async () => CATALOG} progress={progress} />);
+    const row = await screen.findByRole('region', { name: 'Continue watching' });
+
+    for (let round = 0; round < 2; round += 1) {
+      await user.click(within(row).getByRole('button', { name: /Alien, \d+% watched/ }));
+      await user.click(
+        within(await screen.findByRole('dialog')).getByRole('button', { name: 'Close' }),
+      );
+    }
+    await screen.findByRole('button', { name: 'Alien, 75% watched' });
+    await act(async () => {
+      answer([]);
+    });
+
+    expect(screen.getByRole('button', { name: 'Alien, 75% watched' })).toBeInTheDocument();
   });
 });
 
