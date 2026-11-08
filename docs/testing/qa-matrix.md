@@ -35,8 +35,8 @@ One row per screen or flow. Cell format: `date · SHA · environment · OK | KO 
 
 Replay on every pass that touches Discover, the title sheet or the wishlist:
 
-1. Start the server with `TMDB_API_KEY` set and TMDB unreachable (no network, or a
-   blackholed `api.themoviedb.org` in `/etc/hosts`): `GET /discover`, `/discover/search`,
+1. Start the server with `TMDB_API_KEY` set and TMDB unreachable (`NODE_USE_ENV_PROXY=1
+   HTTPS_PROXY=http://127.0.0.1:9`, a closed port): `GET /discover`, `/discover/search`,
    `/discover/movie/1` and `PUT …/wishlist/movie/1` answer `502 tmdb_unavailable`, never
    `500`; the log has one `discover.tmdb.failed` line per call, without the API key.
 2. A `200` whose body is not JSON cannot be produced by hand (`API_BASE` is fixed to
