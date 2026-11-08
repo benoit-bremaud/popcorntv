@@ -4,6 +4,22 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-08 — #169 Back closes the open dialog (PR #219 merged, `9592291`)
+
+- MCDA option A (owner, 455/500 vs hash route / react-router 255): `useHistoryLayer` pushes
+  a `{ pctvLayer }` entry per open `<dialog>` (detail, player, title sheet); one module
+  `popstate` listener closes the layers above the landing entry top first; a button / Escape
+  close goes back (pending Backs counted); "Play in my library" reuses the sheet's entry; a
+  reload on a layer entry lands on the catalog. Spec `history-back`, ADR-0024, component
+  diagram + state diagram 07. Known limit: a 401 with a layer open leaves its entries.
+- Tests: pure helpers (TDD), hook edge cases (double Back, close then Back, reopen before
+  the Back lands, Forward, hand-off), real `PlayerDialog` (save + HLS stop on Back),
+  `DiscoverPage`, `App` hand-off, e2e Back / reload. Dialog `close` now async in jsdom.
+  QA matrix § Back navigation checks (#169); staging replay deferred to Full QA (report
+  `docs/architecture/qa/2026-11-08-issue-169-history-back.md`).
+- Gate: all local checks + e2e green, SonarQube passed, adversarial review 1 Must (double
+  Back lost the player's last save) + 6 Should fixed, round 2 open.
+
 ## 2026-11-08 — #179 unreachable TMDB answers 502, not 500 (PR #217 merged, `7c7af83`)
 
 - The issue premise was stale: the body shape was already zod-guarded. The real 500s came
