@@ -23,6 +23,15 @@ function setup(api: Partial<ProfileApi> = {}) {
 }
 
 describe('ManageProfiles', () => {
+  it('opts the profile name out of the browser identity autofill (#168)', () => {
+    setup();
+
+    const name = screen.getByRole('textbox', { name: 'Add a profile: name' });
+
+    expect(name).toHaveAttribute('autocomplete', 'off');
+    expect(name).toHaveAttribute('name', 'profile-name');
+  });
+
   it('adds a profile with a trimmed name and the chosen colour, then clears the form', async () => {
     const { user, api, onChanged } = setup();
     const name = screen.getByRole('textbox', { name: 'Add a profile: name' });

@@ -51,6 +51,15 @@ function rowOf(name: string): HTMLElement {
 }
 
 describe('DiscoverPage', () => {
+  it('opts the search out of the browser identity autofill (#168)', () => {
+    render(<DiscoverPage profileId="p1" onPlayInLibrary={() => undefined} api={makeApi()} />);
+
+    const field = screen.getByRole('searchbox', { name: 'Search TMDB titles' });
+
+    expect(field).toHaveAttribute('autocomplete', 'off');
+    expect(field).toHaveAttribute('name', 'q');
+  });
+
   it('shows the four TMDB rows and marks a title already on disk', async () => {
     render(<DiscoverPage profileId="p1" onPlayInLibrary={() => undefined} api={makeApi()} />);
 

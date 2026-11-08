@@ -89,6 +89,20 @@ describe('AccountMenu', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Password changed.');
   });
 
+  it('keeps the password tokens on the change form (#168)', async () => {
+    const user = userEvent.setup();
+    menu();
+
+    await user.click(screen.getByText('kid'));
+    await user.click(screen.getByRole('button', { name: 'Change password' }));
+
+    expect(screen.getByLabelText('Current password')).toHaveAttribute(
+      'autocomplete',
+      'current-password',
+    );
+    expect(screen.getByLabelText('New password')).toHaveAttribute('autocomplete', 'new-password');
+  });
+
   it('explains a refused change and can cancel', async () => {
     const user = userEvent.setup();
     menu({

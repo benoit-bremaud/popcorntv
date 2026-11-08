@@ -140,6 +140,8 @@ export function DiscoverPage({
             type="search"
             maxLength={100}
             className="search__input"
+            name="q"
+            autoComplete="off"
             aria-label="Search TMDB titles"
             placeholder="Search films and series to discover"
             value={query}
