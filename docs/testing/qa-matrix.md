@@ -171,9 +171,9 @@ Replay with a screen reader (Orca on Firefox, then NVDA or VoiceOver when availa
 
 ## Placeholder contrast checks (#167)
 
-1. Catalog search, Discover search, sign-in, account, profile name and library path fields:
-   each placeholder reads `rgb(163, 154, 148)` (`--color-text-muted`) in DevTools.
+1. Catalog search, Discover search, profile name, library Path ("Other folder…") and
+   library Name fields: each placeholder reads `rgb(163, 154, 148)` (`--color-text-muted`) in DevTools.
 2. Measured contrast: ≥ 5.9:1 on `.input` (`--color-surface-raised`), ≥ 6.5:1 on the
-   catalog search (`--color-surface`); the user-agent grey was 3.9:1 and 3.6:1.
+   catalog and Discover searches (`--color-surface`); the user-agent grey was 3.6:1 and 3.9:1.
 3. Firefox: the placeholder is not dimmed further (`opacity: 1`).
 4. Typed text stays `--color-text`; the placeholder never looks like a filled value.
