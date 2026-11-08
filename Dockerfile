@@ -55,7 +55,8 @@ COPY --from=build --chown=1000:1000 /out /app
 # The web build ships in the same image so web and API versions never drift (ADR-0013); the
 # reverse proxy serves it from a volume the compose `web-sync` service fills from /app/web.
 COPY --from=build --chown=1000:1000 /app/apps/web/dist /app/web
-RUN mkdir -p /app/data /app/media /srv/web && chown 1000:1000 /app/data /app/media /srv/web
+RUN mkdir -p /app/data /app/cache /app/media /srv/web \
+  && chown 1000:1000 /app/data /app/cache /app/media /srv/web
 USER 1000
 ENV NODE_ENV=production PORT=3000 HOST=0.0.0.0 MEDIA_ROOT=/app/media
 EXPOSE 3000

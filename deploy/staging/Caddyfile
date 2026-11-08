@@ -1,0 +1,37 @@
+# Local staging site (#204): the homelab site block (deploy/homelab/Caddyfile) in plain HTTP
+# on loopback — no `tls internal`, no `tailnet_only`, no HSTS. Keep the rest in step with it.
+{
+	admin off
+	auto_https off
+}
+
+:8080 {
+	encode zstd gzip
+
+	header {
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self' data:; media-src 'self' blob:; worker-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+		X-Frame-Options "DENY"
+		Cross-Origin-Opener-Policy "same-origin"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		-Server
+	}
+
+	handle_path /api/* {
+		reverse_proxy 10.203.204.3:3000
+	}
+
+	handle /assets/* {
+		root * /srv/popcorntv-web
+		header Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+
+	handle {
+		root * /srv/popcorntv-web
+		header Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}

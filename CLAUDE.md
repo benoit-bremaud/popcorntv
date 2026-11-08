@@ -56,6 +56,9 @@ spacing / typography, tests with every feature (Vitest unit, Playwright e2e late
   `http://localhost:3000`; e.g. `API_URL=http://localhost:3001 pnpm dev:web`).
 - `pnpm typecheck` · `pnpm lint` · `pnpm format:check` · `pnpm test` · `pnpm coverage` ·
   `pnpm build`.
+- `make staging-up` — production image of HEAD on <http://localhost:8080>, like the Pi
+  (`deploy/staging/compose.yml`, env `.env.staging`); QA passes run here, never on the Pi.
+  `make staging-logs` · `make staging-down` (keeps data) · `make staging-reset`.
 - `make lint-docker` · `make scan-docker-config` · `make scan-docker-image IMAGE=…`.
 
 ## Current state

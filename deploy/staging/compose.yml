@@ -1,0 +1,98 @@
+# Local staging (#204): the production image run on the dev machine like the Pi runs it
+# (deploy/homelab/compose.yml), for QA passes before the owner decides a Pi deploy.
+# Differences with the Pi, on purpose: named volumes instead of the HDD bind mounts, a sample
+# media folder, and Caddy in plain HTTP on loopback instead of the homelab TLS site.
+# Run through the Makefile: make staging-up | staging-logs | staging-down | staging-reset.
+name: popcorntv-staging
+
+services:
+  popcorntv:
+    image: popcorntv:${POPCORNTV_VERSION:?set POPCORNTV_VERSION}
+    env_file:
+      - ../../.env.staging
+    environment:
+      HOST: 0.0.0.0
+      MEDIA_ROOT: /app/media
+      PUBLIC_URL: http://localhost:8080
+      # Caddy's fixed address on the staging network, as on the Pi.
+      TRUST_PROXY: 10.203.204.2
+      ARTWORK_DIR: /app/cache/artwork
+      TRANSCODE_DIR: /app/cache/transcode
+    volumes:
+      - data:/app/data
+      - cache:/app/cache
+      - ${STAGING_MEDIA:-../../media}:/app/media:ro
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    networks:
+      staging:
+        ipv4_address: 10.203.204.3
+    depends_on:
+      web-sync:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # Same one-shot as on the Pi: copies the web build of this image into the volume Caddy serves.
+  web-sync:
+    image: popcorntv:${POPCORNTV_VERSION:?set POPCORNTV_VERSION}
+    entrypoint: ['/bin/sh', '-c']
+    command:
+      - >-
+        mkdir -p /srv/web/assets
+        && cp -RL /app/web/assets/. /srv/web/assets/
+        && find /app/web -maxdepth 1 -type f -exec cp -L -t /srv/web/ {} +
+        && test -f /srv/web/index.html
+        && find /srv/web/assets -type f -mtime +30 -delete
+    volumes:
+      - web:/srv/web
+    network_mode: none
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: 'no'
+
+  caddy:
+    image: caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d
+    ports:
+      # Loopback only (spec auth §5).
+      - '127.0.0.1:8080:8080'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - web:/srv/popcorntv-web:ro
+    # No TLS and no admin API: nothing to keep in /data or /config.
+    tmpfs:
+      - /data
+      - /config
+    user: '1000:1000'
+    read_only: true
+    cap_drop: [ALL]
+    # The caddy binary carries this file capability; exec fails without it in the bounding set.
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: [no-new-privileges:true]
+    networks:
+      staging:
+        ipv4_address: 10.203.204.2
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:8080/api/health']
+      interval: 30s
+      timeout: 5s
+      start_period: 5s
+      retries: 3
+    depends_on:
+      popcorntv:
+        condition: service_healthy
+    restart: unless-stopped
+
+networks:
+  staging:
+    ipam:
+      config:
+        - subnet: 10.203.204.0/24
+
+volumes:
+  data:
+  cache:
+  web:
