@@ -15,12 +15,14 @@ export type KeyframeProbe = (
 ) => Promise<number>;
 
 const PROBE_TIMEOUT_MS = 10_000;
+const NO_PTS = '-9223372036854775808';
 const PROBE_MAX_OUTPUT_BYTES = 64 * 1024;
 
 /**
  * Builds a probe that runs FFmpeg's own seek, with the same `-ss` and maps as the session,
  * and prints the packets up to the first video one (`framecrc`): the player's timeline
- * starts at the earliest of them, audio included (MPEG-TS audio often leads the keyframe). `-copyts -start_at_zero` keeps its
+ * starts at the earliest of them, audio included (audio can lead the keyframe,
+ * as in MPEG-TS or a file remuxed from it). `-copyts -start_at_zero` keeps its
  * time on the media timeline. The path is the `-i` argument, never an option.
  */
 export function createKeyframeProbe(ffmpegPath: string): KeyframeProbe {
@@ -69,7 +71,8 @@ export function parseFramecrc(output: string): number | null {
   let start: number | null = null;
   for (const [, stream, pts] of output.matchAll(/^(\d+),\s*-?\d+,\s*(-?\d+),/gm)) {
     const base = bases.get(stream ?? '');
-    if (base === undefined) continue;
+    // FFmpeg prints a missing pts as INT64_MIN: no time to report.
+    if (base === undefined || pts === NO_PTS) continue;
     const time = Number(pts) * base;
     start = start === null ? time : Math.min(start, time);
   }

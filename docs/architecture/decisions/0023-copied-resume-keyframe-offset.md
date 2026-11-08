@@ -36,7 +36,8 @@ A. `KeyframeProbe` (`src/playback/keyframe-probe.ts`) runs FFmpeg itself with th
 session's seek and maps: `ffmpeg -ss <startSec> -copyts -start_at_zero -i <file> -map 0:V:0
 [-map 0:a:<track>] -c copy -frames:v 1 -f framecrc -`, and the pure `parseFramecrc` keeps the
 smallest pts over the printed packets, each in its stream's time base: the player's timeline
-starts at the earliest packet, and MPEG-TS audio often leads the video keyframe by seconds.
+starts at the earliest packet, and audio can lead the video keyframe by seconds (MPEG-TS, not a scanned container, or a file
+remuxed from it).
 Asking FFmpeg, not ffprobe, matters: FFmpeg backs its seek off by up to 3/23 s with B-frames, counts `-ss` from the container start and seeks index-less MPEG-TS
 differently; an ffprobe `-read_intervals` probe disagreed with it by one GOP in the review
 (Matroska with B-frames, late video start, MPEG-TS). `SessionManager.open` probes only when
@@ -51,5 +52,6 @@ the web floors `offsetSec + currentTime` before it saves.
 - Timeline, saved positions and subtitles are exact on copied resumes.
 - `PlaybackStart.offsetSec` keeps its type but changes meaning for copied HLS resumes: the
   real start, up to one GOP before `startSec`, possibly fractional.
-- Residual error measured in QA: under 0.2 s (B-frame delay), instead of up to one GOP.
+- Residual error measured in review: 0 s with copied audio; up to −0.08 s when the audio is
+  re-encoded (its accurate seek trims to `startSec`, the probe copies), instead of up to one GOP.
 - One FFmpeg run (≤ 10 s timeout, one packet copied) more per copied resume.

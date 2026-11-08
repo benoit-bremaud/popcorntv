@@ -19,7 +19,7 @@ FFmpeg really started.
 | R55-02 | resume 40 s (exactly on a keyframe) | FFmpeg backs off to 30; `offsetSec` ≈ 30 | `29.954`, frame 30 ([shot](2026-11-08-issue-55-resume-offset/02-resume-40-first-frame-30.png)) | OK |
 | R55-03 | start 0 | `offsetSec: 0`, no probe | `0` | OK |
 | R55-04 | subtitles at the answered `offsetSec` | cue end = 120.023 − `offsetSec` | 80.062 and 90.069 | OK |
-| R55-05 | probe vs player start on the reviewer's MKV / MP4 / late-video MKV / MPEG-TS files | equal to the measured player start | 4.949 / 4.928 / 5.440 / 6.805, all equal | OK |
+| R55-05 | probe vs player start on the reviewer's MKV / MP4 / late-video MKV / MPEG-TS files | equal to the measured player start | 4.949 / 4.928 / 5.440 / 6.805, all equal (`.ts` is not a scanned container: probed directly) | OK |
 | R55-06 | `playback.keyframe.failed` in the log | none | 0 | OK |
 
 Before the fix, R55-01 answered `offsetSec: 47` for a stream that started at 40: positions

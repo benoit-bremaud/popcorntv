@@ -34,6 +34,7 @@ describe('parseFramecrc', () => {
     ['no packet', HEADER],
     ['no time base', '0, 1, 1, 1, 1, 0x0\n'],
     ['a zero denominator', '#tb 0: 1/0\n0, 1, 1, 1, 1, 0x0\n'],
+    ['only a packet without pts', '#tb 0: 1/1000\n0, 5000, -9223372036854775808, 1, 1, 0x0\n'],
     ['a packet of a stream without time base', '#tb 0: 1/1000\n1, 5, 5, 1, 1, 0x0\n'],
   ])('returns null with %s', (_case, output) => {
     expect(parseFramecrc(output)).toBeNull();

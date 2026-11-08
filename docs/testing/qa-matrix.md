@@ -39,7 +39,8 @@ re-encoded) and one with a text subtitle track:
    position saved after 10 s agree with the media time (no forward drift on the next
    resume).
 2. Resume exactly on a keyframe: same agreement (FFmpeg backs its seek off with B-frames).
-3. Resume an MPEG-TS file: same agreement (audio may lead the keyframe).
+3. Resume a file whose audio leads the video keyframe (e.g. an MKV remuxed from a TV
+   recording): same agreement.
 4. The server log shows `playback.session.opened` with `offsetSec` ≤ `startSec` and no
    `playback.keyframe.failed`.
 
