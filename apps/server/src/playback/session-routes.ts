@@ -113,7 +113,7 @@ export function registerSessionRoutes(app: FastifyInstance, deps: SessionRoutesD
       sessionId: result.id,
       url: `/playback/sessions/${result.id}/${PLAYLIST_NAME}`,
       startSec,
-      offsetSec: startSec,
+      offsetSec: result.offsetSec,
     };
     return reply.code(201).send(hls);
   });

@@ -81,8 +81,8 @@ sequenceDiagram
 
 ## Notes
 
-- `ffmpegArgs` is pure; `Transcoder` is the only child-process egress of the playback
-  domain and gets `spawn` injected (tests never run FFmpeg).
+- `ffmpegArgs` is pure; `Transcoder` is the child-process egress of the playback sessions
+  (the keyframe probe of a copied resume is the other one, ADR-0023) and gets `spawn` injected (tests never run FFmpeg).
 - Playlist and segment routes never build a path from the URL without validating the
   name (`index.m3u8` or `segment-\d{5}.ts`) and joining it to the session's own dir.
 - Direct play keeps the #7 Range route untouched.

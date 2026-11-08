@@ -128,7 +128,8 @@ export function PlayerDialog({
   function position(): number | null {
     const element = video.current;
     if (!positioned.current || element === null) return null;
-    return offsetSec + Math.floor(element.currentTime);
+    // A copied resume starts on a keyframe, a fraction of a second (ADR-0023).
+    return Math.floor(offsetSec + element.currentTime);
   }
 
   /** Saves run one after another, so an older position can never land last. */
@@ -141,7 +142,10 @@ export function PlayerDialog({
     return saves.current;
   }
 
-  /** Direct play seeks in the file; an HLS session already starts at the offset. */
+  /**
+   * Direct play seeks in the file; an HLS session starts at `offsetSec`, so it seeks the
+   * rest of the way (a copied resume starts on an earlier keyframe, ADR-0023).
+   */
   function seekToStart(): void {
     const element = video.current;
     // The server's effective start: it starts over when the asked one is past the end.

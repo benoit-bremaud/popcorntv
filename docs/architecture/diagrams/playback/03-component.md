@@ -35,6 +35,7 @@ flowchart LR
     Art[Artwork cache]
     Trans[FFmpeg runner]
     Probe[ffprobe runner]
+    KProbe[Keyframe probe]
     Repo[SQLite repositories]
     Stream[Range file streamer]
     Subs[Subtitle routes + extractor + WebVTT shift]
@@ -53,6 +54,7 @@ flowchart LR
     Routes --> Decider
     Routes --> Repo
     Routes --> Trans
+    Routes --> KProbe
     Routes --> Scan
     Scan --> Parser
     Scan --> Probe
@@ -76,6 +78,7 @@ flowchart LR
   Subs --> SubCache[("TRANSCODE_DIR/subtitles")]
   Trans -->|"child process"| FFmpeg[["ffmpeg"]]
   Probe -->|"child process"| FFprobe[["ffprobe"]]
+  KProbe -->|"child process"| FFmpeg
   Repo --> DB[("SQLite")]
 ```
 
@@ -84,7 +87,8 @@ flowchart LR
 - Flat layering on purpose: routes call the domain and the adapters directly. A ports
   layer appears only when a second implementation exists (e.g. a second metadata
   provider).
-- The two runners are the only egress to the process API; nothing else spawns processes.
+- The two runners and the keyframe probe (a copied resume's real start, ADR-0023) are the
+  only egress to the process API; nothing else spawns processes.
   The scanner receives the `ffprobe runner` as a function (`Prober`) so tests inject a
   fake. `Name parser + path guard` are pure (no fs, no process).
 - Metadata (#4, ADR-0003): the `TMDB client` is the single HTTP egress, injected into

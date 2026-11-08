@@ -6,6 +6,7 @@ import { openDatabase } from './db/index.js';
 import { createFfprobe } from './library/ffprobe.js';
 import { loggerOptions } from './logging.js';
 import { createTmdbClient } from './metadata/tmdb-client.js';
+import { createKeyframeProbe } from './playback/keyframe-probe.js';
 import { createTranscoder } from './playback/transcoder.js';
 import { installShutdownHandlers } from './shutdown.js';
 
@@ -28,6 +29,7 @@ const app = await buildApp({
     : null,
   artworkDir: config.artworkDir,
   transcoder: createTranscoder(config.ffmpegPath),
+  keyframeProbe: createKeyframeProbe(config.ffmpegPath),
   transcodeDir: config.transcodeDir,
   transcodeMaxSessions: config.transcodeMaxSessions,
   publicUrl: config.publicUrl,

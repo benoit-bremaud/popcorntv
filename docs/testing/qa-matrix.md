@@ -12,7 +12,7 @@ One row per screen or flow. Cell format: `date · SHA · environment · OK | KO 
 | Detail dialog | 2026-11-08 · 0698684 · Pi · OK | — (no error path in this flow) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · KO #169 | 2026-11-08 · 0698684 · Pi · KO #172 | 2026-11-08 · 0698684 · Pi · OK (619 px) · [shot](../architecture/qa/2026-11-08-full-pass-pi/18-narrow-619-dialog.jpg) |
 | Direct play | 2026-11-08 · 0698684 · Pi · OK · [shot](../architecture/qa/2026-11-08-full-pass-pi/20-direct-play-sprite-fright.jpg) | — (no error path in this flow) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · KO #169 | — (player controls native, not audited) | — (window floor 619 px, 320/390 not reachable) |
 | HLS play | 2026-11-08 · 0698684 · Pi · OK · [shot](../architecture/qa/2026-11-08-full-pass-pi/06-hls-player-sintel.jpg) | — (no error path in this flow) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · KO #169 | — (player controls native, not audited) | — (window floor 619 px, 320/390 not reachable) |
-| Resume | 2026-11-08 · 0698684 · Pi · KO #55 | — (no error path in this flow) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | — (not audited) | — (window floor 619 px, 320/390 not reachable) |
+| Resume | 2026-11-08 · a0aedb0 · local prod build · OK (#55 fixed: copied resume reports the real start) · [report](../architecture/qa/2026-11-08-issue-55-resume-offset.md) | — (no error path in this flow) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | — (not audited) | — (window floor 619 px, 320/390 not reachable) |
 | Next episode | — (no series with episodes in the libraries) | — (no series) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | — (no series) | — (no series) | — (window floor 619 px, 320/390 not reachable) |
 | Subtitles | — (no file with a text track reached) | 2026-11-08 · 0698684 · Pi · OK (index 999 / -1 / 0 probes: 404/400/200) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | — (no track) | — (no track) | — (window floor 619 px, 320/390 not reachable) |
 | Audio track | 2026-11-08 · 0698684 · Pi · KO #157 | — (no multi-audio file) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | — (no multi-audio file) | — (no multi-audio file) | — (window floor 619 px, 320/390 not reachable) |
@@ -29,3 +29,18 @@ One row per screen or flow. Cell format: `date · SHA · environment · OK | KO 
 | Admin: events | 2026-11-08 · 0698684 · Pi · OK | — (no error path in this flow) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | 2026-11-08 · 0698684 · Pi · KO #175 | — (window floor 619 px, 320/390 not reachable) |
 | Libraries add / edit / delete / scan | 2026-11-08 · 0698684 · Pi · KO #163 | 2026-11-08 · 0698684 · Pi · KO #163 | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | — (not audited) | — (window floor 619 px, 320/390 not reachable) |
 | Scheduled scan | — (timer needs server logs, ROB-07) | — (needs server logs) | — (BLOCKED) | — (no UI) | — (no UI) | — (no UI) |
+
+## Resume checks (#55, ADR-0023)
+
+Replay on every pass that touches playback, with an H.264 file copied to HLS (not
+re-encoded) and one with a text subtitle track:
+
+1. Resume at a position a few seconds after a keyframe: the picture, the subtitles and the
+   position saved after 10 s agree with the media time (no forward drift on the next
+   resume).
+2. Resume exactly on a keyframe: same agreement (FFmpeg backs its seek off with B-frames).
+3. Resume a file whose audio leads the video keyframe (e.g. an MKV remuxed from a TV
+   recording): same agreement.
+4. The server log shows `playback.session.opened` with `offsetSec` ≤ `startSec` and no
+   `playback.keyframe.failed`.
+

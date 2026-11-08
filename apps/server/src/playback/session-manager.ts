@@ -4,14 +4,21 @@ import { access, mkdir, mkdtemp, readdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import type { FastifyBaseLogger } from 'fastify';
+import { effectiveAudioIndex } from '@popcorntv/shared';
 import type { Role, StreamInfo } from '@popcorntv/shared';
 import type { Caller } from '../http.js';
-import { PLAYLIST_NAME, SEGMENT_PATTERN, ffmpegArgs } from './ffmpeg-args.js';
+import { PLAYLIST_NAME, SEGMENT_PATTERN, copiesVideo, ffmpegArgs } from './ffmpeg-args.js';
+import type { KeyframeProbe } from './keyframe-probe.js';
 import type { TranscodeHandle, Transcoder } from './transcoder.js';
 
 /** Tunables of the session lifecycle (state diagram 05); tests shorten them. */
 export interface SessionManagerOptions {
   readonly transcoder: Transcoder;
+  /**
+   * Finds the keyframe a copied resume really starts at (ADR-0023); without it the
+   * requested `startSec` is reported, one GOP late at most.
+   */
+  readonly keyframeProbe?: KeyframeProbe;
   /** Parent of every session directory (`TRANSCODE_DIR`). */
   readonly dir: string;
   /** `TRANSCODE_MAX_SESSIONS`: at it `open` frees a slot or answers `busy` (spec R5, R5b). */
@@ -33,7 +40,7 @@ export type Opener = Pick<Caller, 'userId' | 'role'>;
  * taken over meanwhile, `not_playable` without a video stream.
  */
 export type OpenResult =
-  | { readonly kind: 'ready'; readonly id: string }
+  | { readonly kind: 'ready'; readonly id: string; readonly offsetSec: number }
   | { readonly kind: 'not_playable' | 'busy' | 'failed' };
 
 interface Session {
@@ -104,8 +111,12 @@ export class SessionManager {
   ): Promise<OpenResult> {
     // Known before any take-over: a title without video must not end someone's stream.
     if (!streams.some((stream) => stream.type === 'video')) return { kind: 'not_playable' };
+    // A caller bound to be refused costs no probe.
+    if (this.atLimit() && this.victimFor(opener) === undefined) return { kind: 'busy' };
+    // Probed before the limit check: nothing may be awaited between it and the reservation.
+    const offsetSec = await this.realStart(inputPath, streams, startSec, audioIndex);
     let preempted: Promise<boolean> | undefined;
-    if (this.sessions.size + this.starting >= this.options.maxSessions) {
+    if (this.atLimit()) {
       const victim = this.victimFor(opener);
       if (victim === undefined) return { kind: 'busy' };
       const { owner, role } = this.sessions.get(victim) ?? {};
@@ -186,11 +197,12 @@ export class SessionManager {
           session: id,
           userId: opener.userId,
           startSec,
+          offsetSec,
           audioIndex,
         },
         'transcode session opened',
       );
-      return { kind: 'ready', id };
+      return { kind: 'ready', id, offsetSec };
     }
     this.options.logger.warn(
       { event: 'playback.session.not_ready', session: id, exited },
@@ -198,6 +210,38 @@ export class SessionManager {
     );
     await this.close(id, 'not_ready');
     return { kind: 'failed' };
+  }
+
+  private atLimit(): boolean {
+    return this.sessions.size + this.starting >= this.options.maxSessions;
+  }
+
+  /**
+   * Media time the HLS timeline starts at (ADR-0023): FFmpeg's input `-ss` starts a copied
+   * video on a keyframe before `startSec`, so the probe asks FFmpeg's own seek where; a
+   * re-encoded video starts at `startSec`. A failed probe keeps `startSec`, as before #55.
+   */
+  private async realStart(
+    inputPath: string,
+    streams: readonly StreamInfo[],
+    startSec: number,
+    audioIndex: number,
+  ): Promise<number> {
+    const probe = this.options.keyframeProbe;
+    if (startSec <= 0 || probe === undefined || !copiesVideo(streams)) return startSec;
+    try {
+      // The same audio map as `ffmpegArgs`: the timeline starts at its earliest packet.
+      const audioTrack = streams.some((stream) => stream.type === 'audio')
+        ? effectiveAudioIndex(streams, audioIndex)
+        : null;
+      return await probe(inputPath, startSec, audioTrack);
+    } catch (error) {
+      this.options.logger.warn(
+        { event: 'playback.keyframe.failed', err: error, startSec },
+        'keyframe probe failed, reporting the requested start',
+      );
+      return startSec;
+    }
   }
 
   /**

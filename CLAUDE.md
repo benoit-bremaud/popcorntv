@@ -143,8 +143,8 @@ Server layout (flat, component diagram 03): `src/library/` holds the pure `name-
 and `path-guard`, the `ffprobe` runner (only process egress), the `folder-lister` (one-level `readdir` of `MEDIA_ROOT`), the `scanner`, the pure `identity` (carry-over keys, ADR-0018), the `scheduler` (interval rescans, ADR-0016), the per-library
 `lock` (scan + included enrich and explicit enrich never overlap), the Drizzle `repository`
 and the `routes`; `src/playback/` the pure `range` parser, the
-streaming `routes`, the pure `ffmpeg-args`, the `transcoder` (only child-process egress,
-`spawn` injected), the `session-manager` and the `session-routes`; `src/progress/` the `watch_progress`
+streaming `routes`, the pure `ffmpeg-args`, the `transcoder` (child-process egress to
+FFmpeg sessions, `spawn` injected), the `keyframe-probe` (ADR-0023), the `session-manager` and the `session-routes`; `src/progress/` the `watch_progress`
 `repository` and its `routes`; `src/profiles/` the `profiles` `repository` and its `routes`; `src/discover/` the `wishlist-repository`
 (and the local `tmdb_id` match) and the Discover `routes` (ADR-0020); `src/metadata/` the `tmdb-client` (only HTTP egress,
 `fetch` injected), the pure `matcher` (match + map), the `artwork-cache`, its

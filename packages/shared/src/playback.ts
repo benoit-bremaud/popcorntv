@@ -120,7 +120,9 @@ export function matchAudioTrack(streams: readonly StreamInfo[], chosen: AudioTra
 /**
  * Response of `POST /playback/sessions`: 200 direct (no session) or 201 HLS session.
  * `offsetSec` is the media time at which the player's timeline starts: 0 for direct play
- * (the web seeks itself), `startSec` for HLS (FFmpeg started there, ADR-0007 §2).
+ * (the web seeks itself); for HLS, where FFmpeg really started: `startSec` when the video is
+ * re-encoded, the keyframe FFmpeg's seek landed on when it is copied (ADR-0023), possibly
+ * fractional and up to one GOP before `startSec`.
  * `startSec` is the effective resume point: 0 when the asked one was at or past the end.
  */
 export type PlaybackStart =

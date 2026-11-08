@@ -15,6 +15,10 @@ const VIEWER = { userId: 'viewer-1', role: 'viewer' } as const;
 const OTHER_VIEWER = { userId: 'viewer-2', role: 'viewer' } as const;
 const OTHER_OWNER = { userId: 'owner-2', role: 'owner' } as const;
 
+const H264: readonly StreamInfo[] = [
+  { type: 'video', codec: 'h264', width: 1920, height: 1080, language: null },
+];
+
 const HEVC: readonly StreamInfo[] = [
   { type: 'video', codec: 'hevc', width: 3840, height: 2160, language: null },
 ];
@@ -401,5 +405,72 @@ describe('SessionManager', () => {
     expect(await sessions.close(result.id)).toBe(true);
     expect(await sessions.close(result.id)).toBe(false);
     expect(kills).toHaveBeenCalledTimes(1);
+  });
+
+  describe('copied resume start (ADR-0023)', () => {
+    it('reports where the probe says FFmpeg starts, keeping the requested seek', async () => {
+      const { transcoder, runs } = fakeTranscoder('writes');
+      const keyframeProbe = vi.fn(async () => 39.96);
+      const result = await manager(transcoder, { keyframeProbe }).open(USER, '/m/a.mkv', H264, 42);
+
+      expect(keyframeProbe).toHaveBeenCalledWith('/m/a.mkv', 42, null);
+      expect(result).toMatchObject({ kind: 'ready', offsetSec: 39.96 });
+      expect(runs[0]?.args.slice(4, 6)).toEqual(['-ss', '42']);
+    });
+
+    it('never probes a re-encoded video or a start from zero', async () => {
+      const { transcoder } = fakeTranscoder('writes');
+      const keyframeProbe = vi.fn(async () => 1);
+      const sessions = manager(transcoder, { keyframeProbe, maxSessions: 2 });
+
+      const reencoded = await sessions.open(USER, '/m/a.mkv', HEVC, 42);
+      const fromZero = await sessions.open(USER, '/m/b.mkv', H264, 0);
+
+      expect(keyframeProbe).not.toHaveBeenCalled();
+      expect(reencoded).toMatchObject({ offsetSec: 42 });
+      expect(fromZero).toMatchObject({ offsetSec: 0 });
+    });
+
+    it('keeps the requested start and warns when the probe fails', async () => {
+      const { transcoder, runs } = fakeTranscoder('writes');
+      const keyframeProbe = vi.fn(async () => Promise.reject(new Error('ffprobe died')));
+      const result = await manager(transcoder, { keyframeProbe }).open(USER, '/m/a.mkv', H264, 42);
+
+      expect(result).toMatchObject({ kind: 'ready', offsetSec: 42 });
+      expect(runs[0]?.args.slice(4, 6)).toEqual(['-ss', '42']);
+      expect(warn).toHaveBeenCalledWith(
+        expect.objectContaining({ event: 'playback.keyframe.failed' }),
+        expect.any(String),
+      );
+    });
+  });
+
+  it('answers busy without probing when no slot may be taken', async () => {
+    const { transcoder } = fakeTranscoder('writes');
+    const keyframeProbe = vi.fn(async () => 40);
+    const sessions = manager(transcoder, { keyframeProbe });
+    await sessions.open(USER, '/m/a.mkv', HEVC);
+
+    const result = await sessions.open(VIEWER, '/m/b.mkv', H264, 42);
+
+    expect(result).toEqual({ kind: 'busy' });
+    expect(keyframeProbe).not.toHaveBeenCalled();
+  });
+
+  it('probes with the audio track the session maps', async () => {
+    const { transcoder } = fakeTranscoder('writes');
+    const keyframeProbe = vi.fn(async () => 40);
+    const audio = (language: string): StreamInfo => ({
+      type: 'audio',
+      codec: 'aac',
+      width: null,
+      height: null,
+      language,
+    });
+    const streams = [...H264, audio('eng'), audio('fra')];
+
+    await manager(transcoder, { keyframeProbe }).open(USER, '/m/a.mkv', streams, 42, 1);
+
+    expect(keyframeProbe).toHaveBeenCalledWith('/m/a.mkv', 42, 1);
   });
 });

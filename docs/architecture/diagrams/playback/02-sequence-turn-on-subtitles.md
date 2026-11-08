@@ -51,5 +51,5 @@ sequenceDiagram
 
 ## Notes
 
-- `s` is the session's `offsetSec`: 0 in direct play, the resume point in HLS.
+- `s` is the session's `offsetSec`: 0 in direct play, where FFmpeg really started in HLS (ADR-0023).
 - The cache keeps the unshifted track, so one extraction serves every offset.
