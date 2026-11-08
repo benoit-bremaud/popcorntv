@@ -29,7 +29,23 @@ One row per screen or flow. Cell format: `date · SHA · environment · OK | KO 
 | Admin: links | 2026-11-08 · 0698684 · Pi · OK | — (no link created or revoked by this pass) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | 2026-11-08 · 0698684 · Pi · KO #175 | — (window floor 619 px, 320/390 not reachable) |
 | Admin: events | 2026-11-08 · 0698684 · Pi · OK | — (no error path in this flow) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | 2026-11-08 · 0698684 · Pi · KO #175 | — (window floor 619 px, 320/390 not reachable) |
 | Libraries add / edit / delete / scan | 2026-11-08 · 0698684 · Pi · KO #163 | 2026-11-08 · 0698684 · Pi · KO #163 | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | — (not audited) | — (window floor 619 px, 320/390 not reachable) |
+| Unknown paths (#177) | 2026-11-08 · local staging · OK (`/`, assets 200) · [report](../architecture/qa/2026-11-08-issue-177-not-found.md) | 2026-11-08 · local staging · OK (24-path matrix, 404 page, `/api` JSON) | — (static page, no network call) | — (no layer) | — (not audited) | — (not audited) |
 | Scheduled scan | — (timer needs server logs, ROB-07) | — (needs server logs) | — (BLOCKED) | — (no UI) | — (no UI) | — (no UI) |
+
+## Not-found checks (#177)
+
+Replay on every pass that touches a Caddyfile, the web build entries or the deploy:
+
+1. `make staging-up` then `make check-not-found`: every line is `ok` (unknown paths,
+   dotfiles, trailing slash, deep paths, `HEAD`, query strings, `/index.html/x`, encoded
+   dots answer `404 text/html`; `/`, `/index.html`, a hashed asset and the favicon `200`).
+2. `/api`, `/api/artwork/..%2f..%2fetc%2fpasswd`, `/api/%2e%2e/nope` answer `404
+   application/json`, never HTML; `/api/health` still `200`.
+3. The 404 page renders with the token styles (no CSP violation in the console) and its
+   link lands on the catalog.
+4. A setup or redeem link (`/#…`) still opens its form: the hash flows only use `/`.
+5. On the Pi, after an owner deploy that copies the homelab Caddyfile: same matrix with the
+   Pi origin (`scripts/not-found-check.sh https://popcorntv.bb-homelab.local`).
 
 ## Discover TMDB failure checks (#179)
 

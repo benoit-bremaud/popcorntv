@@ -31,10 +31,29 @@ localhost:8443 {
 		file_server
 	}
 
+	# Caddy matches on the decoded, cleaned path: `/api/x/..%2f..%2fetc` reaches the
+	# routes below as `/etc`. The raw path still says /api, so it is an API miss (#177).
+	@rawApi expression `{http.request.orig_uri.path}.startsWith("/api/") || {http.request.orig_uri.path} == "/api"`
+	handle @rawApi {
+		header Content-Type application/json
+		respond `{"error":"not_found"}` 404
+	}
+
+	# The app has no client routes: only real files and `/` (index.html) exist. Anything
+	# else is a real 404 with the static 404 page (#177), never index.html with a 200.
 	handle {
 		root * /srv/popcorntv-web
 		header Cache-Control "no-cache"
-		try_files {path} /index.html
+		# A path under a file (`/index.html/x`) would be a bare 400 from file_server.
+		@missing not file {path} {path}index.html
+		error @missing 404
+		file_server
+	}
+
+	handle_errors 404 {
+		root * /srv/popcorntv-web
+		header Cache-Control "no-cache"
+		rewrite * /404.html
 		file_server
 	}
 }

@@ -12,6 +12,16 @@ export default defineConfig({
       ),
     },
   },
+  build: {
+    // The static 404 page Caddy answers for unknown paths (#177) is a second entry, so it
+    // shares the hashed token stylesheet pipeline.
+    rollupOptions: {
+      input: {
+        main: fileURLToPath(new URL('index.html', import.meta.url)),
+        notFound: fileURLToPath(new URL('404.html', import.meta.url)),
+      },
+    },
+  },
   server: {
     proxy: {
       // The web player calls the API under /api; the dev server forwards to Fastify
