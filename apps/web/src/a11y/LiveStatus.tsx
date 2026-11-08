@@ -10,7 +10,8 @@ type Props = {
 /**
  * A visually hidden polite live region. Always mounted: a region inserted together with its
  * text is not announced by most screen readers. `role="status"` with an explicit `aria-live`
- * because Orca on Firefox ignores the implicit live value of `<output>` (#165).
+ * and `aria-atomic` (both implicit in the role) because Orca on Firefox does not reliably
+ * honour the implicit live value of `<output>` (#165).
  */
 export function LiveStatus({ message }: Props): React.JSX.Element {
   return (

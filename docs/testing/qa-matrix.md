@@ -146,6 +146,7 @@ Replay with a screen reader (Orca on Firefox, then NVDA or VoiceOver when availa
 4. Type only spaces: nothing is announced and the rows stay.
 5. Discover tab, search and press Enter: "Searching for “…”…" then the count; with the
    network cut, "TMDB could not be reached." is read.
-6. Empty catalog (viewer and owner): "Nothing to watch yet." / the welcome is exposed as a
-   status; the loading line too.
-7. DOM check: exactly one `role="status"` region per tab, present before the first search.
+6. Empty catalog: the viewer hears "Nothing to watch yet.", the owner hears the welcome
+   line after "Loading the catalog…" (same region, its text changes).
+7. DOM check: exactly one `role="status"` region per tab, present before the first search
+   and before the catalog loads.

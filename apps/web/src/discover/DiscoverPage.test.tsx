@@ -194,6 +194,17 @@ describe('DiscoverPage', () => {
     );
   });
 
+  it('keeps the status empty on a blank search (#165)', async () => {
+    const user = userEvent.setup();
+    const api = makeApi();
+    render(<DiscoverPage profileId="p1" onPlayInLibrary={() => undefined} api={api} />);
+
+    await user.type(screen.getByRole('searchbox', { name: 'Search TMDB titles' }), '   {Enter}');
+
+    expect(api.search).not.toHaveBeenCalled();
+    expect(screen.getByRole('status')).toBeEmptyDOMElement();
+  });
+
   it('keeps the status empty before any search (#165)', () => {
     render(<DiscoverPage profileId="p1" onPlayInLibrary={() => undefined} api={makeApi()} />);
 

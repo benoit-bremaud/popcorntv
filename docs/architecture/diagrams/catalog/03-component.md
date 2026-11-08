@@ -11,6 +11,8 @@ flowchart TB
     app[App] --> page[catalog/CatalogPage]
     page --> controls[catalog/Controls]
     page --> search["catalog/SearchBox «new #135»"]
+    page --> live["a11y/LiveStatus «new #165»<br/>polite status, useSettledMessage 500 ms"]
+    discover --> live
     page --> row[catalog/PosterRow]
     page --> grid[catalog/PosterGrid]
     page --> detail[catalog/DetailDialog]

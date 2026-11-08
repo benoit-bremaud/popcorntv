@@ -226,13 +226,17 @@ describe('CatalogPage', () => {
   it('shows the empty state when no library has items', async () => {
     renderPage(async () => [pilot]);
 
-    expect(await screen.findByText(/Nothing to watch yet/)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent('Nothing to watch yet.'),
+    );
   });
 
   it('offers a viewer nothing to add when the catalog is empty', async () => {
     render(<CatalogPage profileId="default" load={async () => []} />);
 
-    expect(await screen.findByText('Nothing to watch yet.')).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent('Nothing to watch yet.'),
+    );
     expect(screen.queryByRole('button', { name: 'Add a library' })).toBeNull();
   });
 
@@ -467,7 +471,6 @@ describe('CatalogPage search (spec search)', () => {
 
     expect(screen.getByRole('status')).toBeEmptyDOMElement();
     await user.type(box, '   ');
-    await act(() => new Promise((resolve) => setTimeout(resolve, 600)));
     expect(screen.getByRole('status')).toBeEmptyDOMElement();
   });
 
@@ -492,20 +495,23 @@ describe('CatalogPage search (spec search)', () => {
     }
   });
 
-  it('should expose the loading and empty catalog as statuses (#165)', async () => {
+  it('should announce the empty catalog in the region kept from loading (#165)', async () => {
     render(<CatalogPage profileId="default" load={async () => []} />);
+    const status = screen.getByRole('status');
 
-    expect(screen.getByRole('status')).toHaveTextContent('Loading the catalog…');
-    await waitFor(() =>
-      expect(screen.getByRole('status')).toHaveTextContent('Nothing to watch yet.'),
-    );
+    expect(status).toBeEmptyDOMElement();
+    await waitFor(() => expect(status).toHaveTextContent('Nothing to watch yet.'));
+    expect(screen.getByRole('status')).toBe(status);
   });
 
-  it('should expose the owner welcome as a status (#165)', async () => {
+  it('should announce the owner welcome in the same region, landmark kept (#165)', async () => {
     render(
       <CatalogPage profileId="default" load={async () => []} onAddLibrary={() => undefined} />,
     );
+    const status = screen.getByRole('status');
 
-    expect(await screen.findByRole('status', { name: 'Welcome to PopCornTV' })).toBeInTheDocument();
+    await waitFor(() => expect(status).toHaveTextContent(/^Welcome to PopCornTV\. Add a library/));
+    expect(screen.getByRole('status')).toBe(status);
+    expect(screen.getByRole('region', { name: 'Welcome to PopCornTV' })).toBeInTheDocument();
   });
 });

@@ -119,11 +119,14 @@ export function CatalogPage({
     [fetchProgress],
   );
 
+  // Loading and empty states share one leading LiveStatus, so React keeps the region and
+  // only its text changes: a region mounted with its text is not announced (#165).
   if (catalog.kind === 'loading') {
     return (
-      <p className="status muted" role="status">
-        Loading the catalog…
-      </p>
+      <>
+        <LiveStatus message="" />
+        <p className="status muted">Loading the catalog…</p>
+      </>
     );
   }
   if (catalog.kind === 'failed') {
@@ -141,19 +144,23 @@ export function CatalogPage({
   if (items.length === 0) {
     if (!onAddLibrary) {
       return (
-        <p className="status muted" role="status">
-          Nothing to watch yet.
-        </p>
+        <>
+          <LiveStatus message="Nothing to watch yet." />
+          <p className="status muted">Nothing to watch yet.</p>
+        </>
       );
     }
     return (
-      <section className="status" role="status" aria-labelledby="welcome-title">
-        <h2 id="welcome-title">Welcome to PopCornTV</h2>
-        <p className="muted">Add a library from your media folder, then scan it.</p>
-        <button type="button" className="button" onClick={onAddLibrary}>
-          Add a library
-        </button>
-      </section>
+      <>
+        <LiveStatus message={`${WELCOME_TITLE}. ${WELCOME_HINT}`} />
+        <section className="status" aria-labelledby="welcome-title">
+          <h2 id="welcome-title">{WELCOME_TITLE}</h2>
+          <p className="muted">{WELCOME_HINT}</p>
+          <button type="button" className="button" onClick={onAddLibrary}>
+            Add a library
+          </button>
+        </section>
+      </>
     );
   }
 
@@ -222,6 +229,9 @@ export function CatalogPage({
     </WatchedContext>
   );
 }
+
+const WELCOME_TITLE = 'Welcome to PopCornTV';
+const WELCOME_HINT = 'Add a library from your media folder, then scan it.';
 
 type SearchResultsProps = {
   readonly query: string;
