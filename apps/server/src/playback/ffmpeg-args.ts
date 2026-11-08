@@ -17,6 +17,12 @@ function first(streams: readonly StreamInfo[], type: StreamInfo['type']): Stream
   return streams.find((stream) => stream.type === type) ?? null;
 }
 
+/** True when the first video stream is copied, so an input seek lands on a keyframe. */
+export function copiesVideo(streams: readonly StreamInfo[]): boolean {
+  const video = first(streams, 'video');
+  return video !== null && COPY_VIDEO.has(video.codec.toLowerCase());
+}
+
 function videoArgs(video: StreamInfo): string[] {
   if (COPY_VIDEO.has(video.codec.toLowerCase())) return ['-c:v', 'copy'];
   return [

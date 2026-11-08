@@ -24,7 +24,7 @@ function toStamp(ms: number): string {
  */
 export function shiftWebVtt(text: string, offsetSec: number): string {
   if (offsetSec <= 0) return text;
-  const offsetMs = offsetSec * 1000;
+  const offsetMs = Math.round(offsetSec * 1000);
   const blocks = text.replaceAll('\r\n', '\n').split(/\n{2,}/);
   const kept: string[] = [];
   for (const block of blocks) {

@@ -136,7 +136,7 @@ describe('GET /media/:id/subtitles/:index', () => {
     expect((await app.inject({ url })).statusCode).toBe(400);
   });
 
-  it.each(['-3', '1.5', 'x'])('answers 400 for offsetSec=%s', async (offset) => {
+  it.each(['-3', 'x', '604801'])('answers 400 for offsetSec=%s', async (offset) => {
     const film = await scanned();
 
     const response = await app.inject({ url: `/media/${film.id}/subtitles/1?offsetSec=${offset}` });

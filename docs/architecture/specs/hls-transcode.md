@@ -98,8 +98,9 @@ Extensions:
 
 ## 4. Non-functional
 
-- `transcoder.ts` is the only child-process egress of the playback domain; tests inject a
-  fake `spawn`. No real FFmpeg in unit tests.
+- `transcoder.ts` is the child-process egress to FFmpeg and `keyframe-probe.ts` the one to
+  ffprobe (a copied resume's real start, ADR-0023); tests inject fakes. No real FFmpeg or
+  ffprobe in unit tests.
 - Temp root `TRANSCODE_DIR` (default `data/transcode`); at start only the `session-*`
   directories a previous run left are removed; one `mkdtemp` directory per session;
   segment names validated before any `join`.

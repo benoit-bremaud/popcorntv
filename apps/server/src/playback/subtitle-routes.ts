@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { subtitleTracks } from '@popcorntv/shared';
 import { apiError, invalid, MEDIA_ROUTE } from '../http.js';
+import { MAX_POSITION_SEC } from '../progress/routes.js';
 import type { LibraryRepository } from '../library/repository.js';
 import { confinedPath } from './routes.js';
 import type { SubtitleExtractor } from './subtitle-extractor.js';
@@ -16,7 +17,7 @@ export interface SubtitleRoutesDeps {
 }
 
 const params = z.object({ id: z.uuid(), index: z.coerce.number().int().min(0) });
-const query = z.object({ offsetSec: z.coerce.number().int().min(0).default(0) });
+const query = z.object({ offsetSec: z.coerce.number().min(0).max(MAX_POSITION_SEC).default(0) });
 
 /**
  * `GET /media/:id/subtitles/:index?offsetSec=` (200 `text/vtt` | 400 `invalid_request` |

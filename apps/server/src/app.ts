@@ -19,6 +19,7 @@ import { UserRepository } from './auth/user-repository.js';
 import { registerUserRoutes } from './auth/user-routes.js';
 import type { AppDatabase } from './db/index.js';
 import type { Prober } from './library/ffprobe.js';
+import type { KeyframeProbe } from './playback/keyframe-probe.js';
 import { LibraryRepository } from './library/repository.js';
 import { LibraryLock } from './library/lock.js';
 import { registerLibraryRoutes, scanLibrary } from './library/routes.js';
@@ -69,6 +70,8 @@ export interface AppOptions {
   readonly transcoder: Transcoder;
   /** Parent of the HLS session directories (`ServerConfig.transcodeDir`). */
   readonly transcodeDir: string;
+  /** Process boundary to ffprobe for copied resumes (ADR-0023); tests omit it. */
+  readonly keyframeProbe?: KeyframeProbe;
   readonly transcodeMaxSessions?: number;
   /** `ServerConfig.publicUrl`: cookie flags, CSRF origin and the setup link (spec auth R6). */
   readonly publicUrl: string;
@@ -224,6 +227,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   registerSubtitleRoutes(app, { repository, extractor, mediaRoot: options.mediaRoot });
   const sessions = new SessionManager({
     transcoder: options.transcoder,
+    ...(options.keyframeProbe === undefined ? {} : { keyframeProbe: options.keyframeProbe }),
     dir: options.transcodeDir,
     maxSessions: options.transcodeMaxSessions ?? 1,
     logger: app.log,

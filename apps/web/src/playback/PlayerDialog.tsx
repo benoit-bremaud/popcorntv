@@ -128,7 +128,8 @@ export function PlayerDialog({
   function position(): number | null {
     const element = video.current;
     if (!positioned.current || element === null) return null;
-    return offsetSec + Math.floor(element.currentTime);
+    // A copied resume starts on a keyframe, a fraction of a second (ADR-0023).
+    return Math.floor(offsetSec + element.currentTime);
   }
 
   /** Saves run one after another, so an older position can never land last. */

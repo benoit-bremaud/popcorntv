@@ -45,7 +45,10 @@ Primary key `(profile_id, media_id)`: one row per profile and title, upserted.
   answers gain `startSec`, the effective resume point (0 when the asked one is at or past
   the end, 4b), and `offsetSec`, the media time at which the player's timeline starts:
   - direct → `offsetSec: 0`; the web seeks the `<video>` to `startSec` itself;
-  - HLS → FFmpeg gets `-ss startSec` before `-i`; `offsetSec: startSec`.
+  - HLS → FFmpeg gets `-ss` before `-i`. Re-encoded video: `-ss startSec`,
+    `offsetSec: startSec`. Copied H.264: the server first probes the keyframe at or before
+    `startSec` and seeks FFmpeg to it, `offsetSec` = that keyframe, to the millisecond
+    (ADR-0023). A failed probe falls back to `startSec` with a warn log.
 
   The web always reports `offsetSec + video.currentTime` as the position.
 
@@ -86,9 +89,9 @@ Extensions:
   `finished` included, is overwritten by the next save, unless the title is marked watched
   (`watched_at`, spec watched-marks): it stays finished until unmarked.
 - 4a. HLS input seeking lands on the keyframe before the offset when the video is copied:
-  the picture starts up to one keyframe interval early while `offsetSec` still says
-  `startSec`, so saved positions can run that much ahead. Accepted (ADR-0007 §2);
-  re-encoded video is frame-accurate. Seek-ahead will remove the offset.
+  the picture starts up to one keyframe interval early, and `offsetSec` reports that
+  keyframe (ADR-0023, #55), so the timeline, saved positions and subtitle cues stay
+  exact. Only a failed probe reports `startSec` (the pre-#55 drift, logged).
 - 4b. `startSec` at or past the known duration → the server starts over (`offsetSec: 0`),
   so FFmpeg never holds a slot for an empty output. Both `startSec` and `positionSec` are
   capped at one week of media time (400 beyond).

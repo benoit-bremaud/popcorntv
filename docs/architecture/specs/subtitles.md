@@ -19,7 +19,7 @@ as WebVTT, in direct play and in HLS alike.
   `packages/shared`, the scanner's stream order).
 - **R3** `GET /media/:id/subtitles/:index` answers the track as `text/vtt`. FFmpeg extracts it
   on the first request; the result is cached on disk (ADR-0009 §2).
-- **R4** `?offsetSec=` (integer ≥ 0, default 0) shifts every cue back by that many
+- **R4** `?offsetSec=` (number ≥ 0 up to 7 days, default 0; a copied resume starts on a keyframe, ADR-0023) shifts every cue back by that many
   seconds and drops the cues that ended before it, so the track matches an HLS timeline
   that starts at `offsetSec` (ADR-0007 §2, ADR-0009 §3). Direct play passes 0.
 - **R5** The web player adds one `<track kind="subtitles">` per offered track, labelled
@@ -34,7 +34,7 @@ as WebVTT, in direct play and in HLS alike.
 `GET /media/:id/subtitles/:index?offsetSec=s`
 
 - `200 text/vtt; charset=utf-8` with the shifted track.
-- `400 invalid_request` on a non-uuid id, a non-integer `index` or `offsetSec`.
+- `400 invalid_request` on a non-uuid id, a non-integer `index`, a negative or non-numeric `offsetSec`.
 - `404 media_not_found` for an unknown media or a file that fails the path guard.
 - `404 subtitle_not_found` when `index` is not an offered track of that media.
 - `500 transcode_failed` when FFmpeg fails or runs past 120 s.
