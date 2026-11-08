@@ -4,6 +4,25 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-08 — #165 search results and empty states announced (PR #229 merged, `2f18382`)
+
+- MCDA option B (owner, 435/500 vs immediate per-keystroke 335, live visible heading 260):
+  shared `a11y/LiveStatus` polite region (`role="status"`, explicit `aria-live` /
+  `aria-atomic`, always mounted) + `useSettledMessage` (500 ms pause, empty clears at
+  once). Library: *N results for "…"* / *No match for "…"*; Discover (submit-based, no
+  delay): in flight, count, no match, TMDB failure. Loading and empty catalog states keep
+  one leading region whose text changes; the welcome keeps its landmark. Specs search
+  R3/R4 and discover-wishlist R2, component diagram 03 updated; no ADR.
+- Tests: 15 new jsdom cases (fake-timer debounce, singular / plural, blank, cleared,
+  failure, region identity); gate green (Sonar PASSED after S6819 ×3 fixed, e2e 2/2,
+  gitleaks). `history-layer.test.tsx` flaked once under full-suite load (untouched file).
+- Review: Opus adversarial 2 rounds — owner welcome mounted with its text (fixed), missing
+  diagram and QA record (added).
+- QA: `docs/testing/qa-matrix.md` § Search announcement checks; report
+  `docs/architecture/qa/2026-11-08-issue-165-search-announcements.md`, Orca replay pending.
+  Follow-up seen: `<output>` messages in AccountMenu / LibrarySection / AdminPanel /
+  PlayerDialog mount with their text.
+
 ## 2026-11-08 — #164 account menu closes on Escape and outside click (PR #227 merged, `e28c34a`)
 
 - MCDA option A (owner, 480/500 vs `useDismiss` hook 420, `popover` API 205): `AccountMenu`
