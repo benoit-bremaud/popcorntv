@@ -27,8 +27,9 @@ The catalog home opens with a row of the active profile's titles to pick up agai
 - **R6** Each card shows a progress bar (position / duration; hidden when the duration is
   unknown). Activating a card opens the detail dialog of the film or the series, whose
   Resume / episode ▶ buttons apply the existing resume rules.
-- **R7** The row is reloaded when the detail dialog closes, so a title just watched
-  moves to the front. A progress load failure shows the catalog without the row.
+- **R7** The row is reloaded when the detail dialog closes, once the player's last
+  progress save has landed (#140), so a title just watched moves to the front with its
+  new position. A progress load failure shows the catalog without the row.
 - **R8** Done when the row rules have unit tests (resume, finished film, series next
   episode, last episode, one card per series, limit) and the page test shows the row.
 
@@ -38,7 +39,8 @@ The catalog home opens with a row of the active profile's titles to pick up agai
 2. The page loads the catalog and the profile's progress.
 3. The page computes the row (`continueWatchingRow`) and shows it first.
 4. The viewer activates a card; the detail dialog opens (UC4) and Play resumes (UC6/UC7).
-5. On close, the page reloads the progress and recomputes the row.
+5. On close, the page waits for the player's last save, reloads the progress and
+   recomputes the row.
 
 ## 3. Extensions
 

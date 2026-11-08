@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import type { Media, WatchProgress } from '@popcorntv/shared';
 import { artworkUrl, loadCatalog, loadProgress } from '../api.js';
+import type { PlaybackApi } from '../playback/PlayerDialog.js';
 import {
   availableGenres,
   availableTypes,
@@ -36,6 +37,8 @@ type Props = {
   readonly onAddLibrary?: () => void;
   /** Opened once the catalog is loaded: Discover's "Play in my library" (UC26 R4). */
   readonly openMediaId?: string | null;
+  /** The player's server calls, forwarded to the detail dialog; injected in tests. */
+  readonly playback?: PlaybackApi;
 };
 
 /** UC3 / UC4: the catalog with its dynamic controls and the detail dialog. */
@@ -45,6 +48,7 @@ export function CatalogPage({
   progress = loadProgress,
   onAddLibrary,
   openMediaId = null,
+  playback,
 }: Props): React.JSX.Element {
   const [catalog, setCatalog] = useState<Load>({ kind: 'loading' });
   const [state, dispatch] = useReducer(viewReducer, HOME);
@@ -105,10 +109,11 @@ export function CatalogPage({
   }, [catalog, openMediaId]);
 
   const onClose = useCallback(
-    (seq: number) => {
+    (seq: number, lastSave: Promise<void>) => {
       setOpen((current) => (current?.seq === seq ? null : current));
       trigger.current?.focus();
-      void fetchProgress();
+      // R7: reload once the player's last save landed, or the row shows a stale position.
+      void lastSave.then(fetchProgress);
     },
     [fetchProgress],
   );
@@ -200,7 +205,8 @@ export function CatalogPage({
           seasons={seasonsOf(open.item, catalog.media)}
           profileId={profileId}
           progress={progress}
-          onClose={() => onClose(open.seq)}
+          api={playback}
+          onClose={(lastSave) => onClose(open.seq, lastSave)}
         />
       )}
     </WatchedContext>

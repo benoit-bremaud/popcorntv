@@ -194,6 +194,43 @@ describe('DetailDialog playback', () => {
 
     expect(onClose).toHaveBeenCalledOnce();
   });
+
+  it('should hand a settled save to onClose when nothing was played (#140)', async () => {
+    const { user, onClose } = renderDetail(heat);
+
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+
+    await expect(onClose.mock.calls[0]?.[0]).resolves.toBeUndefined();
+  });
+
+  it("should hand the player's last save to onClose (#140)", async () => {
+    const { user, onClose, api } = renderDetail(heat);
+    let land: () => void = () => undefined;
+    vi.mocked(api.save).mockImplementation(
+      () =>
+        new Promise<void>((done) => {
+          land = done;
+        }),
+    );
+    await user.click(await screen.findByRole('button', { name: '▶ Play' }));
+    const player = screen.getByRole('dialog', { name: 'Playing Heat' });
+    await waitFor(() => expect(player.querySelector('video')).not.toBeNull());
+    fireEvent.loadedMetadata(player.querySelector('video') as HTMLVideoElement);
+    await user.click(within(player).getByRole('button', { name: 'Close player' }));
+
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+
+    const handed = onClose.mock.calls[0]?.[0] as Promise<void>;
+    let settled = false;
+    void handed.then(() => {
+      settled = true;
+    });
+    await Promise.resolve();
+    expect(settled).toBe(false);
+    land();
+    await handed;
+    expect(settled).toBe(true);
+  });
 });
 
 function saved(mediaId: string, positionSec: number, finished = false): WatchProgress {
