@@ -4,6 +4,19 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-09 — #167 placeholder contrast raised to 4.5:1 (PR #235 merged, `6fa47e9`)
+
+- MCDA option A (owner, 500/500): one global `::placeholder` rule using
+  `--color-text-muted` at `opacity: 1`. The alternatives scored 420 (a dedicated token)
+  and 390 (per-class rules, which miss the unclassed inputs). No ADR.
+- Ratios (WCAG 2.x): 5.94:1 on `--color-surface-raised` and 6.52:1 on `--color-surface`.
+  The user-agent grey was 3.56:1 and 3.91:1 (A11Y-04 in the 2026-11-08 full pass).
+- `tokens.test.ts` computes the ratios from `tokens.css`. Vitest keeps that file
+  unblanked (`test.css.include`).
+- Gate: typecheck, lint, format, coverage, build, e2e, gitleaks and SonarQube are all
+  green. Adversarial review: 0 Must; 2 Should fixed and verified. Staging replay pending
+  (`docs/architecture/qa/2026-11-09-issue-167-placeholder-contrast.md`).
+
 ## 2026-11-09 — #166 Discover search made live (PR #233 merged, `38ff494`)
 
 - MCDA option A (owner, 410/500 vs a Search button 385, debounce plus button 385). The
