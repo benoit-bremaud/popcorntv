@@ -70,7 +70,7 @@ export function TitleSheet({
           aria-label="Close"
           onClick={() => ref.current?.close()}
         >
-          ×
+          ✕
         </button>
         <div className="detail__body sheet">
           {shown.posterPath !== null && (

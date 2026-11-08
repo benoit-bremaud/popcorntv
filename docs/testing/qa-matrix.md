@@ -204,3 +204,5 @@ Replay with a screen reader (Orca on Firefox, then NVDA or VoiceOver when availa
    no cast line when TMDB gives none.
 6. The ✕ close button measures 44×44 px in both dialogs and in the player, keyboard focus
    ring visible.
+7. A long title ("Harry Potter and the Philosopher's Stone") in the Discover sheet and in a
+   library dialog without backdrop never runs under the close button.

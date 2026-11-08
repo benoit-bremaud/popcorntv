@@ -111,13 +111,17 @@ describe('DiscoverPage', () => {
   it('shows no cast line when TMDB gives no cast (#172)', async () => {
     const user = userEvent.setup();
     const api = makeApi({
-      details: vi.fn<DiscoverApi['details']>(async () => ({ ...DUNE, genres: [], cast: [] })),
+      details: vi.fn<DiscoverApi['details']>(async () => ({
+        ...DUNE,
+        genres: ['Drama'],
+        cast: [],
+      })),
     });
     render(<DiscoverPage profileId="p1" onPlayInLibrary={() => undefined} api={api} />);
 
     await user.click(await screen.findByRole('button', { name: 'Dune (2021)' }));
     const sheet = screen.getByRole('dialog', { name: 'Dune' });
-    await waitFor(() => expect(api.details).toHaveBeenCalled());
+    await within(sheet).findByText('Drama');
 
     expect(within(sheet).queryByText('Cast:')).toBeNull();
   });

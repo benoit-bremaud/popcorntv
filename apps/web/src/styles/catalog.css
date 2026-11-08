@@ -425,8 +425,10 @@
   animation-delay: calc(2 * var(--stagger));
 }
 
+/* Keeps a long title clear of the 44 px close button. */
 .detail__title {
   margin: 0;
+  padding-inline-end: calc(var(--touch-target) + var(--space-3) - var(--space-5));
   font-size: var(--text-2xl);
   line-height: var(--leading-tight);
   letter-spacing: var(--tracking-tight);

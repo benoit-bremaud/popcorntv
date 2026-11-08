@@ -534,7 +534,7 @@ describe('DetailDialog action row (#172)', () => {
   });
 
   it('shows no cast line when the cast is empty', async () => {
-    renderDetail(heat);
+    renderDetail({ ...heat, metadata: metadata({ cast: [] }) });
 
     await screen.findByRole('button', { name: '▶ Play' });
 
