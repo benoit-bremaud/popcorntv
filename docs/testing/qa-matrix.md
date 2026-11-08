@@ -30,6 +30,19 @@ One row per screen or flow. Cell format: `date · SHA · environment · OK | KO 
 | Libraries add / edit / delete / scan | 2026-11-08 · 0698684 · Pi · KO #163 | 2026-11-08 · 0698684 · Pi · KO #163 | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | — (not audited) | — (window floor 619 px, 320/390 not reachable) |
 | Scheduled scan | — (timer needs server logs, ROB-07) | — (needs server logs) | — (BLOCKED) | — (no UI) | — (no UI) | — (no UI) |
 
+## Discover TMDB failure checks (#179)
+
+Replay on every pass that touches Discover, the title sheet or the wishlist:
+
+1. Start the server with `TMDB_API_KEY` set and TMDB unreachable (no network, or a
+   blackholed `api.themoviedb.org` in `/etc/hosts`): `GET /discover`, `/discover/search`,
+   `/discover/movie/1` and `PUT …/wishlist/movie/1` answer `502 tmdb_unavailable`, never
+   `500`; the log has one `discover.tmdb.failed` line per call, without the API key.
+2. Same through a proxy answering `200` with an HTML page: still `502`, nothing added to
+   the wishlist.
+3. After TMDB comes back, the next call answers normally (no poisoned state).
+4. The web Discover tab shows its muted line instead of a row, never a blank page.
+
 ## Resume checks (#55, ADR-0023)
 
 Replay on every pass that touches playback, with an H.264 file copied to HLS (not

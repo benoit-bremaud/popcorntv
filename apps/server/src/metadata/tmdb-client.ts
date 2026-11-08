@@ -89,16 +89,19 @@ export interface TmdbClient {
 }
 
 /**
- * Thrown when TMDB answers an error status (after the single 429 retry). Two statuses are
- * synthetic: `200` for a payload the schemas reject, `400` for an image path or image
- * base URL refused before any request, and `413` for an image over `IMAGE_MAX_BYTES`.
+ * Thrown when TMDB answers an error status (after the single 429 retry). Some statuses are
+ * synthetic: `0` when TMDB cannot be reached (network failure, timeout, abort), `200` for a
+ * payload that is not JSON or that the schemas reject, `400` for an image path or image base
+ * URL refused before any request, and `413` for an image over `IMAGE_MAX_BYTES`. `cause` keeps
+ * the underlying error for the log.
  */
 export class TmdbRequestError extends Error {
   constructor(
     readonly path: string,
     readonly status: number,
+    cause?: unknown,
   ) {
-    super(`TMDB ${path} answered ${status}`);
+    super(`TMDB ${path} answered ${status}`, { cause });
     this.name = 'TmdbRequestError';
   }
 }
@@ -314,10 +317,16 @@ export function createTmdbClient(options: TmdbClientOptions): TmdbClient {
       url.searchParams.set(key, value);
     }
     const outcome = await serial(async (): Promise<{ retryAfter: number } | { body: unknown }> => {
-      const response = await options.fetch(url, {
-        headers: { Authorization: `Bearer ${options.apiKey}`, Accept: 'application/json' },
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-      });
+      let response: Response;
+      try {
+        response = await options.fetch(url, {
+          headers: { Authorization: `Bearer ${options.apiKey}`, Accept: 'application/json' },
+          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        });
+      } catch (error) {
+        // Network failure, timeout or abort: TMDB is unreachable, not a server bug (#179).
+        throw new TmdbRequestError(path, 0, error);
+      }
       if (response.status === 429 && !retried) {
         const retryAfter = Number.parseInt(response.headers.get('retry-after') ?? '1', 10);
         await response.body?.cancel(); // Release the connection before waiting.
@@ -327,7 +336,12 @@ export function createTmdbClient(options: TmdbClientOptions): TmdbClient {
         await response.body?.cancel();
         throw new TmdbRequestError(path, response.status);
       }
-      return { body: await response.json() };
+      try {
+        return { body: await response.json() };
+      } catch (error) {
+        // A body that is not JSON, or cut short, is an unexpected shape like a schema miss (#179).
+        throw new TmdbRequestError(path, 200, error);
+      }
     });
     if ('body' in outcome) return outcome.body;
     await delay(Math.min(outcome.retryAfter, RETRY_AFTER_CAP_S) * 1000);

@@ -8,7 +8,7 @@ import type { DiscoverDetails, DiscoverTitle, WishlistEntry } from '@popcorntv/s
 import { openDatabase } from '../db/index.js';
 import { libraries, media } from '../db/schema.js';
 import { ArtworkCache } from '../metadata/artwork-cache.js';
-import { TmdbRequestError } from '../metadata/tmdb-client.js';
+import { createTmdbClient, TmdbRequestError } from '../metadata/tmdb-client.js';
 import type { TmdbClient, TmdbSummary } from '../metadata/tmdb-client.js';
 import { ProfileRepository } from '../profiles/repository.js';
 import { actAs, createAccount } from '../test-fixtures.js';
@@ -311,5 +311,35 @@ describe('wishlist routes', () => {
     expect(put.statusCode).toBe(502);
     expect(failures).toEqual([]);
     expect(tmdbFailures.length).toBeGreaterThan(0);
+  });
+
+  describe('with the real client over a broken TMDB (#179)', () => {
+    const broken: [string, () => Promise<Response>][] = [
+      ['a non-JSON body', async () => new Response('<html>oops</html>')],
+      ['a JSON body of the wrong shape', async () => Response.json({ id: 'one', results: 3 })],
+      ['a network failure', async () => Promise.reject(new TypeError('fetch failed'))],
+      ['a timeout', async () => Promise.reject(new DOMException('slow', 'TimeoutError'))],
+    ];
+
+    it.each(broken)('answers 502 tmdb_unavailable on %s', async (_label, answer) => {
+      const client = createTmdbClient({ apiKey: 'k', language: 'en-US', fetch: vi.fn(answer) });
+      const { app, failures, tmdbFailures } = await setup(client);
+
+      const routes = [
+        { method: 'GET' as const, url: '/discover?list=trending&kind=movie' },
+        { method: 'GET' as const, url: '/discover/search?q=dune' },
+        { method: 'GET' as const, url: '/discover/movie/1' },
+        { method: 'PUT' as const, url: '/profiles/default/wishlist/movie/1' },
+      ];
+      for (const route of routes) {
+        const response = await app.inject(route);
+        expect(response.statusCode, route.url).toBe(502);
+        expect(response.json(), route.url).toEqual({ error: 'tmdb_unavailable' });
+      }
+
+      expect(failures).toEqual([]);
+      expect(tmdbFailures).toHaveLength(routes.length);
+      expect((await app.inject({ url: '/profiles/default/wishlist' })).json()).toEqual([]);
+    });
   });
 });
