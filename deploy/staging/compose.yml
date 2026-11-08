@@ -76,7 +76,16 @@ services:
       staging:
         ipv4_address: 10.203.204.2
     healthcheck:
-      test: ['CMD', 'wget', '-q', '--no-check-certificate', '-O', '/dev/null', 'https://localhost:8443/api/health']
+      test:
+        [
+          'CMD',
+          'wget',
+          '-q',
+          '--no-check-certificate',
+          '-O',
+          '/dev/null',
+          'https://localhost:8443/api/health',
+        ]
       interval: 30s
       timeout: 5s
       start_period: 5s
