@@ -8,7 +8,7 @@
   --color-surface-raised: #261d21;
   --color-border: #3a2e33;
   --color-text: #f4efe9;
-  --color-text-muted: #a39a94;
+  --color-text-muted: #a39a94; /* also placeholders: 5.9:1 on surface-raised, 6.5:1 on surface */
   --color-accent: #b3122e; /* fills: white text on it is 6.9:1 */
   --color-accent-hover: #c8203d;
   --color-accent-text: #e8495c; /* red text, focus ring, rating: 5.2:1 on bg */
@@ -119,6 +119,12 @@ body {
 :focus-visible {
   outline: var(--focus-ring);
   outline-offset: 2px;
+}
+
+/* Placeholders (WCAG 1.4.3): the user-agent grey is 3.9:1 on surface; Firefox also dims it. */
+::placeholder {
+  color: var(--color-text-muted);
+  opacity: 1;
 }
 
 .muted {
