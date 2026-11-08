@@ -82,5 +82,5 @@ error code `subtitle_not_found`. The web adds one `<track>` per offered track.
 - ASS styling is lost (WebVTT keeps the text).
 - Entries of deleted media stay in `TRANSCODE_DIR/subtitles` until it is emptied by hand;
   they are small text files. A modified file replaces its own entries.
-- A resumed HLS session that copies H.264 starts at the keyframe before `startSec`, so its
-  cues may run early by up to one GOP (inherited from ADR-0007 §2, #55).
+- A resumed HLS session that copies H.264 starts at the keyframe before `startSec`; since
+  ADR-0023 (#55) `offsetSec` reports that keyframe, so the cues stay in sync.

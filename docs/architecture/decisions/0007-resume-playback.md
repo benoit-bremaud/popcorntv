@@ -4,6 +4,7 @@
 - Date: 2026-10-24
 - Deciders: owner
 - Related: UC6 / UC7 ([spec](../specs/resume-playback.md)), ADR-0005, ADR-0006, issue #9
+- Amended by: ADR-0023 (§2: a copied resume reports the keyframe FFmpeg really starts at)
 
 ## Context
 

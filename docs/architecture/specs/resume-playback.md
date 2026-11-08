@@ -46,9 +46,9 @@ Primary key `(profile_id, media_id)`: one row per profile and title, upserted.
   the end, 4b), and `offsetSec`, the media time at which the player's timeline starts:
   - direct → `offsetSec: 0`; the web seeks the `<video>` to `startSec` itself;
   - HLS → FFmpeg gets `-ss` before `-i`. Re-encoded video: `-ss startSec`,
-    `offsetSec: startSec`. Copied H.264: the server first probes the keyframe at or before
-    `startSec`, seeks FFmpeg 0.5 s past it (FFmpeg's seek back-off), `offsetSec` = that keyframe, to the millisecond
-    (ADR-0023). A failed probe falls back to `startSec` with a warn log.
+    `offsetSec: startSec`. Copied H.264: FFmpeg starts on a keyframe before `startSec`;
+    the server first runs FFmpeg's own seek on one packet to learn where, and answers that
+    as `offsetSec` (ADR-0023). A failed probe falls back to `startSec` with a warn log.
 
   The web always reports `offsetSec + video.currentTime` as the position.
 
@@ -76,7 +76,8 @@ Main scenario:
 2. The viewer presses **Resume**.
 3. The web posts `{ mediaId, directPlay, startSec: 754 }`.
 4. The server answers direct (`offsetSec: 0`) or opens an HLS session whose FFmpeg
-   starts at 754 s (`offsetSec: 754`).
+   seeks to 754 s; re-encoded it starts there (`offsetSec: 754`), copied it starts on the
+   keyframe before, which the probe reports (e.g. `offsetSec: 750.5`, ADR-0023).
 5. The web seeks to the answer's `startSec − offsetSec` once metadata is loaded, then plays.
 6. Every 10 s while playing, on pause and on close, the web sends `PUT
    /profiles/:profileId/media/:id/progress` with `offsetSec + currentTime`.

@@ -29,7 +29,7 @@ const app = await buildApp({
     : null,
   artworkDir: config.artworkDir,
   transcoder: createTranscoder(config.ffmpegPath),
-  keyframeProbe: createKeyframeProbe(config.ffprobePath),
+  keyframeProbe: createKeyframeProbe(config.ffmpegPath),
   transcodeDir: config.transcodeDir,
   transcodeMaxSessions: config.transcodeMaxSessions,
   publicUrl: config.publicUrl,

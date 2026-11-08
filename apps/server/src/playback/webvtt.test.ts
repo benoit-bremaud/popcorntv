@@ -23,6 +23,12 @@ describe('shiftWebVtt', () => {
     expect(shiftWebVtt(VTT, 0)).toBe(VTT);
   });
 
+  it('rounds a fractional offset to the millisecond', () => {
+    const text = 'WEBVTT\n\n00:00:10.000 --> 00:00:12.000\nA\n';
+
+    expect(shiftWebVtt(text, 0.0004 + 1)).toBe('WEBVTT\n\n00:00:09.000 --> 00:00:11.000\nA\n');
+  });
+
   it('drops past cues, clamps a straddling one and shifts the rest, settings kept', () => {
     expect(shiftWebVtt(VTT, 10)).toBe(
       [

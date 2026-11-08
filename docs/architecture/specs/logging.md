@@ -76,7 +76,8 @@ them. The 2026-11-08 FULL QA pass found 18 log calls in 9 of ~50 server files, a
 | `metadata.season.failed`                                  | warn         | `tmdbId`, `season`, `err`                               | `metadata/service.ts`  |
 | `metadata.enrich.done`                                    | info         | `libraryId`, `refresh`, `matched`, `unmatched`, `failed`, `skipped`, `ms` | `metadata/service.ts` |
 | `playback.decision`                                       | info         | `mediaId`, `mode`, `browserDirect`, `defaultTrack`, `startSec` | `session-routes.ts` |
-| `playback.session.opened`                                 | info         | `session`, `userId`, `startSec`, `audioIndex`           | `session-manager.ts`   |
+| `playback.session.opened`                                 | info         | `session`, `userId`, `startSec`, `offsetSec`, `audioIndex` | `session-manager.ts`   |
+| `playback.keyframe.failed`                                | warn         | `startSec`, `err`                                       | `session-manager.ts`   |
 | `playback.session.takeover`                               | info         | `session`, `victimOwner`, `victimRole`, `by`            | `session-manager.ts`   |
 | `playback.session.not_ready`                              | warn         | `session`, `exited`                                     | `session-manager.ts`   |
 | `playback.session.closed`                                 | info         | `session`, `reason` (`stopped`, `idle`, `crash`, `takeover`, `not_ready`, `shutdown`) | `session-manager.ts` |

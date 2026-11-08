@@ -1,36 +1,28 @@
 import { describe, expect, it } from 'vitest';
-import { parseKeyframe } from './keyframe-probe.js';
+import { parseFramecrc } from './keyframe-probe.js';
 
-describe('parseKeyframe', () => {
-  it('returns the first keyframe, relative to the stream start', () => {
-    const output = {
-      streams: [{ start_time: '0.080000' }],
-      packets: [
-        { pts_time: '40.040000', flags: 'K__' },
-        { pts_time: '40.080000', flags: '___' },
-      ],
-    };
+const HEADER = '#software: Lavf62.3.100\n#tb 0: 1/1000\n#media_type 0: video\n';
 
-    expect(parseKeyframe(output, 42)).toBe(39.96);
+describe('parseFramecrc', () => {
+  it('returns the first packet pts in seconds', () => {
+    const output = `${HEADER}0,      39960,      40001,       41,     9261, 0x1cc1ab7a\n`;
+
+    expect(parseFramecrc(output)).toBe(39.96);
   });
 
-  it('skips packets that are not keyframes or have no time', () => {
-    const output = {
-      packets: [
-        { pts_time: '41.000000', flags: '___' },
-        { pts_time: 'N/A', flags: 'K__' },
-        { pts_time: '36.500000', flags: 'K_' },
-      ],
-    };
+  it('applies a non-millisecond time base', () => {
+    expect(parseFramecrc('#tb 0: 1001/24000\n0, 960, 960, 1, 10, 0x0\n')).toBeCloseTo(40.04, 6);
+  });
 
-    expect(parseKeyframe(output, 42)).toBe(36.5);
+  it('never returns a negative time', () => {
+    expect(parseFramecrc('#tb 0: 1/1000\n0, -42, 0, 1, 10, 0x0\n')).toBe(0);
   });
 
   it.each([
-    ['after the requested start', [{ pts_time: '43', flags: 'K__' }]],
-    ['before the stream start', [{ pts_time: '-1', flags: 'K__' }]],
-    ['missing', []],
-  ])('returns null when the keyframe is %s', (_case, packets) => {
-    expect(parseKeyframe({ packets }, 42)).toBeNull();
+    ['no packet', HEADER],
+    ['no time base', '0, 1, 1, 1, 1, 0x0\n'],
+    ['a zero denominator', '#tb 0: 1/0\n0, 1, 1, 1, 1, 0x0\n'],
+  ])('returns null with %s', (_case, output) => {
+    expect(parseFramecrc(output)).toBeNull();
   });
 });

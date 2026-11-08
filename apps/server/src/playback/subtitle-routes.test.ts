@@ -91,6 +91,15 @@ describe('GET /media/:id/subtitles/:index', () => {
     expect(transcoder.mock.calls[0]?.[0]).toContain('0:s:1');
   });
 
+  it('shifts by a fractional offset from a copied resume (ADR-0023)', async () => {
+    const film = await scanned();
+
+    const shifted = await app.inject({ url: `/media/${film.id}/subtitles/1?offsetSec=10.5` });
+
+    expect(shifted.statusCode).toBe(200);
+    expect(shifted.body).toBe('WEBVTT\n\n00:00:09.500 --> 00:00:11.500\nLate\n');
+  });
+
   it.each([
     ['an image track', 0],
     ['a missing track', 2],

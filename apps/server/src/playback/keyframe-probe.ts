@@ -4,64 +4,60 @@ import { promisify } from 'node:util';
 const execFileAsync = promisify(execFile);
 
 /**
- * Process egress of a copied resume (ADR-0023): the media time of the video keyframe a
- * `-ss startSec` input seek lands on. Rejects when ffprobe fails or finds no keyframe.
+ * Process egress of a copied resume (ADR-0023): the media time at which FFmpeg's input
+ * `-ss startSec` really starts the copied video. Rejects when FFmpeg fails or prints no frame.
  */
 export type KeyframeProbe = (filePath: string, startSec: number) => Promise<number>;
 
-interface KeyframeOutput {
-  readonly packets?: readonly { readonly pts_time?: string; readonly flags?: string }[];
-  readonly streams?: readonly { readonly start_time?: string }[];
-}
-
 const PROBE_TIMEOUT_MS = 10_000;
-const PROBE_MAX_OUTPUT_BYTES = 1024 * 1024;
-/** Packets read after the seek; the demuxer lands on a keyframe, this is only a margin. */
-const PACKETS_READ = 50;
+const PROBE_MAX_OUTPUT_BYTES = 64 * 1024;
 
 /**
- * Builds a probe that seeks the first video stream like FFmpeg's input `-ss` does and
- * reads the first keyframe there. The path is the `-i` argument, never an option.
+ * Builds a probe that runs FFmpeg's own seek, with the same `-ss` and map as the session,
+ * and prints the first copied video packet (`framecrc`). `-copyts -start_at_zero` keeps its
+ * time on the media timeline. The path is the `-i` argument, never an option.
  */
-export function createKeyframeProbe(ffprobePath: string): KeyframeProbe {
+export function createKeyframeProbe(ffmpegPath: string): KeyframeProbe {
   return async (filePath, startSec) => {
     const { stdout } = await execFileAsync(
-      ffprobePath,
+      ffmpegPath,
       [
         '-v',
         'error',
-        '-select_streams',
-        'v:0',
-        '-read_intervals',
-        `${startSec}%+#${PACKETS_READ}`,
-        '-show_entries',
-        'packet=pts_time,flags:stream=start_time',
-        '-print_format',
-        'json',
+        '-nostdin',
+        '-ss',
+        String(startSec),
+        '-copyts',
+        '-start_at_zero',
         '-i',
         filePath,
+        '-map',
+        '0:V:0',
+        '-c',
+        'copy',
+        '-frames:v',
+        '1',
+        '-f',
+        'framecrc',
+        '-',
       ],
       { timeout: PROBE_TIMEOUT_MS, killSignal: 'SIGKILL', maxBuffer: PROBE_MAX_OUTPUT_BYTES },
     );
-    const keyframe = parseKeyframe(JSON.parse(stdout) as KeyframeOutput, startSec);
-    if (keyframe === null) throw new Error('no keyframe found');
-    return keyframe;
+    const start = parseFramecrc(stdout);
+    if (start === null) throw new Error('no video packet after the seek');
+    return start;
   };
 }
 
 /**
- * Pure: the first keyframe at or before `startSec`, relative to the stream start (FFmpeg's
- * `-ss` counts from there), rounded to the millisecond. Null when there is none.
+ * Pure: the first packet's pts × the stream time base from FFmpeg's `framecrc` output, in
+ * seconds, never negative. Null when there is no time base or packet.
  */
-export function parseKeyframe(output: KeyframeOutput, startSec: number): number | null {
-  const origin = Number(output.streams?.[0]?.start_time ?? 0);
-  const base = Number.isFinite(origin) ? origin : 0;
-  for (const packet of output.packets ?? []) {
-    if (!(packet.flags ?? '').startsWith('K')) continue;
-    const pts = Number(packet.pts_time);
-    if (!Number.isFinite(pts)) continue;
-    const time = Math.round((pts - base) * 1000) / 1000;
-    return time >= 0 && time <= startSec ? time : null;
-  }
-  return null;
+export function parseFramecrc(output: string): number | null {
+  const base = /^#tb 0: (\d+)\/(\d+)$/m.exec(output);
+  const packet = /^0,\s*(-?\d+),/m.exec(output);
+  if (base === null || packet === null) return null;
+  const [num, den] = [Number(base[1]), Number(base[2])];
+  if (den === 0) return null;
+  return Math.max(0, (Number(packet[1]) * num) / den);
 }

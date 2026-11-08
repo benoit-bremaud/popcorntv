@@ -16,13 +16,13 @@ much. A re-encoded session is exact.
 
 ## Options
 
-A — probe the keyframe with ffprobe before FFmpeg, seek FFmpeg to it and answer it;
+A — probe, before the session, where FFmpeg's seek starts the copied video and answer it;
 B — read the first segment's PTS (presentation timestamp) once the playlist exists;
 C — seek accurately by re-encoding the video of every resume.
 
 | Criterion                  | Weight | A                              | B                                | C                  |
 | -------------------------- | -----: | ------------------------------ | -------------------------------- | ------------------ |
-| Exactness                  |     35 | 5 — the keyframe is the origin | 3 — MPEG-TS start offset to undo | 5                  |
+| Exactness                  |     35 | 5 — FFmpeg's own seek measured | 3 — MPEG-TS start offset to undo | 5                  |
 | CPU on the Pi              |     25 | 5 — one short probe            | 5                                | 1 — full re-encode |
 | Simplicity and testability |     25 | 4 — pure parser, injected run  | 2 — polling after the playlist   | 4 — one flag       |
 | Start latency              |     15 | 4 — one probe more             | 3 — one probe after the playlist | 2 — slower encoder |
@@ -32,19 +32,23 @@ Sensitivity: with exactness at 50 and CPU at 10, A stays first (470 against C's 
 
 ## Decision
 
-A. `KeyframeProbe` (`src/playback/keyframe-probe.ts`) runs `ffprobe -select_streams v:0
--read_intervals <startSec>%+#50 -show_entries packet=pts_time,flags:stream=start_time` and
-the pure `parseKeyframe` keeps the first keyframe, relative to the stream start, rounded to
-the millisecond, refused past `startSec`. `SessionManager.open` probes only when the video
-is copied and `startSec > 0`, before the session-limit check, and returns the keyframe as
-`offsetSec`. FFmpeg gets `-ss keyframe + 0.5`: its input seek backs off by up to 3/23 s
-when the video has B-frames, so `-ss` exactly on a keyframe lands on the one before (seen in
-the #55 QA on MKV); the margin is above that back-off and below any real keyframe interval. A failed probe logs `playback.keyframe.failed` and keeps
-`startSec` (the old behaviour). `offsetSec` may now carry a fraction: the subtitle route
-accepts a number and the web floors `offsetSec + currentTime` before it saves.
+A. `KeyframeProbe` (`src/playback/keyframe-probe.ts`) runs FFmpeg itself with the
+session's seek: `ffmpeg -ss <startSec> -copyts -start_at_zero -i <file> -map 0:V:0 -c copy
+-frames:v 1 -f framecrc -`, and the pure `parseFramecrc` turns the first packet's pts into
+seconds. Asking FFmpeg, not ffprobe, matters: FFmpeg backs its seek off by up to 3/23 s
+with B-frames, counts `-ss` from the container start and seeks index-less MPEG-TS
+differently; an ffprobe `-read_intervals` probe disagreed with it by one GOP in the review
+(Matroska with B-frames, late video start, MPEG-TS). `SessionManager.open` probes only when
+the video is copied and `startSec > 0`, after a cheap busy check and before the
+session-limit reservation; the session keeps `-ss startSec` and answers the probe as
+`offsetSec`. A failed probe logs `playback.keyframe.failed` and keeps `startSec` (the old
+behaviour). `offsetSec` may now carry a fraction: the subtitle route accepts a number and
+the web floors `offsetSec + currentTime` before it saves.
 
 ## Consequences
 
 - Timeline, saved positions and subtitles are exact on copied resumes.
-- One ffprobe run (≤ 10 s timeout) more per copied resume.
-- The `PlaybackStart` contract is unchanged (`offsetSec: number`).
+- `PlaybackStart.offsetSec` keeps its type but changes meaning for copied HLS resumes: the
+  real start, up to one GOP before `startSec`, possibly fractional.
+- Residual error measured in QA: under 0.2 s (B-frame delay), instead of up to one GOP.
+- One FFmpeg run (≤ 10 s timeout, one packet copied) more per copied resume.

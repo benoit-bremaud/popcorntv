@@ -142,7 +142,10 @@ export function PlayerDialog({
     return saves.current;
   }
 
-  /** Direct play seeks in the file; an HLS session already starts at the offset. */
+  /**
+   * Direct play seeks in the file; an HLS session starts at `offsetSec`, so it seeks the
+   * rest of the way (a copied resume starts on an earlier keyframe, ADR-0023).
+   */
   function seekToStart(): void {
     const element = video.current;
     // The server's effective start: it starts over when the asked one is past the end.

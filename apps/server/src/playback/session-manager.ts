@@ -10,12 +10,6 @@ import { PLAYLIST_NAME, SEGMENT_PATTERN, copiesVideo, ffmpegArgs } from './ffmpe
 import type { KeyframeProbe } from './keyframe-probe.js';
 import type { TranscodeHandle, Transcoder } from './transcoder.js';
 
-/**
- * How far past the probed keyframe a copied resume seeks (ADR-0023): above FFmpeg's 3/23 s
- * seek back-off, below any real keyframe interval.
- */
-const KEYFRAME_SEEK_MARGIN_SEC = 0.5;
-
 /** Tunables of the session lifecycle (state diagram 05); tests shorten them. */
 export interface SessionManagerOptions {
   readonly transcoder: Transcoder;
@@ -116,10 +110,12 @@ export class SessionManager {
   ): Promise<OpenResult> {
     // Known before any take-over: a title without video must not end someone's stream.
     if (!streams.some((stream) => stream.type === 'video')) return { kind: 'not_playable' };
+    // A caller bound to be refused costs no probe.
+    if (this.atLimit() && this.victimFor(opener) === undefined) return { kind: 'busy' };
     // Probed before the limit check: nothing may be awaited between it and the reservation.
-    const { offsetSec, seekSec } = await this.realStart(inputPath, streams, startSec);
+    const offsetSec = await this.realStart(inputPath, streams, startSec);
     let preempted: Promise<boolean> | undefined;
-    if (this.sessions.size + this.starting >= this.options.maxSessions) {
+    if (this.atLimit()) {
       const victim = this.victimFor(opener);
       if (victim === undefined) return { kind: 'busy' };
       const { owner, role } = this.sessions.get(victim) ?? {};
@@ -147,7 +143,7 @@ export class SessionManager {
     } finally {
       this.starting -= 1;
     }
-    const args = ffmpegArgs(inputPath, streams, dir, seekSec, audioIndex);
+    const args = ffmpegArgs(inputPath, streams, dir, startSec, audioIndex);
     if (args === null) {
       await this.remove(dir);
       return { kind: 'not_playable' };
@@ -215,32 +211,30 @@ export class SessionManager {
     return { kind: 'failed' };
   }
 
+  private atLimit(): boolean {
+    return this.sessions.size + this.starting >= this.options.maxSessions;
+  }
+
   /**
-   * Media time the HLS timeline starts at (`offsetSec`) and the `-ss` FFmpeg gets (ADR-0023).
-   * A copied video starts on the keyframe at or before `startSec`; FFmpeg backs its seek off
-   * by up to 3/23 s, so it is seeked a margin past that keyframe to land on it. A re-encoded
-   * one starts at `startSec`. A failed probe keeps `startSec`, as before #55.
+   * Media time the HLS timeline starts at (ADR-0023): FFmpeg's input `-ss` starts a copied
+   * video on a keyframe before `startSec`, so the probe asks FFmpeg's own seek where; a
+   * re-encoded video starts at `startSec`. A failed probe keeps `startSec`, as before #55.
    */
   private async realStart(
     inputPath: string,
     streams: readonly StreamInfo[],
     startSec: number,
-  ): Promise<{ offsetSec: number; seekSec: number }> {
-    const requested = { offsetSec: startSec, seekSec: startSec };
+  ): Promise<number> {
     const probe = this.options.keyframeProbe;
-    if (startSec <= 0 || probe === undefined || !copiesVideo(streams)) return requested;
+    if (startSec <= 0 || probe === undefined || !copiesVideo(streams)) return startSec;
     try {
-      const keyframe = await probe(inputPath, startSec);
-      return {
-        offsetSec: keyframe,
-        seekSec: Math.round((keyframe + KEYFRAME_SEEK_MARGIN_SEC) * 1000) / 1000,
-      };
+      return await probe(inputPath, startSec);
     } catch (error) {
       this.options.logger.warn(
         { event: 'playback.keyframe.failed', err: error, startSec },
         'keyframe probe failed, reporting the requested start',
       );
-      return requested;
+      return startSec;
     }
   }
 

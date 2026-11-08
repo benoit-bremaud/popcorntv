@@ -314,6 +314,29 @@ describe('PlayerDialog resume and progress', () => {
     await waitFor(() => expect(api.save).toHaveBeenCalledWith('kid', 'heat', 766));
   });
 
+  it('seeks a copied HLS resume from its keyframe and saves whole seconds', async () => {
+    const api = fakeApi({ ...HLS, startSec: 42, offsetSec: 39.96 });
+    render(
+      <PlayerDialog
+        profileId="kid"
+        item={heat}
+        directPlay={false}
+        startSec={42}
+        onClose={vi.fn()}
+        api={api}
+        attach={async () => () => undefined}
+      />,
+    );
+    const element = await videoOf();
+
+    fireEvent.loadedMetadata(element);
+    expect(element.currentTime).toBeCloseTo(2.04, 6);
+    element.currentTime = 0.05;
+    fireEvent.pause(element);
+
+    await waitFor(() => expect(api.save).toHaveBeenCalledWith('kid', 'heat', 40));
+  });
+
   it('honours the server starting over instead of the asked offset', async () => {
     render(
       <PlayerDialog

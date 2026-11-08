@@ -408,15 +408,14 @@ describe('SessionManager', () => {
   });
 
   describe('copied resume start (ADR-0023)', () => {
-    it('seeks FFmpeg just past the probed keyframe and reports the keyframe', async () => {
+    it('reports where the probe says FFmpeg starts, keeping the requested seek', async () => {
       const { transcoder, runs } = fakeTranscoder('writes');
       const keyframeProbe = vi.fn(async () => 39.96);
       const result = await manager(transcoder, { keyframeProbe }).open(USER, '/m/a.mkv', H264, 42);
 
       expect(keyframeProbe).toHaveBeenCalledWith('/m/a.mkv', 42);
       expect(result).toMatchObject({ kind: 'ready', offsetSec: 39.96 });
-      // 0.5 s past it: FFmpeg's seek back-off would land on the keyframe before.
-      expect(runs[0]?.args.slice(4, 6)).toEqual(['-ss', '40.46']);
+      expect(runs[0]?.args.slice(4, 6)).toEqual(['-ss', '42']);
     });
 
     it('never probes a re-encoded video or a start from zero', async () => {
@@ -444,5 +443,17 @@ describe('SessionManager', () => {
         expect.any(String),
       );
     });
+  });
+
+  it('answers busy without probing when no slot may be taken', async () => {
+    const { transcoder } = fakeTranscoder('writes');
+    const keyframeProbe = vi.fn(async () => 40);
+    const sessions = manager(transcoder, { keyframeProbe });
+    await sessions.open(USER, '/m/a.mkv', HEVC);
+
+    const result = await sessions.open(VIEWER, '/m/b.mkv', H264, 42);
+
+    expect(result).toEqual({ kind: 'busy' });
+    expect(keyframeProbe).not.toHaveBeenCalled();
   });
 });

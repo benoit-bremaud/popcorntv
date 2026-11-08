@@ -37,8 +37,11 @@ sequenceDiagram
     API-->>P: 200 {mode: direct, url, mime, offsetSec: 0}
   else HLS
     API->>SM: open(path, streams, startSec, audioIndex)
+    opt copied H.264 and startSec > 0 (ADR-0023)
+      SM->>SM: ffmpeg -ss startSec -copyts … -frames:v 1 -f framecrc → offsetSec
+    end
     SM->>SM: ffmpeg -ss startSec -i path …
-    API-->>P: 201 {mode: hls, sessionId, url, offsetSec: startSec}
+    API-->>P: 201 {mode: hls, sessionId, url, offsetSec}
   end
   P->>P: on loadedmetadata, currentTime = startSec − offsetSec
   loop every 10 s while playing, on pause, on close (keepalive)
@@ -61,6 +64,7 @@ sequenceDiagram
 
 - `offsetSec` makes the saved position absolute whatever the mode: direct play seeks in
   the file, HLS starts FFmpeg at the offset (EVENT playlist, no seek-ahead — ADR-0006).
-- HLS input seeking lands on the previous keyframe: the resume may start a few seconds
-  early (spec 4a).
+- HLS input seeking of a copied video lands on an earlier keyframe; the keyframe probe
+  reports it as `offsetSec`, and the web seeks forward by `startSec − offsetSec` (spec 4a,
+  ADR-0023).
 - `nextEpisode` and `isFinished` are pure; no autoplay countdown (ADR-0007 §4).
