@@ -21,6 +21,20 @@ describe('credential fields keep their autocomplete tokens (#168)', () => {
     expect(screen.getByLabelText(/^Password/)).toHaveAttribute('autocomplete', 'new-password');
   });
 
+  it('an invite link offers the saved username', () => {
+    render(
+      <RedeemForm
+        kind="invite"
+        token="t"
+        redeem={vi.fn()}
+        onSignedIn={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText('Username')).toHaveAttribute('autocomplete', 'username');
+  });
+
   it.each(['invite', 'reset'] as const)('a %s link offers a new password', (kind) => {
     const { container } = render(
       <RedeemForm kind={kind} token="t" redeem={vi.fn()} onSignedIn={vi.fn()} onCancel={vi.fn()} />,
