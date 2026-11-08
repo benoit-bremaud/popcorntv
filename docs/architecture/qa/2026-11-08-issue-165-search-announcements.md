@@ -1,6 +1,6 @@
 # QA record — #165 search and empty-state announcements
 
-Fix verification for A11Y-03 / A11Y-14 of the 2026-11-08 Pi full pass; the automated layers are green, the screen-reader replay on staging is pending.
+Fix verification for A11Y-03 / A11Y-14 of the 2026-11-08 Pi full pass; the automated layers and the DOM replay on local staging are green, a listening pass with a real screen reader is pending.
 
 ## Scope
 
@@ -21,9 +21,34 @@ Fix verification for A11Y-03 / A11Y-14 of the 2026-11-08 Pi full pass; the autom
 | Discover in flight, then TMDB failure | Vitest | Pass |
 | Empty catalog and welcome reuse the loading region | Vitest | Pass |
 | Catalog smoke on the local prod build | Playwright `pnpm e2e` | Pass |
-| Orca replay, `docs/testing/qa-matrix.md` § Search announcement checks | Staging | Pending |
+| Live-region replay of § Search announcement checks | Staging `b7cbdfb`, Playwright Chromium | Pass (below) |
+| Listening pass with Orca | Staging | Pending |
+
+## Staging replay
+
+Local staging (`make staging-up`, image `popcorntv:staging-b7cbdfb`), account `qa-tester`
+created by the agent from a server-issued invitation (credentials in the git-ignored
+`.env.staging`, `QA_TESTER_*`), library *QA films* on the two mounted test films. The text
+of every `role="status"` node was read after each step:
+
+| Step | Region text | Result |
+|---|---|---|
+| Viewer, empty catalog | `Nothing to watch yet.` | Pass ([01](2026-11-08-issue-165-search-announcements/01-viewer-empty-catalog.png)) |
+| Owner, empty catalog | `Welcome to PopCornTV. Add a library from your media folder, then scan it.` | Pass (text read before the library existed; no screenshot) |
+| Library before any search | empty, one region | Pass ([02](2026-11-08-issue-165-search-announcements/02-library-catalog.png)) |
+| Type `heat` fast (120 ms per key) | empty after every key | Pass |
+| 700 ms later | `1 result for “heat”` | Pass ([02](2026-11-08-issue-165-search-announcements/02b-library-results.png)) |
+| Query `a` | `2 results for “a”` | Pass |
+| Query `zzzqqq` | `No match for “zzzqqq”`, visible line `No title or person matches “zzzqqq”.` | Pass ([03](2026-11-08-issue-165-search-announcements/03-library-no-match.png)) |
+| Escape | empty at once | Pass |
+| Blank query | empty | Pass |
+| Discover before search | empty, one region | Pass |
+| Discover search (staging TMDB key is a placeholder) | `TMDB could not be reached.`, emptied when the field is cleared | Pass ([04](2026-11-08-issue-165-search-announcements/04-discover-results.png)) |
+
+Not replayed on staging: the Discover count and no-match lines, which need a real TMDB key;
+Vitest covers both.
 
 ## Pending
 
-The staging database holds an owner whose password the agent does not have, so the
-screen-reader replay waits for the owner's next QA pass on <https://localhost:8443>.
+A listening pass with Orca on Firefox, by the owner, of `docs/testing/qa-matrix.md`
+§ Search announcement checks.
