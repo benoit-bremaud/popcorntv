@@ -97,6 +97,20 @@ unreadable or the root is empty (unmounted volume). File names follow the Plex /
 Database migrations live in `apps/server/drizzle` (`pnpm --filter @popcorntv/server exec
 drizzle-kit generate` after a schema change) and are applied at server start.
 
+### Local staging
+
+QA runs against the production image on this machine before any Pi deploy. `make
+staging-up` builds the committed HEAD (`git archive`, tag `popcorntv:staging-<sha>`) and runs
+[deploy/staging/compose.yml](deploy/staging/compose.yml), a copy of the Pi service
+(`web-sync`, read-only root, dropped capabilities, separate cache volume) behind Caddy with
+`tls internal` on <https://localhost:8443> (`/api/*` is the server; accept the local
+certificate). Use exactly that origin: any other one, `127.0.0.1` included, fails the CSRF
+check. Copy `.env.staging.example` to `.env.staging` first. Media come from `./media`, or
+from `STAGING_MEDIA=/absolute/path`; put a few files there in the Plex layout (a film, a
+series episode with subtitles and a second audio track) so direct play, HLS, subtitles and
+resume can be exercised. The setup link is in `make staging-logs`. Stop it after a pass:
+`make staging-down` keeps the data, `make staging-reset` deletes it and the older images.
+
 ## Documentation
 
 - [docs/requirements](docs/requirements) — vision, actors, functional and non-functional requirements

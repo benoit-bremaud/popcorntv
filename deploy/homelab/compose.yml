@@ -1,6 +1,7 @@
 # Reference compose for the bb-homelab deployment (ADR-0013). The live copy lives in the
 # bb-homelab repository; keep both in step. No app port is published: Caddy is the only
 # entry point and reaches the app over its own proxy network (bb-homelab ADR 0009).
+# Keep deploy/staging/compose.yml (local staging, #204) in step.
 services:
   popcorntv:
     image: popcorntv:${POPCORNTV_VERSION:?set POPCORNTV_VERSION}

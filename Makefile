@@ -1,4 +1,4 @@
-.PHONY: help lint-docker scan-docker-config scan-docker-image
+.PHONY: help lint-docker scan-docker-config scan-docker-image staging-up staging-down staging-logs staging-reset
 
 help: ## List targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "%-20s %s\n", $$1, $$2}'
@@ -39,3 +39,26 @@ scan-docker-image: ## Trivy vulnerability scan: make scan-docker-image IMAGE=nam
 		image --cache-dir /cache --severity HIGH,CRITICAL --scanners vuln \
 		--ignorefile .trivyignore.yaml --exit-code "$(TRIVY_EXIT)" --format "$(TRIVY_FORMAT)" \
 		$(if $(TRIVY_OUTPUT),--output "/out/$(TRIVY_OUTPUT)") "$(IMAGE)"
+
+# Local staging (#204): the production image of HEAD run like on the Pi, on
+# https://localhost:8443, for QA passes before a Pi deploy. The build context is
+# `git archive HEAD`, so uncommitted changes never end up under HEAD's tag.
+STAGING_TAG = popcorntv:staging-$$(git rev-parse --short HEAD)
+STAGING_COMPOSE = POPCORNTV_VERSION=staging-$$(git rev-parse --short HEAD) docker compose -f deploy/staging/compose.yml
+
+staging-up: ## Build HEAD's production image and start local staging (needs .env.staging)
+	@test -f .env.staging || { echo "copy .env.staging.example to .env.staging first"; exit 2; }
+	@mkdir -p media
+	git archive --format=tar HEAD | docker build --label org.opencontainers.image.revision=$$(git rev-parse HEAD) -t $(STAGING_TAG) -
+	$(STAGING_COMPOSE) up -d --wait
+
+staging-logs: ## Follow the local staging logs
+	$(STAGING_COMPOSE) logs -f
+
+staging-down: ## Stop local staging, keep its data
+	$(STAGING_COMPOSE) down
+
+staging-reset: ## Stop local staging, delete its data volumes and older staging images
+	$(STAGING_COMPOSE) down -v
+	@docker images --format '{{.Repository}}:{{.Tag}}' 'popcorntv:staging-*' \
+		| grep -vx "$(STAGING_TAG)" | xargs -r docker rmi

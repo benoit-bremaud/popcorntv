@@ -9,6 +9,7 @@ coverage/
 .env
 .env.*
 !.env.example
+!.env.staging.example
 
 # Runtime data (SQLite database, transcode cache, media)
 data/

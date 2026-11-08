@@ -1,7 +1,7 @@
 # Reference site block for the bb-homelab Caddy (ADR-0013, issue #46). The Caddy container
 # joins `bb-homelab-proxy-popcorntv` at 10.203.60.2 and mounts the `popcorntv-web` volume
 # read-only at /srv/popcorntv-web. The `tailnet_only` snippet is defined at the top of the
-# bb-homelab Caddyfile.
+# bb-homelab Caddyfile. Keep deploy/staging/Caddyfile (local staging, #204) in step.
 popcorntv.bb-homelab.local {
 	tls internal
 	import tailnet_only /api/health
