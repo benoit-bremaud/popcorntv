@@ -69,7 +69,10 @@ function yearOf(date: string): number | null {
  */
 const SENT = Symbol('sent');
 
-/** Runs a TMDB call; on a TMDB failure it sends `404 title_not_found` or `502 tmdb_unavailable` (spec R9) and returns `SENT`. */
+/**
+ * Runs a TMDB call; on a TMDB failure it sends `404 title_not_found` or `502 tmdb_unavailable`
+ * (spec R9) and returns `SENT`.
+ */
 async function viaTmdb<T>(reply: FastifyReply, call: () => Promise<T>): Promise<T | typeof SENT> {
   try {
     return await call();
