@@ -4,6 +4,21 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-08 — #177 real 404 for unknown paths (PR #221 merged, `714eaa6`)
+
+- MCDA option A (owner, 455/500 vs Fastify serving the web 335, client view 285): both
+  Caddyfiles drop `try_files {path} /index.html`; `@missing not file {path} {path}index.html`
+  → `error 404`; `handle_errors 404` serves the static `404.html` (second Vite entry, token
+  styles); `(popcorntv_headers)` snippet so error routes keep the security headers;
+  `@rawApi` on `{http.request.orig_uri.path}` answers `404 {"error":"not_found"}`, `@assets`
+  excludes raw `/api` paths. ADR-0025, spec deploy-homelab R3a.
+- Tests: `scripts/not-found-check.sh` (`make check-not-found`), 27 lines, green on local
+  staging; report `docs/architecture/qa/2026-11-08-issue-177-not-found.md`.
+- Review: Opus adversarial 2 rounds — 404 page without headers, `/api/..%2fassets/` reaching
+  the assets route, README install step missing the snippet; all fixed.
+- Pi: owner copies the snippet + site block into bb-homelab on the next deploy.
+- Follow-up: `pnpm lint` can exhaust the default V8 heap on this machine (reviewer note).
+
 ## 2026-11-08 — #169 Back closes the open dialog (PR #219 merged, `9592291`)
 
 - MCDA option A (owner, 455/500 vs hash route / react-router 255): `useHistoryLayer` pushes
