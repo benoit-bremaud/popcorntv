@@ -152,7 +152,7 @@ Gate note: no Must was found, but applicable P0 items are INCONCLUSIVE or BLOCKE
 9. 🔵 Nice — rows start 8 px left of titles (scroll-snap padding) (UI-07) → #170
 10. 🔵 Nice — account trigger text top-aligned (UI-07) → #171
 11. 🔵 Nice — detail dialog actions and wording inconsistent (UI-07) → #172
-12. 🔵 Nice — profile picker accessible names "MMe" (A11Y-02) → #173
+12. 🔵 Nice — profile picker accessible names "MMe" (A11Y-02) → #173 (false positive: textContent read, see `2026-11-09-a11y-02-recheck.md`)
 13. 🔵 Nice — raw User-Agent in the device list (USA-06) → #174
 14. 🔵 Nice — admin panel polish (US dates, plural, alignment, revoke) (UI-06) → #175
 15. 🔵 Nice — same title in two libraries shows twice (FON-11) → #176

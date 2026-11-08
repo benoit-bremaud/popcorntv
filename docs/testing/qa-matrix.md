@@ -206,3 +206,14 @@ Replay with a screen reader (Orca on Firefox, then NVDA or VoiceOver when availa
    ring visible.
 7. A long title ("Harry Potter and the Philosopher's Stone") in the Discover sheet and in a
    library dialog without backdrop never runs under the close button.
+
+## Profile picker accessible name checks (#173)
+
+1. "Who's watching?": in DevTools › Accessibility (or the axe / Playwright
+   `getByRole('button', { name })` tree), each profile button's computed name is the
+   profile name alone ("Me"), never "MMe". Read the accessibility tree, not `textContent`
+   or `innerText`: those include the `aria-hidden` avatar initial and give a false "MMe".
+2. A profile named in RTL script with an emoji (e.g. "مريم 🎬") is announced intact, with
+   no initial before it.
+3. The avatar span carries `aria-hidden="true"`; the header profile switcher reads the
+   same way.
