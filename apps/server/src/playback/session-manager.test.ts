@@ -413,7 +413,7 @@ describe('SessionManager', () => {
       const keyframeProbe = vi.fn(async () => 39.96);
       const result = await manager(transcoder, { keyframeProbe }).open(USER, '/m/a.mkv', H264, 42);
 
-      expect(keyframeProbe).toHaveBeenCalledWith('/m/a.mkv', 42);
+      expect(keyframeProbe).toHaveBeenCalledWith('/m/a.mkv', 42, null);
       expect(result).toMatchObject({ kind: 'ready', offsetSec: 39.96 });
       expect(runs[0]?.args.slice(4, 6)).toEqual(['-ss', '42']);
     });
@@ -455,5 +455,22 @@ describe('SessionManager', () => {
 
     expect(result).toEqual({ kind: 'busy' });
     expect(keyframeProbe).not.toHaveBeenCalled();
+  });
+
+  it('probes with the audio track the session maps', async () => {
+    const { transcoder } = fakeTranscoder('writes');
+    const keyframeProbe = vi.fn(async () => 40);
+    const audio = (language: string): StreamInfo => ({
+      type: 'audio',
+      codec: 'aac',
+      width: null,
+      height: null,
+      language,
+    });
+    const streams = [...H264, audio('eng'), audio('fra')];
+
+    await manager(transcoder, { keyframeProbe }).open(USER, '/m/a.mkv', streams, 42, 1);
+
+    expect(keyframeProbe).toHaveBeenCalledWith('/m/a.mkv', 42, 1);
   });
 });

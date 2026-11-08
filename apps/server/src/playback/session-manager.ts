@@ -4,6 +4,7 @@ import { access, mkdir, mkdtemp, readdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import type { FastifyBaseLogger } from 'fastify';
+import { effectiveAudioIndex } from '@popcorntv/shared';
 import type { Role, StreamInfo } from '@popcorntv/shared';
 import type { Caller } from '../http.js';
 import { PLAYLIST_NAME, SEGMENT_PATTERN, copiesVideo, ffmpegArgs } from './ffmpeg-args.js';
@@ -113,7 +114,7 @@ export class SessionManager {
     // A caller bound to be refused costs no probe.
     if (this.atLimit() && this.victimFor(opener) === undefined) return { kind: 'busy' };
     // Probed before the limit check: nothing may be awaited between it and the reservation.
-    const offsetSec = await this.realStart(inputPath, streams, startSec);
+    const offsetSec = await this.realStart(inputPath, streams, startSec, audioIndex);
     let preempted: Promise<boolean> | undefined;
     if (this.atLimit()) {
       const victim = this.victimFor(opener);
@@ -224,11 +225,16 @@ export class SessionManager {
     inputPath: string,
     streams: readonly StreamInfo[],
     startSec: number,
+    audioIndex: number,
   ): Promise<number> {
     const probe = this.options.keyframeProbe;
     if (startSec <= 0 || probe === undefined || !copiesVideo(streams)) return startSec;
     try {
-      return await probe(inputPath, startSec);
+      // The same audio map as `ffmpegArgs`: the timeline starts at its earliest packet.
+      const audioTrack = streams.some((stream) => stream.type === 'audio')
+        ? effectiveAudioIndex(streams, audioIndex)
+        : null;
+      return await probe(inputPath, startSec, audioTrack);
     } catch (error) {
       this.options.logger.warn(
         { event: 'playback.keyframe.failed', err: error, startSec },

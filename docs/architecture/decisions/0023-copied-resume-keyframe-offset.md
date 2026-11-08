@@ -33,10 +33,11 @@ Sensitivity: with exactness at 50 and CPU at 10, A stays first (470 against C's 
 ## Decision
 
 A. `KeyframeProbe` (`src/playback/keyframe-probe.ts`) runs FFmpeg itself with the
-session's seek: `ffmpeg -ss <startSec> -copyts -start_at_zero -i <file> -map 0:V:0 -c copy
--frames:v 1 -f framecrc -`, and the pure `parseFramecrc` turns the first packet's pts into
-seconds. Asking FFmpeg, not ffprobe, matters: FFmpeg backs its seek off by up to 3/23 s
-with B-frames, counts `-ss` from the container start and seeks index-less MPEG-TS
+session's seek and maps: `ffmpeg -ss <startSec> -copyts -start_at_zero -i <file> -map 0:V:0
+[-map 0:a:<track>] -c copy -frames:v 1 -f framecrc -`, and the pure `parseFramecrc` keeps the
+smallest pts over the printed packets, each in its stream's time base: the player's timeline
+starts at the earliest packet, and MPEG-TS audio often leads the video keyframe by seconds.
+Asking FFmpeg, not ffprobe, matters: FFmpeg backs its seek off by up to 3/23 s with B-frames, counts `-ss` from the container start and seeks index-less MPEG-TS
 differently; an ffprobe `-read_intervals` probe disagreed with it by one GOP in the review
 (Matroska with B-frames, late video start, MPEG-TS). `SessionManager.open` probes only when
 the video is copied and `startSec > 0`, after a cheap busy check and before the

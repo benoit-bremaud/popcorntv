@@ -7,11 +7,13 @@ import { createKeyframeProbe } from './keyframe-probe.js';
 
 /**
  * Opt-in (`FFMPEG_IT=1`): runs the real FFmpeg on a B-frame Matroska file with a keyframe
- * every 5 s, the case where an ffprobe probe disagreed with FFmpeg's seek (ADR-0023).
+ * every 5 s, the case where an ffprobe probe disagreed with FFmpeg's seek, and on an MPEG-TS
+ * file whose audio leads the video keyframe (ADR-0023).
  */
 describe.runIf(process.env['FFMPEG_IT'] === '1')('createKeyframeProbe with FFmpeg', () => {
   let dir: string;
   let file: string;
+  let ts: string;
 
   beforeAll(async () => {
     dir = await mkdtemp(join(tmpdir(), 'popcorntv-keyframe-'));
@@ -33,6 +35,13 @@ describe.runIf(process.env['FFMPEG_IT'] === '1')('createKeyframeProbe with FFmpe
       '0',
       file,
     ]);
+    ts = join(dir, 'gop.ts');
+    // prettier-ignore
+    execFileSync('ffmpeg', [
+      '-v', 'error', '-f', 'lavfi', '-i', 'testsrc=d=30:r=24', '-f', 'lavfi', '-i', 'sine=d=30',
+      '-c:v', 'libx264', '-g', '120', '-keyint_min', '120', '-sc_threshold', '0',
+      '-c:a', 'aac', '-f', 'mpegts', ts,
+    ]);
   });
 
   afterAll(async () => {
@@ -45,8 +54,18 @@ describe.runIf(process.env['FFMPEG_IT'] === '1')('createKeyframeProbe with FFmpe
     // FFmpeg backs its seek off with B-frames: just past a keyframe lands on the one before.
     [20.05, 15],
   ])('a seek to %s s starts near the keyframe at %s s', async (startSec, keyframe) => {
-    const start = await createKeyframeProbe('ffmpeg')(file, startSec);
+    const start = await createKeyframeProbe('ffmpeg')(file, startSec, null);
 
     expect(Math.abs(start - keyframe)).toBeLessThan(0.2);
+  });
+
+  it('starts an MPEG-TS resume at its earliest packet, audio included', async () => {
+    const probe = createKeyframeProbe('ffmpeg');
+
+    const videoOnly = await probe(ts, 7, null);
+    const withAudio = await probe(ts, 7, 0);
+
+    expect(withAudio).toBeLessThanOrEqual(videoOnly);
+    expect(withAudio).toBeLessThanOrEqual(7);
   });
 });

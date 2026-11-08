@@ -5,20 +5,26 @@ const execFileAsync = promisify(execFile);
 
 /**
  * Process egress of a copied resume (ADR-0023): the media time at which FFmpeg's input
- * `-ss startSec` really starts the copied video. Rejects when FFmpeg fails or prints no frame.
+ * `-ss startSec` really starts the session's output, video and `audioTrack` (the index among
+ * the audio streams, null without audio). Rejects when FFmpeg fails or prints no packet.
  */
-export type KeyframeProbe = (filePath: string, startSec: number) => Promise<number>;
+export type KeyframeProbe = (
+  filePath: string,
+  startSec: number,
+  audioTrack: number | null,
+) => Promise<number>;
 
 const PROBE_TIMEOUT_MS = 10_000;
 const PROBE_MAX_OUTPUT_BYTES = 64 * 1024;
 
 /**
- * Builds a probe that runs FFmpeg's own seek, with the same `-ss` and map as the session,
- * and prints the first copied video packet (`framecrc`). `-copyts -start_at_zero` keeps its
+ * Builds a probe that runs FFmpeg's own seek, with the same `-ss` and maps as the session,
+ * and prints the packets up to the first video one (`framecrc`): the player's timeline
+ * starts at the earliest of them, audio included (MPEG-TS audio often leads the keyframe). `-copyts -start_at_zero` keeps its
  * time on the media timeline. The path is the `-i` argument, never an option.
  */
 export function createKeyframeProbe(ffmpegPath: string): KeyframeProbe {
-  return async (filePath, startSec) => {
+  return async (filePath, startSec, audioTrack) => {
     const { stdout } = await execFileAsync(
       ffmpegPath,
       [
@@ -33,6 +39,7 @@ export function createKeyframeProbe(ffmpegPath: string): KeyframeProbe {
         filePath,
         '-map',
         '0:V:0',
+        ...(audioTrack === null ? [] : ['-map', `0:a:${audioTrack}`]),
         '-c',
         'copy',
         '-frames:v',
@@ -50,14 +57,21 @@ export function createKeyframeProbe(ffmpegPath: string): KeyframeProbe {
 }
 
 /**
- * Pure: the first packet's pts × the stream time base from FFmpeg's `framecrc` output, in
- * seconds, never negative. Null when there is no time base or packet.
+ * Pure: the smallest pts over the packets of FFmpeg's `framecrc` output (lines `stream, dts,
+ * pts, …`), each times its stream's `#tb`, in seconds, never negative. Null when no packet
+ * has a time base.
  */
 export function parseFramecrc(output: string): number | null {
-  const base = /^#tb 0: (\d+)\/(\d+)$/m.exec(output);
-  const packet = /^0,\s*(-?\d+),/m.exec(output);
-  if (base === null || packet === null) return null;
-  const [num, den] = [Number(base[1]), Number(base[2])];
-  if (den === 0) return null;
-  return Math.max(0, (Number(packet[1]) * num) / den);
+  const bases = new Map<string, number>();
+  for (const [, stream, num, den] of output.matchAll(/^#tb (\d+): (\d+)\/(\d+)$/gm)) {
+    if (Number(den) !== 0) bases.set(stream ?? '', Number(num) / Number(den));
+  }
+  let start: number | null = null;
+  for (const [, stream, pts] of output.matchAll(/^(\d+),\s*-?\d+,\s*(-?\d+),/gm)) {
+    const base = bases.get(stream ?? '');
+    if (base === undefined) continue;
+    const time = Number(pts) * base;
+    start = start === null ? time : Math.min(start, time);
+  }
+  return start === null ? null : Math.max(0, start);
 }
