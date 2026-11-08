@@ -139,7 +139,10 @@ the `OneLinePerRequest` log controller, `event: "<domain>.<action>"` on every do
 by default, signed-in `GET /version`, `/health` answers `{ status }` only, shown in the
 account menu); #169 Back closes layers (spec `docs/architecture/specs/history-back.md`,
 ADR-0024: `useHistoryLayer` pushes `{ pctvLayer }` per open `<dialog>`, `popstate` closes it,
-a button / Escape close goes back, a hand-off reuses the entry, a reload leaves it).
+a button / Escape close goes back, a hand-off reuses the entry, a reload leaves it); #177 real 404 (ADR-0025, spec deploy-homelab R3a: no
+`index.html` fallback in Caddy, `handle_errors 404` → static `404.html` (second Vite entry)
+with the `(popcorntv_headers)` snippet, raw-path `/api` misses answer JSON,
+`make check-not-found` replays the matrix).
 
 Server layout (flat, component diagram 03): `src/library/` holds the pure `name-parser`
 and `path-guard`, the `ffprobe` runner (only process egress), the `folder-lister` (one-level `readdir` of `MEDIA_ROOT`), the `scanner`, the pure `identity` (carry-over keys, ADR-0018), the `scheduler` (interval rescans, ADR-0016), the per-library

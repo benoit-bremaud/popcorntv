@@ -1,4 +1,4 @@
-.PHONY: help lint-docker scan-docker-config scan-docker-image staging-up staging-down staging-logs staging-reset
+.PHONY: help lint-docker scan-docker-config scan-docker-image staging-up check-not-found staging-down staging-logs staging-reset
 
 help: ## List targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "%-20s %s\n", $$1, $$2}'
@@ -52,6 +52,9 @@ staging-up: ## Build HEAD's production image and start local staging (needs .env
 	git archive --format=tar HEAD | docker build --label org.opencontainers.image.revision=$$(git rev-parse HEAD) \
 		--build-arg APP_VERSION=$$(git describe --tags --always HEAD) -t $(STAGING_TAG) -
 	$(STAGING_COMPOSE) up -d --wait
+
+check-not-found: ## Replay the not-found matrix (#177) against local staging
+	scripts/not-found-check.sh https://localhost:8443
 
 staging-logs: ## Follow the local staging logs
 	$(STAGING_COMPOSE) logs -f

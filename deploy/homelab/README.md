@@ -52,8 +52,9 @@ the `bb-homelab` repository.
    compose `.env`, then `docker compose up -d`.
 5. In the Caddy compose: join `bb-homelab-proxy-popcorntv` (external) at `10.203.60.2`,
    mount `popcorntv-web` (external) read-only at `/srv/popcorntv-web`, add
-   `popcorntv.bb-homelab.local` to the `proxy-uptime-kuma` aliases. Add the site block of
-   `Caddyfile`, then recreate Caddy.
+   `popcorntv.bb-homelab.local` to the `proxy-uptime-kuma` aliases. Add the
+   `(popcorntv_headers)` snippet and the site block of `Caddyfile` (snippet first), then
+   recreate Caddy.
 6. Read the one-time setup link in `docker logs bb-homelab-popcorntv`, create the owner
    account. On the empty catalog press "Add a library" (or account menu › Administration ›
    Libraries), pick `films` then `series` under `/app/media` with their kind, and press
@@ -81,6 +82,8 @@ up here.
 1. Run the backup line above by hand.
 2. Build the new tag, change `POPCORNTV_VERSION`, `docker compose up -d`. `web-sync` copies
    the new web build before the app starts; migrations run at start.
+3. When `Caddyfile` changed, copy its snippet and site block into the bb-homelab Caddyfile
+   and reload Caddy (e.g. #177 adds the `(popcorntv_headers)` snippet and the 404 routes).
 
 Roll back by setting the previous tag; if the new version migrated the database, restore
 the archive taken in step 1 first: stop the app, put back `popcorntv.sqlite` with its

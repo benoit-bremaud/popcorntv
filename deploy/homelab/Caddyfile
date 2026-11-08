@@ -1,13 +1,11 @@
-# Reference site block for the bb-homelab Caddy (ADR-0013, issue #46). The Caddy container
+# Reference snippet and site block for the bb-homelab Caddy (ADR-0013, issue #46). The Caddy container
 # joins `bb-homelab-proxy-popcorntv` at 10.203.60.2 and mounts the `popcorntv-web` volume
 # read-only at /srv/popcorntv-web. The `tailnet_only` snippet is defined at the top of the
 # bb-homelab Caddyfile. Keep deploy/staging/Caddyfile (local staging, #204) in step.
-popcorntv.bb-homelab.local {
-	tls internal
-	import tailnet_only /api/health
 
-	encode zstd gzip
-
+# Security headers, imported by the site and by its error routes: `handle_errors` does not
+# run the site's `header` directives (#177).
+(popcorntv_headers) {
 	header {
 		Strict-Transport-Security "max-age=31536000"
 		# No inline script or style (#31). hls.js plays through MediaSource blob: URLs and runs
@@ -20,6 +18,15 @@ popcorntv.bb-homelab.local {
 		Referrer-Policy "no-referrer"
 		-Server
 	}
+}
+
+popcorntv.bb-homelab.local {
+	tls internal
+	import tailnet_only /api/health
+
+	encode zstd gzip
+
+	import popcorntv_headers
 
 	# The API answers without the /api prefix, like the Vite dev proxy.
 	handle_path /api/* {
@@ -27,16 +34,41 @@ popcorntv.bb-homelab.local {
 	}
 
 	# Hashed build assets: cached for good, and a missing one is a 404, never index.html.
-	handle /assets/* {
+	# `/api/..%2fassets/x.js` cleans to /assets/x.js: the raw /api path keeps it an API miss.
+	@assets {
+		path /assets/*
+		not expression `{http.request.orig_uri.path}.startsWith("/api/")`
+	}
+	handle @assets {
 		root * /srv/popcorntv-web
 		header Cache-Control "public, max-age=31536000, immutable"
 		file_server
 	}
 
+	# Caddy matches on the decoded, cleaned path: `/api/x/..%2f..%2fetc` reaches the
+	# routes below as `/etc`. The raw path still says /api, so it is an API miss (#177).
+	@rawApi expression `{http.request.orig_uri.path}.startsWith("/api/") || {http.request.orig_uri.path} == "/api"`
+	handle @rawApi {
+		header Content-Type application/json
+		respond `{"error":"not_found"}` 404
+	}
+
+	# The app has no client routes: only real files and `/` (index.html) exist. Anything
+	# else is a real 404 with the static 404 page (#177), never index.html with a 200.
 	handle {
 		root * /srv/popcorntv-web
 		header Cache-Control "no-cache"
-		try_files {path} /index.html
+		# A path under a file (`/index.html/x`) would be a bare 400 from file_server.
+		@missing not file {path} {path}index.html
+		error @missing 404
+		file_server
+	}
+
+	handle_errors 404 {
+		import popcorntv_headers
+		root * /srv/popcorntv-web
+		header Cache-Control "no-cache"
+		rewrite * /404.html
 		file_server
 	}
 }
