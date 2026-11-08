@@ -44,7 +44,6 @@ re-encoded) and one with a text subtitle track:
 4. The server log shows `playback.session.opened` with `offsetSec` ≤ `startSec` and no
    `playback.keyframe.failed`.
 
-
 ## Continue watching checks (#140)
 
 Replay on every pass that touches the catalog, the detail dialog or the player:

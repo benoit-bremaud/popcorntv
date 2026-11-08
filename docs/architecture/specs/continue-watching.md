@@ -46,3 +46,6 @@ The catalog home opens with a row of the active profile's titles to pick up agai
 
 - 2a. The progress request fails → no row, the rest of the catalog is unchanged.
 - 3a. A saved media is no longer in the catalog (library removed) → its row is ignored.
+- 5a. The viewer leaves the catalog before the last save lands → the catalog loaded on
+  return may show the previous position until the next dialog close (known limit, one
+  save round trip).

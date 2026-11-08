@@ -1,7 +1,7 @@
 # Sequence diagram — catalog — continue watching
 
 > **Feature**: UC22 ([spec](../../specs/continue-watching.md))
-> **Related ADRs**: ADR-0007, ADR-0015
+> **Related ADRs**: ADR-0007, ADR-0015 · **Issues**: #140
 
 ## Diagram
 
@@ -31,6 +31,7 @@ sequenceDiagram
   Viewer->>Page: activate a card
   Page-->>Viewer: detail dialog of the film or series (UC4, resume UC6/UC7)
   Viewer->>Page: close the dialog
+  Note over Page: waits for the player's last PUT progress (R7, #140)
   Page->>Api: loadProgress(profileId)
   Api-->>Page: WatchProgress[]
   Page->>Cat: continueWatchingRow(media, progress)

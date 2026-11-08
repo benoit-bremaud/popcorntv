@@ -101,11 +101,11 @@ export function DetailDialog({
   const lastSave = useRef<Promise<void>>(Promise.resolve());
 
   /** Reloads the offer once the player's last save has landed (spec step 7). */
-  async function stop(saved: Promise<void>): Promise<void> {
-    lastSave.current = saved;
+  async function stop(landed: Promise<void>): Promise<void> {
+    lastSave.current = landed;
     setPlaying(null);
     trigger.current?.focus();
-    await saved;
+    await landed;
     await refreshProgress();
   }
 
