@@ -4,6 +4,23 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-08 — #182 logging audit (PR #205 merged, `eae975a`)
+
+- **Audit** — 18 log calls in 9 server files, `LOG_LEVEL` ignored, audit events in the
+  database only, swallowed TMDB / unreadable-root branches.
+- **Conception** — spec `docs/architecture/specs/logging.md` (R1–R8, event catalog, sink),
+  ADR-0021 (MCDA: `auth_events` mirrored into the log by `EventRepository.record`, 490/500,
+  owner approval), "Log events" sections in four feature specs, log sink on the deployment
+  diagram.
+- **Code** — `LOG_LEVEL` validated, pino redact, one `http.request` line per answer through a
+  `OneLinePerRequest` log controller (keeps Fastify's error lines), `event` on every domain
+  line (scan, TMDB, playback decision, session lifecycle with close reason, CSRF, auth),
+  `scripts/log-coverage.mjs` in `pnpm lint`.
+- **Gate** — typecheck, lint + log coverage, format, 622 server tests, coverage 97.2 %, build,
+  gitleaks, SonarQube passed; Opus adversarial (1 Must + 9 Should fixed), verify round open
+  (2 Should fixed). Merge with main resolved a conflict with #180 in `viaTmdb`; the #178 guard
+  test now expects the `discover.tmdb.failed` line. Codex review: out of credit.
+
 ## 2026-11-08 — Pi deploy of `0698684`, FULL QA pass, #178 fix (PR #180 merged, `9d21ab0`)
 
 - **Deploy** — Pi rebuilt from `0698684` (was `bbde01d`), backup taken first, healthy; Discover
