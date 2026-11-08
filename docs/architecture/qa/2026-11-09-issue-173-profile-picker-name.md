@@ -12,8 +12,14 @@ product defect; this note records the analysis, the guard tests and the pending 
 - `apps/web/src/profiles/Avatar.tsx` has rendered the initial with `aria-hidden="true"`
   since #36 (`da3b6e1`); the tested image `0698684` already carried it.
 - The accessible name computation (W3C accname 1.2, Chromium, dom-accessibility-api)
-  skips `aria-hidden` descendants, so the computed name is "Me". The QA pass read the
-  button text (`textContent` / `innerText`), which does include the hidden initial.
+  skips `aria-hidden` descendants, so the computed name is "Me". The QA pass most likely
+  read the button through `textContent` (the Claude in Chrome page tool), which includes the
+  hidden initial; the report does not record the method.
+- Existing tests already required the exact name "Me" before the QA run:
+  `apps/web/e2e/catalog.smoke.spec.ts:64` (Playwright, real browser and CSS, since #66) and
+  `apps/web/src/App.test.tsx:70,86` (since #36). The new component tests repeat that guard
+  at the picker level. Playwright and Testing Library use their own accname code, so the
+  Chromium accessibility tree is checked in the staging replay.
 - Verdict: false positive. No product change.
 
 ## Guard
