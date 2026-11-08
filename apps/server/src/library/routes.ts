@@ -59,6 +59,7 @@ export function registerLibraryRoutes(app: FastifyInstance, deps: LibraryRoutesD
     const rootPath = body.data.rootPath;
     // Spec R3: overlapping roots would list every title twice. Compared on real paths, as
     // the scanner walks them: a link to another library's folder overlaps it too.
+    // log: n/a — an unreadable root is compared as written
     const real = (path: string) => realpath(path).catch(() => path);
     const realRoot = await real(rootPath);
     const realOf = new Map(
@@ -151,7 +152,25 @@ export async function scanLibrary(
   log: FastifyInstance['log'],
 ): Promise<ScanReport> {
   return deps.lock.run(library.id, async () => {
+    const started = Date.now();
+    log.info({ event: 'library.scan.start', libraryId: library.id }, 'scan started');
     const scanned = await deps.scanner.scan(library);
+    // One line per file left out: ffprobe failures are only visible here (spec logging R5).
+    for (const file of scanned.skipped) {
+      log.warn({ event: 'library.scan.skipped', libraryId: library.id, ...file }, 'file skipped');
+    }
+    log.info(
+      {
+        event: 'library.scan.done',
+        libraryId: library.id,
+        added: scanned.added,
+        updated: scanned.updated,
+        removed: scanned.removed,
+        skipped: scanned.skipped.length,
+        ms: Date.now() - started,
+      },
+      'scan done',
+    );
     const metadata = await includeEnrich(deps.enrich, library, log);
     return { ...scanned, metadata };
   });
@@ -167,7 +186,10 @@ async function includeEnrich(
   try {
     return await enrich(library);
   } catch (error) {
-    log.warn(error, 'metadata enrichment skipped after scan');
+    log.warn(
+      { event: 'metadata.enrich.skipped', err: error, libraryId: library.id },
+      'metadata enrichment skipped after scan',
+    );
     return null;
   }
 }

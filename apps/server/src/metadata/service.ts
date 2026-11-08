@@ -1,3 +1,4 @@
+import type { FastifyBaseLogger } from 'fastify';
 import type { EnrichReport, EnrichTitle, Library } from '@popcorntv/shared';
 import { BACKDROP_SIZE, POSTER_SIZE } from './artwork-cache.js';
 import type { ArtworkCache } from './artwork-cache.js';
@@ -13,9 +14,7 @@ export interface EnrichOptions {
 }
 
 /** Where per-title failures go: the report only names the title, the log keeps the cause. */
-export interface EnrichLogger {
-  warn(error: unknown, message: string): void;
-}
+export type EnrichLogger = Pick<FastifyBaseLogger, 'info' | 'warn'>;
 
 /** Collaborators of the service; `now` and `logger` are the boundaries tests replace. */
 export interface MetadataServiceDeps {
@@ -59,7 +58,7 @@ export class MetadataService {
     this.repository = deps.repository;
     this.client = deps.client;
     this.artwork = deps.artwork;
-    this.logger = deps.logger ?? { warn: () => {} };
+    this.logger = deps.logger ?? { info: () => {}, warn: () => {} };
     this.now = deps.now ?? (() => new Date());
   }
 
@@ -76,11 +75,32 @@ export class MetadataService {
     const revisited = pending.filter((title) => title.knownTmdbId !== null).length;
     const skipped = refresh ? 0 : this.repository.countLookedUp(library.id) - revisited;
     const report = { matched: 0, unmatched: [] as EnrichTitle[], failed: [] as EnrichTitle[] };
+    const started = Date.now();
     await sequentially(pending, async (title) => {
       const outcome = await this.enrichTitle(kind, title);
       if (outcome === 'matched') report.matched += 1;
       else report[outcome].push({ title: title.title, year: title.year });
+      // Why a poster is missing is the first question asked of the logs (spec logging R5).
+      if (outcome === 'unmatched') {
+        this.logger.info(
+          { event: 'metadata.unmatched', mediaId: title.id, title: title.title, year: title.year },
+          'no TMDB match',
+        );
+      }
     });
+    this.logger.info(
+      {
+        event: 'metadata.enrich.done',
+        libraryId: library.id,
+        refresh,
+        matched: report.matched,
+        unmatched: report.unmatched.length,
+        failed: report.failed.length,
+        skipped,
+        ms: Date.now() - started,
+      },
+      'metadata enrichment done',
+    );
     return { ...report, skipped };
   }
 
@@ -102,7 +122,10 @@ export class MetadataService {
         this.repository.markUnmatched(title.id, this.now().toISOString());
         return 'unmatched';
       }
-      this.logger.warn(error, `metadata lookup failed for "${title.title}"`);
+      this.logger.warn(
+        { event: 'metadata.lookup.failed', err: error, mediaId: title.id, title: title.title },
+        'metadata lookup failed',
+      );
       return 'failed';
     }
   }
@@ -136,7 +159,10 @@ export class MetadataService {
 
   private cacheArtwork(path: string | null, size: string): Promise<string | null> {
     return this.artwork.cache(path, size, (error) =>
-      this.logger.warn(error, `artwork download failed for ${size}${path}`),
+      this.logger.warn(
+        { event: 'metadata.artwork.failed', err: error, size, path },
+        'artwork download failed',
+      ),
     );
   }
 
@@ -166,7 +192,10 @@ export class MetadataService {
       episodes = await this.client.season(tmdbId, season);
     } catch (error) {
       // Spec 8a: the episodes keep their parsed fields, the series stays matched.
-      this.logger.warn(error, `season ${season} of TMDB ${tmdbId} could not be fetched`);
+      this.logger.warn(
+        { event: 'metadata.season.failed', err: error, tmdbId, season },
+        'TMDB season could not be fetched',
+      );
       return;
     }
     const fetchedAt = this.now().toISOString();

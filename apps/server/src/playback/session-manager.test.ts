@@ -45,10 +45,12 @@ async function exists(path: string): Promise<boolean> {
 describe('SessionManager', () => {
   let dir: string;
   let warn: ReturnType<typeof vi.fn>;
+  let info: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     dir = join(await mkdtemp(join(tmpdir(), 'popcorntv-sessions-')), 'transcode');
     warn = vi.fn();
+    info = vi.fn();
   });
 
   afterEach(async () => {
@@ -60,7 +62,7 @@ describe('SessionManager', () => {
       transcoder,
       dir,
       maxSessions: 1,
-      logger: { warn, info: vi.fn() } as unknown as FastifyBaseLogger,
+      logger: { warn, info, debug: vi.fn(), error: vi.fn() } as unknown as FastifyBaseLogger,
       pollMs: 5,
       ...overrides,
     });
@@ -296,6 +298,28 @@ describe('SessionManager', () => {
     expect(warn).toHaveBeenCalledOnce();
   });
 
+  it('logs the opening and the reason each session closed', async () => {
+    const { transcoder } = fakeTranscoder('writes');
+    const sessions = manager(transcoder, { idleMs: 20 });
+    const result = await sessions.open(USER, '/m/a.mkv', HEVC, 12);
+    if (result.kind !== 'ready') throw new Error('not ready');
+
+    await vi.waitFor(() =>
+      expect(info).toHaveBeenCalledWith(
+        { event: 'playback.session.closed', session: result.id, reason: 'idle' },
+        'transcode session closed',
+      ),
+    );
+    expect(info).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'playback.session.opened',
+        session: result.id,
+        startSec: 12,
+      }),
+      'transcode session opened',
+    );
+  });
+
   it('logs nothing when its own close kills FFmpeg', async () => {
     const { transcoder, runs } = fakeTranscoder('writes');
     const sessions = manager(transcoder);
@@ -316,7 +340,7 @@ describe('SessionManager', () => {
       },
       dir,
       maxSessions: 1,
-      logger: { warn, error } as unknown as FastifyBaseLogger,
+      logger: { warn, error, info } as unknown as FastifyBaseLogger,
     });
 
     expect((await sessions.open(USER, '/m/a.mkv', HEVC)).kind).toBe('failed');

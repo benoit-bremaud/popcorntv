@@ -176,3 +176,7 @@ reaches the end of its walk with the key configured.
   artwork cache on a temporary
   folder, service on an in-memory SQLite with a fake client, routes via `inject`.
 - Coverage ≥ 80 % (threshold in `vitest.config.ts`), no network in tests.
+
+## Log events
+
+See the event catalog of the [logging spec](logging.md#3-event-catalog) (ADR-0021).

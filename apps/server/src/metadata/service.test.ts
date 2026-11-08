@@ -80,10 +80,11 @@ describe('MetadataService', () => {
 
   afterEach(async () => {
     logger.warn.mockReset();
+    logger.info.mockReset();
     await rm(artworkDir, { recursive: true, force: true });
   });
 
-  const logger = { warn: vi.fn() };
+  const logger = { info: vi.fn(), warn: vi.fn() };
 
   function makeService(client: TmdbClient): MetadataService {
     return new MetadataService({
@@ -289,6 +290,14 @@ describe('MetadataService', () => {
     expect(metadataOf(id)).toMatchObject({ tmdbId: null, fetchedAt: NOW.toISOString() });
     expect(second).toEqual({ matched: 0, unmatched: [], failed: [], skipped: 1 });
     expect(client.search).toHaveBeenCalledTimes(1);
+    expect(logger.info).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'metadata.unmatched', mediaId: id, title: 'Home Video' }),
+      'no TMDB match',
+    );
+    expect(logger.info).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'metadata.enrich.done', unmatched: 1, matched: 0 }),
+      'metadata enrichment done',
+    );
   });
 
   it('re-fetches every title with refresh, including unmatched ones', async () => {
@@ -335,8 +344,12 @@ describe('MetadataService', () => {
     });
     expect(metadataOf(id)).toBeNull();
     expect(logger.warn).toHaveBeenCalledWith(
-      expect.any(TmdbRequestError),
-      expect.stringContaining('Interstellar'),
+      expect.objectContaining({
+        event: 'metadata.lookup.failed',
+        err: expect.any(TmdbRequestError),
+        title: 'Interstellar',
+      }),
+      'metadata lookup failed',
     );
   });
 
@@ -386,7 +399,14 @@ describe('MetadataService', () => {
 
     expect(report.matched).toBe(1);
     expect(metadataOf(id)).toMatchObject({ tmdbId: 5, posterPath: null, backdropPath: null });
-    expect(logger.warn).toHaveBeenCalledWith(expect.any(Error), expect.stringContaining('w500'));
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'metadata.artwork.failed',
+        err: expect.any(Error),
+        size: 'w500',
+      }),
+      'artwork download failed',
+    );
   });
 
   it('enriches a series and its episodes with one season request per season', async () => {
@@ -451,8 +471,8 @@ describe('MetadataService', () => {
     expect(byId.get(absentEpisode)?.title).toBe('Dark');
     expect(byId.get(absentEpisode)?.metadata).toMatchObject({ tmdbId: null });
     expect(logger.warn).toHaveBeenCalledWith(
-      expect.any(TmdbRequestError),
-      expect.stringContaining('season 9'),
+      expect.objectContaining({ event: 'metadata.season.failed', season: 9 }),
+      'TMDB season could not be fetched',
     );
   });
 

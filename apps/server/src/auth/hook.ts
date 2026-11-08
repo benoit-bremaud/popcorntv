@@ -75,6 +75,14 @@ export function registerAuthHook(app: FastifyInstance, deps: AuthHookDeps): void
 
   app.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
     if (isCrossSite(request.method, request.headers, deps.cookie.origin)) {
+      request.log.warn(
+        {
+          event: 'auth.csrf_refused',
+          origin: request.headers.origin,
+          fetchSite: request.headers['sec-fetch-site'],
+        },
+        'cross-site request refused',
+      );
       return reply.code(403).send(apiError('csrf'));
     }
     const now = new Date();

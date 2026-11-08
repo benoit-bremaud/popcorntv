@@ -6,6 +6,19 @@ import { loadConfig, trustProxyWarning } from './config.js';
 const BASE = { PUBLIC_URL: 'http://localhost:5173' };
 
 describe('loadConfig', () => {
+  it.each([
+    ['debug', 'debug'],
+    [' WARN ', 'warn'],
+    ['silent', 'silent'],
+    ['', 'info'],
+  ])('reads LOG_LEVEL %j as %s', (value, level) => {
+    expect(loadConfig({ ...BASE, LOG_LEVEL: value }).logLevel).toBe(level);
+  });
+
+  it('refuses an unknown LOG_LEVEL rather than logging at a level no one chose', () => {
+    expect(() => loadConfig({ ...BASE, LOG_LEVEL: 'verbose' })).toThrow('LOG_LEVEL must be one of');
+  });
+
   it('uses the .env.example defaults when nothing is set, listening on loopback only', () => {
     expect(loadConfig(BASE)).toEqual({
       port: 3000,
@@ -22,6 +35,7 @@ describe('loadConfig', () => {
       publicUrl: 'http://localhost:5173',
       trustProxy: null,
       scanIntervalMin: 60,
+      logLevel: 'info',
     });
   });
 
@@ -42,6 +56,7 @@ describe('loadConfig', () => {
         PUBLIC_URL: ' https://tv.example.org/ ',
         TRUST_PROXY: '172.18.0.0/16, 10.0.0.2',
         SCAN_INTERVAL_MIN: '0',
+        LOG_LEVEL: 'debug',
       }),
     ).toEqual({
       port: 8080,
@@ -58,6 +73,7 @@ describe('loadConfig', () => {
       publicUrl: 'https://tv.example.org',
       trustProxy: '172.18.0.0/16,10.0.0.2',
       scanIntervalMin: 0,
+      logLevel: 'debug',
     });
   });
 

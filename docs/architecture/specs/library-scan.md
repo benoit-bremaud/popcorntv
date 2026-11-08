@@ -168,3 +168,7 @@ The owner calls `POST /libraries/:id/scan`.
 - Unit tests: parser and path guard (pure), scanner on a real temporary folder with an
   in-memory SQLite and a fake prober (the only double), routes via `inject`.
 - Coverage ≥ 80 % enforced in the Vitest config.
+
+## Log events
+
+See the event catalog of the [logging spec](logging.md#3-event-catalog) (ADR-0021).

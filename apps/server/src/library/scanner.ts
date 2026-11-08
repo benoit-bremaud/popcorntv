@@ -113,6 +113,7 @@ export class LibraryScanner {
     try {
       probed = await this.probe(file.realPath);
     } catch {
+      // log: n/a — reported as a skipped file, logged by scanLibrary
       return 'probe_failed';
     }
     const parsed = parseMediaName(relativePath, library.kind);
@@ -147,6 +148,7 @@ export class LibraryScanner {
  * under `MEDIA_ROOT` must not pull an external tree into the library.
  */
 async function realRoot(rootPath: string, mediaRoot: string): Promise<string> {
+  // log: n/a — a missing root is refused just below
   const info = await stat(rootPath).catch(() => null);
   if (!info?.isDirectory()) throw new RootUnreadableError(rootPath, 'is not a readable directory');
   const [real, realMediaRoot] = await Promise.all([realpath(rootPath), realpath(mediaRoot)]);
@@ -167,6 +169,7 @@ async function locate(root: string, filePath: string): Promise<LocatedFile | Ski
     fileSize = info.size;
     fileMtimeMs = Math.round(info.mtimeMs);
   } catch {
+    // log: n/a — reported as a skipped file, logged by scanLibrary
     return 'unreadable';
   }
   if (resolveUnderRoot(root, realPath) === null) return 'outside_root';
@@ -189,6 +192,7 @@ async function walk(dir: string): Promise<WalkResult> {
   try {
     entries = await readdir(dir, { withFileTypes: true });
   } catch {
+    // log: n/a — reported as an unreadable folder in the scan report
     return { files: [], unreadableDirs: [dir] };
   }
   const sorted = [...entries].sort((a, b) => a.name.localeCompare(b.name));

@@ -1,4 +1,5 @@
 import { desc, eq, lt } from 'drizzle-orm';
+import type { FastifyBaseLogger } from 'fastify';
 import { USERNAME_PATTERN } from '@popcorntv/shared';
 import type { AuthEvent } from '@popcorntv/shared';
 import type { AppDatabase } from '../db/index.js';
@@ -19,9 +20,19 @@ export interface AuthEventInput {
   readonly usernameTried?: string;
 }
 
-/** Writes `auth_events` (spec auth R9); UC18 lists them. */
+/** Kinds logged at `warn`: an attack or a typo worth noticing (spec logging R5). */
+const WARN_KINDS: ReadonlySet<AuthEventKind> = new Set(['login_failed', 'login_locked']);
+
+/**
+ * Writes `auth_events` (spec auth R9); UC18 lists them. Each row is also one `auth.<kind>`
+ * log line with the same facts (ADR-0021), except `usernameTried`, which stays in the
+ * owner-only table: stdout ends up in Docker logs.
+ */
 export class EventRepository {
-  constructor(private readonly db: AppDatabase) {}
+  constructor(
+    private readonly db: AppDatabase,
+    private readonly logger?: Pick<FastifyBaseLogger, 'info' | 'warn'>,
+  ) {}
 
   record(kind: AuthEventKind, input: AuthEventInput, now: Date = new Date()): void {
     const tried = input.usernameTried;
@@ -35,6 +46,10 @@ export class EventRepository {
         usernameTried: tried !== undefined && USERNAME_PATTERN.test(tried) ? tried : null,
       })
       .run();
+    this.logger?.[WARN_KINDS.has(kind) ? 'warn' : 'info'](
+      { event: `auth.${kind}`, userId: input.userId ?? undefined, ip: input.ip ?? undefined },
+      `auth event ${kind}`,
+    );
   }
 
   /** The latest events, newest first, with the account's current username (UC18). */

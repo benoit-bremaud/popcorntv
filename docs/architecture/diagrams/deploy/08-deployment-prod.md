@@ -31,6 +31,7 @@ flowchart LR
     Media[("«folder» /mnt/appdata/media, read-only")]
     Kuma["«container» bb-homelab-uptime-kuma"]
     Backup["«cron» appdata-backup.sh 03:25"]
+    Logs[("«artifact» Docker json-file log — docker logs bb-homelab-popcorntv")]
   end
   TMDB["«external» api.themoviedb.org"]
 
@@ -42,6 +43,7 @@ flowchart LR
   App --> Cache
   App --> Media
   App -->|"HTTPS"| TMDB
+  App -->|"stdout, pino JSON lines (spec logging)"| Logs
   Kuma -->|"GET /api/health"| Site
   Backup -->|"pause + docker cp /app/data"| App
 ```

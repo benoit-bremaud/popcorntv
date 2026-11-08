@@ -277,3 +277,7 @@ receives `Pick<ProfileRepository, 'adoptOrphans' | 'createFirst'>`.
 - Web: setup, sign-in, invite and reset screens, users and invitations panel, `401` →
   sign-in.
 - Security: gitleaks, SEC-01…SEC-12 and SEC-15 (skill `qa-browser-check`).
+
+## Log events
+
+See the event catalog of the [logging spec](logging.md#3-event-catalog) (ADR-0021).

@@ -52,6 +52,7 @@ export async function confinedPath(
     if (!isAtOrUnderRoot(realMediaRoot, root) || resolveUnderRoot(root, file) === null) return null;
     return file;
   } catch {
+    // log: n/a — a path outside the root answers 404, the guard is the point
     return null;
   }
 }
@@ -79,6 +80,7 @@ async function confinedFile(
     const mime = MIME_TYPES[extname(file).toLowerCase()] ?? 'application/octet-stream';
     return { handle, size: info.size, mime };
   } catch {
+    // log: n/a — the file vanished since the scan: 404
     await handle?.close();
     return null;
   }

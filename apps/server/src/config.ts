@@ -1,5 +1,7 @@
 import { isIP } from 'node:net';
 import { resolve } from 'node:path';
+import { LOG_LEVELS } from './logging.js';
+import type { LogLevel } from './logging.js';
 
 /** Runtime configuration, read once from the environment (see `.env.example`). */
 export interface ServerConfig {
@@ -33,6 +35,8 @@ export interface ServerConfig {
   readonly trustProxy: string | null;
   /** Minutes between two automatic rescans of every library; 0 disables them (spec scheduled-scan R1). */
   readonly scanIntervalMin: number;
+  /** pino level from `LOG_LEVEL`, `info` by default (spec logging R1). */
+  readonly logLevel: LogLevel;
 }
 
 /** The `.env.example` value: a copied example file must not count as a configured key. */
@@ -58,6 +62,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): ServerConfig {
     publicUrl,
     trustProxy: parseTrustProxy(env['TRUST_PROXY']),
     scanIntervalMin: scanInterval(env['SCAN_INTERVAL_MIN'], 60),
+    logLevel: parseLogLevel(env['LOG_LEVEL']),
   };
 }
 
@@ -125,4 +130,13 @@ function scanInterval(value: string | undefined, fallback: number): number {
 function positiveInteger(value: string | undefined, fallback: number): number {
   const n = Number(value);
   return Number.isSafeInteger(n) && n >= 1 ? n : fallback;
+}
+
+/** One of the pino levels, case-insensitive; a typo fails the start rather than going silent. */
+function parseLogLevel(value: string | undefined): LogLevel {
+  const level = (value ?? '').trim().toLowerCase();
+  if (level === '') return 'info';
+  const known = LOG_LEVELS.find((candidate) => candidate === level);
+  if (known === undefined) throw new Error(`LOG_LEVEL must be one of ${LOG_LEVELS.join(', ')}`);
+  return known;
 }
