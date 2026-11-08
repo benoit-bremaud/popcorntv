@@ -1,7 +1,7 @@
 # Local staging (#204): the production image run on the dev machine like the Pi runs it
 # (deploy/homelab/compose.yml), for QA passes before the owner decides a Pi deploy.
 # Differences with the Pi, on purpose: named volumes instead of the HDD bind mounts, a sample
-# media folder, and Caddy in plain HTTP on loopback instead of the homelab TLS site.
+# media folder, and Caddy on https://localhost:8443 (tls internal) instead of the tailnet site.
 # Run through the Makefile: make staging-up | staging-logs | staging-down | staging-reset.
 name: popcorntv-staging
 
@@ -13,7 +13,7 @@ services:
     environment:
       HOST: 0.0.0.0
       MEDIA_ROOT: /app/media
-      PUBLIC_URL: http://localhost:8080
+      PUBLIC_URL: https://localhost:8443
       # Caddy's fixed address on the staging network, as on the Pi.
       TRUST_PROXY: 10.203.204.2
       ARTWORK_DIR: /app/cache/artwork
@@ -58,14 +58,14 @@ services:
     image: caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d
     ports:
       # Loopback only (spec auth §5).
-      - '127.0.0.1:8080:8080'
+      - '127.0.0.1:8443:8443'
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - web:/srv/popcorntv-web:ro
-    # No TLS and no admin API: nothing to keep in /data or /config.
+    # The tls internal CA is regenerated at each start (the QA browser accepts it); no admin API.
     tmpfs:
-      - /data
-      - /config
+      - /data:uid=1000,gid=1000
+      - /config:uid=1000,gid=1000
     user: '1000:1000'
     read_only: true
     cap_drop: [ALL]
@@ -76,7 +76,7 @@ services:
       staging:
         ipv4_address: 10.203.204.2
     healthcheck:
-      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:8080/api/health']
+      test: ['CMD', 'wget', '-q', '--no-check-certificate', '-O', '/dev/null', 'https://localhost:8443/api/health']
       interval: 30s
       timeout: 5s
       start_period: 5s

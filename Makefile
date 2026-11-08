@@ -41,13 +41,15 @@ scan-docker-image: ## Trivy vulnerability scan: make scan-docker-image IMAGE=nam
 		$(if $(TRIVY_OUTPUT),--output "/out/$(TRIVY_OUTPUT)") "$(IMAGE)"
 
 # Local staging (#204): the production image of HEAD run like on the Pi, on
-# http://localhost:8080, for QA passes before a Pi deploy. Commit first: the tag is HEAD's SHA.
+# https://localhost:8443, for QA passes before a Pi deploy. The build context is
+# `git archive HEAD`, so uncommitted changes never end up under HEAD's tag.
+STAGING_TAG = popcorntv:staging-$$(git rev-parse --short HEAD)
 STAGING_COMPOSE = POPCORNTV_VERSION=staging-$$(git rev-parse --short HEAD) docker compose -f deploy/staging/compose.yml
 
 staging-up: ## Build HEAD's production image and start local staging (needs .env.staging)
 	@test -f .env.staging || { echo "copy .env.staging.example to .env.staging first"; exit 2; }
 	@mkdir -p media
-	docker build -t popcorntv:staging-$$(git rev-parse --short HEAD) .
+	git archive --format=tar HEAD | docker build --label org.opencontainers.image.revision=$$(git rev-parse HEAD) -t $(STAGING_TAG) -
 	$(STAGING_COMPOSE) up -d --wait
 
 staging-logs: ## Follow the local staging logs
@@ -56,5 +58,7 @@ staging-logs: ## Follow the local staging logs
 staging-down: ## Stop local staging, keep its data
 	$(STAGING_COMPOSE) down
 
-staging-reset: ## Stop local staging and delete its data volumes
+staging-reset: ## Stop local staging, delete its data volumes and older staging images
 	$(STAGING_COMPOSE) down -v
+	@docker images --format '{{.Repository}}:{{.Tag}}' 'popcorntv:staging-*' \
+		| grep -vx "$(STAGING_TAG)" | xargs -r docker rmi

@@ -1,14 +1,17 @@
-# Local staging site (#204): the homelab site block (deploy/homelab/Caddyfile) in plain HTTP
-# on loopback — no `tls internal`, no `tailnet_only`, no HSTS. Keep the rest in step with it.
+# Local staging site (#204): the homelab site block (deploy/homelab/Caddyfile) on
+# https://localhost:8443 — same tls internal, headers and routes, no `tailnet_only` (loopback
+# only). Keep it in step with the homelab copy.
 {
 	admin off
-	auto_https off
+	skip_install_trust
 }
 
-:8080 {
+localhost:8443 {
+	tls internal
 	encode zstd gzip
 
 	header {
+		Strict-Transport-Security "max-age=31536000"
 		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self' data:; media-src 'self' blob:; worker-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
 		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
 		X-Frame-Options "DENY"
@@ -19,7 +22,7 @@
 	}
 
 	handle_path /api/* {
-		reverse_proxy 10.203.204.3:3000
+		reverse_proxy popcorntv:3000
 	}
 
 	handle /assets/* {
