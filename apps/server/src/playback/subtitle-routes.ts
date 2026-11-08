@@ -44,7 +44,10 @@ export function registerSubtitleRoutes(app: FastifyInstance, deps: SubtitleRoute
     try {
       text = await deps.extractor.get(id, index, file);
     } catch (error) {
-      request.log.error({ err: error, mediaId: id, index }, 'subtitle extraction failed');
+      request.log.error(
+        { event: 'playback.subtitle.failed', err: error, mediaId: id, index },
+        'subtitle extraction failed',
+      );
       return reply.code(500).send(apiError('transcode_failed'));
     }
     return reply

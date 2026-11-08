@@ -4,6 +4,7 @@ import { buildApp } from './app.js';
 import { loadConfig, trustProxyWarning } from './config.js';
 import { openDatabase } from './db/index.js';
 import { createFfprobe } from './library/ffprobe.js';
+import { loggerOptions } from './logging.js';
 import { createTmdbClient } from './metadata/tmdb-client.js';
 import { createTranscoder } from './playback/transcoder.js';
 import { installShutdownHandlers } from './shutdown.js';
@@ -32,12 +33,16 @@ const app = await buildApp({
   publicUrl: config.publicUrl,
   trustProxy: config.trustProxy,
   scanIntervalMin: config.scanIntervalMin,
-  logger: true,
+  logger: loggerOptions(config.logLevel),
 });
 
 const proxyWarning = trustProxyWarning(config);
 if (proxyWarning) app.log.warn(proxyWarning);
 if (!config.tmdbApiKey) app.log.warn('TMDB_API_KEY not set: metadata enrichment disabled');
+app.log.info(
+  { event: 'server.config', logLevel: config.logLevel, scanIntervalMin: config.scanIntervalMin },
+  'configuration loaded',
+);
 
 installShutdownHandlers(app, process);
 

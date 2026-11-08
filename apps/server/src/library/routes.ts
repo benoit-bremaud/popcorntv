@@ -3,7 +3,14 @@ import { isAbsolute, resolve } from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { LIBRARY_KINDS } from '@popcorntv/shared';
-import type { EnrichReport, Library, Media, MediaFolderList, ScanReport } from '@popcorntv/shared';
+import type {
+  EnrichReport,
+  Library,
+  Media,
+  MediaFolderList,
+  ScanReport,
+  SkipReason,
+} from '@popcorntv/shared';
 import { apiError, invalid, loadLibrary } from '../http.js';
 import { listSubFolders } from './folder-lister.js';
 import { LibraryBusyError } from './lock.js';
@@ -59,6 +66,7 @@ export function registerLibraryRoutes(app: FastifyInstance, deps: LibraryRoutesD
     const rootPath = body.data.rootPath;
     // Spec R3: overlapping roots would list every title twice. Compared on real paths, as
     // the scanner walks them: a link to another library's folder overlaps it too.
+    // log: n/a — an unreadable root is compared as written
     const real = (path: string) => realpath(path).catch(() => path);
     const realRoot = await real(rootPath);
     const realOf = new Map(
@@ -124,8 +132,13 @@ export function registerLibraryRoutes(app: FastifyInstance, deps: LibraryRoutesD
       const report = await scanLibrary(deps, library.value, request.log);
       return reply.code(200).send(report);
     } catch (error) {
-      if (error instanceof RootUnreadableError)
+      if (error instanceof RootUnreadableError) {
+        request.log.warn(
+          { event: 'library.scan.failed', err: error, libraryId: library.value.id },
+          'scan refused: root unreadable',
+        );
         return reply.code(409).send(apiError('root_unreadable'));
+      }
       if (error instanceof LibraryBusyError) return reply.code(409).send(apiError('scan_running'));
       throw error;
     }
@@ -139,6 +152,9 @@ export function registerLibraryRoutes(app: FastifyInstance, deps: LibraryRoutesD
   });
 }
 
+/** Skip reasons that are a choice, not a fault (spec logging R2). */
+const PLANNED_SKIPS: ReadonlySet<SkipReason> = new Set(['extra', 'duplicate']);
+
 /**
  * UC1 with its «include» of UC2, under the library lock; shared by the scan route and the
  * schedule (spec scheduled-scan R2). The lock spans the include too: the enrichment must
@@ -151,7 +167,29 @@ export async function scanLibrary(
   log: FastifyInstance['log'],
 ): Promise<ScanReport> {
   return deps.lock.run(library.id, async () => {
+    const started = Date.now();
+    log.info({ event: 'library.scan.start', libraryId: library.id }, 'scan started');
     const scanned = await deps.scanner.scan(library);
+    // One line per file left out: ffprobe failures are only visible here (spec logging R2).
+    // Extras and duplicates are left out on purpose, so they stay at debug.
+    for (const file of scanned.skipped) {
+      log[PLANNED_SKIPS.has(file.reason) ? 'debug' : 'warn'](
+        { event: 'library.scan.skipped', libraryId: library.id, ...file },
+        'file skipped',
+      );
+    }
+    log.info(
+      {
+        event: 'library.scan.done',
+        libraryId: library.id,
+        added: scanned.added,
+        updated: scanned.updated,
+        removed: scanned.removed,
+        skipped: scanned.skipped.length,
+        ms: Date.now() - started,
+      },
+      'scan done',
+    );
     const metadata = await includeEnrich(deps.enrich, library, log);
     return { ...scanned, metadata };
   });
@@ -167,7 +205,10 @@ async function includeEnrich(
   try {
     return await enrich(library);
   } catch (error) {
-    log.warn(error, 'metadata enrichment skipped after scan');
+    log.warn(
+      { event: 'metadata.enrich.skipped', err: error, libraryId: library.id },
+      'metadata enrichment skipped after scan',
+    );
     return null;
   }
 }

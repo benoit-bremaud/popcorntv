@@ -33,11 +33,18 @@ describe('scanAllLibraries', () => {
 
     expect(scan.mock.calls.map(([lib]) => lib.id)).toEqual(['a', 'b', 'c', 'd']);
     expect(log.info).toHaveBeenCalledWith(
-      { libraryId: 'b' },
+      { event: 'library.schedule.busy', libraryId: 'b' },
       'scheduled scan skipped: library busy',
     );
     expect(log.info).toHaveBeenCalledWith(
-      { libraryId: 'a', added: 1, updated: 0, removed: 0, skipped: 0 },
+      {
+        event: 'library.schedule.done',
+        libraryId: 'a',
+        added: 1,
+        updated: 0,
+        removed: 0,
+        skipped: 0,
+      },
       'scheduled scan done',
     );
     expect(log.warn).toHaveBeenCalledTimes(1);

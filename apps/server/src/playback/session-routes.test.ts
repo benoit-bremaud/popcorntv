@@ -9,6 +9,7 @@ import type { FastifyInstance } from 'fastify';
 import type { ApiError, Library, Media, PlaybackStart, StreamInfo } from '@popcorntv/shared';
 import { buildApp } from '../app.js';
 import { openDatabase } from '../db/index.js';
+import { loggerOptions } from '../logging.js';
 import type { Transcoder } from './transcoder.js';
 import { createAccount, sendCookie, testAuthOptions } from '../test-fixtures.js';
 
@@ -35,7 +36,11 @@ describe('playback session routes', () => {
   /** Cookie of a second account, to prove sessions are private (spec auth R10). */
   let guest: string;
 
+  const lines: Record<string, unknown>[] = [];
+  type Line = Record<string, unknown>;
+
   beforeEach(async () => {
+    lines.length = 0;
     base = await mkdtemp(join(tmpdir(), 'popcorntv-sessions-routes-'));
     const mediaRoot = join(base, 'media');
     root = join(mediaRoot, 'films');
@@ -64,6 +69,7 @@ describe('playback session routes', () => {
       transcoder,
       transcodeDir: join(base, 'transcode'),
       ...testAuthOptions,
+      logger: loggerOptions('info', { write: (line) => lines.push(JSON.parse(line) as Line) }),
     });
     sendCookie(app, createAccount(db).cookie);
     guest = createAccount(db, 'guest', 'viewer').cookie;
@@ -147,6 +153,9 @@ describe('playback session routes', () => {
       offsetSec: 0,
     });
     expect(spawned).toHaveLength(0);
+    expect(lines.filter((line) => line['event'] === 'playback.decision')).toEqual([
+      expect.objectContaining({ mediaId: media.id, mode: 'direct', browserDirect: true }),
+    ]);
   });
 
   it('starts HLS mapping the chosen audio track, even for a direct-playable file', async () => {

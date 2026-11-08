@@ -64,10 +64,20 @@ async function setup(client: TmdbClient | null = makeClient()) {
   const artworkDir = await mkdtemp(join(tmpdir(), 'popcorntv-discover-'));
   dirs.push(artworkDir);
   let clock = 0;
-  /** Warn-level and worse log lines: a handler that throws or sends again after replying (#178). */
+  /**
+   * Unexpected warn-level and worse lines: a handler that throws or sends again after replying
+   * (#178). The expected `discover.tmdb.failed` lines (spec logging) go to `tmdbFailures`.
+   */
   const failures: string[] = [];
+  const tmdbFailures: string[] = [];
   const app = Fastify({
-    logger: { level: 'warn', stream: { write: (line: string) => failures.push(line) } },
+    logger: {
+      level: 'warn',
+      stream: {
+        write: (line: string) =>
+          (line.includes('"event":"discover.tmdb.failed"') ? tmdbFailures : failures).push(line),
+      },
+    },
   });
   actAs(app, () => ({ userId: owner.userId, role: 'owner', sessionId: owner.sessionId }));
   registerDiscoverRoutes(app, {
@@ -88,7 +98,7 @@ async function setup(client: TmdbClient | null = makeClient()) {
     db.insert(media).values({ id, libraryId, kind: 'film', title: 'Dune', tmdbId }).run();
     return id;
   };
-  return { app, db, failures, addFilm, advance: (ms: number) => (clock += ms) };
+  return { app, db, failures, tmdbFailures, addFilm, advance: (ms: number) => (clock += ms) };
 }
 
 describe('discover routes', () => {
@@ -126,7 +136,7 @@ describe('discover routes', () => {
   });
 
   it('refuses bad queries, answers 409 without TMDB and 502 when TMDB fails', async () => {
-    const { app, failures } = await setup(
+    const { app, failures, tmdbFailures } = await setup(
       makeClient({
         list: vi.fn(async () => Promise.reject(new TmdbRequestError('/x', 500))),
         searchTitles: vi.fn(async () => Promise.reject(new TmdbRequestError('/s', 500))),
@@ -146,6 +156,7 @@ describe('discover routes', () => {
     expect((await app.inject({ url: '/discover/movie/1' })).statusCode).toBe(502);
     expect((await none.app.inject({ url: '/discover/search?q=a' })).statusCode).toBe(409);
     expect(failures).toEqual([]);
+    expect(tmdbFailures.length).toBeGreaterThan(0);
   });
 
   it('searches titles and returns the title sheet with the first billed cast', async () => {
@@ -291,7 +302,7 @@ describe('wishlist routes', () => {
   });
 
   it('answers 502 when TMDB fails while adding', async () => {
-    const { app, failures } = await setup(
+    const { app, failures, tmdbFailures } = await setup(
       makeClient({ details: vi.fn(async () => Promise.reject(new TmdbRequestError('/m', 500))) }),
     );
 
@@ -299,5 +310,6 @@ describe('wishlist routes', () => {
 
     expect(put.statusCode).toBe(502);
     expect(failures).toEqual([]);
+    expect(tmdbFailures.length).toBeGreaterThan(0);
   });
 });

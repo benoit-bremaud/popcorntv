@@ -60,6 +60,7 @@ async function exists(path: string): Promise<boolean> {
     await access(path);
     return true;
   } catch {
+    // log: n/a — existence probe
     return false;
   }
 }

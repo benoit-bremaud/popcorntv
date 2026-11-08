@@ -45,10 +45,12 @@ async function exists(path: string): Promise<boolean> {
 describe('SessionManager', () => {
   let dir: string;
   let warn: ReturnType<typeof vi.fn>;
+  let info: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     dir = join(await mkdtemp(join(tmpdir(), 'popcorntv-sessions-')), 'transcode');
     warn = vi.fn();
+    info = vi.fn();
   });
 
   afterEach(async () => {
@@ -60,7 +62,7 @@ describe('SessionManager', () => {
       transcoder,
       dir,
       maxSessions: 1,
-      logger: { warn, info: vi.fn() } as unknown as FastifyBaseLogger,
+      logger: { warn, info, debug: vi.fn(), error: vi.fn() } as unknown as FastifyBaseLogger,
       pollMs: 5,
       ...overrides,
     });
@@ -102,6 +104,14 @@ describe('SessionManager', () => {
     if (first.kind !== 'ready') return;
     expect(sessions.touch(first.id)).toBe(false);
     expect(kills).toHaveBeenCalledOnce();
+    expect(info).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'playback.session.takeover', session: first.id }),
+      'session taken over',
+    );
+    expect(info).toHaveBeenCalledWith(
+      { event: 'playback.session.closed', session: first.id, reason: 'takeover' },
+      'transcode session closed',
+    );
     await sessions.closeAll();
   });
 
@@ -206,7 +216,11 @@ describe('SessionManager', () => {
     expect(kills).toHaveBeenCalledTimes(1);
     await vi.waitFor(async () => expect(await readdir(dir)).toEqual([]));
     expect(warn).toHaveBeenCalledWith(
-      expect.objectContaining({ code: 1, stderrTail: 'Invalid data found' }),
+      expect.objectContaining({
+        event: 'playback.ffmpeg.failed',
+        code: 1,
+        stderrTail: 'Invalid data found',
+      }),
       'ffmpeg failed',
     );
   });
@@ -216,6 +230,10 @@ describe('SessionManager', () => {
 
     expect((await sessions.open(USER, '/m/a.mkv', HEVC)).kind).toBe('failed');
     expect(await readdir(dir)).toEqual([]);
+    expect(warn).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'playback.session.not_ready', exited: false }),
+      'transcode produced no playlist',
+    );
   });
 
   it('refuses a file without video before spawning anything', async () => {
@@ -296,6 +314,28 @@ describe('SessionManager', () => {
     expect(warn).toHaveBeenCalledOnce();
   });
 
+  it('logs the opening and the reason each session closed', async () => {
+    const { transcoder } = fakeTranscoder('writes');
+    const sessions = manager(transcoder, { idleMs: 20 });
+    const result = await sessions.open(USER, '/m/a.mkv', HEVC, 12);
+    if (result.kind !== 'ready') throw new Error('not ready');
+
+    await vi.waitFor(() =>
+      expect(info).toHaveBeenCalledWith(
+        { event: 'playback.session.closed', session: result.id, reason: 'idle' },
+        'transcode session closed',
+      ),
+    );
+    expect(info).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'playback.session.opened',
+        session: result.id,
+        startSec: 12,
+      }),
+      'transcode session opened',
+    );
+  });
+
   it('logs nothing when its own close kills FFmpeg', async () => {
     const { transcoder, runs } = fakeTranscoder('writes');
     const sessions = manager(transcoder);
@@ -316,12 +356,15 @@ describe('SessionManager', () => {
       },
       dir,
       maxSessions: 1,
-      logger: { warn, error } as unknown as FastifyBaseLogger,
+      logger: { warn, error, info } as unknown as FastifyBaseLogger,
     });
 
     expect((await sessions.open(USER, '/m/a.mkv', HEVC)).kind).toBe('failed');
     expect(await readdir(dir)).toEqual([]);
-    expect(error).toHaveBeenCalledOnce();
+    expect(error).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'playback.ffmpeg.spawn_failed', err: expect.any(Error) }),
+      'ffmpeg could not start',
+    );
   });
 
   it('cleans only the session directories a previous run left', async () => {

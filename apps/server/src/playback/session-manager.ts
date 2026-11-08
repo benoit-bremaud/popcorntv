@@ -62,9 +62,13 @@ async function exists(path: string): Promise<boolean> {
     await access(path);
     return true;
   } catch {
+    // log: n/a — existence probe
     return false;
   }
 }
+
+/** Why a session ended, in its `playback.session.closed` line (spec logging R5). */
+export type CloseReason = 'stopped' | 'idle' | 'crash' | 'takeover' | 'not_ready' | 'shutdown';
 
 /**
  * In-memory HLS sessions (ADR-0006 §3): one FFmpeg process and one private temp
@@ -106,11 +110,17 @@ export class SessionManager {
       if (victim === undefined) return { kind: 'busy' };
       const { owner, role } = this.sessions.get(victim) ?? {};
       this.options.logger.info(
-        { session: victim, victimOwner: owner, victimRole: role, by: opener.userId },
+        {
+          event: 'playback.session.takeover',
+          session: victim,
+          victimOwner: owner,
+          victimRole: role,
+          by: opener.userId,
+        },
         'session taken over',
       );
       // `close` forgets the session synchronously: the slot is free before any await.
-      preempted = this.close(victim);
+      preempted = this.close(victim, 'takeover');
     }
     // Reserved before the first await (nothing is awaited since the check), so concurrent
     // opens cannot both pass the limit.
@@ -135,17 +145,29 @@ export class SessionManager {
       handle = this.options.transcoder(args, (code, stderrTail) => {
         exited = true;
         // `close` forgets the session before killing it: only a crash is still in the map.
-        if (code === 0 || !this.sessions.has(id)) return;
-        this.options.logger.warn({ session: id, code, stderrTail }, 'ffmpeg failed');
+        if (code === 0 || !this.sessions.has(id)) {
+          this.options.logger.debug(
+            { event: 'playback.ffmpeg.exit', session: id, code },
+            'ffmpeg exited',
+          );
+          return;
+        }
+        this.options.logger.warn(
+          { event: 'playback.ffmpeg.failed', session: id, code, stderrTail },
+          'ffmpeg failed',
+        );
         // A crashed transcode must not hold the slot until the viewer gives up.
-        void this.close(id);
+        void this.close(id, 'crash');
       });
     } catch (error) {
-      this.options.logger.error({ err: error }, 'ffmpeg could not start');
+      this.options.logger.error(
+        { event: 'playback.ffmpeg.spawn_failed', err: error },
+        'ffmpeg could not start',
+      );
       await this.remove(dir);
       return { kind: 'failed' };
     }
-    const timer = setTimeout(() => void this.close(id), this.idleMs);
+    const timer = setTimeout(() => void this.close(id, 'idle'), this.idleMs);
     this.sessions.set(id, { owner: opener.userId, role: opener.role, dir, handle, timer });
 
     const deadline = Date.now() + this.readyTimeoutMs;
@@ -157,8 +179,24 @@ export class SessionManager {
       await delay(this.pollMs);
       return waitForPlaylist();
     };
-    if (await waitForPlaylist()) return { kind: 'ready', id };
-    await this.close(id);
+    if (await waitForPlaylist()) {
+      this.options.logger.info(
+        {
+          event: 'playback.session.opened',
+          session: id,
+          userId: opener.userId,
+          startSec,
+          audioIndex,
+        },
+        'transcode session opened',
+      );
+      return { kind: 'ready', id };
+    }
+    this.options.logger.warn(
+      { event: 'playback.session.not_ready', session: id, exited },
+      'transcode produced no playlist',
+    );
+    await this.close(id, 'not_ready');
     return { kind: 'failed' };
   }
 
@@ -198,10 +236,14 @@ export class SessionManager {
   }
 
   /** Kills FFmpeg and removes the directory; false when the session was already gone. */
-  async close(id: string): Promise<boolean> {
+  async close(id: string, reason: CloseReason = 'stopped'): Promise<boolean> {
     const session = this.sessions.get(id);
     if (session === undefined) return false;
     this.sessions.delete(id);
+    this.options.logger.info(
+      { event: 'playback.session.closed', session: id, reason },
+      'transcode session closed',
+    );
     clearTimeout(session.timer);
     session.handle.kill();
     await this.remove(session.dir);
@@ -218,6 +260,7 @@ export class SessionManager {
     try {
       entries = await readdir(this.options.dir, { withFileTypes: true });
     } catch {
+      // log: n/a — no TRANSCODE_DIR yet means nothing to clean
       return;
     }
     const candidates = entries.filter(
@@ -240,13 +283,16 @@ export class SessionManager {
     try {
       await rm(dir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     } catch (error) {
-      this.options.logger.error({ err: error, dir }, 'session directory not removed');
+      this.options.logger.error(
+        { event: 'playback.session.cleanup_failed', err: error, dir },
+        'session directory not removed',
+      );
     }
   }
 
   /** Server shutdown: every session is closed (`close` never rejects). */
   async closeAll(): Promise<void> {
-    await Promise.all([...this.sessions.keys()].map((id) => this.close(id)));
+    await Promise.all([...this.sessions.keys()].map((id) => this.close(id, 'shutdown')));
   }
 }
 
@@ -259,6 +305,7 @@ async function holdsOnlyFfmpegOutput(dir: string): Promise<boolean> {
       return final === PLAYLIST_NAME || SEGMENT_PATTERN.test(final);
     });
   } catch {
+    // log: n/a — an unreadable directory is not ours to remove
     return false;
   }
 }

@@ -37,6 +37,7 @@ async function openOrNull(path: string): Promise<FileHandle | null> {
   try {
     return await open(path);
   } catch {
+    // log: n/a — a segment not written yet answers 404; the player retries
     return null;
   }
 }
@@ -71,6 +72,18 @@ export function registerSessionRoutes(app: FastifyInstance, deps: SessionRoutesD
 
     // The browser's answer counts only for a file the shared rule calls direct-playable.
     const mime = directPlay ? directPlayMime({ relativePath: stored.filePath, streams }) : null;
+    // Why a film transcodes is the first question asked of the logs (spec logging R5).
+    request.log.info(
+      {
+        event: 'playback.decision',
+        mediaId,
+        mode: mime === null ? 'hls' : 'direct',
+        browserDirect: body.data.directPlay,
+        defaultTrack,
+        startSec,
+      },
+      'playback mode chosen',
+    );
     if (mime !== null) {
       const direct: PlaybackStart = {
         mode: 'direct',

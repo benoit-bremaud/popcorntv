@@ -37,14 +37,21 @@ export async function scanAllLibraries(
           updated: report.updated,
           removed: report.removed,
           skipped: report.skipped.length,
+          event: 'library.schedule.done',
         },
         'scheduled scan done',
       );
     } catch (error) {
       if (error instanceof LibraryBusyError) {
-        deps.logger.info({ libraryId: library.id }, 'scheduled scan skipped: library busy');
+        deps.logger.info(
+          { event: 'library.schedule.busy', libraryId: library.id },
+          'scheduled scan skipped: library busy',
+        );
       } else {
-        deps.logger.warn({ err: error, libraryId: library.id }, 'scheduled scan failed');
+        deps.logger.warn(
+          { event: 'library.schedule.failed', err: error, libraryId: library.id },
+          'scheduled scan failed',
+        );
       }
     }
   }
@@ -65,7 +72,9 @@ export function startScanSchedule(deps: ScanScheduleDeps): () => Promise<void> {
   const handle = set(() => {
     if (running || stopped) return;
     running = scanAllLibraries(deps, () => stopped)
-      .catch((error: unknown) => deps.logger.warn({ err: error }, 'scheduled scan failed'))
+      .catch((error: unknown) =>
+        deps.logger.warn({ event: 'library.schedule.failed', err: error }, 'scheduled scan failed'),
+      )
       .finally(() => {
         running = null;
       });

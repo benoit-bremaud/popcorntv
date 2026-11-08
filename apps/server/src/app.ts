@@ -5,6 +5,8 @@ import type { FastifyError, FastifyInstance, FastifyRequest } from 'fastify';
 import type { ApiError, HealthResponse, Library } from '@popcorntv/shared';
 import { apiError } from './http.js';
 import { EventRepository } from './auth/event-repository.js';
+import { OneLinePerRequest, registerRequestLog } from './logging.js';
+import type { LoggerOptions } from './logging.js';
 import { Argon2Hasher, HasherBusyError } from './auth/hasher.js';
 import type { Hasher } from './auth/hasher.js';
 import { cookiePolicy, registerAuthHook } from './auth/hook.js';
@@ -91,7 +93,8 @@ export interface AppOptions {
   readonly onSetupLink?: (link: string) => void;
   /** API requests per client per minute before `429` (spec auth R13); lowered by tests. */
   readonly rateLimitMax?: number;
-  readonly logger?: boolean;
+  /** Fastify's logger (`loggerOptions`); absent or false logs nothing (tests). */
+  readonly logger?: LoggerOptions | false;
 }
 
 /** Spec auth R13: far above what browsing sends, far below what a script can. */
@@ -106,6 +109,8 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   // in the list is the client, so a forged left-most entry is ignored.
   const app = Fastify({
     logger: options.logger ?? false,
+    // One `http.request` line per answer instead (spec logging R3, `registerRequestLog`).
+    logController: new OneLinePerRequest(),
     trustProxy: options.trustProxy ?? false,
   });
 
@@ -175,6 +180,8 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     }),
   );
 
+  registerRequestLog(app);
+
   const cookie = cookiePolicy(options.publicUrl);
   const sessionRepository = new SessionRepository(options.db);
   registerAuthHook(app, { sessions: sessionRepository, cookie });
@@ -223,7 +230,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   const profiles = new ProfileRepository(options.db);
   registerProfileRoutes(app, { profiles });
   const users = new UserRepository(options.db);
-  const events = new EventRepository(options.db);
+  const events = new EventRepository(options.db, app.log);
   const setupToken = new SetupToken();
   const tokens = new TokenRepository(options.db);
   registerAuthRoutes(app, {
@@ -274,7 +281,11 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       const link = `${cookie.origin}/#/setup/${setupToken.issue()}`;
       (
         options.onSetupLink ??
-        ((l) => app.log.warn({ setupLink: l }, 'no account yet: open the setup link (valid 1 h)'))
+        ((l) =>
+          app.log.warn(
+            { event: 'auth.setup_link', setupLink: l },
+            'no account yet: open the setup link (valid 1 h)',
+          ))
       )(link);
     }
   });

@@ -16,6 +16,7 @@ export async function listSubFolders(
       .map((entry) => ({ name: entry.name, path: join(root, entry.name) }))
       .sort((a, b) => a.name.localeCompare(b.name));
   } catch {
+    // log: n/a — an unreadable MEDIA_ROOT lists no folder; the owner sees an empty picker
     return [];
   }
 }
