@@ -6,7 +6,7 @@ One row per screen or flow. Cell format: `date · SHA · environment · OK | KO 
 |---|---|---|---|---|---|---|
 | Sign-in / setup | — (owner session in use, no sign-out) | — (needs sign-out or a new account, forbidden by the rules of this pass) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | — (not reachable) | — (A11Y-08 not reachable) | — (window floor 619 px, 320/390 not reachable) |
 | Redeem link | — (no link redeemed (would consume or create one)) | — (needs sign-out or a new account, forbidden by the rules of this pass) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | — (not reachable) | — (not reachable) | — (window floor 619 px, 320/390 not reachable) |
-| Profile picker + management | 2026-11-08 · 0698684 · Pi · OK | 2026-11-08 · 0698684 · Pi · OK (XSS, empty, RTL, whitespace probes; alert shown) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK (reload keeps profile) | 2026-11-08 · 0698684 · Pi · KO #173 | — (window floor 619 px, 320/390 not reachable) |
+| Profile picker + management | 2026-11-08 · 0698684 · Pi · OK | 2026-11-08 · 0698684 · Pi · OK (XSS, empty, RTL, whitespace probes; alert shown) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK (reload keeps profile) | 2026-11-09 · 15b9179 · unit (jsdom) + e2e · OK (A11Y-02 false positive, [report](../architecture/qa/2026-11-09-issue-173-profile-picker-name.md)), pending Full QA | — (window floor 619 px, 320/390 not reachable) |
 | Library catalog + rows | 2026-11-08 · 0698684 · Pi · OK · [shot](../architecture/qa/2026-11-08-full-pass-pi/03-continue-watching-and-top-rated.jpg) | 2026-11-08 · 0698684 · Pi · OK (empty/missing artwork states) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | 2026-11-08 · 0698684 · Pi · KO #170 · [shot](../architecture/qa/2026-11-08-full-pass-pi/03-continue-watching-and-top-rated.jpg) | 2026-11-08 · 0698684 · Pi · OK (619 px) · [shot](../architecture/qa/2026-11-08-full-pass-pi/17-narrow-619-home.jpg) |
 | Search | 2026-11-08 · 0698684 · Pi · OK · [shot](../architecture/qa/2026-11-08-full-pass-pi/07-library-search-results.jpg) | 2026-11-08 · 0698684 · Pi · OK (%, tags, 500 chars, whitespace) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | 2026-11-08 · 0698684 · Pi · KO #165 | 2026-11-08 · 0698684 · Pi · OK (619 px) |
 | Detail dialog | 2026-11-08 · 0698684 · Pi · OK | — (no error path in this flow) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · f5ef04f · e2e · OK (#169, [report](../architecture/qa/2026-11-08-issue-169-history-back.md)) | 2026-11-08 · 0698684 · Pi · KO #172 | 2026-11-08 · 0698684 · Pi · OK (619 px) · [shot](../architecture/qa/2026-11-08-full-pass-pi/18-narrow-619-dialog.jpg) |
@@ -206,3 +206,15 @@ Replay with a screen reader (Orca on Firefox, then NVDA or VoiceOver when availa
    ring visible.
 7. A long title ("Harry Potter and the Philosopher's Stone") in the Discover sheet and in a
    library dialog without backdrop never runs under the close button.
+
+## Profile picker accessible name checks (#173)
+
+1. "Who's watching?": in DevTools › Accessibility (or the axe / Playwright
+   `getByRole('button', { name })` tree), each profile button's computed name is the
+   profile name alone ("Me"), never "MMe". Read the accessibility tree, not `textContent`
+   or `innerText`: those include the `aria-hidden` avatar initial and give a false "MMe".
+2. A profile named in RTL script with an emoji (e.g. "مريم 🎬") is announced intact, with
+   no initial before it.
+3. The avatar span carries `aria-hidden="true"`; the header profile switcher is named
+   "Me, switch profile" with no initial before it (Chromium shows "Me , switch profile":
+   the flex items add a space).

@@ -49,7 +49,7 @@ describe('App', () => {
       expect(screen.getByRole('status')).toHaveTextContent('Nothing to watch yet.'),
     );
     expect(storage.getItem('popcorntv.activeProfileId')).toBe('k1');
-    expect(screen.getByRole('button', { name: /Kid, switch profile/ })).toHaveFocus();
+    expect(screen.getByRole('button', { name: /^Kid, switch profile$/ })).toHaveFocus();
   });
 
   it('skips the picker for a remembered profile that still exists', async () => {
