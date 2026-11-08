@@ -16,7 +16,7 @@ type Props = {
   readonly onClose: () => void;
 };
 
-/** UC26 title sheet: a modal `<dialog>`; Escape or Close end it. */
+/** UC26 title sheet: a modal `<dialog>`; Escape, Close or Back end it. */
 export function TitleSheet({
   title,
   profileId,

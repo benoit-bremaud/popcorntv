@@ -63,6 +63,27 @@ describe('PlayerDialog over HLS', () => {
     await waitFor(() => expect(api.stop).toHaveBeenCalledWith('s1'));
   });
 
+  it('ends the session and hands its last save to onClose on browser Back (#169)', async () => {
+    const api = fakeApi(HLS);
+    const onClose = vi.fn();
+    render(
+      <PlayerDialog
+        profileId="kid"
+        item={heat}
+        directPlay={false}
+        onClose={onClose}
+        api={api}
+        attach={vi.fn(async () => vi.fn())}
+      />,
+    );
+    await waitFor(() => expect(api.start).toHaveBeenCalledOnce());
+
+    history.back();
+
+    await waitFor(() => expect(api.stop).toHaveBeenCalledWith('s1'));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
   it('detaches hls.js when it unmounts, leaving the session to close or the watchdog', async () => {
     const api = fakeApi(HLS);
     const detach = vi.fn();

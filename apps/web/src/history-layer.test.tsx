@@ -4,8 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   layerDepth,
   layerState,
+  closingOrder,
   leaveStaleLayers,
   openLayer,
+  ownsTop,
   poppedBy,
   resetHistoryLayers,
   useHistoryLayer,
@@ -61,6 +63,39 @@ describe('poppedBy', () => {
   });
 });
 
+describe('closingOrder', () => {
+  it('closes the top layer first', () => {
+    expect(closingOrder([1, 2], 0)).toEqual([2, 1]);
+  });
+
+  it('keeps the layers at or below the landing entry', () => {
+    expect(closingOrder([1, 2], 1)).toEqual([2]);
+    expect(closingOrder([1, 2], 2)).toEqual([]);
+  });
+
+  it('closes nothing when no layer is open', () => {
+    expect(closingOrder([], 0)).toEqual([]);
+  });
+});
+
+describe('ownsTop', () => {
+  it('owns the top entry when nothing is pending', () => {
+    expect(ownsTop(1, 1, 0)).toBe(true);
+  });
+
+  it('owns it once the pending Back of the layer above has landed', () => {
+    expect(ownsTop(1, 2, 1)).toBe(true);
+  });
+
+  it('does not own an entry another layer stands on', () => {
+    expect(ownsTop(1, 2, 0)).toBe(false);
+  });
+
+  it('a layer that never took an entry owns nothing', () => {
+    expect(ownsTop(0, 0, 0)).toBe(false);
+  });
+});
+
 describe('leaveStaleLayers', () => {
   it('goes back over every layer entry of a reloaded page', () => {
     const go = vi.fn();
@@ -106,7 +141,7 @@ function Layer({
 }
 
 /** A detail layer that can open a player layer inside it, like DetailDialog. */
-function Stack(): React.JSX.Element {
+function Stack({ log = [] }: { readonly log?: string[] }): React.JSX.Element {
   const [detail, setDetail] = useState(true);
   const [player, setPlayer] = useState(false);
   return (
@@ -115,11 +150,25 @@ function Stack(): React.JSX.Element {
         Open
       </button>
       {detail && (
-        <Layer name="detail" onClose={() => setDetail(false)}>
+        <Layer
+          name="detail"
+          onClose={() => {
+            log.push('detail');
+            setDetail(false);
+          }}
+        >
           <button type="button" onClick={() => setPlayer(true)}>
             Play
           </button>
-          {player && <Layer name="player" onClose={() => setPlayer(false)} />}
+          {player && (
+            <Layer
+              name="player"
+              onClose={() => {
+                log.push('player');
+                setPlayer(false);
+              }}
+            />
+          )}
         </Layer>
       )}
     </>
@@ -197,14 +246,16 @@ describe('useHistoryLayer', () => {
     expect(screen.queryByRole('dialog', { hidden: true })).toBeNull();
   });
 
-  it('a double Back fired at once closes both layers', async () => {
-    render(<Stack />);
+  it('a double Back fired at once closes the player first, then the detail', async () => {
+    const log: string[] = [];
+    render(<Stack log={log} />);
     act(() => screen.getByText('Play').click());
     await act(async () => {
       history.go(-2);
       await new Promise((resolve) => setTimeout(resolve, 20));
     });
     expect(screen.queryByRole('dialog', { hidden: true })).toBeNull();
+    expect(log).toEqual(['player', 'detail']);
   });
 
   it('closing the player by its button keeps the detail and its entry', async () => {
@@ -217,8 +268,12 @@ describe('useHistoryLayer', () => {
 
   it('a layer opened before the closed one has gone back is not closed by that Back', async () => {
     render(<Stack />);
-    // Reopened in the same task as the close: its Back has not landed yet.
+    // Reopened once the close fired, before its Back has landed.
     act(() => screen.getByText('Close detail').click());
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(screen.queryByRole('dialog', { hidden: true })).toBeNull();
     act(() => screen.getByText('Open').click());
     expect(depth()).toBe(1);
     await act(async () => {
@@ -238,5 +293,32 @@ describe('useHistoryLayer', () => {
     expect(depth()).toBe(1);
     expect(push).toHaveBeenCalledTimes(1);
     push.mockRestore();
+  });
+
+  it('two closes in a row before the first Back lands leave no stale entry', async () => {
+    render(<Stack />);
+    act(() => screen.getByText('Play').click());
+    act(() => screen.getByText('Close player').click());
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    act(() => screen.getByText('Close detail').click());
+    await waitFor(() => expect(depth()).toBe(0));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(depth()).toBe(0);
+    expect(screen.queryByRole('dialog', { hidden: true })).toBeNull();
+  });
+
+  it('Forward onto a closed layer entry goes straight back to the catalog', async () => {
+    render(<Stack />);
+    await back();
+    await act(async () => {
+      history.forward();
+      await new Promise((resolve) => setTimeout(resolve, 40));
+    });
+    expect(depth()).toBe(0);
+    expect(screen.queryByRole('dialog', { hidden: true })).toBeNull();
   });
 });

@@ -56,7 +56,7 @@ type Props = {
 /**
  * UC5 / UC6 / UC7: a full-viewport modal `<dialog>` on the native `<video controls>`. It asks the
  * server for a playback session, then plays the file directly or the HLS playlist, sends
- * heartbeats while open, and ends the session on `close` (Close or Escape); a tab closed
+ * heartbeats while open, and ends the session on `close` (Close, Escape or Back); a tab closed
  * without it is left to the server's idle watchdog. It resumes at `startSec`, saves the
  * position every 10 s while playing, on pause and on close, and offers the next episode.
  */
@@ -115,7 +115,7 @@ export function PlayerDialog({
     // Mount only: a new title remounts the player (`key` in DetailDialog).
   }, []);
 
-  /** Close button, Escape: the HLS session ends (even if it is still starting). */
+  /** Close button, Escape, Back: the HLS session ends (even if it is still starting). */
   async function endSession(): Promise<void> {
     const result = await started.current;
     if (result !== null && typeof result === 'object' && result.mode === 'hls') {

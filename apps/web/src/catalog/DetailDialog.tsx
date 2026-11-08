@@ -45,7 +45,7 @@ function episodeName(episode: Media): string {
   return episode.episode === null ? episode.title : `${episode.title}, episode ${episode.episode}`;
 }
 
-/** UC4: a modal `<dialog>` over the catalog; Escape or the close button close it. */
+/** UC4: a modal `<dialog>` over the catalog; Escape, the close button or Back close it. */
 export function DetailDialog({
   item,
   seasons,
@@ -130,7 +130,7 @@ export function DetailDialog({
       ref={ref}
       className="detail"
       aria-labelledby={titleId}
-      // Every close path (button, Escape) ends in the native `close` event, fired once the
+      // Every close path (button, Escape, Back) ends in the native `close` event, fired once the
       // modal is no longer inert, so the caller can move the focus back. React propagates
       // `close` up its tree, so the nested player's own close must not end the detail too.
       onClose={(event) => {

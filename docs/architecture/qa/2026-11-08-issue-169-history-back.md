@@ -16,9 +16,13 @@ Full QA pass (`docs/testing/qa-matrix.md` § Back navigation checks (#169)).
 | Back closes the detail dialog, the app stays | e2e "Back closes the detail dialog…" (`page.goBack()`) | OK |
 | Close button leaves no stale entry | same e2e, `history.state` back to `null` | OK |
 | Reload on the dialog entry shows the catalog | same e2e, `page.reload()` | OK |
-| Player → Back closes the player only, second Back the detail | `history-layer.test.tsx` | OK |
-| Double Back at once closes both layers | `history-layer.test.tsx` (`history.go(-2)`) | OK |
-| Close by button then Back reopens nothing | `history-layer.test.tsx` | OK |
+| Player → Back closes the player only, second Back the detail | `history-layer.test.tsx` (unit, jsdom) | OK |
+| Back on the real player saves and ends the HLS session | `PlayerDialog.test.tsx` (unit) | OK |
+| Back on the real title sheet closes it, focus returned | `DiscoverPage.test.tsx` (unit) | OK |
+| Double Back at once closes the player first, then the detail | `history-layer.test.tsx` (`history.go(-2)`, browser-like async `close`) | OK |
+| Escape twice before the first Back lands leaves no stale entry | `history-layer.test.tsx` | OK |
+| Forward onto a closed layer entry goes back to the catalog | `history-layer.test.tsx` | OK |
+| Close by button then Back reopens nothing | `history-layer.test.tsx` (unit, jsdom) | OK |
 | Reopen before the close's Back lands stays open | `history-layer.test.tsx` | OK |
 | "Play in my library" hand-off reuses the sheet's entry | `history-layer.test.tsx` | OK |
 | Escape / button close still work, focus returned | e2e catalog smoke, existing dialog tests | OK |

@@ -1,7 +1,7 @@
 # Component diagram — catalog (apps/web)
 
 > **Feature**: UC3 / UC4 / UC22 / UC24 / UC26 ([spec](../../specs/catalog-grid.md), [continue-watching](../../specs/continue-watching.md))
-> **Related ADRs**: ADR-0001, ADR-0004, ADR-0020
+> **Related ADRs**: ADR-0001, ADR-0004, ADR-0020, ADR-0024
 
 ## Diagram
 
@@ -14,6 +14,8 @@ flowchart TB
     page --> row[catalog/PosterRow]
     page --> grid[catalog/PosterGrid]
     page --> detail[catalog/DetailDialog]
+    detail --> layer["history-layer.ts «new #169»<br/>useHistoryLayer, Back closes a dialog"]
+    sheet --> layer
     row --> card[catalog/PosterCard]
     grid --> card
     page --> state[catalog/view-state.ts<br/>reducer, pure]

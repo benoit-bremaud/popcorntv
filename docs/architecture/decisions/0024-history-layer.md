@@ -25,16 +25,19 @@ C — a router library (react-router).
 | No clash with the auth hash links        |     20 | 5                     | 1                              | 4                     |
 | Nesting and the Discover hand-off        |     15 | 4 — depth + adoption  | 3                              | 4                     |
 | Dependencies                             |     10 | 5                     | 5                              | 1                     |
-| **Total /500**                           |    100 | **460**               | **275**                        | **270**               |
+| **Total /500**                           |    100 | **455**               | **255**                        | **255**               |
 
-Sensitivity: A stays first with simplicity at 10 and dependencies at 30.
+Sensitivity: with simplicity at 10 and dependencies at 30, A 475, B 295, C 255; A stays
+first. B and C tie at 255.
 
 ## Decision
 
 A. Each layer pushes its entry on open; `popstate` below its depth closes it through the
 dialog's `close`; a close by button or Escape calls `history.back()` when its entry is on
 top. A layer unmounted while open leaves its entry adoptable by the next layer. A layer
-opened while such a Back is pending waits for its `popstate`.
+opened while such a Back is pending waits for its `popstate`. One module `popstate`
+listener closes the layers above the landing entry, top first, so the player saves and ends
+its session before the detail dialog closes.
 
 ## Consequences
 

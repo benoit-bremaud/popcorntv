@@ -101,7 +101,7 @@ test('Back closes the detail dialog and a reload on its entry shows the catalog'
   await expect(dialog).toBeHidden();
   await expect(page.getByRole('heading', { name: 'Top rated' })).toBeVisible();
 
-  // Closed by its button, the dialog leaves no entry: Back then leaves nothing open either.
+  // Closed by its button, the dialog goes back over its own entry: no stale entry stays.
   await poster.click();
   await dialog.getByRole('button', { name: 'Close' }).click();
   await expect(dialog).toBeHidden();
