@@ -65,11 +65,16 @@ export function DiscoverPage({
   const [wishlist, setWishlist] = useState<readonly WishlistEntry[]>([]);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<{ query: string; titles: RowState } | null>(null);
+  /** True while an input method composes, so half-typed text is never sent. */
+  const [composing, setComposing] = useState(false);
   const [open, setOpen] = useState<DiscoverTitle | null>(null);
   const trigger = useRef<HTMLElement | null>(null);
   const wishlistRequest = useRef(0);
-  /** The trimmed query last sent (or cleared), so Enter and the debounce never repeat it. */
-  const sent = useRef('');
+  /**
+   * The trimmed query last sent (or cleared), so Enter and the debounce never repeat it;
+   * `null` after a failure, so Enter retries it.
+   */
+  const sent = useRef<string | null>('');
 
   const refreshWishlist = useCallback(async () => {
     const request = ++wishlistRequest.current;
@@ -106,6 +111,7 @@ export function DiscoverPage({
         titles = await api.search(text);
       } catch {
         titles = 'failed';
+        if (sent.current === text) sent.current = null;
       }
       setResults((current) => (current?.query === text ? { query: text, titles } : current));
     },
@@ -114,9 +120,10 @@ export function DiscoverPage({
 
   // Live search like the library one (#166): the query goes out once typing pauses.
   useEffect(() => {
+    if (composing) return;
     const timer = setTimeout(() => void search(query), SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [query, search]);
+  }, [query, composing, search]);
 
   const listed = new Set(wishlist.map(titleKey));
 
@@ -141,6 +148,8 @@ export function DiscoverPage({
               setQuery(value);
               if (value.trim() === '') void search('');
             }}
+            onCompositionStart={() => setComposing(true)}
+            onCompositionEnd={() => setComposing(false)}
             onKeyDown={(event) => {
               if (event.key === 'Escape' && !event.nativeEvent.isComposing) {
                 setQuery('');

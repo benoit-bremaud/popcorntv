@@ -342,5 +342,58 @@ describe('DiscoverPage', () => {
       expect(screen.getByRole('status')).toHaveTextContent('1 result for “dark”');
       expect(screen.queryByRole('button', { name: /Dune/ })).not.toBeInTheDocument();
     });
+
+    it('lets Enter retry a query whose search failed', async () => {
+      const search = vi
+        .fn<DiscoverApi['search']>()
+        .mockRejectedValueOnce(new Error('down'))
+        .mockResolvedValue([DUNE]);
+      const { type, api, field } = setup(search);
+
+      type('dune');
+      await pause();
+      expect(screen.getByRole('status')).toHaveTextContent('TMDB could not be reached.');
+      await act(async () => {
+        fireEvent.submit(field);
+      });
+
+      expect(api.search).toHaveBeenCalledTimes(2);
+      expect(screen.getByRole('status')).toHaveTextContent('1 result for “dune”');
+    });
+
+    it('clears a failed search when the field is emptied', async () => {
+      const { type } = setup(vi.fn(async () => Promise.reject(new Error('down'))));
+
+      type('dune');
+      await pause();
+      type('');
+
+      expect(screen.getByRole('status')).toBeEmptyDOMElement();
+      expect(screen.getByRole('region', { name: 'Trending films' })).toBeInTheDocument();
+    });
+
+    it('waits for an input method to finish composing', async () => {
+      const { type, api, field } = setup();
+
+      fireEvent.compositionStart(field);
+      type('でゅ');
+      await pause();
+      expect(api.search).not.toHaveBeenCalled();
+      type('デューン');
+      fireEvent.compositionEnd(field);
+      await pause();
+
+      expect(api.search).toHaveBeenCalledTimes(1);
+      expect(api.search).toHaveBeenCalledWith('デューン');
+    });
+
+    it('keeps the field on Escape while an input method composes', () => {
+      const { type, field } = setup();
+
+      type('dune');
+      fireEvent.keyDown(field, { key: 'Escape', isComposing: true });
+
+      expect(field).toHaveValue('dune');
+    });
   });
 });

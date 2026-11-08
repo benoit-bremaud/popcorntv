@@ -163,5 +163,8 @@ Replay with a screen reader (Orca on Firefox, then NVDA or VoiceOver when availa
 6. Escape in the field: the field, the results and the announcement clear; the rows show.
 7. Throttle the network, type "da", pause, then "dark": the "da" answer arriving late
    never replaces the "dark" results.
-8. Empty and failure states are unchanged: "No title matches." and "TMDB could not be
+8. Cut the network, search "dune" (failure read), restore it, press Enter: the search is
+   retried. With Japanese input, no request goes out before the candidate is confirmed.
+9. Screen reader: each pause reads "Searching for …" then the count, once per pause.
+10. Empty and failure states are unchanged: "No title matches." and "TMDB could not be
    reached." (network cut).
