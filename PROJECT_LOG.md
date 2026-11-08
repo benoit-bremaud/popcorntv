@@ -4,6 +4,18 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-08 — #162 + #92 running version in the app (PR #209 merged, `283e875`)
+
+- **Decision** — ADR-0022 (MCDA: signed-in `GET /version` 480/500 vs session field 425 vs Vite
+  constant 335, owner approval). `APP_VERSION` build argument (`git describe --tags
+  --always`) → `ENV`, validated by `loadConfig` (`dev` by default); `/health` answers
+  `{ status }` only (#92); account menu shows `PopCornTV <version>` (UC27). `make
+  staging-up` and the homelab build line pass the argument: the next Pi build must use it.
+- **Gate** — 948 tests, server 97.2 % / web 98.4 % stmts, Playwright smoke 1/1, Hadolint,
+  Trivy config, gitleaks, SonarQube passed; Opus adversarial 0 Must / 2 Should fixed, verify
+  round open. Staging QA: `/api/version` 401 anonymous, `505b464` signed in, menu shown.
+- **Follow-up** — `docs/architecture/README.md` index tables are stale (decisions, features).
+
 ## 2026-11-08 — #204 local staging instance (PR #207 merged, `6ee2daf`)
 
 - **Decision** — owner rule 2026-11-08: no Pi redeploy per brick; QA passes run on a local
