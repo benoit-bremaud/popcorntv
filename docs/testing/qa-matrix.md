@@ -158,7 +158,7 @@ Replay with a screen reader (Orca on Firefox, then NVDA or VoiceOver when availa
 2. Type "dune" quickly letter by letter: a single request goes out, not one per letter.
 3. Type "dune" and press Enter at once: results appear immediately and no second
    request follows after the pause.
-4. Add trailing spaces to a searched query: no new request.
+4. Add trailing spaces to a successfully searched query: no new request.
 5. Type only spaces: no request, the rows stay, nothing is announced.
 6. Escape in the field: the field, the results and the announcement clear; the rows show.
 7. Throttle the network, type "da", pause, then "dark": the "da" answer arriving late

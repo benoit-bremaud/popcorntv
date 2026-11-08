@@ -18,8 +18,8 @@ whether the title is already on disk, and keeps a per-profile wishlist whose ent
 - **R2** A search field queries `GET /discover/search?q=` (1–100 characters, TMDB
   `/search/multi`, films and series only, at most 20). Like the library search, it is
   live (#166): the trimmed query goes out 400 ms after the last keystroke, Enter sends it
-  at once, an unchanged query is not re-sent unless its last attempt failed (Enter then
-  retries it), a blank one is never sent, nothing goes out while an input method composes,
+  at once, an unchanged query is not re-sent unless its last attempt failed (Enter or the next
+  pause retries it), a blank one is never sent, nothing goes out while an input method composes,
   an answer for an older query is dropped, and Escape clears the field. Each search is
   announced as it starts and ends; the 400 ms pause already groups the keystrokes. The `LiveStatus` region announces
   *Searching for "…"…*, then *N results for "…"*, *No match for "…"* or the TMDB
