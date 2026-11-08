@@ -28,9 +28,8 @@ export function isAtOrUnderRoot(root: string, candidate: string): boolean {
  * of a library root or name (spec library-management R2).
  */
 export function hasControlChar(value: string): boolean {
-  for (let i = 0; i < value.length; i += 1) {
-    const code = value.charCodeAt(i);
-    if (code <= 0x1f || (code >= 0x7f && code <= 0x9f)) return true;
-  }
-  return false;
+  return [...value].some((char) => {
+    const code = char.codePointAt(0) ?? 0;
+    return code <= 0x1f || (code >= 0x7f && code <= 0x9f);
+  });
 }
