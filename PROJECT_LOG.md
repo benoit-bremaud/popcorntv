@@ -4,6 +4,16 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-08 — #140 continue watching waits for the last save (PR #215 merged, `6332ab9`)
+
+- `DetailDialog` hands the player's last progress save to `onClose`; `CatalogPage` reloads
+  the row once it landed (spec continue-watching R7, extension 5a known limit, sequence 06).
+- Tests: delayed-save page test (red on the old code), settled save without play, stale
+  answer guard. QA matrix § Continue watching checks (#140); browser replay deferred to the
+  next Full QA pass (report `docs/architecture/qa/2026-11-08-issue-140-continue-watching-reload.md`).
+- Gate: all local checks green, SonarQube passed, adversarial review 1 Must (stale
+  diagram) fixed, round 2 open.
+
 ## 2026-11-08 — #55 copied resume reports the real HLS start (PR #211 merged, `6226e0f`)
 
 - **Decision** — ADR-0023 (MCDA: probe before FFmpeg 465/500 vs first-segment PTS 345 vs
