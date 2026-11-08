@@ -4,6 +4,26 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-08 — #55 copied resume reports the real HLS start (PR #211 merged, `6226e0f`)
+
+- **Decision** — ADR-0023 (MCDA: probe before FFmpeg 465/500 vs first-segment PTS 345 vs
+  re-encode 335, owner approval). A one-packet FFmpeg run with the session's own `-ss` and
+  maps (`-copyts -start_at_zero … -frames:v 1 -f framecrc`) gives the earliest pts of the
+  output, answered as `offsetSec`; failed probe → `startSec` + `playback.keyframe.failed`.
+  `offsetSec` may be fractional (subtitle route accepts it, web floors the saved position).
+- **Review** — Opus adversarial, 3 rounds: an ffprobe `-read_intervals` probe and then a
+  first-video-packet probe were both one GOP off (FFmpeg's 3/23 s B-frame seek back-off,
+  container start origin, audio leading the keyframe); final error 0.000 s on MKV, MP4,
+  late-video MKV and MPEG-TS, −0.08 s with re-encoded audio. Gate open.
+- **Gate** — 965 tests (+13 opt-in `FFMPEG_IT=1`), server 97.0 % / web 98.4 % stmts,
+  SonarQube passed, gitleaks clean; Playwright smoke 1/1 run after the merge (missed
+  before it). QA on the local prod build (staging holds the owner's account):
+  `docs/architecture/qa/2026-11-08-issue-55-resume-offset.md`; resume checks added to
+  `docs/testing/qa-matrix.md` for the later Full pass (new owner rule: every brick adds its
+  QA subtleties to the ledger).
+- **Follow-up** — HLS copy of AVI H.264 with B-frames fails (`first pts and dts value must
+  be set`, pre-existing); `docs/architecture/README.md` ADR index stale.
+
 ## 2026-11-08 — #162 + #92 running version in the app (PR #209 merged, `283e875`)
 
 - **Decision** — ADR-0022 (MCDA: signed-in `GET /version` 480/500 vs session field 425 vs Vite
