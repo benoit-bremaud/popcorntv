@@ -10,6 +10,8 @@ export function SearchBox({ query, onChange }: Props): React.JSX.Element {
       <input
         type="search"
         className="search__input"
+        name="q"
+        autoComplete="off"
         aria-label="Search titles and people"
         placeholder="Search titles and people"
         value={query}

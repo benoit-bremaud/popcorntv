@@ -145,6 +145,30 @@ describe('LibrarySection', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('already running');
   });
 
+  it('opts the add form out of the browser identity autofill (#168)', async () => {
+    const { user } = section();
+
+    await screen.findByRole('option', { name: 'series' });
+    await user.selectOptions(screen.getByLabelText('Folder'), 'Other folder…');
+
+    expect(screen.getByLabelText('Path')).toHaveAttribute('autocomplete', 'off');
+    expect(screen.getByLabelText('Path')).toHaveAttribute('name', 'library-path');
+    expect(screen.getByLabelText('Name')).toHaveAttribute('autocomplete', 'off');
+    expect(screen.getByLabelText('Name')).toHaveAttribute('name', 'library-name');
+  });
+
+  it.each([
+    ['Rename Films', 'New name of Films', 'library-rename'],
+    ['Delete Films', 'Type Films to confirm', 'library-confirm'],
+  ])('opts the %s field out of the identity autofill (#168)', async (button, label, name) => {
+    const { user } = section();
+
+    await user.click(await screen.findByRole('button', { name: button }));
+
+    expect(screen.getByLabelText(label)).toHaveAttribute('autocomplete', 'off');
+    expect(screen.getByLabelText(label)).toHaveAttribute('name', name);
+  });
+
   it('renames a library', async () => {
     const { api, user } = section();
 

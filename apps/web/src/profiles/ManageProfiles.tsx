@@ -187,6 +187,8 @@ function ProfileForm({
           className="input"
           value={name}
           maxLength={PROFILE_NAME_MAX}
+          name="profile-name"
+          autoComplete="off"
           required
           placeholder="Name"
           aria-label={`${legend}: name`}

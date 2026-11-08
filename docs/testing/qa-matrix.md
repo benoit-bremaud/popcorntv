@@ -177,3 +177,16 @@ Replay with a screen reader (Orca on Firefox, then NVDA or VoiceOver when availa
    catalog and Discover searches (`--color-surface`); the user-agent grey was 3.6:1 and 3.9:1.
 3. Firefox: the placeholder is not dimmed further (`opacity: 1`).
 4. Typed text stays `--color-text`; the placeholder never looks like a filled value.
+
+## Identity autofill checks (#168)
+
+1. With a password manager or identity extension active, focus the catalog search, the
+   Discover search, "Add a profile" (and a profile edit name), library Name, library Path
+   ("Other folder…"), the Rename field and the delete confirmation: no contact or identity
+   suggestion opens.
+2. Submit a new profile and a new library: no "Save contact info" prompt follows.
+3. DevTools: each of those inputs carries `autocomplete="off"` and its `name` (`q`,
+   `profile-name`, `library-name`, `library-path`, `library-rename`, `library-confirm`).
+4. Sign-in still offers the saved username and password (`username` /
+   `current-password`); setup, invitation, reset and password change still offer to
+   generate and save a password (`new-password`); the setup token stays `off`.

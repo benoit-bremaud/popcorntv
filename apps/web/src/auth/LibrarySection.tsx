@@ -170,6 +170,8 @@ export function LibrarySection({ api }: Props): React.JSX.Element {
                 >
                   <input
                     className="input"
+                    name="library-rename"
+                    autoComplete="off"
                     aria-label={`New name of ${library.name}`}
                     value={renaming.name}
                     maxLength={200}
@@ -223,6 +225,8 @@ export function LibrarySection({ api }: Props): React.JSX.Element {
                 <span className="admin-row">
                   <input
                     className="input"
+                    name="library-confirm"
+                    autoComplete="off"
                     aria-label={`Type ${library.name} to confirm`}
                     value={deleting.typed}
                     onChange={(event) => setDeleting({ id: library.id, typed: event.target.value })}
@@ -279,6 +283,8 @@ export function LibrarySection({ api }: Props): React.JSX.Element {
             <span>Path</span>
             <input
               className="input"
+              name="library-path"
+              autoComplete="off"
               value={path}
               placeholder={folders ? `${folders.root}/…` : '/…'}
               onChange={(event) => setPath(event.target.value)}
@@ -289,6 +295,8 @@ export function LibrarySection({ api }: Props): React.JSX.Element {
           <span>Name</span>
           <input
             className="input"
+            name="library-name"
+            autoComplete="off"
             value={name}
             placeholder={suggestion}
             maxLength={200}
