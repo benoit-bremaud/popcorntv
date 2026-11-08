@@ -29,8 +29,11 @@ sequenceDiagram
   Routes-->>Web: 200 { root, folders[] }
   Owner->>Web: pick folder, name, kind; Add
   Web->>Routes: POST /libraries { name, rootPath, kind }
-  alt path invalid or outside MEDIA_ROOT
+  alt path invalid, outside MEDIA_ROOT, or a control character in the path or name
     Routes-->>Web: 400 invalid_request
+  else root missing, not a directory, or real path outside MEDIA_ROOT (#163)
+    Routes->>FS: stat + realpath(rootPath), realpath(MEDIA_ROOT)
+    Routes-->>Web: 409 root_unreadable
   else root overlaps another library
     Routes-->>Web: 409 root_in_use
   else accepted

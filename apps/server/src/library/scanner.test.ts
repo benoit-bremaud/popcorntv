@@ -463,4 +463,11 @@ describe('LibraryScanner', () => {
     await expect(scanner.scan(missing)).rejects.toBeInstanceOf(RootUnreadableError);
     await expect(scanner.scan(file)).rejects.toBeInstanceOf(RootUnreadableError);
   });
+
+  it('throws RootUnreadableError when the media root itself cannot be resolved', async () => {
+    const gone = new LibraryScanner(repository, probe, join(root, 'no-media-root'));
+    const library = repository.createLibrary({ name: 'Z', rootPath: root, kind: 'films' });
+
+    await expect(gone.scan(library)).rejects.toThrow(/cannot be resolved/);
+  });
 });

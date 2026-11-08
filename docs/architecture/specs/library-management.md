@@ -17,7 +17,11 @@
   sub-folders of `MEDIA_ROOT`, one level, directories only — symbolic links and names
   starting with `.` are left out — sorted by name, each with the id of the library whose
   root overlaps it (R3), or null; the form offers only the free ones. The form also takes an absolute path typed by hand
-  ("Other folder"), validated by the existing `MEDIA_ROOT` guard.
+  ("Other folder"), validated by the existing `MEDIA_ROOT` guard. (#163) On create, the root
+  must also be an existing directory whose real path (links followed) stays under
+  `MEDIA_ROOT` — the same check as every scan — else `409 root_unreadable`, nothing stored;
+  a control character (C0, DEL, C1: NUL, newline, tab…) in the root or in the name, on
+  create as on rename, is `400 invalid_request`. A trailing slash is normalised away.
 - **R3** A new library's root may not equal, contain or sit inside another library's root:
   `409 root_in_use`. Two libraries over the same files would list every title twice.
 - **R4** The kind (`films` | `series`) and the root are fixed once created; only the name
@@ -57,11 +61,15 @@ or presses "Add a library" on the empty catalog.
 
 ### Extensions
 
-- 3a. The path is not absolute or not under `MEDIA_ROOT` → 400 `invalid_request`; the web
-  shows the reason above the list.
+- 3a. The path is not absolute or not under `MEDIA_ROOT`, or it or the name holds a control
+  character (the name on rename too) → 400 `invalid_request`; the web shows the reason
+  above the list.
 - 3b. The root overlaps another library → 409 `root_in_use`; the web explains that the
   folder overlaps another library. Roots are compared on their real paths, so a link to
   another library's folder overlaps it too.
+- 3c. (#163) The root is missing, not a directory or its real path leaves `MEDIA_ROOT` →
+  409 `root_unreadable`; nothing is stored; the web shows "The server cannot read this
+  folder."
 - 4a. The root is unreadable → 409 `root_unreadable` (UC1).
 - 5a. A scan or refresh of that library is running → 409 `scan_running` /
   `enrich_running`; nothing changes.

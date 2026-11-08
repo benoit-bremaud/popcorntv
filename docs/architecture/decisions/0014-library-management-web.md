@@ -97,4 +97,6 @@ Points: A = 200+250 · B = 250+100 · C = 100+250.
 - New owner routes `GET /libraries/folders`, `PATCH /libraries/:id`, `DELETE
   /libraries/:id`; new error code `root_in_use` (roots compared on real paths).
 - The JSON body parser treats an empty body as no body (#122).
+- #163: `POST /libraries` also answers `409 root_unreadable` (the scan's root check runs on
+  create) and refuses control characters in the root and the name with 400.
 - Follow-up issues: scheduled scan, background scan with progress.

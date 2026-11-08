@@ -139,7 +139,8 @@ describe('library routes', () => {
   });
 
   it('answers 409 when the root cannot be read', async () => {
-    const library = await createLibrary(join(root, 'missing'));
+    const library = await createLibrary();
+    await rm(root, { recursive: true });
 
     const scan = await app.inject({ method: 'POST', url: `/libraries/${library.id}/scan` });
 
@@ -165,6 +166,123 @@ describe('library routes', () => {
     expect((await first).statusCode).toBe(200);
   });
 
+  describe('root checks (spec library-management R2, #163)', () => {
+    const add = (payload: Record<string, unknown>) =>
+      app.inject({
+        method: 'POST',
+        url: '/libraries',
+        payload: { name: 'Films', rootPath: root, kind: 'films', ...payload },
+      });
+    const listed = async () => (await app.inject({ method: 'GET', url: '/libraries' })).json();
+
+    it.each([
+      ['NUL', '\u0000'],
+      ['newline', '\n'],
+      ['tab', '\t'],
+      ['DEL', '\u007f'],
+      ['C1 control', '\u0085'],
+    ])('refuses a %s in the root with 400 and stores nothing', async (_label, char) => {
+      const response = await add({ rootPath: `${root}${char}` });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json<ApiError>().error).toBe('invalid_request');
+      expect(await listed()).toEqual([]);
+    });
+
+    it.each([
+      ['NUL', '\u0000'],
+      ['newline', 'Fi\nlms'],
+      ['tab', 'Fi\tlms'],
+      ['DEL', '\u007f'],
+      ['C1 control', '\u0085'],
+    ])('refuses a %s in the name on create', async (_label, name) => {
+      const response = await add({ name: `Films${name}` });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json<ApiError>().error).toBe('invalid_request');
+    });
+
+    it.each([
+      ['NUL', 'Films\u0000'],
+      ['newline', 'Fi\nlms'],
+      ['DEL', 'Films\u007f'],
+      ['C1 control', 'Films\u0085'],
+    ])('refuses a %s in the name on rename and keeps the old one', async (_label, name) => {
+      const library = await createLibrary();
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/libraries/${library.id}`,
+        payload: { name },
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json<ApiError>().error).toBe('invalid_request');
+      expect(await listed()).toEqual([library]);
+    });
+
+    it.each([
+      ['a missing folder', () => join(mediaRoot, 'nonexistent-qa'), async () => undefined],
+      [
+        'a file',
+        () => join(mediaRoot, 'film.mkv'),
+        () => writeFile(join(mediaRoot, 'film.mkv'), 'x'),
+      ],
+      [
+        'a link out of the media root',
+        () => join(mediaRoot, 'escape'),
+        () => symlink(tmpdir(), join(mediaRoot, 'escape')),
+      ],
+      [
+        'a dangling link',
+        () => join(mediaRoot, 'dangling'),
+        () => symlink(join(mediaRoot, 'gone'), join(mediaRoot, 'dangling')),
+      ],
+    ])('refuses %s with 409 root_unreadable and stores nothing', async (_label, path, arrange) => {
+      await arrange();
+
+      const response = await add({ rootPath: path() });
+
+      expect(response.statusCode).toBe(409);
+      expect(response.json()).toEqual({ error: 'root_unreadable' });
+      expect(await listed()).toEqual([]);
+    });
+
+    it('trims surrounding whitespace, a final newline included, from the name', async () => {
+      const response = await add({ name: '  Films\n' });
+
+      expect(response.statusCode).toBe(201);
+      expect(response.json<Library>().name).toBe('Films');
+    });
+
+    it('accepts a trailing slash and stores the path without it', async () => {
+      const library = await createLibrary(`${root}/`);
+
+      expect(library.rootPath).toBe(root);
+    });
+
+    it('accepts a link to a folder inside the media root', async () => {
+      await mkdir(join(mediaRoot, 'real'));
+      await symlink(join(mediaRoot, 'real'), join(mediaRoot, 'alias'));
+
+      const library = await createLibrary(join(mediaRoot, 'alias'));
+
+      expect(library.rootPath).toBe(join(mediaRoot, 'alias'));
+    });
+
+    it.each([
+      ['NFC', 'Fran\u00e7ais'],
+      ['NFD', 'Franc\u0327ais'],
+    ])('accepts an existing %s unicode folder and name', async (_label, folder) => {
+      await mkdir(join(mediaRoot, folder));
+
+      const response = await add({ name: folder, rootPath: join(mediaRoot, folder) });
+
+      expect(response.statusCode).toBe(201);
+      expect(response.json<Library>()).toMatchObject({ name: folder });
+    });
+  });
+
   describe('management (spec library-management)', () => {
     it.each([
       ['the same root', () => root],
@@ -172,6 +290,7 @@ describe('library routes', () => {
       ['a root containing it', () => mediaRoot],
     ])('refuses %s with 409 root_in_use', async (_label, other) => {
       await createLibrary();
+      await mkdir(join(root, 'sub'));
 
       const response = await app.inject({
         method: 'POST',

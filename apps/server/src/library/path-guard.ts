@@ -22,3 +22,14 @@ export function rootsOverlap(a: string, b: string): boolean {
 export function isAtOrUnderRoot(root: string, candidate: string): boolean {
   return resolve(candidate) === resolve(root) || resolveUnderRoot(root, candidate) !== null;
 }
+
+/**
+ * True when `value` holds a C0 control, DEL or a C1 control (NUL, newline, tab…): never part
+ * of a library root or name (spec library-management R2).
+ */
+export function hasControlChar(value: string): boolean {
+  return [...value].some((char) => {
+    const code = char.codePointAt(0) ?? 0;
+    return code <= 0x1f || (code >= 0x7f && code <= 0x9f);
+  });
+}

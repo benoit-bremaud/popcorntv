@@ -28,9 +28,27 @@ One row per screen or flow. Cell format: `date · SHA · environment · OK | KO 
 | Admin: devices | 2026-11-08 · 0698684 · Pi · OK | — (no revoke by rule) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | 2026-11-08 · 0698684 · Pi · KO #174 | — (window floor 619 px, 320/390 not reachable) |
 | Admin: links | 2026-11-08 · 0698684 · Pi · OK | — (no link created or revoked by this pass) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | 2026-11-08 · 0698684 · Pi · KO #175 | — (window floor 619 px, 320/390 not reachable) |
 | Admin: events | 2026-11-08 · 0698684 · Pi · OK | — (no error path in this flow) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | 2026-11-08 · 0698684 · Pi · KO #175 | — (window floor 619 px, 320/390 not reachable) |
-| Libraries add / edit / delete / scan | 2026-11-08 · 0698684 · Pi · KO #163 | 2026-11-08 · 0698684 · Pi · KO #163 | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | — (not audited) | — (window floor 619 px, 320/390 not reachable) |
+| Libraries add / edit / delete / scan | 2026-11-08 · 0698684 · Pi · KO #163 | 2026-11-08 · f69a401 · inject tests · OK, staging owner replay pending (#163, [report](../architecture/qa/2026-11-08-issue-163-library-root.md)) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | — (not audited) | — (window floor 619 px, 320/390 not reachable) |
 | Unknown paths (#177) | 2026-11-08 · local staging · OK (`/`, assets 200) · [report](../architecture/qa/2026-11-08-issue-177-not-found.md) | 2026-11-08 · local staging · OK (24-path matrix, 404 page, `/api` JSON) | — (static page, no network call) | — (no layer) | — (not audited) | — (not audited) |
 | Scheduled scan | — (timer needs server logs, ROB-07) | — (needs server logs) | — (BLOCKED) | — (no UI) | — (no UI) | — (no UI) |
+
+## Library root checks (#163)
+
+Replay on every pass that touches library creation or the path guard (owner, `POST /api/libraries`):
+
+1. A missing folder under `MEDIA_ROOT` (`/app/media/nonexistent-qa`) answers `409
+   root_unreadable` and `GET /api/libraries` lists nothing new; the admin form shows "The
+   server cannot read this folder."
+2. A file instead of a folder, a link under `MEDIA_ROOT` pointing outside it, and a dangling
+   link answer the same `409 root_unreadable`.
+3. NUL (`\u0000`), newline, tab, DEL and a C1 control in `rootPath` answer `400
+   invalid_request`; the same characters inside `name` answer 400 on create and on rename
+   (`PATCH`), and the old name stays.
+4. A trailing slash is stored without it; surrounding whitespace in the name is trimmed (a
+   final newline too, so it is accepted).
+5. Accented folder names (NFC and NFD) that exist are accepted as written.
+6. Unchanged: `/etc`, `../etc`, `/app/media/../../etc` answer 400, an existing root `409
+   root_in_use`, a link to another library's root `409 root_in_use`.
 
 ## Not-found checks (#177)
 

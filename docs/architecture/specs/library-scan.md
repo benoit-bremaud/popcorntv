@@ -28,7 +28,10 @@ ADR-0016).
 
 - A library exists (`POST /libraries` with `name`, `rootPath`, `kind` in `films | series`).
 - `rootPath` is an absolute, existing, readable directory equal to or under the server's
-  `MEDIA_ROOT` (`POST /libraries` rejects any other path with `400 invalid_request`).
+  `MEDIA_ROOT` (`POST /libraries` rejects a relative path, a path outside `MEDIA_ROOT` or a
+  control character with `400 invalid_request`, and a root that is missing, not a directory
+  or whose real path leaves `MEDIA_ROOT` with `409 root_unreadable`, spec library-management
+  R2).
 - `ffprobe` is reachable at `FFPROBE_PATH`.
 
 ## Minimal guarantees
