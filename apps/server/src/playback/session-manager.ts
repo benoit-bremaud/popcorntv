@@ -10,6 +10,12 @@ import { PLAYLIST_NAME, SEGMENT_PATTERN, copiesVideo, ffmpegArgs } from './ffmpe
 import type { KeyframeProbe } from './keyframe-probe.js';
 import type { TranscodeHandle, Transcoder } from './transcoder.js';
 
+/**
+ * How far past the probed keyframe a copied resume seeks (ADR-0023): above FFmpeg's 3/23 s
+ * seek back-off, below any real keyframe interval.
+ */
+const KEYFRAME_SEEK_MARGIN_SEC = 0.5;
+
 /** Tunables of the session lifecycle (state diagram 05); tests shorten them. */
 export interface SessionManagerOptions {
   readonly transcoder: Transcoder;
@@ -111,7 +117,7 @@ export class SessionManager {
     // Known before any take-over: a title without video must not end someone's stream.
     if (!streams.some((stream) => stream.type === 'video')) return { kind: 'not_playable' };
     // Probed before the limit check: nothing may be awaited between it and the reservation.
-    const offsetSec = await this.realStart(inputPath, streams, startSec);
+    const { offsetSec, seekSec } = await this.realStart(inputPath, streams, startSec);
     let preempted: Promise<boolean> | undefined;
     if (this.sessions.size + this.starting >= this.options.maxSessions) {
       const victim = this.victimFor(opener);
@@ -141,7 +147,7 @@ export class SessionManager {
     } finally {
       this.starting -= 1;
     }
-    const args = ffmpegArgs(inputPath, streams, dir, offsetSec, audioIndex);
+    const args = ffmpegArgs(inputPath, streams, dir, seekSec, audioIndex);
     if (args === null) {
       await this.remove(dir);
       return { kind: 'not_playable' };
@@ -210,25 +216,31 @@ export class SessionManager {
   }
 
   /**
-   * Media time the HLS timeline starts at (ADR-0023): a copied video starts on the keyframe
-   * at or before `startSec`, so FFmpeg is seeked to that keyframe exactly; a re-encoded one
-   * starts at `startSec`. A failed probe keeps `startSec`, as before #55.
+   * Media time the HLS timeline starts at (`offsetSec`) and the `-ss` FFmpeg gets (ADR-0023).
+   * A copied video starts on the keyframe at or before `startSec`; FFmpeg backs its seek off
+   * by up to 3/23 s, so it is seeked a margin past that keyframe to land on it. A re-encoded
+   * one starts at `startSec`. A failed probe keeps `startSec`, as before #55.
    */
   private async realStart(
     inputPath: string,
     streams: readonly StreamInfo[],
     startSec: number,
-  ): Promise<number> {
+  ): Promise<{ offsetSec: number; seekSec: number }> {
+    const requested = { offsetSec: startSec, seekSec: startSec };
     const probe = this.options.keyframeProbe;
-    if (startSec <= 0 || probe === undefined || !copiesVideo(streams)) return startSec;
+    if (startSec <= 0 || probe === undefined || !copiesVideo(streams)) return requested;
     try {
-      return await probe(inputPath, startSec);
+      const keyframe = await probe(inputPath, startSec);
+      return {
+        offsetSec: keyframe,
+        seekSec: Math.round((keyframe + KEYFRAME_SEEK_MARGIN_SEC) * 1000) / 1000,
+      };
     } catch (error) {
       this.options.logger.warn(
         { event: 'playback.keyframe.failed', err: error, startSec },
         'keyframe probe failed, reporting the requested start',
       );
-      return startSec;
+      return requested;
     }
   }
 

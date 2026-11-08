@@ -36,8 +36,10 @@ A. `KeyframeProbe` (`src/playback/keyframe-probe.ts`) runs `ffprobe -select_stre
 -read_intervals <startSec>%+#50 -show_entries packet=pts_time,flags:stream=start_time` and
 the pure `parseKeyframe` keeps the first keyframe, relative to the stream start, rounded to
 the millisecond, refused past `startSec`. `SessionManager.open` probes only when the video
-is copied and `startSec > 0`, before the session-limit check, seeks FFmpeg to the keyframe
-and returns it as `offsetSec`. A failed probe logs `playback.keyframe.failed` and keeps
+is copied and `startSec > 0`, before the session-limit check, and returns the keyframe as
+`offsetSec`. FFmpeg gets `-ss keyframe + 0.5`: its input seek backs off by up to 3/23 s
+when the video has B-frames, so `-ss` exactly on a keyframe lands on the one before (seen in
+the #55 QA on MKV); the margin is above that back-off and below any real keyframe interval. A failed probe logs `playback.keyframe.failed` and keeps
 `startSec` (the old behaviour). `offsetSec` may now carry a fraction: the subtitle route
 accepts a number and the web floors `offsetSec + currentTime` before it saves.
 

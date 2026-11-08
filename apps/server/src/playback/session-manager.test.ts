@@ -408,14 +408,15 @@ describe('SessionManager', () => {
   });
 
   describe('copied resume start (ADR-0023)', () => {
-    it('seeks FFmpeg to the probed keyframe and reports it as the offset', async () => {
+    it('seeks FFmpeg just past the probed keyframe and reports the keyframe', async () => {
       const { transcoder, runs } = fakeTranscoder('writes');
       const keyframeProbe = vi.fn(async () => 39.96);
       const result = await manager(transcoder, { keyframeProbe }).open(USER, '/m/a.mkv', H264, 42);
 
       expect(keyframeProbe).toHaveBeenCalledWith('/m/a.mkv', 42);
       expect(result).toMatchObject({ kind: 'ready', offsetSec: 39.96 });
-      expect(runs[0]?.args.slice(4, 6)).toEqual(['-ss', '39.96']);
+      // 0.5 s past it: FFmpeg's seek back-off would land on the keyframe before.
+      expect(runs[0]?.args.slice(4, 6)).toEqual(['-ss', '40.46']);
     });
 
     it('never probes a re-encoded video or a start from zero', async () => {

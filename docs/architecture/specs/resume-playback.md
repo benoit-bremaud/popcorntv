@@ -47,7 +47,7 @@ Primary key `(profile_id, media_id)`: one row per profile and title, upserted.
   - direct → `offsetSec: 0`; the web seeks the `<video>` to `startSec` itself;
   - HLS → FFmpeg gets `-ss` before `-i`. Re-encoded video: `-ss startSec`,
     `offsetSec: startSec`. Copied H.264: the server first probes the keyframe at or before
-    `startSec` and seeks FFmpeg to it, `offsetSec` = that keyframe, to the millisecond
+    `startSec`, seeks FFmpeg 0.5 s past it (FFmpeg's seek back-off), `offsetSec` = that keyframe, to the millisecond
     (ADR-0023). A failed probe falls back to `startSec` with a warn log.
 
   The web always reports `offsetSec + video.currentTime` as the position.
