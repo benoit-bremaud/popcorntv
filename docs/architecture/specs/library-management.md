@@ -17,7 +17,11 @@
   sub-folders of `MEDIA_ROOT`, one level, directories only — symbolic links and names
   starting with `.` are left out — sorted by name, each with the id of the library whose
   root overlaps it (R3), or null; the form offers only the free ones. The form also takes an absolute path typed by hand
-  ("Other folder"), validated by the existing `MEDIA_ROOT` guard.
+  ("Other folder"), validated by the existing `MEDIA_ROOT` guard. (#163) On create, the root
+  must also be an existing directory whose real path (links followed) stays under
+  `MEDIA_ROOT` — the same check as every scan — else `409 root_unreadable`, nothing stored;
+  a control character (C0, DEL, C1: NUL, newline, tab…) in the root or in the name, on
+  create as on rename, is `400 invalid_request`. A trailing slash is normalised away.
 - **R3** A new library's root may not equal, contain or sit inside another library's root:
   `409 root_in_use`. Two libraries over the same files would list every title twice.
 - **R4** The kind (`films` | `series`) and the root are fixed once created; only the name

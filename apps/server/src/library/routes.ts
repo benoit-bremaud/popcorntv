@@ -15,9 +15,9 @@ import { apiError, invalid, loadLibrary } from '../http.js';
 import { listSubFolders } from './folder-lister.js';
 import { LibraryBusyError } from './lock.js';
 import type { LibraryLock } from './lock.js';
-import { isAtOrUnderRoot, rootsOverlap } from './path-guard.js';
+import { hasControlChar, isAtOrUnderRoot, rootsOverlap } from './path-guard.js';
 import type { LibraryRepository } from './repository.js';
-import { RootUnreadableError } from './scanner.js';
+import { RootUnreadableError, realRoot } from './scanner.js';
 import type { LibraryScanner } from './scanner.js';
 
 /** Owner-only routes (spec auth §4.4). */
@@ -39,7 +39,7 @@ export interface LibraryRoutesDeps {
 }
 
 /**
- * `POST /libraries` (201 | 400 `invalid_request` | 409 `root_in_use`), `GET /libraries`,
+ * `POST /libraries` (201 | 400 `invalid_request` | 409 `root_unreadable` / `root_in_use`), `GET /libraries`,
  * `GET /libraries/folders`, `PATCH /libraries/:id` (200 | 400 | 404),
  * `DELETE /libraries/:id` (204 | 400 | 404 | 409 `scan_running`),
  * `POST /libraries/:id/scan` (200 | 400 | 404 `library_not_found` | 409 `root_unreadable` /
@@ -47,28 +47,46 @@ export interface LibraryRoutesDeps {
  * `GET /libraries/:id/media` (200 | 400 | 404).
  */
 export function registerLibraryRoutes(app: FastifyInstance, deps: LibraryRoutesDeps): void {
+  const libraryName = z
+    .string()
+    .trim()
+    .min(1)
+    .max(200)
+    .refine((name) => !hasControlChar(name), 'name must not contain a control character');
   const createLibraryBody = z.object({
-    name: z.string().trim().min(1).max(200),
+    name: libraryName,
     rootPath: z
       .string()
       .min(1)
       .max(4096)
+      .refine((path) => !hasControlChar(path), 'rootPath must not contain a control character')
       .refine(isAbsolute, 'rootPath must be absolute')
       .transform((path) => underMediaRoot(deps.mediaRoot, path))
       .refine((path) => path !== null, 'rootPath must be under MEDIA_ROOT'),
     kind: z.enum(LIBRARY_KINDS),
   });
-  const renameLibraryBody = z.object({ name: z.string().trim().min(1).max(200) });
+  const renameLibraryBody = z.object({ name: libraryName });
 
   app.post('/libraries', OWNER, async (request, reply) => {
     const body = createLibraryBody.safeParse(request.body);
     if (!body.success) return reply.code(400).send(invalid(body.error.issues));
     const rootPath = body.data.rootPath;
+    // Spec R2: the same check as the scan, so a typo or a link out fails now, not at scan time.
+    let realRootPath: string;
+    try {
+      realRootPath = await realRoot(rootPath, deps.mediaRoot);
+    } catch (error) {
+      if (!(error instanceof RootUnreadableError)) throw error;
+      request.log.info(
+        { event: 'library.create.refused', err: error },
+        'library refused: root unreadable',
+      );
+      return reply.code(409).send(apiError('root_unreadable'));
+    }
     // Spec R3: overlapping roots would list every title twice. Compared on real paths, as
     // the scanner walks them: a link to another library's folder overlaps it too.
-    // log: n/a — an unreadable root is compared as written
+    // log: n/a — a stored root gone missing is compared as written
     const real = (path: string) => realpath(path).catch(() => path);
-    const realRoot = await real(rootPath);
     const realOf = new Map(
       await Promise.all(
         deps.repository.listLibraries().map(async (l) => [l.id, await real(l.rootPath)] as const),
@@ -80,7 +98,7 @@ export function registerLibraryRoutes(app: FastifyInstance, deps: LibraryRoutesD
       .listLibraries()
       .some((l) =>
         [l.rootPath, realOf.get(l.id) ?? l.rootPath].some(
-          (other) => rootsOverlap(other, rootPath) || rootsOverlap(other, realRoot),
+          (other) => rootsOverlap(other, rootPath) || rootsOverlap(other, realRootPath),
         ),
       );
     if (overlaps) return reply.code(409).send(apiError('root_in_use'));

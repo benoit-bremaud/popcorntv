@@ -145,9 +145,11 @@ export class LibraryScanner {
 
 /**
  * The real path of the library root, checked against the real media root: a link placed
- * under `MEDIA_ROOT` must not pull an external tree into the library.
+ * under `MEDIA_ROOT` must not pull an external tree into the library. Run on every scan and
+ * on every library creation (spec library-management R2).
+ * @throws {RootUnreadableError} when the root is missing, not a directory, or a link out
  */
-async function realRoot(rootPath: string, mediaRoot: string): Promise<string> {
+export async function realRoot(rootPath: string, mediaRoot: string): Promise<string> {
   // log: n/a — a missing root is refused just below
   const info = await stat(rootPath).catch(() => null);
   if (!info?.isDirectory()) throw new RootUnreadableError(rootPath, 'is not a readable directory');
