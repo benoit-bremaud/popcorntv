@@ -1,4 +1,4 @@
-/* The static 404 page (spec deploy-homelab §2.1, #177): served by Caddy, no script. */
+/* The static 404 page (spec deploy-homelab R3a, #177): served by Caddy, no script. */
 @import './tokens.css';
 
 body {

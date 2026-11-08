@@ -81,6 +81,8 @@ up here.
 1. Run the backup line above by hand.
 2. Build the new tag, change `POPCORNTV_VERSION`, `docker compose up -d`. `web-sync` copies
    the new web build before the app starts; migrations run at start.
+3. When `Caddyfile` changed, copy its snippet and site block into the bb-homelab Caddyfile
+   and reload Caddy (e.g. #177 adds the `(popcorntv_headers)` snippet and the 404 routes).
 
 Roll back by setting the previous tag; if the new version migrated the database, restore
 the archive taken in step 1 first: stop the app, put back `popcorntv.sqlite` with its

@@ -1,7 +1,7 @@
 #!/bin/sh
-# Not-found matrix (#177, spec deploy-homelab §2.1): checks the status and the content type
+# Not-found matrix (#177, spec deploy-homelab R3a): checks the status and the content type
 # Caddy answers for each path. Usage: scripts/not-found-check.sh [base-url] (default local
-# staging). Exits 1 on the first mismatch count > 0.
+# staging). Runs every line, then exits 1 if any line failed.
 set -u
 BASE="${1:-https://localhost:8443}"
 fails=0
@@ -42,6 +42,8 @@ check GET  /openapi.json                         404 text/html
 check GET  /docs                                 404 text/html
 check GET  /index.html/x                         404 text/html
 check GET  /%2e%2e/%2e%2e/etc/passwd             404 text/html
+check GET  /api/health                           200 application/json
+check GET  '/api/..%2fassets/x.js'               404 application/json
 check GET  /api                                  404 application/json
 check GET  '/api/artwork/..%2f..%2fetc%2fpasswd' 404 application/json
 check GET  '/api/..%2f..%2fnope'                 404 application/json

@@ -213,16 +213,6 @@ receives `Pick<ProfileRepository, 'adoptOrphans' | 'createFirst'>`.
   are a real 404, never `index.html` (#177, ADR-0025): the reference site blocks are
   `deploy/homelab/Caddyfile` and `deploy/staging/Caddyfile`.
 
-  ```caddyfile
-  handle_path /api/* {
-    reverse_proxy popcorntv:3000
-  }
-  handle {
-    root * /srv/web
-    file_server
-  }
-  ```
-
   One origin for both, so CORP `same-origin` holds and
   the cookie accompanies `<video>`, `<img>` and `<track>`.
 - Caddy sets `Strict-Transport-Security: max-age=31536000`, `X-Frame-Options: DENY`,
