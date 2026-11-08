@@ -14,5 +14,6 @@ Staging replay record for #168 (name and search fields opt out of the identity a
   opt-outs (`data-1p-ignore`, `data-lpignore`, `data-bwignore`, `data-form-type="other"`)
   are needed — added only if the replay fails (YAGNI).
 - **To do**: replay the four checks on local staging (`make staging-up`,
-  <https://localhost:8443>) with the extension that raised PRI-07 active during the next
+  <https://localhost:8443>) with the extension that raised PRI-07 active (unnamed in the
+  full-pass report: ask the owner) during the next
   batch QA pass and record the result here.
