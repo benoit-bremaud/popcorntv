@@ -19,7 +19,7 @@ A — `EventRepository.record` writes the row and the log line; B — every rout
 
 | Criterion                  | Weight | A                                   | B                         | C                                  |
 | -------------------------- | -----: | ----------------------------------- | ------------------------- | ---------------------------------- |
-| DRY, one source of truth   |     30 | 5 — one place                       | 2 — 8 duplicated calls    | 4 — one hook                       |
+| DRY, one source of truth   |     30 | 5 — one place                       | 2 — 19 duplicated calls   | 4 — one hook                       |
 | Domain fidelity            |     25 | 5 — same event, same fields         | 5 — same                  | 2 — sees an HTTP status only       |
 | Testability                |     20 | 5 — one unit test                   | 3 — one per route         | 3 — needs every route              |
 | Simplicity                 |     15 | 4 — injects a logger                | 4 — plain calls           | 3 — status-to-event mapping        |

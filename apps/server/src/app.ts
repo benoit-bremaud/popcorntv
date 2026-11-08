@@ -5,7 +5,7 @@ import type { FastifyError, FastifyInstance, FastifyRequest } from 'fastify';
 import type { ApiError, HealthResponse, Library } from '@popcorntv/shared';
 import { apiError } from './http.js';
 import { EventRepository } from './auth/event-repository.js';
-import { registerRequestLog } from './logging.js';
+import { OneLinePerRequest, registerRequestLog } from './logging.js';
 import type { LoggerOptions } from './logging.js';
 import { Argon2Hasher, HasherBusyError } from './auth/hasher.js';
 import type { Hasher } from './auth/hasher.js';
@@ -110,7 +110,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   const app = Fastify({
     logger: options.logger ?? false,
     // One `http.request` line per answer instead (spec logging R3, `registerRequestLog`).
-    disableRequestLogging: true,
+    logController: new OneLinePerRequest(),
     trustProxy: options.trustProxy ?? false,
   });
 
@@ -281,7 +281,11 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       const link = `${cookie.origin}/#/setup/${setupToken.issue()}`;
       (
         options.onSetupLink ??
-        ((l) => app.log.warn({ setupLink: l }, 'no account yet: open the setup link (valid 1 h)'))
+        ((l) =>
+          app.log.warn(
+            { event: 'auth.setup_link', setupLink: l },
+            'no account yet: open the setup link (valid 1 h)',
+          ))
       )(link);
     }
   });

@@ -1,3 +1,4 @@
+import { LogController } from 'fastify';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
 /** pino levels `LOG_LEVEL` accepts (spec logging R1). */
@@ -16,6 +17,8 @@ export const REDACT_PATHS: readonly string[] = [
   'headers.authorization',
   '*.password',
   '*.token',
+  '*.current',
+  '*.next',
   'password',
   'token',
 ];
@@ -33,14 +36,33 @@ export function loggerOptions(level: LogLevel, stream?: LoggerOptions['stream'])
 }
 
 /**
- * The level of the one `http.request` line per answer (spec logging R3): 5xx are logged by
- * the error handler, refusals stay visible, and the media bucket (segments, heartbeats,
+ * The level of the one `http.request` line per answer (spec logging R3): 5xx at error,
+ * refusals stay visible, and the media bucket (segments, heartbeats,
  * streams) drops to debug so a film does not write a line every few seconds.
  */
-export function requestLevel(status: number, media: boolean): 'debug' | 'info' | 'warn' {
+export function requestLevel(status: number, media: boolean): 'debug' | 'info' | 'warn' | 'error' {
+  // A status sent by a route (502 transcode_failed, 503 transcode_busy) skips the error handler.
+  if (status >= 500) return 'error';
   if (status === 403 || status === 429) return 'warn';
+  // A player polls a segment not written yet: each retry is a 404.
+  if (status === 404 && media) return 'debug';
   if (status >= 400) return 'info';
   return media ? 'debug' : 'info';
+}
+
+/**
+ * Silences only Fastify's request lines (spec logging R3): `incoming request`, `request
+ * completed` and `Route … not found`, whose text carries the query string. Its error lines
+ * (a stream failing mid-film, a serializer or `writeHead` error) stay.
+ */
+export class OneLinePerRequest extends LogController {
+  override incomingRequest(): void {}
+
+  override requestCompleted(...args: Parameters<LogController['requestCompleted']>): void {
+    if (args[0]) super.requestCompleted(...args);
+  }
+
+  override routeNotFound(): void {}
 }
 
 /** Replaces Fastify's two request lines by one, with the path but never the query string. */

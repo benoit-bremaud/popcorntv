@@ -1,5 +1,8 @@
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { afterEach, describe, expect, it } from 'vitest';
+import { join } from 'node:path';
+import { Readable } from 'node:stream';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from './app.js';
 import { openDatabase } from './db/index.js';
@@ -7,28 +10,35 @@ import type { AppDatabase } from './db/index.js';
 import { LibraryRepository } from './library/repository.js';
 import { loggerOptions, requestLevel } from './logging.js';
 import type { LogLevel } from './logging.js';
+import type { Prober } from './library/ffprobe.js';
 import { TEST_PUBLIC_URL, createAccount, sendCookie, testAuthOptions } from './test-fixtures.js';
 
 type Line = Record<string, unknown>;
 
 /** pino level numbers, to read the captured lines back. */
-const LEVEL = { debug: 20, info: 30, warn: 40 } as const;
+const LEVEL = { debug: 20, info: 30, warn: 40, error: 50 } as const;
 
 let app: FastifyInstance | undefined;
+const dirs: string[] = [];
 afterEach(async () => {
   await app?.close();
   app = undefined;
+  await Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
 });
 
 /** The app with its logger writing JSON lines into `lines` (spec logging R8). */
-async function loggedApp(level: LogLevel = 'debug'): Promise<{ db: AppDatabase; lines: Line[] }> {
+async function loggedApp(
+  level: LogLevel = 'debug',
+  probe: Prober = async () => ({ durationSec: null, streams: [] }),
+  mediaRoot = tmpdir(),
+): Promise<{ db: AppDatabase; lines: Line[] }> {
   const db = openDatabase(':memory:');
   const lines: Line[] = [];
   app = await buildApp({
     version: '0.0.0-test',
     db,
-    probe: async () => ({ durationSec: null, streams: [] }),
-    mediaRoot: tmpdir(),
+    probe,
+    mediaRoot,
     tmdb: null,
     artworkDir: tmpdir(),
     transcoder: () => {
@@ -49,7 +59,10 @@ describe('requestLevel', () => {
     [200, false, 'info'],
     [206, true, 'debug'],
     [401, false, 'info'],
-    [404, true, 'info'],
+    [404, true, 'debug'],
+    [404, false, 'info'],
+    [502, false, 'error'],
+    [503, true, 'error'],
     [403, false, 'warn'],
     [429, true, 'warn'],
   ] as const)('logs a %i (media %s) at %s', (status, media, level) => {
@@ -120,12 +133,22 @@ describe('logging', () => {
     expect(lines.at(-1)).toMatchObject({ headers: { cookie: '[redacted]' } });
   });
 
-  it('logs the start, the skipped files and the totals of a scan', async () => {
-    const { db, lines } = await loggedApp();
+  it('logs the start, a probe failure at warn, an extra at debug and the totals of a scan', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'popcorntv-logging-'));
+    dirs.push(root);
+    await writeFile(join(root, 'Broken (2020).mkv'), 'x');
+    await writeFile(join(root, 'Heat (1995)-trailer.mkv'), 'x');
+    const { db, lines } = await loggedApp(
+      'debug',
+      async () => {
+        throw new Error('moov atom not found');
+      },
+      root,
+    );
     sendCookie(app as FastifyInstance, createAccount(db).cookie);
     const library = new LibraryRepository(db).createLibrary({
       name: 'Films',
-      rootPath: tmpdir(),
+      rootPath: root,
       kind: 'films',
     });
 
@@ -136,8 +159,51 @@ describe('logging', () => {
     });
 
     expect(byEvent(lines, 'library.scan.start')).toHaveLength(1);
+    expect(byEvent(lines, 'library.scan.skipped')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ level: LEVEL.warn, reason: 'probe_failed' }),
+        expect.objectContaining({ level: LEVEL.debug, reason: 'extra' }),
+      ]),
+    );
     expect(byEvent(lines, 'library.scan.done')).toEqual([
-      expect.objectContaining({ level: LEVEL.info, libraryId: library.id, ms: expect.any(Number) }),
+      expect.objectContaining({ level: LEVEL.info, libraryId: library.id, skipped: 2 }),
     ]);
+  });
+
+  it('logs a scan refused for an unreadable root', async () => {
+    const { db, lines } = await loggedApp();
+    sendCookie(app as FastifyInstance, createAccount(db).cookie);
+    const library = new LibraryRepository(db).createLibrary({
+      name: 'Gone',
+      rootPath: join(tmpdir(), 'popcorntv-no-such-folder'),
+      kind: 'films',
+    });
+
+    await app?.inject({
+      method: 'POST',
+      url: `/libraries/${library.id}/scan`,
+      headers: { origin: TEST_PUBLIC_URL },
+    });
+
+    expect(byEvent(lines, 'library.scan.failed')).toEqual([
+      expect.objectContaining({ level: LEVEL.warn, libraryId: library.id }),
+    ]);
+  });
+
+  it("keeps Fastify's error line when a stream fails after the headers", async () => {
+    const { lines } = await loggedApp();
+    app?.get('/broken-stream', { config: { access: 'public' } }, (_request, reply) => {
+      const body = new Readable({
+        read() {
+          this.push('partial');
+          this.destroy(new Error('EIO disk read'));
+        },
+      });
+      return reply.type('application/octet-stream').send(body);
+    });
+
+    await app?.inject({ method: 'GET', url: '/broken-stream' }).catch(() => undefined);
+
+    await vi.waitFor(() => expect(JSON.stringify(lines)).toContain('EIO disk read'));
   });
 });

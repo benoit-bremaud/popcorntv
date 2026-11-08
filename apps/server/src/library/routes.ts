@@ -3,7 +3,14 @@ import { isAbsolute, resolve } from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { LIBRARY_KINDS } from '@popcorntv/shared';
-import type { EnrichReport, Library, Media, MediaFolderList, ScanReport } from '@popcorntv/shared';
+import type {
+  EnrichReport,
+  Library,
+  Media,
+  MediaFolderList,
+  ScanReport,
+  SkipReason,
+} from '@popcorntv/shared';
 import { apiError, invalid, loadLibrary } from '../http.js';
 import { listSubFolders } from './folder-lister.js';
 import { LibraryBusyError } from './lock.js';
@@ -125,8 +132,13 @@ export function registerLibraryRoutes(app: FastifyInstance, deps: LibraryRoutesD
       const report = await scanLibrary(deps, library.value, request.log);
       return reply.code(200).send(report);
     } catch (error) {
-      if (error instanceof RootUnreadableError)
+      if (error instanceof RootUnreadableError) {
+        request.log.warn(
+          { event: 'library.scan.failed', err: error, libraryId: library.value.id },
+          'scan refused: root unreadable',
+        );
         return reply.code(409).send(apiError('root_unreadable'));
+      }
       if (error instanceof LibraryBusyError) return reply.code(409).send(apiError('scan_running'));
       throw error;
     }
@@ -146,6 +158,9 @@ export function registerLibraryRoutes(app: FastifyInstance, deps: LibraryRoutesD
  * see the rows this scan wrote.
  * @throws {LibraryBusyError} | {RootUnreadableError}
  */
+/** Skip reasons that are a choice, not a fault (spec logging R2). */
+const PLANNED_SKIPS: ReadonlySet<SkipReason> = new Set(['extra', 'duplicate']);
+
 export async function scanLibrary(
   deps: Pick<LibraryRoutesDeps, 'lock' | 'scanner' | 'enrich'>,
   library: Library,
@@ -155,9 +170,13 @@ export async function scanLibrary(
     const started = Date.now();
     log.info({ event: 'library.scan.start', libraryId: library.id }, 'scan started');
     const scanned = await deps.scanner.scan(library);
-    // One line per file left out: ffprobe failures are only visible here (spec logging R5).
+    // One line per file left out: ffprobe failures are only visible here (spec logging R2).
+    // Extras and duplicates are left out on purpose, so they stay at debug.
     for (const file of scanned.skipped) {
-      log.warn({ event: 'library.scan.skipped', libraryId: library.id, ...file }, 'file skipped');
+      log[PLANNED_SKIPS.has(file.reason) ? 'debug' : 'warn'](
+        { event: 'library.scan.skipped', libraryId: library.id, ...file },
+        'file skipped',
+      );
     }
     log.info(
       {

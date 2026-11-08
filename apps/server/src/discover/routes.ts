@@ -71,6 +71,7 @@ async function viaTmdb<T>(reply: FastifyReply, call: () => Promise<T>): Promise<
     if (error instanceof TmdbRequestError) {
       // TMDB answers 404 for an id it does not know: the title, not TMDB, is missing.
       if (error.status === 404) return reply.code(404).send(apiError('title_not_found'));
+      reply.log.warn({ event: 'discover.tmdb.failed', err: error }, 'TMDB unavailable');
       return reply.code(502).send(apiError('tmdb_unavailable'));
     }
     throw error;
@@ -181,7 +182,10 @@ export function registerDiscoverRoutes(app: FastifyInstance, deps: DiscoverRoute
       return reply.code(404).send(apiError('artwork_not_found'));
     }
     const file = await artwork.cache(`/${params.data.file}`, DISCOVER_POSTER_SIZE, (error) =>
-      request.log.warn({ err: error }, 'discover poster download failed'),
+      request.log.warn(
+        { event: 'discover.poster.failed', err: error },
+        'discover poster download failed',
+      ),
     );
     if (file === null) return reply.code(404).send(apiError('artwork_not_found'));
     const bytes = await readFile(join(deps.artworkDir, file));

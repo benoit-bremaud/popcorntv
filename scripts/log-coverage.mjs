@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 // Log coverage (spec logging R7, agents-skills#383): every `catch` in the server code must
 // log, rethrow, or say why not with a `// log: n/a — <reason>` comment. A swallowed error
-// is invisible on the Pi, which is how #178 nearly went unnoticed.
+// is invisible on the Pi, which is how #178 nearly went unnoticed. A block that logs or
+// rethrows anywhere passes: a branch it swallows is left to review (spec logging R7).
 /* global URL, console, process */
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = new URL('../apps/server/src/', import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL('../apps/server/src/', import.meta.url));
 const HANDLED = /\blog(?:ger)?\b|\bonError\(|\bthrow\b|\breject\(|\/\/ log: n\/a/;
 
 function* sources(dir) {
