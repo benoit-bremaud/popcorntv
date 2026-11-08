@@ -2,12 +2,10 @@
 # joins `bb-homelab-proxy-popcorntv` at 10.203.60.2 and mounts the `popcorntv-web` volume
 # read-only at /srv/popcorntv-web. The `tailnet_only` snippet is defined at the top of the
 # bb-homelab Caddyfile. Keep deploy/staging/Caddyfile (local staging, #204) in step.
-popcorntv.bb-homelab.local {
-	tls internal
-	import tailnet_only /api/health
 
-	encode zstd gzip
-
+# Security headers, imported by the site and by its error routes: `handle_errors` does not
+# run the site's `header` directives (#177).
+(popcorntv_headers) {
 	header {
 		Strict-Transport-Security "max-age=31536000"
 		# No inline script or style (#31). hls.js plays through MediaSource blob: URLs and runs
@@ -20,6 +18,15 @@ popcorntv.bb-homelab.local {
 		Referrer-Policy "no-referrer"
 		-Server
 	}
+}
+
+popcorntv.bb-homelab.local {
+	tls internal
+	import tailnet_only /api/health
+
+	encode zstd gzip
+
+	import popcorntv_headers
 
 	# The API answers without the /api prefix, like the Vite dev proxy.
 	handle_path /api/* {
@@ -53,6 +60,7 @@ popcorntv.bb-homelab.local {
 	}
 
 	handle_errors 404 {
+		import popcorntv_headers
 		root * /srv/popcorntv-web
 		header Cache-Control "no-cache"
 		rewrite * /404.html

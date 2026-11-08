@@ -48,4 +48,11 @@ check GET  '/api/..%2f..%2fnope'                 404 application/json
 check GET  '/api/%2e%2e/nope'                    404 application/json
 check GET  /api/../nope                          404 application/json
 
+# The 404 page carries the site's security headers (handle_errors runs its own routes).
+if curl -ksSI --max-time 10 "$BASE/nope" | grep -qi '^content-security-policy:'; then
+  echo 'ok   404 page sends the CSP'
+else
+  echo 'FAIL 404 page without CSP'; fails=$((fails + 1))
+fi
+
 [ "$fails" -eq 0 ] || { echo "$fails check(s) failed"; exit 1; }

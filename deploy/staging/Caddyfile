@@ -6,10 +6,9 @@
 	skip_install_trust
 }
 
-localhost:8443 {
-	tls internal
-	encode zstd gzip
-
+# Security headers, imported by the site and by its error routes: `handle_errors` does not
+# run the site's `header` directives (#177).
+(popcorntv_headers) {
 	header {
 		Strict-Transport-Security "max-age=31536000"
 		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self' data:; media-src 'self' blob:; worker-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
@@ -20,6 +19,13 @@ localhost:8443 {
 		Referrer-Policy "no-referrer"
 		-Server
 	}
+}
+
+localhost:8443 {
+	tls internal
+	encode zstd gzip
+
+	import popcorntv_headers
 
 	handle_path /api/* {
 		reverse_proxy popcorntv:3000
@@ -51,6 +57,7 @@ localhost:8443 {
 	}
 
 	handle_errors 404 {
+		import popcorntv_headers
 		root * /srv/popcorntv-web
 		header Cache-Control "no-cache"
 		rewrite * /404.html
