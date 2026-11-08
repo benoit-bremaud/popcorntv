@@ -1,6 +1,6 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, onTestFinished, vi } from 'vitest';
 import type { User } from '@popcorntv/shared';
 import { AccountMenu } from './AccountMenu.js';
 import type { AuthApi } from './auth-api.js';
@@ -19,7 +19,12 @@ function menu(
     version: vi.fn(async (): Promise<string | null> => 'v1.2.0'),
     ...api,
   };
-  render(<AccountMenu user={account} api={full} onSignedOut={onSignedOut} onAdmin={onAdmin} />);
+  render(
+    <>
+      <button type="button">elsewhere</button>
+      <AccountMenu user={account} api={full} onSignedOut={onSignedOut} onAdmin={onAdmin} />
+    </>,
+  );
   return { api: full, onSignedOut, onAdmin };
 }
 
@@ -64,6 +69,7 @@ describe('AccountMenu', () => {
 
     expect(onSignedOut).not.toHaveBeenCalled();
     expect(screen.getByRole('status')).toHaveTextContent('The server could not be reached.');
+    expect(screen.getByText('kid').closest('details')).toHaveAttribute('open');
   });
 
   it('changes the password', async () => {
@@ -138,5 +144,153 @@ describe('AccountMenu', () => {
     await user.click(screen.getByText('kid'));
 
     expect(screen.queryByRole('button', { name: 'Administration' })).toBeNull();
+  });
+
+  describe('closing (#164)', () => {
+    const details = () => screen.getByText('kid').closest('details') as HTMLDetailsElement;
+    const summary = () => screen.getByText('kid').closest('summary') as HTMLElement;
+
+    it('closes on Escape with focus inside and gives focus back to the summary', async () => {
+      const user = userEvent.setup();
+      menu();
+      await user.click(screen.getByText('kid'));
+      screen.getByRole('button', { name: 'Sign out' }).focus();
+
+      await user.keyboard('{Escape}');
+
+      expect(details().open).toBe(false);
+      expect(summary()).toHaveFocus();
+    });
+
+    it('closes on Escape with focus outside the menu', async () => {
+      const user = userEvent.setup();
+      menu();
+      await user.click(screen.getByText('kid'));
+      screen.getByRole('button', { name: 'elsewhere' }).focus();
+
+      await user.keyboard('{Escape}');
+
+      expect(details().open).toBe(false);
+      expect(screen.getByRole('button', { name: 'elsewhere' })).toHaveFocus();
+    });
+
+    it('closes on Escape from the password field and focuses the summary', async () => {
+      const user = userEvent.setup();
+      menu();
+      await user.click(screen.getByText('kid'));
+      await user.click(screen.getByRole('button', { name: 'Change password' }));
+      await user.click(screen.getByLabelText('Current password'));
+
+      await user.keyboard('{Escape}');
+
+      expect(details().open).toBe(false);
+      expect(summary()).toHaveFocus();
+    });
+
+    it('ignores Escape while an input method composes', async () => {
+      const user = userEvent.setup();
+      menu();
+      await user.click(screen.getByText('kid'));
+
+      fireEvent.keyDown(document, { key: 'Escape', isComposing: true });
+
+      expect(details().open).toBe(true);
+    });
+
+    it('ignores other keys', async () => {
+      const user = userEvent.setup();
+      menu();
+      await user.click(screen.getByText('kid'));
+
+      await user.keyboard('a');
+
+      expect(details().open).toBe(true);
+    });
+
+    it('does nothing on Escape when already closed', async () => {
+      const user = userEvent.setup();
+      menu();
+      screen.getByRole('button', { name: 'elsewhere' }).focus();
+
+      await user.keyboard('{Escape}');
+
+      expect(details().open).toBe(false);
+      expect(screen.getByRole('button', { name: 'elsewhere' })).toHaveFocus();
+    });
+
+    it('leaves Escape to a dialog open above it', async () => {
+      const user = userEvent.setup();
+      menu();
+      await user.click(screen.getByText('kid'));
+      const dialog = document.createElement('dialog');
+      dialog.setAttribute('open', '');
+      document.body.append(dialog);
+      onTestFinished(() => dialog.remove());
+
+      await user.keyboard('{Escape}');
+
+      expect(details().open).toBe(true);
+    });
+
+    it('closes on a pointer-down outside, mouse or touch, without moving focus', async () => {
+      const user = userEvent.setup();
+      menu();
+      await user.click(screen.getByText('kid'));
+      fireEvent.pointerDown(document.body, { pointerType: 'touch' });
+
+      expect(details().open).toBe(false);
+
+      await user.click(screen.getByText('kid'));
+      await user.click(screen.getByRole('button', { name: 'elsewhere' }));
+      expect(details().open).toBe(false);
+      expect(screen.getByRole('button', { name: 'elsewhere' })).toHaveFocus();
+    });
+
+    it('stays open on a click inside the panel', async () => {
+      const user = userEvent.setup();
+      menu();
+      await user.click(screen.getByText('kid'));
+
+      await user.click(screen.getByRole('button', { name: 'Change password' }));
+      await user.click(screen.getByLabelText('Current password'));
+
+      expect(details().open).toBe(true);
+    });
+
+    it('toggles once on a click on the summary', async () => {
+      const user = userEvent.setup();
+      menu();
+      await user.click(screen.getByText('kid'));
+      expect(details().open).toBe(true);
+
+      await user.click(screen.getByText('kid'));
+
+      expect(details().open).toBe(false);
+    });
+
+    it('closes when the administration is opened', async () => {
+      const user = userEvent.setup();
+      const { onAdmin } = menu({}, { id: 'u1', username: 'kid', role: 'owner' });
+      await user.click(screen.getByText('kid'));
+
+      await user.click(screen.getByRole('button', { name: 'Administration' }));
+
+      expect(onAdmin).toHaveBeenCalled();
+      expect(details().open).toBe(false);
+    });
+
+    it('stops listening once closed', async () => {
+      const user = userEvent.setup();
+      menu();
+      await user.click(screen.getByText('kid'));
+      await user.keyboard('{Escape}');
+      const remove = vi.spyOn(document, 'removeEventListener');
+
+      await user.click(screen.getByText('kid'));
+      await user.click(screen.getByText('kid'));
+
+      expect(remove).toHaveBeenCalledWith('keydown', expect.any(Function));
+      remove.mockRestore();
+    });
   });
 });

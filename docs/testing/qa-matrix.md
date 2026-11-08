@@ -117,3 +117,19 @@ Replay on every pass that touches a dialog (spec history-back, ADR-0024):
 6. Discover → title sheet → Back closes the sheet; "Play in my library" → Back from the
    detail returns to the catalog in one press.
 7. Close then reopen a title at once: the new dialog stays open.
+
+## Account menu checks (#164)
+
+Replay on every pass that touches the header:
+
+1. Open the account menu, press Escape: it closes and focus is on the name button
+   (a visible focus ring with the keyboard).
+2. Open it, click empty catalog space (mouse) or tap it (phone): it closes. A click on a
+   poster both closes the menu and opens the title (the click is not swallowed).
+3. Open it, click "Change password", type in the fields: the menu stays open.
+4. Owner: open it, click Administration: the menu closes and the administration shows.
+5. Open the menu, Tab to a poster, Enter: Escape closes the detail, not the menu; a
+   second Escape closes the menu and focus stays on the poster.
+6. Open the menu, Tab to the search box, type, Escape: the query clears, the menu closes,
+   focus stays in the search box.
+7. Sign out with the server stopped: the menu stays open and shows the error.

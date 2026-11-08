@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PASSWORD_MAX, PASSWORD_MIN } from '@popcorntv/shared';
 import type { User } from '@popcorntv/shared';
 import type { AuthApi } from './auth-api.js';
@@ -21,6 +21,39 @@ export function AccountMenu({ user, api, onSignedOut, onAdmin }: Props): React.J
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [version, setVersion] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDetailsElement>(null);
+
+  // #164: an open menu closes on Escape and on a pointer-down outside it. Focus goes back to
+  // the summary only when it was inside the menu. Escape is left to a dialog open above,
+  // which closes first (ADR-0024); every dialog today is modal (`showModal`).
+  useEffect(() => {
+    if (!open) return;
+    const panel = ref.current;
+    if (!panel) return;
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key !== 'Escape' || event.isComposing) return;
+      if (document.querySelector('dialog[open]')) return;
+      const inside =
+        document.activeElement instanceof Node && panel.contains(document.activeElement);
+      panel.open = false;
+      if (inside) panel.querySelector('summary')?.focus();
+    };
+    const onPointer = (event: PointerEvent): void => {
+      if (event.target instanceof Node && panel.contains(event.target)) return;
+      panel.open = false;
+    };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('pointerdown', onPointer);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('pointerdown', onPointer);
+    };
+  }, [open]);
+
+  function close(): void {
+    if (ref.current) ref.current.open = false;
+  }
 
   // Which build runs (#162): read once, the menu simply omits it when the server cannot say.
   useEffect(() => {
@@ -62,7 +95,7 @@ export function AccountMenu({ user, api, onSignedOut, onAdmin }: Props): React.J
   }
 
   return (
-    <details className="account">
+    <details ref={ref} className="account" onToggle={(event) => setOpen(event.currentTarget.open)}>
       <summary className="account-summary">
         <span className="visually-hidden">Account: </span>
         {user.username}
@@ -109,7 +142,14 @@ export function AccountMenu({ user, api, onSignedOut, onAdmin }: Props): React.J
         ) : (
           <>
             {onAdmin && user.role === 'owner' && (
-              <button type="button" className="button button-quiet" onClick={onAdmin}>
+              <button
+                type="button"
+                className="button button-quiet"
+                onClick={() => {
+                  close();
+                  onAdmin();
+                }}
+              >
                 Administration
               </button>
             )}
