@@ -44,5 +44,6 @@ flowchart LR
 
 ## Notes
 
-- `folder-lister` is the only new filesystem read; it never follows symbolic links.
+- `folder-lister` is the only new filesystem read; it never follows symbolic links. Since
+  #163 the add route also runs the scanner's `realRoot` check (`stat` + `realpath`).
 - The dependency rule holds: the web depends on the shared contracts only.

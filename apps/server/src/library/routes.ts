@@ -77,10 +77,7 @@ export function registerLibraryRoutes(app: FastifyInstance, deps: LibraryRoutesD
       realRootPath = await realRoot(rootPath, deps.mediaRoot);
     } catch (error) {
       if (!(error instanceof RootUnreadableError)) throw error;
-      request.log.info(
-        { event: 'library.create.refused', err: error },
-        'library refused: root unreadable',
-      );
+      // log: n/a — a refused add is traced by its http.request line (spec logging §3)
       return reply.code(409).send(apiError('root_unreadable'));
     }
     // Spec R3: overlapping roots would list every title twice. Compared on real paths, as

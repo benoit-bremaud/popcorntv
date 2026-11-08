@@ -153,7 +153,11 @@ export async function realRoot(rootPath: string, mediaRoot: string): Promise<str
   // log: n/a — a missing root is refused just below
   const info = await stat(rootPath).catch(() => null);
   if (!info?.isDirectory()) throw new RootUnreadableError(rootPath, 'is not a readable directory');
-  const [real, realMediaRoot] = await Promise.all([realpath(rootPath), realpath(mediaRoot)]);
+  const [real, realMediaRoot] = await Promise.all([realpath(rootPath), realpath(mediaRoot)]).catch(
+    (error: unknown) => {
+      throw new RootUnreadableError(rootPath, `cannot be resolved (${String(error)})`);
+    },
+  );
   if (!isAtOrUnderRoot(realMediaRoot, real)) {
     throw new RootUnreadableError(rootPath, 'resolves outside MEDIA_ROOT');
   }

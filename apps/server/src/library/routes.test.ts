@@ -194,6 +194,7 @@ describe('library routes', () => {
       ['newline', 'Fi\nlms'],
       ['tab', 'Fi\tlms'],
       ['DEL', '\u007f'],
+      ['C1 control', '\u0085'],
     ])('refuses a %s in the name on create', async (_label, name) => {
       const response = await add({ name: `Films${name}` });
 
@@ -205,6 +206,7 @@ describe('library routes', () => {
       ['NUL', 'Films\u0000'],
       ['newline', 'Fi\nlms'],
       ['DEL', 'Films\u007f'],
+      ['C1 control', 'Films\u0085'],
     ])('refuses a %s in the name on rename and keeps the old one', async (_label, name) => {
       const library = await createLibrary();
 

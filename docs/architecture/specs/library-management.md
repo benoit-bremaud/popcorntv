@@ -61,8 +61,12 @@ or presses "Add a library" on the empty catalog.
 
 ### Extensions
 
-- 3a. The path is not absolute or not under `MEDIA_ROOT` → 400 `invalid_request`; the web
-  shows the reason above the list.
+- 3a. The path is not absolute or not under `MEDIA_ROOT`, or it or the name holds a control
+  character (the name on rename too) → 400 `invalid_request`; the web shows the reason
+  above the list.
+- 3c. (#163) The root is missing, not a directory or its real path leaves `MEDIA_ROOT` →
+  409 `root_unreadable`; nothing is stored; the web shows "The server cannot read this
+  folder."
 - 3b. The root overlaps another library → 409 `root_in_use`; the web explains that the
   folder overlaps another library. Roots are compared on their real paths, so a link to
   another library's folder overlaps it too.
