@@ -4,6 +4,20 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-08 — #179 unreachable TMDB answers 502, not 500 (PR #217 merged, `7c7af83`)
+
+- The issue premise was stale: the body shape was already zod-guarded. The real 500s came
+  from `fetch` rejecting (network, timeout, abort) and from a non-JSON body. MCDA option A
+  (owner): a `reach()` helper in the TMDB client, used for API and image calls, turns them
+  into `TmdbRequestError` (status `0` when unreachable, `200` for a body that is not JSON,
+  original kept as `cause`). Spec R9 / 5a, ADR-0003 (Consequences amended), sequence 02.
+- Tests: client (non-JSON, empty, network / timeout / abort, retry, body cut short, image,
+  no stray cause), routes with the real client over a broken `fetch` (four routes 502, key
+  absent from the log). QA on the local prod build with TMDB behind a closed proxy: OK
+  (report `docs/architecture/qa/2026-11-08-issue-179-tmdb-unavailable.md`).
+- Gate: all local checks + e2e green, SonarQube passed, adversarial review 1 Must (stale
+  ADR-0003) + 3 Should fixed, round 2 open.
+
 ## 2026-11-08 — #140 continue watching waits for the last save (PR #215 merged, `6332ab9`)
 
 - `DetailDialog` hands the player's last progress save to `onClose`; `CatalogPage` reloads
