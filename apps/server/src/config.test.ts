@@ -19,6 +19,10 @@ describe('loadConfig', () => {
     expect(loadConfig({ ...BASE, APP_VERSION: ` ${value} ` }).appVersion).toBe(value);
   });
 
+  it.each(['', '   '])('reads an empty APP_VERSION %j as dev', (value) => {
+    expect(loadConfig({ ...BASE, APP_VERSION: value }).appVersion).toBe('dev');
+  });
+
   it.each(['<script>', '-rf', 'x'.repeat(65)])('refuses APP_VERSION %j', (value) => {
     expect(() => loadConfig({ ...BASE, APP_VERSION: value })).toThrow('APP_VERSION must be');
   });

@@ -27,8 +27,7 @@ C — a `version` field on the session answer (`/auth/status`).
 | **Total**                          |    100 | **480**                 | **335**                        | **425**                        |
 
 By hand: A = 150 + 125 + 80 + 75 + 50 = 480; B = 90 + 75 + 80 + 60 + 30 = 335;
-C = 150 + 125 + 80 + 30 + 40 = 425 — the chat matrix read 435, a sum slip; the ranking is
-unchanged. Sensitivity: with separation of concerns at 0, A (405) still leads C (395); B stays
+C = 150 + 125 + 80 + 30 + 40 = 425. Sensitivity: with separation of concerns at 0, A (405) still leads C (395); B stays
 last for any weight on simplicity.
 
 ## Decision

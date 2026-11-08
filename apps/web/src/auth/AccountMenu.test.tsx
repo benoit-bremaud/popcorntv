@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { User } from '@popcorntv/shared';
@@ -40,7 +40,8 @@ describe('AccountMenu', () => {
     await user.click(screen.getByText('kid'));
 
     await vi.waitFor(() => expect(api.version).toHaveBeenCalled());
-    expect(screen.queryByText(/^PopCornTV /)).not.toBeInTheDocument();
+    await act(async () => {});
+    expect(screen.queryByText(/PopCornTV/)).not.toBeInTheDocument();
   });
 
   it('signs out this device', async () => {

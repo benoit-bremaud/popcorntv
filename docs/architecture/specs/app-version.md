@@ -3,7 +3,7 @@
 A signed-in person reads which build runs from the account menu, while the public health
 route says nothing about the build.
 
-> **Feature**: Accounts — [use cases](../diagrams/auth/01-use-case.md)
+> **Feature**: Accounts, UC27 — [use cases](../diagrams/auth/01-use-case.md)
 > **Issue**: #162, #92 · **Related ADRs**: ADR-0010, ADR-0013, ADR-0022
 > Format: Cockburn casual use case.
 
@@ -24,13 +24,14 @@ route says nothing about the build.
 
 ## 2. Main scenario
 
-1. The person opens the account menu.
-2. The web app calls `GET /version` with the session cookie.
+1. The account menu mounts (the person is signed in) and reads `GET /version` once with the
+   session cookie.
+2. The person opens the account menu.
 3. The menu shows `PopCornTV v0.3.0` (or a short SHA).
 
 ### Extensions
 
-- 2a. The call fails (offline, session ended): the line is omitted; the rest of the menu works.
+- 1a. The call fails (offline, session ended): the line is omitted; the rest of the menu works.
 
 ## 3. Tests
 

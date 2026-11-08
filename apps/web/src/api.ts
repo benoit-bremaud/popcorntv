@@ -1,5 +1,4 @@
 import type {
-  VersionResponse,
   Account,
   ApiError,
   ApiErrorCode,
@@ -32,6 +31,7 @@ import type {
   SignInBody,
   UpdateProfileBody,
   User,
+  VersionResponse,
   WatchProgress,
   WishlistEntry,
 } from '@popcorntv/shared';
