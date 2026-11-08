@@ -87,7 +87,10 @@ export function TitleSheet({
             )}
             {shown.overview !== '' && <p>{shown.overview}</p>}
             {details !== null && details.cast.length > 0 && (
-              <p className="muted">With {details.cast.join(', ')}</p>
+              <p className="detail__cast">
+                <span className="muted">Cast: </span>
+                {details.cast.join(', ')}
+              </p>
             )}
             <div className="detail__actions">
               {title.mediaId !== null && (

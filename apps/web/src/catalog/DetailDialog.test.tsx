@@ -9,7 +9,7 @@ import type {
   WatchProgress,
 } from '@popcorntv/shared';
 import type { PlaybackApi } from '../playback/PlayerDialog.js';
-import { media } from '../test-fixtures.js';
+import { media, metadata } from '../test-fixtures.js';
 import { DetailDialog } from './DetailDialog.js';
 import type { Season } from './catalog.js';
 
@@ -481,6 +481,64 @@ describe('DetailDialog watched mark (spec watched-marks)', () => {
       'aria-pressed',
       'false',
     );
+  });
+});
+
+describe('DetailDialog action row (#172)', () => {
+  function actionsOf(button: HTMLElement): string[] {
+    const row = button.closest('.detail__actions');
+    expect(row).not.toBeNull();
+    return Array.from(row?.querySelectorAll('button') ?? [], (b) => b.textContent ?? '');
+  }
+
+  it('puts Play and the watched toggle in one row', async () => {
+    renderDetail(heat);
+
+    const play = await screen.findByRole('button', { name: '▶ Play' });
+
+    expect(actionsOf(play)).toEqual(['▶ Play', 'Mark as watched']);
+  });
+
+  it('puts Resume, Start over and the watched toggle in one row', async () => {
+    renderDetail(heat, always, vi.fn(), [saved('heat', 754)]);
+
+    const resume = await screen.findByRole('button', { name: '▶ Resume from 12:34' });
+
+    expect(actionsOf(resume)).toEqual(['▶ Resume from 12:34', 'Start over', 'Mark as watched']);
+  });
+
+  it('keeps the row with only the watched toggle for a series', async () => {
+    const series = media({ id: 'show', title: 'Show', kind: 'series' });
+    const pilot = media({
+      id: 'e1',
+      title: 'Pilot',
+      kind: 'episode',
+      seriesId: 'show',
+      season: 1,
+      episode: 1,
+      streams: H264_AAC,
+    });
+    renderDetail(series, always, vi.fn(), [], [{ season: 1, episodes: [pilot] }]);
+
+    const toggle = await screen.findByRole('button', { name: 'Mark as watched' });
+
+    expect(actionsOf(toggle)).toEqual(['Mark as watched']);
+  });
+
+  it('labels the cast "Cast:"', async () => {
+    const cast = [{ name: 'Al Pacino', character: 'Hanna', profilePath: null }];
+    renderDetail({ ...heat, metadata: metadata({ cast }) });
+
+    expect(await screen.findByText('Cast:')).toBeInTheDocument();
+    expect(screen.getByText('Cast:').parentElement).toHaveTextContent('Cast: Al Pacino');
+  });
+
+  it('shows no cast line when the cast is empty', async () => {
+    renderDetail(heat);
+
+    await screen.findByRole('button', { name: '▶ Play' });
+
+    expect(screen.queryByText('Cast:')).toBeNull();
   });
 });
 

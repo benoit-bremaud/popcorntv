@@ -392,8 +392,8 @@
   z-index: 1;
   top: var(--space-3);
   right: var(--space-3);
-  width: var(--space-6);
-  height: var(--space-6);
+  width: var(--touch-target);
+  height: var(--touch-target);
   border: 0;
   border-radius: 50%;
   background: var(--color-scrim);
@@ -572,6 +572,13 @@
   gap: var(--space-2);
   align-items: center;
   margin: 0 0 var(--space-4);
+}
+
+/* One shape and one height for every action of a title (#172). */
+.detail__actions > .button,
+.detail__actions > .chip {
+  min-height: var(--touch-target);
+  border-radius: var(--radius-pill);
 }
 
 /* Above the native controls, out of the way of the seek bar. */
