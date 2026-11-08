@@ -138,7 +138,10 @@ Extensions: 3a token wrong or expired → `404 token_invalid`; 3b a user already
 - `sessions`: `id` (UUID, used to end one device), `user_id` (FK cascade), `token_hash`
   (unique), `created_at`, `last_seen_at`, `expires_at` (= `created_at` + 90 days, the
   absolute limit; the idle limit is `last_seen_at` + 14 days), `revoked_at`,
-  `user_agent` (truncated to 200, shown in UC17). `last_seen_at` is written at most once
+  `user_agent` (truncated to 200, shown in UC17 as a readable label such as "Chrome on
+  Linux" by the pure web `deviceLabel`, with the raw string as a tooltip and as the
+  fallback for an unknown agent; #174: an own matcher, a few regexes, rather than a UA
+  library). `last_seen_at` is written at most once
   per hour per session.
 - `auth_tokens`: `id`, `token_hash` (unique), `kind` (`invite` | `reset`), `role`
   (invites), `user_id` (resets; FK cascade), `expires_at`, `used_at`, `revoked_at`. The

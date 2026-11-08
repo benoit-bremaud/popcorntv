@@ -75,6 +75,32 @@ describe('AdminPanel', () => {
     expect(api.endSessions).toHaveBeenCalledWith('u2', 's1');
   });
 
+  it('names each device readably and keeps the raw user agent as a tooltip', async () => {
+    const user = userEvent.setup();
+    const raw =
+      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+    const seen = '2026-11-05T10:00:00.000Z';
+    panel({
+      devices: vi.fn(() =>
+        Promise.resolve({
+          ok: true as const,
+          value: [
+            { id: 's1', createdAt: seen, lastSeenAt: seen, userAgent: raw },
+            { id: 's2', createdAt: seen, lastSeenAt: seen, userAgent: null },
+          ],
+        }),
+      ),
+    });
+
+    await user.click((await screen.findAllByRole('button', { name: 'Devices' }))[0] as HTMLElement);
+
+    const list = await screen.findByRole('list', { name: 'Devices of kid' });
+    expect(list).toHaveTextContent(/Chrome on Linux/);
+    expect(list).toHaveTextContent(/Unknown device/);
+    expect(list).not.toHaveTextContent(/Mozilla/);
+    expect(screen.getByTitle(raw)).toHaveTextContent(/Chrome on Linux/);
+  });
+
   it('refreshes the lists when the devices of an account cannot be loaded', async () => {
     const user = userEvent.setup();
     const { api } = panel({
