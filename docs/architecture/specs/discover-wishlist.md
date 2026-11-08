@@ -16,7 +16,9 @@ whether the title is already on disk, and keeps a per-profile wishlist whose ent
   when it is not empty. `GET /discover?list=trending|popular&kind=movie|tv` answers at
   most 20 `DiscoverTitle`s; a list is kept in memory for 15 minutes.
 - **R2** A search field queries `GET /discover/search?q=` (1–100 characters, TMDB
-  `/search/multi`, films and series only, at most 20).
+  `/search/multi`, films and series only, at most 20). The `LiveStatus` region announces
+  *Searching for "…"…*, then *N results for "…"*, *No match for "…"* or the TMDB
+  failure; it empties when the field is cleared (#165).
 - **R3** Opening a title shows its sheet: poster, year, rating, synopsis, genres and the
   first ten cast names (`GET /discover/:kind/:tmdbId`).
 - **R4** Every `DiscoverTitle` carries `mediaId`: the id of the local `film` (for `movie`)

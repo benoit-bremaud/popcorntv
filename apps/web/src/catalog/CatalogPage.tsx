@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import type { Media, WatchProgress } from '@popcorntv/shared';
+import { LiveStatus, useSettledMessage } from '../a11y/LiveStatus.js';
 import { artworkUrl, loadCatalog, loadProgress } from '../api.js';
 import type { PlaybackApi } from '../playback/PlayerDialog.js';
 import {
@@ -118,8 +119,15 @@ export function CatalogPage({
     [fetchProgress],
   );
 
+  // Loading and empty states share one leading LiveStatus, so React keeps the region and
+  // only its text changes: a region mounted with its text is not announced (#165).
   if (catalog.kind === 'loading') {
-    return <p className="status muted">Loading the catalog…</p>;
+    return (
+      <>
+        <LiveStatus message="" />
+        <p className="status muted">Loading the catalog…</p>
+      </>
+    );
   }
   if (catalog.kind === 'failed') {
     return (
@@ -134,15 +142,25 @@ export function CatalogPage({
 
   const items = catalogItems(catalog.media);
   if (items.length === 0) {
-    if (!onAddLibrary) return <p className="status muted">Nothing to watch yet.</p>;
+    if (!onAddLibrary) {
+      return (
+        <>
+          <LiveStatus message="Nothing to watch yet." />
+          <p className="status muted">Nothing to watch yet.</p>
+        </>
+      );
+    }
     return (
-      <section className="status" aria-labelledby="welcome-title">
-        <h2 id="welcome-title">Welcome to PopCornTV</h2>
-        <p className="muted">Add a library from your media folder, then scan it.</p>
-        <button type="button" className="button" onClick={onAddLibrary}>
-          Add a library
-        </button>
-      </section>
+      <>
+        <LiveStatus message={`${WELCOME_TITLE}. ${WELCOME_HINT}`} />
+        <section className="status" aria-labelledby="welcome-title">
+          <h2 id="welcome-title">{WELCOME_TITLE}</h2>
+          <p className="muted">{WELCOME_HINT}</p>
+          <button type="button" className="button" onClick={onAddLibrary}>
+            Add a library
+          </button>
+        </section>
+      </>
     );
   }
 
@@ -174,8 +192,7 @@ export function CatalogPage({
         </section>
       )}
       <SearchBox query={query} onChange={setQuery} />
-      {/* Always mounted, so screen readers announce each new count (spec search R3). */}
-      <output className="visually-hidden">{searching ? searchStatus(results.length) : ''}</output>
+      <SearchStatus message={searching ? searchStatus(query.trim(), results.length) : ''} />
       {searching ? (
         <SearchResults query={query.trim()} items={results} onOpen={onOpen} />
       ) : (
@@ -213,16 +230,24 @@ export function CatalogPage({
   );
 }
 
+const WELCOME_TITLE = 'Welcome to PopCornTV';
+const WELCOME_HINT = 'Add a library from your media folder, then scan it.';
+
 type SearchResultsProps = {
   readonly query: string;
   readonly items: readonly Media[];
   readonly onOpen: (item: Media, trigger: HTMLElement) => void;
 };
 
-/** The announced search status: the result count, or that nothing matches. */
-function searchStatus(count: number): string {
-  if (count === 0) return 'No match';
-  return `${count} ${count === 1 ? 'result' : 'results'}`;
+/** The announced search status: the result count, or that nothing matches (spec search R3). */
+function searchStatus(query: string, count: number): string {
+  if (count === 0) return `No match for “${query}”`;
+  return `${count} ${count === 1 ? 'result' : 'results'} for “${query}”`;
+}
+
+/** Announces the status once typing pauses, so each keystroke is not read out (#165). */
+function SearchStatus({ message }: { readonly message: string }): React.JSX.Element {
+  return <LiveStatus message={useSettledMessage(message)} />;
 }
 
 /** UC24: the matching titles, or a visible "no match" line. */

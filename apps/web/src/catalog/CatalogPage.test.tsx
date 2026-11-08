@@ -226,13 +226,17 @@ describe('CatalogPage', () => {
   it('shows the empty state when no library has items', async () => {
     renderPage(async () => [pilot]);
 
-    expect(await screen.findByText(/Nothing to watch yet/)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent('Nothing to watch yet.'),
+    );
   });
 
   it('offers a viewer nothing to add when the catalog is empty', async () => {
     render(<CatalogPage profileId="default" load={async () => []} />);
 
-    expect(await screen.findByText('Nothing to watch yet.')).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent('Nothing to watch yet.'),
+    );
     expect(screen.queryByRole('button', { name: 'Add a library' })).toBeNull();
   });
 
@@ -437,7 +441,77 @@ describe('CatalogPage search (spec search)', () => {
 
     await user.type(await screen.findByRole('searchbox'), 'zzz');
 
-    expect(screen.getByRole('status')).toHaveTextContent('No match');
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('No match for “zzz”'));
     expect(screen.getByText(/No title or person matches/)).toBeInTheDocument();
+  });
+
+  it('should announce the result count for the query (#165)', async () => {
+    const { user } = renderPage();
+
+    await user.type(await screen.findByRole('searchbox'), 'pacino');
+
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent('1 result for “pacino”'),
+    );
+  });
+
+  it('should announce several results in the plural, trimmed (#165)', async () => {
+    const { user } = renderPage();
+
+    await user.type(await screen.findByRole('searchbox'), '  a ');
+
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent(/^\d+ results for “a”$/),
+    );
+  });
+
+  it('should keep the status empty with no query or a blank one (#165)', async () => {
+    const { user } = renderPage();
+    const box = await screen.findByRole('searchbox');
+
+    expect(screen.getByRole('status')).toBeEmptyDOMElement();
+    await user.type(box, '   ');
+    expect(screen.getByRole('status')).toBeEmptyDOMElement();
+  });
+
+  it('should announce once typing pauses, not on each keystroke, and clear at once (#165)', async () => {
+    renderPage();
+    const box = await screen.findByRole('searchbox');
+    vi.useFakeTimers();
+    try {
+      const status = screen.getByRole('status');
+      for (const value of ['h', 'he', 'hea', 'heat']) {
+        fireEvent.change(box, { target: { value } });
+        act(() => vi.advanceTimersByTime(200));
+        expect(status).toBeEmptyDOMElement();
+      }
+      act(() => vi.advanceTimersByTime(300));
+      expect(status).toHaveTextContent('1 result for “heat”');
+
+      fireEvent.change(box, { target: { value: '' } });
+      expect(status).toBeEmptyDOMElement();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('should announce the empty catalog in the region kept from loading (#165)', async () => {
+    render(<CatalogPage profileId="default" load={async () => []} />);
+    const status = screen.getByRole('status');
+
+    expect(status).toBeEmptyDOMElement();
+    await waitFor(() => expect(status).toHaveTextContent('Nothing to watch yet.'));
+    expect(screen.getByRole('status')).toBe(status);
+  });
+
+  it('should announce the owner welcome in the same region, landmark kept (#165)', async () => {
+    render(
+      <CatalogPage profileId="default" load={async () => []} onAddLibrary={() => undefined} />,
+    );
+    const status = screen.getByRole('status');
+
+    await waitFor(() => expect(status).toHaveTextContent(/^Welcome to PopCornTV\. Add a library/));
+    expect(screen.getByRole('status')).toBe(status);
+    expect(screen.getByRole('region', { name: 'Welcome to PopCornTV' })).toBeInTheDocument();
   });
 });
