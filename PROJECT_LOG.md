@@ -4,6 +4,18 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-09 — #172 title dialog actions harmonised (PR #239 merged, `eb3d131`)
+
+- MCDA option A (owner, 450/500): the watched toggle joins `.detail__actions`; the row's
+  buttons are `--radius-pill` pills at least `--touch-target` (44 px) high; the close button
+  is 44×44 px with the title kept clear of it; one ✕ glyph; the Discover sheet says
+  "Cast:" like the library dialog. The alternatives scored 375 (square chips) and 315
+  (move only). No ADR.
+- Staging replay pending: `docs/architecture/qa/2026-11-09-issue-172-title-dialog-actions.md`.
+- Gate: typecheck, lint, format, coverage, build, e2e, gitleaks and SonarQube are all
+  green. Adversarial review: 0 Must; 3 Should and 1 Nice fixed and verified. One Nice was
+  left open (a ternary in place of two conditions that mean the same thing).
+
 ## 2026-11-09 — #168 identity autofill stopped on name and search fields (PR #237 merged, `3d527c2`)
 
 - MCDA option A (owner, 430/500): `autocomplete="off"` and a `name` on the catalog and
