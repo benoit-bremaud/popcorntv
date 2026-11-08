@@ -6,7 +6,7 @@ whether the title is already on disk, and keeps a per-profile wishlist whose ent
 
 > **Feature**: Catalog — [use cases](../diagrams/catalog/01-use-case.md),
 > [components](../diagrams/catalog/03-component.md)
-> **Issue**: #127 · **Related ADRs**: ADR-0003, ADR-0008, ADR-0016, ADR-0020
+> **Issue**: #127 (search: #165, #166) · **Related ADRs**: ADR-0003, ADR-0008, ADR-0016, ADR-0020
 > Format: Cockburn casual use case.
 
 ## 1. Requirements
@@ -16,7 +16,12 @@ whether the title is already on disk, and keeps a per-profile wishlist whose ent
   when it is not empty. `GET /discover?list=trending|popular&kind=movie|tv` answers at
   most 20 `DiscoverTitle`s; a list is kept in memory for 15 minutes.
 - **R2** A search field queries `GET /discover/search?q=` (1–100 characters, TMDB
-  `/search/multi`, films and series only, at most 20). The `LiveStatus` region announces
+  `/search/multi`, films and series only, at most 20). Like the library search, it is
+  live (#166): the trimmed query goes out 400 ms after the last keystroke, Enter sends it
+  at once, an unchanged query is not re-sent unless its last attempt failed (Enter or the next
+  pause retries it), a blank one is never sent, nothing goes out while an input method composes,
+  an answer for an older query is dropped, and Escape clears the field. Each search is
+  announced as it starts and ends; the 400 ms pause already groups the keystrokes. The `LiveStatus` region announces
   *Searching for "…"…*, then *N results for "…"*, *No match for "…"* or the TMDB
   failure; it empties when the field is cleared (#165).
 - **R3** Opening a title shows its sheet: poster, year, rating, synopsis, genres and the

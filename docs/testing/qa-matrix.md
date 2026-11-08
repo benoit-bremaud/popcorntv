@@ -150,3 +150,21 @@ Replay with a screen reader (Orca on Firefox, then NVDA or VoiceOver when availa
    owner hears the welcome line (same region, its text changes).
 7. DOM check: exactly one `role="status"` region per tab, present before the first search
    and before the catalog loads.
+
+## Discover live search checks (#166)
+
+1. Discover tab, type "dune" and wait: results appear about 0.4 s after the last
+   keystroke, without Enter; the network panel shows one `/discover/search?q=dune`.
+2. Type "dune" quickly letter by letter: a single request goes out, not one per letter.
+3. Type "dune" and press Enter at once: results appear immediately and no second
+   request follows after the pause.
+4. Add trailing spaces to a successfully searched query: no new request.
+5. Type only spaces: no request, the rows stay, nothing is announced.
+6. Escape in the field: the field, the results and the announcement clear; the rows show.
+7. Throttle the network, type "da", pause, then "dark": the "da" answer arriving late
+   never replaces the "dark" results.
+8. Cut the network, search "dune" (failure read), restore it, press Enter: the search is
+   retried. With Japanese input, no request goes out before the candidate is confirmed.
+9. Screen reader: each pause reads "Searching for …" then the count, once per pause.
+10. Empty and failure states are unchanged: "No title matches." and "TMDB could not be
+   reached." (network cut).
