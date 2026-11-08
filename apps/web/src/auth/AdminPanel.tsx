@@ -12,6 +12,7 @@ import type {
 } from '@popcorntv/shared';
 import type { AdminApi, AdminResult } from '../api.js';
 import { authMessage } from './auth-api.js';
+import { deviceLabel } from './device-label.js';
 import { useFocusedTitle } from './form-hooks.js';
 import { LibrarySection } from './LibrarySection.js';
 
@@ -302,8 +303,8 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
                 {devices.list.length === 0 && <li className="muted">No signed-in device.</li>}
                 {devices.list.map((device) => (
                   <li key={device.id} className="admin-item">
-                    <span>
-                      {device.userAgent ?? 'Unknown device'}
+                    <span title={device.userAgent ?? undefined}>
+                      {deviceLabel(device.userAgent)}
                       <span className="muted"> · last seen {when(device.lastSeenAt)}</span>
                     </span>
                     <button

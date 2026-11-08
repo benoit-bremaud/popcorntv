@@ -33,7 +33,7 @@ classDiagram
     +lastSeenAt: string
     +expiresAt: string
     +revokedAt: string?
-    +userAgent: string
+    +userAgent: string?
   }
   class AuthToken {
     +id: string
