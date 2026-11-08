@@ -5,11 +5,11 @@
  */
 const BROWSERS: readonly (readonly [RegExp, string])[] = [
   [/\bEdg(?:e|A|iOS)?\//, 'Edge'],
-  [/\b(?:OPR|Opera)\//, 'Opera'],
+  [/\b(?:OPR|OPT|Opera)\//, 'Opera'],
   [/\bSamsungBrowser\//, 'Samsung Internet'],
   [/\b(?:Firefox|FxiOS)\//, 'Firefox'],
   [/\b(?:Chrome|CriOS)\//, 'Chrome'],
-  [/\bVersion\/[\d.]+.*\bSafari\//, 'Safari'],
+  [/\bVersion\/[\d.]+ (?:Mobile(?:\/\w+)? )?Safari\//, 'Safari'],
 ];
 
 const SYSTEMS: readonly (readonly [RegExp, string])[] = [
@@ -19,6 +19,7 @@ const SYSTEMS: readonly (readonly [RegExp, string])[] = [
   [/\b(?:iPhone|iPod)\b/, 'iOS'],
   [/\bCrOS\b/, 'ChromeOS'],
   [/\bMac OS X\b/, 'macOS'],
+  [/\bTizen\b/, 'Tizen'],
   [/\bLinux\b/, 'Linux'],
 ];
 

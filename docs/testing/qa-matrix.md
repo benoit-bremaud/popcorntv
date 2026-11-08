@@ -225,7 +225,8 @@ Replay with a screen reader (Orca on Firefox, then NVDA or VoiceOver when availa
    "Chrome on Linux", "Safari on iOS"), never the raw `Mozilla/5.0 …` string; hovering it
    shows the full raw User-Agent.
 2. Sign in from Edge or Opera: the label says "Edge" / "Opera", not "Chrome".
-3. An iPad in desktop mode reports "Macintosh": "Safari on macOS" is expected; in mobile
-   mode it reads "Safari on iPadOS".
+3. An iPad reports "Macintosh" by default (desktop mode since iPadOS 13): "Safari on
+   macOS" is expected; in mobile mode it reads "Safari on iPadOS". A Samsung TV reads
+   "Device on Tizen".
 4. A session opened by a non-browser client shows its raw User-Agent (e.g. `curl/8.x`); a
    session with no User-Agent header shows "Unknown device".
