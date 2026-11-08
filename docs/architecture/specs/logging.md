@@ -24,7 +24,8 @@ them. The 2026-11-08 FULL QA pass found 18 log calls in 9 of ~50 server files, a
 - **R3 — requests.** Fastify's two request lines are replaced by one `http.request` line
   per answer: `method`, `path` (never the query string), `status`, `ms`, `userId`, through
   the `OneLinePerRequest` log controller, which keeps Fastify's error lines (a stream
-  failing mid-film, a serializer error). 5xx at `error` (a thrown error also gets the error
+  failing mid-film, a serializer error). 5xx at `error`, except `503` (the session limit,
+  ADR-0012) at `warn` (a thrown error also gets the error
   handler's line with its cause); 403 and 429 at `warn`; other 4xx at `info`, except a 404
   on a media route (a player retrying a segment) at `debug`; media routes
   (`rateBucket: 'media'`) at `debug` when they succeed.
@@ -39,7 +40,8 @@ them. The 2026-11-08 FULL QA pass found 18 log calls in 9 of ~50 server files, a
 - **R5 — event lines.** Each domain line carries `event: "<domain>.<action>"` and the IDs
   it is about (`libraryId`, `mediaId`, `session`, `userId`). The message is a short, fixed
   English text, never built from data. Errors go in `err`. The only line without an
-  `event` is the start-up warnings of `index.ts` and Fastify's own error lines.
+  `event` is the start-up warnings and the listen failure of `index.ts`, the shutdown
+  lines of `shutdown.ts` and Fastify's own error lines.
 - **R6 — audit events.** Every `auth_events` row is also logged as `auth.<kind>` with
   `userId` and `ip`, by `EventRepository.record` itself (ADR-0021). `login_failed` and
   `login_locked` are logged at `warn`, the other kinds at `info`.
@@ -50,7 +52,8 @@ them. The 2026-11-08 FULL QA pass found 18 log calls in 9 of ~50 server files, a
 - **R8 — tests.** Each `warn` and `error` event and each domain `info` event is asserted by
   a test, on an injected logger spy or by capturing the app's lines through
   `loggerOptions(level, stream)`. Not asserted: `server.config` (start-up script),
-  `playback.ffmpeg.exit` (debug), `playback.session.cleanup_failed` and the
+  `playback.ffmpeg.exit` (debug), `playback.session.cleanup_failed`,
+  `metadata.enrich.skipped`, `auth.setup_link` (tests inject `onSetupLink`) and the
   `discover.*` / `playback.subtitle.failed` lines, whose routes already test the failure
   answer.
 

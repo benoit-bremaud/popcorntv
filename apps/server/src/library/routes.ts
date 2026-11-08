@@ -152,15 +152,15 @@ export function registerLibraryRoutes(app: FastifyInstance, deps: LibraryRoutesD
   });
 }
 
+/** Skip reasons that are a choice, not a fault (spec logging R2). */
+const PLANNED_SKIPS: ReadonlySet<SkipReason> = new Set(['extra', 'duplicate']);
+
 /**
  * UC1 with its «include» of UC2, under the library lock; shared by the scan route and the
  * schedule (spec scheduled-scan R2). The lock spans the include too: the enrichment must
  * see the rows this scan wrote.
  * @throws {LibraryBusyError} | {RootUnreadableError}
  */
-/** Skip reasons that are a choice, not a fault (spec logging R2). */
-const PLANNED_SKIPS: ReadonlySet<SkipReason> = new Set(['extra', 'duplicate']);
-
 export async function scanLibrary(
   deps: Pick<LibraryRoutesDeps, 'lock' | 'scanner' | 'enrich'>,
   library: Library,

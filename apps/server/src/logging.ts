@@ -42,6 +42,8 @@ export function loggerOptions(level: LogLevel, stream?: LoggerOptions['stream'])
  */
 export function requestLevel(status: number, media: boolean): 'debug' | 'info' | 'warn' | 'error' {
   // A status sent by a route (502 transcode_failed, 503 transcode_busy) skips the error handler.
+  // 503 is the session limit working as designed (ADR-0012), not a fault.
+  if (status === 503) return 'warn';
   if (status >= 500) return 'error';
   if (status === 403 || status === 429) return 'warn';
   // A player polls a segment not written yet: each retry is a 404.

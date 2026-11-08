@@ -62,7 +62,7 @@ describe('requestLevel', () => {
     [404, true, 'debug'],
     [404, false, 'info'],
     [502, false, 'error'],
-    [503, true, 'error'],
+    [503, true, 'warn'],
     [403, false, 'warn'],
     [429, true, 'warn'],
   ] as const)('logs a %i (media %s) at %s', (status, media, level) => {
