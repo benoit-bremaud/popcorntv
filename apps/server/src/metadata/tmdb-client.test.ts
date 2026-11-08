@@ -460,4 +460,87 @@ describe('createTmdbClient', () => {
     ]);
     expect(requestedUrl(fetch).searchParams.get('query')).toBe('alien');
   });
+
+  it('reports a 200 whose body is not JSON as an invalid shape (#179)', async () => {
+    const fetch = makeFetch({ '/movie/1': () => new Response('<html>oops</html>') });
+
+    const failure = makeClient(fetch).details('movie', 1);
+
+    await expect(failure).rejects.toBeInstanceOf(TmdbRequestError);
+    await expect(failure).rejects.toMatchObject({ status: 200, path: '/movie/1' });
+  });
+
+  it('reports an empty 200 body as an invalid shape (#179)', async () => {
+    const fetch = makeFetch({ '/movie/1': () => new Response('') });
+
+    await expect(makeClient(fetch).details('movie', 1)).rejects.toMatchObject({ status: 200 });
+  });
+
+  it.each([
+    ['a network failure', new TypeError('fetch failed')],
+    ['a timeout', new DOMException('timed out', 'TimeoutError')],
+    ['an abort', new DOMException('aborted', 'AbortError')],
+  ])('reports %s as status 0 and keeps the cause (#179)', async (_label, cause) => {
+    const fetch = vi.fn<FetchFn>(async () => Promise.reject(cause));
+
+    const failure = makeClient(fetch).search('movie', 'Alien', null);
+
+    await expect(failure).rejects.toBeInstanceOf(TmdbRequestError);
+    await expect(failure).rejects.toMatchObject({ status: 0, path: '/search/movie', cause });
+  });
+
+  it('reports a network failure on the 429 retry as status 0 (#179)', async () => {
+    const fetch = vi
+      .fn<FetchFn>()
+      .mockResolvedValueOnce(jsonResponse({}, 429, { 'retry-after': '1' }))
+      .mockRejectedValueOnce(new TypeError('fetch failed'));
+
+    await expect(makeClient(fetch).details('movie', 1)).rejects.toMatchObject({ status: 0 });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('reports a body cut short by the timeout as status 0, not an invalid shape (#179)', async () => {
+    const cause = new DOMException('timed out', 'TimeoutError');
+    const body = new ReadableStream<Uint8Array>({ pull: (controller) => controller.error(cause) });
+    const fetch = vi.fn<FetchFn>(async () => new Response(body));
+
+    await expect(makeClient(fetch).details('movie', 1)).rejects.toMatchObject({ status: 0, cause });
+  });
+
+  it('reports an image download that cannot reach TMDB as status 0 (#179)', async () => {
+    const cause = new TypeError('fetch failed');
+    const fetch = vi.fn<FetchFn>(async (input) =>
+      String(input).includes('/configuration')
+        ? jsonResponse({ images: { secure_base_url: 'https://image.tmdb.org/t/p/' } })
+        : Promise.reject(cause),
+    );
+
+    await expect(makeClient(fetch).image('/a.jpg', 'w500')).rejects.toMatchObject({
+      status: 0,
+      path: '/image/a.jpg',
+      cause,
+    });
+  });
+
+  it('adds no cause to an error status answer (#179)', async () => {
+    const fetch = makeFetch({ '/movie/1': () => jsonResponse({}, 503) });
+
+    const error = await makeClient(fetch)
+      .details('movie', 1)
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(TmdbRequestError);
+    expect(Object.hasOwn(error as object, 'cause')).toBe(false);
+  });
+
+  it('serves the next call after a network failure (#179)', async () => {
+    const fetch = vi
+      .fn<FetchFn>()
+      .mockRejectedValueOnce(new TypeError('fetch failed'))
+      .mockResolvedValueOnce(jsonResponse({ results: [{ id: 7 }] }));
+    const client = makeClient(fetch);
+
+    await expect(client.search('movie', 'Alien', null)).rejects.toMatchObject({ status: 0 });
+    await expect(client.search('movie', 'Alien', null)).resolves.toEqual([{ id: 7, year: null }]);
+  });
 });

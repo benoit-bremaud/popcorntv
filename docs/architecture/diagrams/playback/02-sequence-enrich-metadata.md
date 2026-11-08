@@ -95,8 +95,9 @@ sequenceDiagram
 - The TMDB client is the single HTTP egress of the server; it receives `fetch` by
   injection so tests assert URLs and headers without a socket. It adds the Bearer header
   and the `language` parameter and retries once on `429` after `Retry-After` (capped at
-  10 s). The key only ever travels in the header: a `TmdbRequestError` carries the path
-  and the status, nothing else.
+  10 s). The key only ever travels in the header: a `TmdbRequestError` carries the path,
+  the status (`0` when TMDB is unreachable) and the underlying network or parse error as
+  `cause`, never the key.
 - Only `query` (title), `year` / `first_air_date_year` and a provider id appear in an
   enrichment request; Discover adds list names, TMDB ids and the viewer's search text,
   never who is asking (data-flow 06).

@@ -38,7 +38,9 @@ whether the title is already on disk, and keeps a per-profile wishlist whose ent
   TMDB, the answer is `Cache-Control: private` (ADR-0020).
 - **R9** Errors: `400 invalid_request`, `404 profile_not_found` / `title_not_found` (an id
   TMDB does not know), `409 tmdb_not_configured`,
-  `502 tmdb_unavailable` when TMDB fails. The web shows a muted line instead of a row.
+  `502 tmdb_unavailable` when TMDB fails: an error status, a network failure or the 15 s
+  timeout, a body that is not JSON or fails validation (#179). The web shows a muted line
+  instead of a row.
 - **R10** Out of scope: requests to Seerr / Radarr / Sonarr (#128), downloads, playback of
   titles not on disk. Done when the client, the repository, the routes, the web helpers and
   the Discover page have tests.

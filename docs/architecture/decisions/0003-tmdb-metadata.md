@@ -1,6 +1,6 @@
 # ADR-0003 — TMDB metadata: plain `fetch` client, id-first matching, JSON on `media`
 
-- Status: accepted (owner, 2026-10-23 — the five A options validated as proposed)
+- Status: accepted (owner, 2026-10-23 — the five A options validated as proposed); Consequences amended by #179
 - Date: 2026-10-23
 - Deciders: owner
 - Related: UC2 ([spec](../specs/tmdb-metadata.md)), ADR-0001, ADR-0002, issue #4
@@ -170,7 +170,8 @@ goes out as the `language` query parameter and carries no personal data.
   credential TMDB accepts as Bearer; the v3 key would travel in URLs), is read once by
   `loadConfig`, passed to the client factory, never logged (the error handler already
   hides messages; the key only travels in the `Authorization` header and a
-  `TmdbRequestError` carries the path and status only).
+  `TmdbRequestError` carries the path, the status and, since #179, the underlying network or
+  parse error as `cause`, never the key).
 - The client queues its own calls: one TMDB request at most is in flight per server,
   whatever the number of libraries enriching at once (the 429 wait is outside the queue).
 - One `LibraryLock` per library, held by the scan route across the walk and the included

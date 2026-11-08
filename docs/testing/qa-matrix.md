@@ -20,6 +20,7 @@ One row per screen or flow. Cell format: `date · SHA · environment · OK | KO 
 | Continue watching | 2026-11-08 · 0698684 · Pi · OK · [shot](../architecture/qa/2026-11-08-full-pass-pi/03-continue-watching-and-top-rated.jpg) | — (no error path in this flow) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | 2026-11-08 · 0698684 · Pi · KO #170 · [shot](../architecture/qa/2026-11-08-full-pass-pi/03-continue-watching-and-top-rated.jpg) | — (window floor 619 px, 320/390 not reachable) |
 | Discover rows | 2026-11-08 · 0698684 · Pi · OK | 2026-11-08 · 0698684 · Pi · OK (bad list/kind, ids probes: 400/404) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | — (not audited) | — (window floor 619 px, 320/390 not reachable) |
 | Discover search | 2026-11-08 · 0698684 · Pi · OK | 2026-11-08 · 0698684 · Pi · OK (XSS, SQL-ish, empty, 300 chars) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | 2026-11-08 · 0698684 · Pi · KO #166 | — (window floor 619 px, 320/390 not reachable) |
+| Discover with TMDB unreachable (#179) | — (error-only flow) | 2026-11-08 · local prod build · OK (502 on rows, search, sheet, add) · [report](../architecture/qa/2026-11-08-issue-179-tmdb-unavailable.md) | 2026-11-08 · local prod build · OK (proxy to a closed port) | — (no navigation in this flow) | — (no UI change) | — (no UI change) |
 | Title sheet | 2026-11-08 · 0698684 · Pi · OK | 2026-11-08 · 0698684 · Pi · OK (movie/abc, -1, 99999999) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · KO #169 | — (not audited) | — (window floor 619 px, 320/390 not reachable) |
 | My list | 2026-11-08 · 0698684 · Pi · OK | 2026-11-08 · 0698684 · Pi · OK (random profile 404, book kind 400) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | — (not audited) | — (window floor 619 px, 320/390 not reachable) |
 | Play in my library | 2026-11-08 · 0698684 · Pi · OK | — (no error path in this flow) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · KO #169 | — (not audited) | — (window floor 619 px, 320/390 not reachable) |
@@ -29,6 +30,20 @@ One row per screen or flow. Cell format: `date · SHA · environment · OK | KO 
 | Admin: events | 2026-11-08 · 0698684 · Pi · OK | — (no error path in this flow) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | 2026-11-08 · 0698684 · Pi · KO #175 | — (window floor 619 px, 320/390 not reachable) |
 | Libraries add / edit / delete / scan | 2026-11-08 · 0698684 · Pi · KO #163 | 2026-11-08 · 0698684 · Pi · KO #163 | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | — (not audited) | — (window floor 619 px, 320/390 not reachable) |
 | Scheduled scan | — (timer needs server logs, ROB-07) | — (needs server logs) | — (BLOCKED) | — (no UI) | — (no UI) | — (no UI) |
+
+## Discover TMDB failure checks (#179)
+
+Replay on every pass that touches Discover, the title sheet or the wishlist:
+
+1. Start the server with `TMDB_API_KEY` set and TMDB unreachable (`NODE_USE_ENV_PROXY=1
+   HTTPS_PROXY=http://127.0.0.1:9`, a closed port): `GET /discover`, `/discover/search`,
+   `/discover/movie/1` and `PUT …/wishlist/movie/1` answer `502 tmdb_unavailable`, never
+   `500`; the log has one `discover.tmdb.failed` line per call, without the API key.
+2. A `200` whose body is not JSON cannot be produced by hand (`API_BASE` is fixed to
+   `https://api.themoviedb.org`, TLS pinned by the CA store): covered by the client and
+   route tests only.
+3. After TMDB comes back, the next call answers normally (no poisoned state).
+4. The web Discover tab shows its muted line instead of a row, never a blank page.
 
 ## Resume checks (#55, ADR-0023)
 

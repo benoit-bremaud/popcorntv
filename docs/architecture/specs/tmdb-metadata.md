@@ -114,7 +114,7 @@ reaches the end of its walk with the key configured.
 - **4c–8c. TMDB answers 429** on an API request → wait `Retry-After` seconds (default 1,
   capped at 10 so a run never stalls on a provider hint), retry once; a second 429 counts
   as a failure (5a). Image downloads are not retried (7a).
-- **5a. Any request fails** (network, 15 s timeout, 5xx, payload fails validation) → the
+- **5a. Any request fails** (network, 15 s timeout, 5xx, body not JSON or failing validation) → the
   title is reported `failed` and the cause logged, nothing is written for it (a later run
   retries it, since `metadataFetchedAt` stays null). Continue at 3.
 - **7a. Artwork download fails** (error status, oversize, redirect, base URL not
