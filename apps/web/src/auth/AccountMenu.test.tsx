@@ -187,6 +187,16 @@ describe('AccountMenu', () => {
       expect(summary()).toHaveFocus();
     });
 
+    it('ignores Escape while an input method composes', async () => {
+      const user = userEvent.setup();
+      menu();
+      await user.click(screen.getByText('kid'));
+
+      fireEvent.keyDown(document, { key: 'Escape', isComposing: true });
+
+      expect(details().open).toBe(true);
+    });
+
     it('ignores other keys', async () => {
       const user = userEvent.setup();
       menu();
