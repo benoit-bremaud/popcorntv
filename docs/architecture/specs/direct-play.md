@@ -53,7 +53,7 @@ Main scenario:
 4. The browser requests byte ranges; the server answers `206` with `Content-Range`,
    `Accept-Ranges: bytes` and the file's MIME type.
 5. The viewer seeks, pauses, goes full screen with the native controls.
-6. The viewer closes the player (close button or Escape); playback stops, the detail
+6. The viewer closes the player (close button, Escape or Back — spec history-back); playback stops, the detail
    dialog is shown again and keeps the focus on Play.
 
 Extensions:

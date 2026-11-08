@@ -69,3 +69,17 @@ Replay on every pass that touches the catalog, the detail dialog or the player:
    `PUT …/progress` answers, never to the older position.
 3. Open and close a detail dialog without playing: the row reloads at once.
 4. Open and close two titles quickly in turn: the row keeps the latest answer.
+
+## Back navigation checks (#169)
+
+Replay on every pass that touches a dialog (spec history-back, ADR-0024):
+
+1. Open a title, press Back (phone Back gesture): the dialog closes, the app stays.
+2. Open a title, Play, Back: the player closes and the detail stays; Back again closes it.
+3. Close a dialog by its button or Escape, then Back: nothing reopens and the app stays
+   only if there was an entry before it (no dead Back press).
+4. Double Back fast from the player: both layers close, the position is saved.
+5. Open a title, reload: the catalog shows, no dialog; Back does not reopen one.
+6. Discover → title sheet → Back closes the sheet; "Play in my library" → Back from the
+   detail returns to the catalog in one press.
+7. Close then reopen a title at once: the new dialog stays open.

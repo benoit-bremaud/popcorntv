@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { DiscoverDetails, DiscoverTitle } from '@popcorntv/shared';
 import { posterUrl } from '../api.js';
 import type { DiscoverApi } from './discover-api.js';
+import { useHistoryLayer } from '../history-layer.js';
 
 type Props = {
   readonly title: DiscoverTitle;
@@ -26,6 +27,8 @@ export function TitleSheet({
   onClose,
 }: Props): React.JSX.Element {
   const ref = useRef<HTMLDialogElement>(null);
+  // Back closes the layer; a close by button or Escape leaves its entry (ADR-0024).
+  useHistoryLayer(ref);
   const [details, setDetails] = useState<DiscoverDetails | null>(null);
   const [busy, setBusy] = useState(false);
 

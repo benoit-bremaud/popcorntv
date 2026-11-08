@@ -8,6 +8,7 @@ import type { PlaybackApi } from '../playback/PlayerDialog.js';
 import { formatPosition, resumeAt } from '../playback/resume.js';
 import { isWatched, nextEpisode } from './catalog.js';
 import type { Season } from './catalog.js';
+import { useHistoryLayer } from '../history-layer.js';
 
 type Props = {
   readonly item: Media;
@@ -56,6 +57,8 @@ export function DetailDialog({
   markWatched = setWatched,
 }: Props): React.JSX.Element {
   const ref = useRef<HTMLDialogElement>(null);
+  // Back closes the layer; a close by button or Escape leaves its entry (ADR-0024).
+  useHistoryLayer(ref);
   const [playing, setPlaying] = useState<Playing | null>(null);
   /** Null until the first load: Play waits for it, so a resume point is never skipped. */
   const [saved, setSaved] = useState<ReadonlyMap<string, WatchProgress> | null>(null);

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import type { AuthStatus, Library, Media, Profile, User } from '@popcorntv/shared';
 
 // The API is mocked at the network layer: the smoke checks the built page, not the server.
@@ -45,7 +45,7 @@ const MEDIA = TITLES.map(({ id, title, genre, voteAverage }, index) => ({
 const PROFILE = { id: 'default', name: 'Me', avatar: 'red' } satisfies Profile;
 const OWNER = { id: 'u1', username: 'owner', role: 'owner' } satisfies User;
 
-test('the catalog grid renders from the API and opens a title', async ({ page }) => {
+async function openCatalog(page: Page): Promise<void> {
   // Registered first so it matches last: an unmocked API call fails fast
   // instead of reaching a live server on :3000.
   await page.route('**/api/**', (route) => route.abort());
@@ -62,7 +62,10 @@ test('the catalog grid renders from the API and opens a title', async ({ page })
 
   await page.goto('/');
   await page.getByRole('button', { name: 'Me', exact: true }).click();
+}
 
+test('the catalog grid renders from the API and opens a title', async ({ page }) => {
+  await openCatalog(page);
   await expect(page.getByRole('heading', { name: 'Top rated' })).toBeVisible();
   await page.getByRole('group', { name: 'Type' }).getByRole('button', { name: 'Films' }).click();
   await page.getByRole('button', { name: 'A–Z' }).click();
@@ -82,4 +85,33 @@ test('the catalog grid renders from the API and opens a title', async ({ page })
   await dialog.getByRole('button', { name: 'Close' }).click();
   await expect(dialog).toBeHidden();
   await expect(poster).toBeFocused();
+});
+
+// #169: the browser Back closes the dialog instead of leaving the app.
+test('Back closes the detail dialog and a reload on its entry shows the catalog', async ({
+  page,
+}) => {
+  await openCatalog(page);
+  const poster = page.getByRole('button', { name: 'Heat' }).first();
+  const dialog = page.getByRole('dialog', { name: 'Heat' });
+
+  await poster.click();
+  await expect(dialog).toBeVisible();
+  await page.goBack();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole('heading', { name: 'Top rated' })).toBeVisible();
+
+  // Closed by its button, the dialog leaves no entry: Back then leaves nothing open either.
+  await poster.click();
+  await dialog.getByRole('button', { name: 'Close' }).click();
+  await expect(dialog).toBeHidden();
+  await expect.poll(() => page.evaluate(() => history.state as unknown)).toBeNull();
+
+  await poster.click();
+  await expect(dialog).toBeVisible();
+  await page.reload();
+  // The picked profile is remembered (localStorage), so the catalog comes back at once.
+  await expect(page.getByRole('heading', { name: 'Top rated' })).toBeVisible();
+  await expect(dialog).toBeHidden();
+  await expect.poll(() => page.evaluate(() => history.state as unknown)).toBeNull();
 });

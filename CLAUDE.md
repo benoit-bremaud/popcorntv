@@ -137,7 +137,9 @@ the `OneLinePerRequest` log controller, `event: "<domain>.<action>"` on every do
 `scripts/log-coverage.mjs` in `pnpm lint` refuses a silent `catch`); #162 + #92 running version (spec
 `docs/architecture/specs/app-version.md`, ADR-0022: `APP_VERSION` build argument, `dev`
 by default, signed-in `GET /version`, `/health` answers `{ status }` only, shown in the
-account menu).
+account menu); #169 Back closes layers (spec `docs/architecture/specs/history-back.md`,
+ADR-0024: `useHistoryLayer` pushes `{ pctvLayer }` per open `<dialog>`, `popstate` closes it,
+a button / Escape close goes back, a hand-off reuses the entry, a reload leaves it).
 
 Server layout (flat, component diagram 03): `src/library/` holds the pure `name-parser`
 and `path-guard`, the `ffprobe` runner (only process egress), the `folder-lister` (one-level `readdir` of `MEDIA_ROOT`), the `scanner`, the pure `identity` (carry-over keys, ADR-0018), the `scheduler` (interval rescans, ADR-0016), the per-library

@@ -71,7 +71,7 @@ Extensions:
 1. The viewer activates a poster (click, Enter or Space).
 2. The system opens a detail dialog over the catalog: backdrop, title, year, runtime,
    rating, genres, synopsis, main cast; for a series, its episodes grouped by season.
-3. The viewer closes it (close button or Escape); focus returns to the
+3. The viewer closes it (close button, Escape or Back — spec history-back); focus returns to the
    poster. A titles-without-genre row ("Other titles") keeps un-enriched titles reachable in
    the *By genre* view.
 

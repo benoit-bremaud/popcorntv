@@ -3,6 +3,7 @@ import { isFinished, subtitleTracks } from '@popcorntv/shared';
 import type { Media, PlaybackStart } from '@popcorntv/shared';
 import { saveProgress, sendHeartbeat, startPlayback, stopPlayback, subtitleUrl } from '../api.js';
 import { attachHls } from './hls-source.js';
+import { useHistoryLayer } from '../history-layer.js';
 
 /** The server calls the player needs; injected by tests. */
 export interface PlaybackApi {
@@ -72,6 +73,8 @@ export function PlayerDialog({
   attach = attachHls,
 }: Props): React.JSX.Element {
   const ref = useRef<HTMLDialogElement>(null);
+  // Back closes the layer; a close by button or Escape leaves its entry (ADR-0024).
+  useHistoryLayer(ref);
   const video = useRef<HTMLVideoElement>(null);
   const [status, setStatus] = useState<Status>({ kind: 'starting' });
   const [offerNext, setOfferNext] = useState(false);
