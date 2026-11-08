@@ -4,6 +4,30 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-09 — #166 Discover search made live (PR #233 merged, `38ff494`)
+
+- MCDA option A (owner, 410/500 vs a Search button 385, debounce plus button 385). The
+  Discover search now behaves like the library search.
+  - The trimmed query is sent 400 ms after the last keystroke (`SEARCH_DEBOUNCE_MS`), and
+    Enter sends it immediately.
+  - An unchanged query is not sent again unless its last attempt failed; Enter or the
+    next pause then retries it.
+  - A blank query is never sent, and nothing is sent while an input method composes.
+  - A late answer for an older query is dropped, and Escape clears the field.
+  - The #165 `LiveStatus` region is unchanged; each search is announced as it starts and
+    as it ends.
+  - Spec discover-wishlist R2 is updated. No ADR and no change to the component diagram.
+- Tests: 13 new jsdom cases using fake timers and `fireEvent`, because user-event hangs
+  under fake timers.
+- Gate:
+  - The Opus adversarial round 1 raised a Must: Enter did not retry a failed query. It was
+    fixed with `sent = null` on failure.
+  - It also raised three Shoulds: a false e2e claim in the QA record, the IME debounce,
+    and per-search announcements (documented as intentional). The verify round passed.
+  - The local gate passed: web 353 tests, `pnpm e2e`, gitleaks and SonarQube.
+- QA matrix § #166 has 10 checks. The staging replay is pending
+  (`docs/architecture/qa/2026-11-08-issue-166-discover-live-search.md`).
+
 ## 2026-11-08 — #165 search results and empty states announced (PR #229 merged, `2f18382`)
 
 - MCDA option B (owner, 435/500 vs immediate per-keystroke 335, live visible heading 260):
