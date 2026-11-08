@@ -4,6 +4,21 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-09 — #168 identity autofill stopped on name and search fields (PR #237 merged, `3d527c2`)
+
+- MCDA option A (owner, 430/500): `autocomplete="off"` and a `name` on the catalog and
+  Discover searches, the profile name and the library name, path, rename and
+  delete-confirmation fields (PRI-07). The alternatives scored 365 (vendor `data-*`
+  opt-outs as well) and 255 (a bogus token). No ADR.
+- Credential fields keep `username` / `current-password` / `new-password`, pinned by
+  `auth/autocomplete.test.tsx` and `AccountMenu.test.tsx`.
+- Closing the issue covers the markup only. Vendor opt-outs are added only if the
+  pending staging replay fails (`docs/architecture/qa/2026-11-09-issue-168-identity-autofill.md`).
+- Gate: typecheck, lint, format, coverage, build, e2e, gitleaks and SonarQube are all
+  green. Adversarial review: 0 Must; 1 Should and 2 Nice fixed and verified. Out of scope:
+  one flaky server test (1 failure in 4 runs) and the change-password form, which has no
+  username field.
+
 ## 2026-11-09 — #167 placeholder contrast raised to 4.5:1 (PR #235 merged, `6fa47e9`)
 
 - MCDA option A (owner, 500/500): one global `::placeholder` rule using
