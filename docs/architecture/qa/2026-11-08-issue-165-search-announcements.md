@@ -34,10 +34,10 @@ of every `role="status"` node was read after each step:
 | Step | Region text | Result |
 |---|---|---|
 | Viewer, empty catalog | `Nothing to watch yet.` | Pass ([01](2026-11-08-issue-165-search-announcements/01-viewer-empty-catalog.png)) |
-| Owner, empty catalog | `Welcome to PopCornTV. Add a library from your media folder, then scan it.` | Pass ([01](2026-11-08-issue-165-search-announcements/01-owner-welcome.png)) |
-| Library before any search | empty, one region | Pass |
+| Owner, empty catalog | `Welcome to PopCornTV. Add a library from your media folder, then scan it.` | Pass (text read before the library existed; no screenshot) |
+| Library before any search | empty, one region | Pass ([02](2026-11-08-issue-165-search-announcements/02-library-catalog.png)) |
 | Type `heat` fast (120 ms per key) | empty after every key | Pass |
-| 700 ms later | `1 result for “heat”` | Pass ([02](2026-11-08-issue-165-search-announcements/02-library-results.png)) |
+| 700 ms later | `1 result for “heat”` | Pass ([02](2026-11-08-issue-165-search-announcements/02b-library-results.png)) |
 | Query `a` | `2 results for “a”` | Pass |
 | Query `zzzqqq` | `No match for “zzzqqq”`, visible line `No title or person matches “zzzqqq”.` | Pass ([03](2026-11-08-issue-165-search-announcements/03-library-no-match.png)) |
 | Escape | empty at once | Pass |
