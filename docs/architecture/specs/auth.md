@@ -211,10 +211,8 @@ receives `Pick<ProfileRepository, 'adoptOrphans' | 'createFirst'>`.
 - Caddy terminates HTTPS, proxies the API with the prefix stripped and serves the web
   build (copied to `/srv/web`) for every other path, both in `handle` blocks. Unknown paths
   are a real 404, never `index.html` (#177, ADR-0025): the reference site blocks are
-  `deploy/homelab/Caddyfile` and `deploy/staging/Caddyfile`.
-
-  One origin for both, so CORP `same-origin` holds and
-  the cookie accompanies `<video>`, `<img>` and `<track>`.
+  `deploy/homelab/Caddyfile` and `deploy/staging/Caddyfile`. One origin for both, so CORP
+  `same-origin` holds and the cookie accompanies `<video>`, `<img>` and `<track>`.
 - Caddy sets `Strict-Transport-Security: max-age=31536000`, `X-Frame-Options: DENY`,
   `Permissions-Policy: camera=(), microphone=(), geolocation=()`,
   `Cross-Origin-Opener-Policy: same-origin` and a CSP on the web build
