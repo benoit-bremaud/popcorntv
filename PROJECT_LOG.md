@@ -4,6 +4,18 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-09 — #173 profile picker names: false positive, guarded (PR #241 merged, `9ed16f7`)
+
+- A11Y-02 "MMe" was a reading artefact (most likely `textContent`): the avatar initial has
+  been `aria-hidden` since #36 and the computed name is "Me" (existing e2e + unit tests,
+  headless Chromium tree). MCDA option A (owner, 475/500): no product change; new
+  `ProfilePicker.test.tsx` (happy / sad / edge, mutation-checked), switcher test anchored,
+  QA matrix section + ledger cell, report `2026-11-09-issue-173-profile-picker-name.md`.
+- Gate green, SonarQube passed, adversarial review: round 1 Must 0, verify found a wrong
+  "exact" switcher name (Chromium reads "Me , switch profile"), fixed, gate open.
+- Staging replay pending with the UI lot batch. Follow-up spotted: `Avatar` `charAt(0)`
+  splits a leading emoji (visual only).
+
 ## 2026-11-09 — #172 title dialog actions harmonised (PR #239 merged, `eb3d131`)
 
 - MCDA option A (owner, 450/500): the watched toggle joins `.detail__actions`; the row's
