@@ -4,6 +4,23 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-08 — #163 library root checked on create (PR #223 merged, `a49457d`)
+
+- MCDA option B (owner, 410/500 vs 400 `invalid_request` 365): `POST /libraries` runs the
+  scanner's `realRoot` (existing directory, real path under `MEDIA_ROOT`) → `409
+  root_unreadable`, nothing stored; pure `hasControlChar` (C0, DEL, C1) refuses control
+  characters in `rootPath` and `name`, create and rename, with 400. `realpath` failures now
+  map to `RootUnreadableError` (409, not 500). Spec library-management R2 / 3a / 3c,
+  library-scan, add sequence, component notes, ADR-0014 consequence; no new ADR.
+- Tests: missing folder, file, link out, dangling link, NUL / newline / tab / DEL / C1,
+  trailing slash, NFC / NFD, link inside; gate green (Sonar PASSED, e2e 2/2, gitleaks).
+- Review: Opus adversarial 2 rounds — stale 400 rule in library-scan and the add sequence,
+  an uncatalogued log event, unmapped `realpath` errors; all fixed.
+- QA: staging owner calls not replayed (no test credentials on the staging DB); report
+  `docs/architecture/qa/2026-11-08-issue-163-library-root.md`, replay pending in the matrix.
+- Follow-ups: bidi / zero-width characters in names; R3 overlap not rechecked after a link
+  is retargeted.
+
 ## 2026-11-08 — #177 real 404 for unknown paths (PR #221 merged, `714eaa6`)
 
 - MCDA option A (owner, 455/500 vs Fastify serving the web 335, client view 285): both
