@@ -37,7 +37,12 @@ export interface ServerConfig {
   readonly scanIntervalMin: number;
   /** pino level from `LOG_LEVEL`, `info` by default (spec logging R1). */
   readonly logLevel: LogLevel;
+  /** The build baked at `docker build` (`APP_VERSION`), `dev` when unset (spec app-version R1). */
+  readonly appVersion: string;
 }
+
+/** A tag (`v1.2.0-rc.1`), a short SHA or `git describe` output: printable, no markup. */
+const APP_VERSION_PATTERN = /^[0-9A-Za-z][0-9A-Za-z.+_-]{0,63}$/;
 
 /** The `.env.example` value: a copied example file must not count as a configured key. */
 const TMDB_PLACEHOLDER = 'your-tmdb-read-access-token';
@@ -63,7 +68,20 @@ export function loadConfig(env: NodeJS.ProcessEnv): ServerConfig {
     trustProxy: parseTrustProxy(env['TRUST_PROXY']),
     scanIntervalMin: scanInterval(env['SCAN_INTERVAL_MIN'], 60),
     logLevel: parseLogLevel(env['LOG_LEVEL']),
+    appVersion: parseAppVersion(env['APP_VERSION']),
   };
+}
+
+/** `APP_VERSION`, refused when it is not a plausible tag or SHA rather than shown as is. */
+function parseAppVersion(value: string | undefined): string {
+  const version = value?.trim();
+  if (!version) return 'dev';
+  if (!APP_VERSION_PATTERN.test(version)) {
+    throw new Error(
+      'APP_VERSION must be a tag or a commit SHA ([0-9A-Za-z.+_-], 64 characters at most)',
+    );
+  }
+  return version;
 }
 
 /** An absolute `http(s)` URL without credentials, query or fragment, kept as its origin. */

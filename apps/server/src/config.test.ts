@@ -15,6 +15,14 @@ describe('loadConfig', () => {
     expect(loadConfig({ ...BASE, LOG_LEVEL: value }).logLevel).toBe(level);
   });
 
+  it.each(['v1.2.0-rc.1', 'a1b2c3d', 'v0.3.0-4-ga1b2c3d'])('reads APP_VERSION %j', (value) => {
+    expect(loadConfig({ ...BASE, APP_VERSION: ` ${value} ` }).appVersion).toBe(value);
+  });
+
+  it.each(['<script>', '-rf', 'x'.repeat(65)])('refuses APP_VERSION %j', (value) => {
+    expect(() => loadConfig({ ...BASE, APP_VERSION: value })).toThrow('APP_VERSION must be');
+  });
+
   it('refuses an unknown LOG_LEVEL rather than logging at a level no one chose', () => {
     expect(() => loadConfig({ ...BASE, LOG_LEVEL: 'verbose' })).toThrow('LOG_LEVEL must be one of');
   });
@@ -36,6 +44,7 @@ describe('loadConfig', () => {
       trustProxy: null,
       scanIntervalMin: 60,
       logLevel: 'info',
+      appVersion: 'dev',
     });
   });
 
@@ -57,6 +66,7 @@ describe('loadConfig', () => {
         TRUST_PROXY: '172.18.0.0/16, 10.0.0.2',
         SCAN_INTERVAL_MIN: '0',
         LOG_LEVEL: 'debug',
+        APP_VERSION: 'v1.0.0',
       }),
     ).toEqual({
       port: 8080,
@@ -74,6 +84,7 @@ describe('loadConfig', () => {
       trustProxy: '172.18.0.0/16,10.0.0.2',
       scanIntervalMin: 0,
       logLevel: 'debug',
+      appVersion: 'v1.0.0',
     });
   });
 

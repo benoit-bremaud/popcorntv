@@ -15,7 +15,7 @@ await mkdir(dirname(config.databasePath), { recursive: true });
 await mkdir(config.artworkDir, { recursive: true });
 
 const app = await buildApp({
-  version: process.env['npm_package_version'] ?? '0.0.0',
+  version: config.appVersion,
   db: openDatabase(config.databasePath),
   probe: createFfprobe(config.ffprobePath),
   mediaRoot: config.mediaRoot,

@@ -37,7 +37,7 @@ the `bb-homelab` repository.
 
    ```bash
    git clone https://github.com/benoit-bremaud/popcorntv.git && cd popcorntv
-   git checkout <tag-or-sha> && docker build -t popcorntv:<tag-or-sha> .
+   git checkout <tag-or-sha> && docker build --build-arg APP_VERSION=$(git describe --tags --always) -t popcorntv:<tag-or-sha> .
    ```
 
 3. Create the shared network and volume once:

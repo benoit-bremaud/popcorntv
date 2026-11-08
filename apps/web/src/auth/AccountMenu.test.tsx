@@ -8,7 +8,7 @@ import type { AuthApi } from './auth-api.js';
 const viewer: User = { id: 'u2', username: 'kid', role: 'viewer' };
 
 function menu(
-  api: Partial<Pick<AuthApi, 'signOut' | 'changePassword'>> = {},
+  api: Partial<Pick<AuthApi, 'signOut' | 'changePassword' | 'version'>> = {},
   account: User = viewer,
 ) {
   const onSignedOut = vi.fn();
@@ -16,6 +16,7 @@ function menu(
   const full = {
     signOut: vi.fn(async () => true),
     changePassword: vi.fn(async () => ({ ok: true as const })),
+    version: vi.fn(async (): Promise<string | null> => 'v1.2.0'),
     ...api,
   };
   render(<AccountMenu user={account} api={full} onSignedOut={onSignedOut} onAdmin={onAdmin} />);
@@ -23,6 +24,25 @@ function menu(
 }
 
 describe('AccountMenu', () => {
+  it('shows the running version (#162)', async () => {
+    const user = userEvent.setup();
+    menu();
+
+    await user.click(screen.getByText('kid'));
+
+    expect(await screen.findByText('PopCornTV v1.2.0')).toBeInTheDocument();
+  });
+
+  it('omits the version when the server cannot say', async () => {
+    const user = userEvent.setup();
+    const { api } = menu({ version: vi.fn(async () => null) });
+
+    await user.click(screen.getByText('kid'));
+
+    await vi.waitFor(() => expect(api.version).toHaveBeenCalled());
+    expect(screen.queryByText(/^PopCornTV /)).not.toBeInTheDocument();
+  });
+
   it('signs out this device', async () => {
     const user = userEvent.setup();
     const { api, onSignedOut } = menu();
