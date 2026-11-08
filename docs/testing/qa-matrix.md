@@ -216,4 +216,5 @@ Replay with a screen reader (Orca on Firefox, then NVDA or VoiceOver when availa
 2. A profile named in RTL script with an emoji (e.g. "مريم 🎬") is announced intact, with
    no initial before it.
 3. The avatar span carries `aria-hidden="true"`; the header profile switcher is named
-   exactly "Me, switch profile" (no initial before it).
+   "Me, switch profile" with no initial before it (Chromium shows "Me , switch profile":
+   the flex items add a space).

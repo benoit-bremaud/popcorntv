@@ -20,6 +20,8 @@ product defect; this note records the analysis, the guard tests and the pending 
   `apps/web/src/App.test.tsx:70,86` (since #36). The new component tests repeat that guard
   at the picker level. Playwright and Testing Library use their own accname code, so the
   Chromium accessibility tree is checked in the staging replay.
+- Chromium's own accessibility tree (headless probe with the project's button CSS) names
+  the picker button "Me".
 - Verdict: false positive. No product change.
 
 ## Guard
