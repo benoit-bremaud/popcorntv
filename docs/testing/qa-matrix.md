@@ -133,3 +133,19 @@ Replay on every pass that touches the header:
 6. Open the menu, Tab to the search box, type, Escape: the query clears, the menu closes,
    focus stays in the search box.
 7. Sign out with the server stopped: the menu stays open and shows the error.
+
+## Search announcement checks (#165)
+
+Replay with a screen reader (Orca on Firefox, then NVDA or VoiceOver when available):
+
+1. Library tab, type "heat" quickly: one announcement "1 result for “heat”" after the
+   pause, not one per letter.
+2. Type a query that matches nothing: "No match for “…”" is read; the visible line says
+   "No title or person matches “…”".
+3. Clear the field (Escape or select-all + Delete): no stale count is read afterwards.
+4. Type only spaces: nothing is announced and the rows stay.
+5. Discover tab, search and press Enter: "Searching for “…”…" then the count; with the
+   network cut, "TMDB could not be reached." is read.
+6. Empty catalog (viewer and owner): "Nothing to watch yet." / the welcome is exposed as a
+   status; the loading line too.
+7. DOM check: exactly one `role="status"` region per tab, present before the first search.

@@ -150,7 +150,53 @@ describe('DiscoverPage', () => {
 
     expect(api.search).toHaveBeenCalledWith('alien');
     expect(await screen.findByText('No title matches.')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('No match for “alien”');
     await user.clear(field);
     expect(screen.getByRole('region', { name: 'Trending films' })).toBeInTheDocument();
+    expect(screen.getByRole('status')).toBeEmptyDOMElement();
+  });
+
+  it('announces the result count of a search (#165)', async () => {
+    const user = userEvent.setup();
+    const api = makeApi({ search: vi.fn(async () => [DUNE, DARK]) });
+    render(<DiscoverPage profileId="p1" onPlayInLibrary={() => undefined} api={api} />);
+
+    await user.type(screen.getByRole('searchbox', { name: 'Search TMDB titles' }), 'd{Enter}');
+
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('2 results for “d”'));
+  });
+
+  it('announces one result in the singular (#165)', async () => {
+    const user = userEvent.setup();
+    render(<DiscoverPage profileId="p1" onPlayInLibrary={() => undefined} api={makeApi()} />);
+
+    await user.type(screen.getByRole('searchbox', { name: 'Search TMDB titles' }), 'dune{Enter}');
+
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent('1 result for “dune”'),
+    );
+  });
+
+  it('announces the search in flight, then a TMDB failure (#165)', async () => {
+    const user = userEvent.setup();
+    let fail: (error: Error) => void = () => undefined;
+    const search = vi.fn(() => new Promise<DiscoverTitle[]>((_resolve, reject) => (fail = reject)));
+    render(
+      <DiscoverPage profileId="p1" onPlayInLibrary={() => undefined} api={makeApi({ search })} />,
+    );
+
+    await user.type(screen.getByRole('searchbox', { name: 'Search TMDB titles' }), 'x{Enter}');
+
+    expect(screen.getByRole('status')).toHaveTextContent('Searching for “x”…');
+    fail(new Error('down'));
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent('TMDB could not be reached.'),
+    );
+  });
+
+  it('keeps the status empty before any search (#165)', () => {
+    render(<DiscoverPage profileId="p1" onPlayInLibrary={() => undefined} api={makeApi()} />);
+
+    expect(screen.getByRole('status')).toBeEmptyDOMElement();
   });
 });

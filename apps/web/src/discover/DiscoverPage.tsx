@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DiscoverKind, DiscoverList, DiscoverTitle, WishlistEntry } from '@popcorntv/shared';
+import { LiveStatus } from '../a11y/LiveStatus.js';
 import { DiscoverCard } from './DiscoverCard.js';
 import { discoverApi } from './discover-api.js';
 import type { DiscoverApi } from './discover-api.js';
@@ -122,6 +123,7 @@ export function DiscoverPage({
           />
         </form>
       </search>
+      <LiveStatus message={results === null ? '' : resultsStatus(results.query, results.titles)} />
       {results !== null ? (
         <TitleRow
           id="discover-results"
@@ -169,6 +171,14 @@ export function DiscoverPage({
       )}
     </>
   );
+}
+
+/** The announced Discover search status (spec discover-wishlist R2, #165). */
+function resultsStatus(query: string, titles: RowState): string {
+  if (titles === 'loading') return `Searching for “${query}”…`;
+  if (titles === 'failed') return 'TMDB could not be reached.';
+  if (titles.length === 0) return `No match for “${query}”`;
+  return `${titles.length} ${titles.length === 1 ? 'result' : 'results'} for “${query}”`;
 }
 
 type TitleRowProps = {

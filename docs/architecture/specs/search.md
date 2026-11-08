@@ -15,5 +15,9 @@ cast member's name, matches.
   case and accents are ignored; a top-level title matches when its title or one of its
   cast names contains the query. TMDB stores no crew, so directors are not searchable.
 - **R3** Results: title matches first, then person matches, each A–Z (`localeCompare`, browser locale), in one grid titled
-  *Results for "…"*, with the result count announced to screen readers. The hero, the controls and the rows are hidden while a query is set.
-- **R4** No match → a status message *No title or person matches "…"*.
+  *Results for "…"*. A polite live region (`LiveStatus`, always mounted, `role="status"`
+  with an explicit `aria-live`) announces *N results for "…"* once typing pauses for
+  500 ms, so rapid typing yields one announcement; it empties at once when the query is
+  cleared (#165). The hero, the controls and the rows are hidden while a query is set.
+- **R4** No match → a status message *No title or person matches "…"*, announced as
+  *No match for "…"*.
