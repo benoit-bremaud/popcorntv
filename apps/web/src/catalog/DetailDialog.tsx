@@ -154,9 +154,9 @@ export function DetailDialog({
             {item.title}
           </h2>
           <p className="detail__facts">{facts(item).join(' · ')}</p>
-          {playable(item) && saved !== null && (
+          {saved !== null && (playable(item) || episodes.length > 0) && (
             <div className="detail__actions">
-              {resume(item) > 0 ? (
+              {playable(item) && resume(item) > 0 && (
                 <>
                   <button
                     type="button"
@@ -173,7 +173,8 @@ export function DetailDialog({
                     Start over
                   </button>
                 </>
-              ) : (
+              )}
+              {playable(item) && resume(item) === 0 && (
                 <button
                   type="button"
                   className="button"
@@ -182,17 +183,15 @@ export function DetailDialog({
                   ▶ Play
                 </button>
               )}
+              <button
+                type="button"
+                className="chip"
+                aria-pressed={watched}
+                onClick={() => void toggleWatched()}
+              >
+                {watched ? '✓ Watched' : 'Mark as watched'}
+              </button>
             </div>
-          )}
-          {saved !== null && (playable(item) || episodes.length > 0) && (
-            <button
-              type="button"
-              className="chip"
-              aria-pressed={watched}
-              onClick={() => void toggleWatched()}
-            >
-              {watched ? '✓ Watched' : 'Mark as watched'}
-            </button>
           )}
           {tracks.length > 1 && (
             <label className="detail__audio">

@@ -98,13 +98,32 @@ describe('DiscoverPage', () => {
     await user.click(await screen.findByRole('button', { name: 'Dune (2021)' }));
     const sheet = screen.getByRole('dialog', { name: 'Dune' });
     expect(await within(sheet).findByText('Science Fiction')).toBeInTheDocument();
-    expect(within(sheet).getByText('With Zendaya')).toBeInTheDocument();
+    expect(within(sheet).getByText('Zendaya', { exact: false })).toHaveTextContent('Cast: Zendaya');
+    expect(within(sheet).queryByText(/With /)).toBeNull();
     expect(within(sheet).queryByRole('button', { name: 'Play in my library' })).toBeNull();
 
     await user.click(within(sheet).getByRole('button', { name: '+ My list' }));
 
     expect(api.setWishlisted).toHaveBeenCalledWith('p1', 'movie', 1, true);
     expect(api.wishlist).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows no cast line when TMDB gives no cast (#172)', async () => {
+    const user = userEvent.setup();
+    const api = makeApi({
+      details: vi.fn<DiscoverApi['details']>(async () => ({
+        ...DUNE,
+        genres: ['Drama'],
+        cast: [],
+      })),
+    });
+    render(<DiscoverPage profileId="p1" onPlayInLibrary={() => undefined} api={api} />);
+
+    await user.click(await screen.findByRole('button', { name: 'Dune (2021)' }));
+    const sheet = screen.getByRole('dialog', { name: 'Dune' });
+    await within(sheet).findByText('Drama');
+
+    expect(within(sheet).queryByText('Cast:')).toBeNull();
   });
 
   it('closes the sheet on browser Back and gives the focus back (#169)', async () => {

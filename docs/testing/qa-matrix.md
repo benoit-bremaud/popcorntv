@@ -190,3 +190,19 @@ Replay with a screen reader (Orca on Firefox, then NVDA or VoiceOver when availa
 4. Sign-in still offers the saved username and password (`username` /
    `current-password`); setup, invitation, reset and password change still offer to
    generate and save a password (`new-password`); the setup token stays `off`.
+
+## Title dialog action checks (#172)
+
+1. Library dialog, film never played: "▶ Play" and "Mark as watched" sit in one row, same
+   pill shape, both 44 px high (DevTools box model), one `--space-2` gap, aligned edges.
+2. Film with a saved position: "▶ Resume from …", "Start over" and the watched toggle in
+   that same row; the row wraps cleanly at 390 px.
+3. Series: the row holds the watched toggle alone; the genre tags start one `--space-4`
+   below the row (no 8 px crowding).
+4. Discover sheet: "Play in my library" and "+ My list" match the library dialog row.
+5. Both dialogs label the cast "Cast:" (muted) followed by the names; no "With …" line;
+   no cast line when TMDB gives none.
+6. The ✕ close button measures 44×44 px in both dialogs and in the player, keyboard focus
+   ring visible.
+7. A long title ("Harry Potter and the Philosopher's Stone") in the Discover sheet and in a
+   library dialog without backdrop never runs under the close button.
