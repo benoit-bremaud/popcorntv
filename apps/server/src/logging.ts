@@ -56,13 +56,17 @@ export function requestLevel(status: number, media: boolean): 'debug' | 'info' |
  * (a stream failing mid-film, a serializer or `writeHead` error) stay.
  */
 export class OneLinePerRequest extends LogController {
-  override incomingRequest(): void {}
+  override incomingRequest(): void {
+    // Replaced by the `http.request` line of `registerRequestLog`.
+  }
 
   override requestCompleted(...args: Parameters<LogController['requestCompleted']>): void {
     if (args[0]) super.requestCompleted(...args);
   }
 
-  override routeNotFound(): void {}
+  override routeNotFound(): void {
+    // Its text carries the query string; the `http.request` line logs the 404 instead.
+  }
 }
 
 /** Replaces Fastify's two request lines by one, with the path but never the query string. */
