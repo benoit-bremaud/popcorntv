@@ -6,6 +6,9 @@ import { discoverApi } from './discover-api.js';
 import type { DiscoverApi } from './discover-api.js';
 import { TitleSheet } from './TitleSheet.js';
 
+/** Pause after the last keystroke before the Discover search goes out (spec R2, #166). */
+export const SEARCH_DEBOUNCE_MS = 400;
+
 /** The four TMDB rows (spec discover-wishlist R1). */
 export const DISCOVER_ROWS: readonly {
   readonly list: DiscoverList;
@@ -65,6 +68,8 @@ export function DiscoverPage({
   const [open, setOpen] = useState<DiscoverTitle | null>(null);
   const trigger = useRef<HTMLElement | null>(null);
   const wishlistRequest = useRef(0);
+  /** The trimmed query last sent (or cleared), so Enter and the debounce never repeat it. */
+  const sent = useRef('');
 
   const refreshWishlist = useCallback(async () => {
     const request = ++wishlistRequest.current;
@@ -86,29 +91,44 @@ export function DiscoverPage({
     setOpen(title);
   }, []);
 
-  async function submit(event: React.SyntheticEvent<HTMLFormElement>): Promise<void> {
-    event.preventDefault();
-    const text = query.trim();
-    if (text === '') {
-      setResults(null);
-      return;
-    }
-    setResults({ query: text, titles: 'loading' });
-    let titles: RowState;
-    try {
-      titles = await api.search(text);
-    } catch {
-      titles = 'failed';
-    }
-    setResults((current) => (current?.query === text ? { query: text, titles } : current));
-  }
+  const search = useCallback(
+    async (raw: string) => {
+      const text = raw.trim();
+      if (text === sent.current) return;
+      sent.current = text;
+      if (text === '') {
+        setResults(null);
+        return;
+      }
+      setResults({ query: text, titles: 'loading' });
+      let titles: RowState;
+      try {
+        titles = await api.search(text);
+      } catch {
+        titles = 'failed';
+      }
+      setResults((current) => (current?.query === text ? { query: text, titles } : current));
+    },
+    [api],
+  );
+
+  // Live search like the library one (#166): the query goes out once typing pauses.
+  useEffect(() => {
+    const timer = setTimeout(() => void search(query), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [query, search]);
 
   const listed = new Set(wishlist.map(titleKey));
 
   return (
     <>
       <search className="search">
-        <form onSubmit={(event) => void submit(event)}>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            void search(query);
+          }}
+        >
           <input
             type="search"
             maxLength={100}
@@ -117,8 +137,15 @@ export function DiscoverPage({
             placeholder="Search films and series to discover"
             value={query}
             onChange={(event) => {
-              setQuery(event.currentTarget.value);
-              if (event.currentTarget.value === '') setResults(null);
+              const value = event.currentTarget.value;
+              setQuery(value);
+              if (value.trim() === '') void search('');
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape' && !event.nativeEvent.isComposing) {
+                setQuery('');
+                void search('');
+              }
             }}
           />
         </form>

@@ -1,9 +1,9 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { DiscoverTitle, WishlistEntry } from '@popcorntv/shared';
 import type { DiscoverApi } from './discover-api.js';
-import { DiscoverPage } from './DiscoverPage.js';
+import { DiscoverPage, SEARCH_DEBOUNCE_MS } from './DiscoverPage.js';
 
 function title(overrides: Partial<DiscoverTitle> = {}): DiscoverTitle {
   return {
@@ -209,5 +209,138 @@ describe('DiscoverPage', () => {
     render(<DiscoverPage profileId="p1" onPlayInLibrary={() => undefined} api={makeApi()} />);
 
     expect(screen.getByRole('status')).toBeEmptyDOMElement();
+  });
+
+  describe('live search (#166)', () => {
+    afterEach(() => vi.useRealTimers());
+
+    function setup(search: DiscoverApi['search'] = vi.fn(async () => [DUNE])) {
+      vi.useFakeTimers();
+      const api = makeApi({ search: vi.fn(search) });
+      render(<DiscoverPage profileId="p1" onPlayInLibrary={() => undefined} api={api} />);
+      const field = screen.getByRole('searchbox', { name: 'Search TMDB titles' });
+      const type = (value: string): void => {
+        fireEvent.change(field, { target: { value } });
+      };
+      return { type, api, field };
+    }
+
+    async function pause(ms = SEARCH_DEBOUNCE_MS): Promise<void> {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(ms);
+      });
+    }
+
+    it('searches once typing pauses, without Enter', async () => {
+      const { type, api } = setup();
+
+      type('dune');
+      expect(api.search).not.toHaveBeenCalled();
+      await pause();
+
+      expect(api.search).toHaveBeenCalledTimes(1);
+      expect(api.search).toHaveBeenCalledWith('dune');
+      expect(screen.getByRole('status')).toHaveTextContent('1 result for “dune”');
+    });
+
+    it('waits for the full pause before searching', async () => {
+      const { type, api } = setup();
+
+      type('dune');
+      await pause(SEARCH_DEBOUNCE_MS - 1);
+
+      expect(api.search).not.toHaveBeenCalled();
+    });
+
+    it('sends a single request for fast typing', async () => {
+      const { type, api } = setup();
+
+      type('du');
+      await pause(SEARCH_DEBOUNCE_MS / 2);
+      type('dune');
+      await pause();
+
+      expect(api.search).toHaveBeenCalledTimes(1);
+      expect(api.search).toHaveBeenCalledWith('dune');
+    });
+
+    it('searches at once on Enter and does not repeat it after the pause', async () => {
+      const { type, api, field } = setup();
+
+      type('dune');
+      fireEvent.submit(field);
+      expect(api.search).toHaveBeenCalledTimes(1);
+      await pause();
+
+      expect(api.search).toHaveBeenCalledTimes(1);
+    });
+
+    it('ignores trailing spaces that do not change the query', async () => {
+      const { type, api } = setup();
+
+      type('dune');
+      await pause();
+      type('dune  ');
+      await pause();
+
+      expect(api.search).toHaveBeenCalledTimes(1);
+    });
+
+    it('never searches blank input', async () => {
+      const { type, api } = setup();
+
+      type('   ');
+      await pause();
+
+      expect(api.search).not.toHaveBeenCalled();
+      expect(screen.getByRole('status')).toBeEmptyDOMElement();
+      expect(screen.getByRole('region', { name: 'Trending films' })).toBeInTheDocument();
+    });
+
+    it('clears the field, the results and the status on Escape', async () => {
+      const { type, api, field } = setup();
+
+      type('dune');
+      await pause();
+      expect(screen.getByRole('region', { name: 'Results for “dune”' })).toBeInTheDocument();
+      fireEvent.keyDown(field, { key: 'Escape' });
+      await pause();
+
+      expect(field).toHaveValue('');
+      expect(screen.getByRole('status')).toBeEmptyDOMElement();
+      expect(screen.getByRole('region', { name: 'Trending films' })).toBeInTheDocument();
+      expect(api.search).toHaveBeenCalledTimes(1);
+    });
+
+    it('searches the same text again after a clear', async () => {
+      const { type, api, field } = setup();
+
+      type('dune');
+      await pause();
+      fireEvent.keyDown(field, { key: 'Escape' });
+      type('dune');
+      await pause();
+
+      expect(api.search).toHaveBeenCalledTimes(2);
+    });
+
+    it('drops a late answer for an earlier query', async () => {
+      const answers: ((titles: DiscoverTitle[]) => void)[] = [];
+      const { type } = setup(
+        () => new Promise<DiscoverTitle[]>((resolve) => answers.push(resolve)),
+      );
+
+      type('da');
+      await pause();
+      type('dark');
+      await pause();
+      await act(async () => {
+        answers[1]?.([DARK]);
+        answers[0]?.([DUNE]);
+      });
+
+      expect(screen.getByRole('status')).toHaveTextContent('1 result for “dark”');
+      expect(screen.queryByRole('button', { name: /Dune/ })).not.toBeInTheDocument();
+    });
   });
 });
