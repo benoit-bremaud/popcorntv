@@ -127,8 +127,9 @@ Replay on every pass that touches the header:
 2. Open it, click empty catalog space (mouse) or tap it (phone): it closes. A click on a
    poster both closes the menu and opens the title (the click is not swallowed).
 3. Open it, click "Change password", type in the fields: the menu stays open.
-4. Owner: open it, click Administration, then Escape: the dialog closes first; the menu
-   is already closed.
-5. Open the menu with a detail dialog open (keyboard): Escape closes the dialog, not
-   the menu.
-6. Sign out with the server stopped: the menu stays open and shows the error.
+4. Owner: open it, click Administration: the menu closes and the administration shows.
+5. Open the menu, Tab to a poster, Enter: Escape closes the detail, not the menu; a
+   second Escape closes the menu and focus stays on the poster.
+6. Open the menu, Tab to the search box, type, Escape: the query clears, the menu closes,
+   focus stays in the search box.
+7. Sign out with the server stopped: the menu stays open and shows the error.

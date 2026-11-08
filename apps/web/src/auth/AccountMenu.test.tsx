@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, onTestFinished, vi } from 'vitest';
 import type { User } from '@popcorntv/shared';
 import { AccountMenu } from './AccountMenu.js';
 import type { AuthApi } from './auth-api.js';
@@ -69,6 +69,7 @@ describe('AccountMenu', () => {
 
     expect(onSignedOut).not.toHaveBeenCalled();
     expect(screen.getByRole('status')).toHaveTextContent('The server could not be reached.');
+    expect(screen.getByText('kid').closest('details')).toHaveAttribute('open');
   });
 
   it('changes the password', async () => {
@@ -170,6 +171,20 @@ describe('AccountMenu', () => {
       await user.keyboard('{Escape}');
 
       expect(details().open).toBe(false);
+      expect(screen.getByRole('button', { name: 'elsewhere' })).toHaveFocus();
+    });
+
+    it('closes on Escape from the password field and focuses the summary', async () => {
+      const user = userEvent.setup();
+      menu();
+      await user.click(screen.getByText('kid'));
+      await user.click(screen.getByRole('button', { name: 'Change password' }));
+      await user.click(screen.getByLabelText('Current password'));
+
+      await user.keyboard('{Escape}');
+
+      expect(details().open).toBe(false);
+      expect(summary()).toHaveFocus();
     });
 
     it('ignores other keys', async () => {
@@ -200,11 +215,11 @@ describe('AccountMenu', () => {
       const dialog = document.createElement('dialog');
       dialog.setAttribute('open', '');
       document.body.append(dialog);
+      onTestFinished(() => dialog.remove());
 
       await user.keyboard('{Escape}');
 
       expect(details().open).toBe(true);
-      dialog.remove();
     });
 
     it('closes on a pointer-down outside, mouse or touch, without moving focus', async () => {
@@ -218,6 +233,7 @@ describe('AccountMenu', () => {
       await user.click(screen.getByText('kid'));
       await user.click(screen.getByRole('button', { name: 'elsewhere' }));
       expect(details().open).toBe(false);
+      expect(screen.getByRole('button', { name: 'elsewhere' })).toHaveFocus();
     });
 
     it('stays open on a click inside the panel', async () => {
