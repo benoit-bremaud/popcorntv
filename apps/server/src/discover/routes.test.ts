@@ -64,7 +64,11 @@ async function setup(client: TmdbClient | null = makeClient()) {
   const artworkDir = await mkdtemp(join(tmpdir(), 'popcorntv-discover-'));
   dirs.push(artworkDir);
   let clock = 0;
-  const app = Fastify();
+  /** Error-level log lines: a handler that throws after replying only shows up here (#178). */
+  const failures: string[] = [];
+  const app = Fastify({
+    logger: { level: 'error', stream: { write: (line: string) => failures.push(line) } },
+  });
   actAs(app, () => ({ userId: owner.userId, role: 'owner', sessionId: owner.sessionId }));
   registerDiscoverRoutes(app, {
     tmdb: client,
@@ -84,7 +88,7 @@ async function setup(client: TmdbClient | null = makeClient()) {
     db.insert(media).values({ id, libraryId, kind: 'film', title: 'Dune', tmdbId }).run();
     return id;
   };
-  return { app, db, addFilm, advance: (ms: number) => (clock += ms) };
+  return { app, db, failures, addFilm, advance: (ms: number) => (clock += ms) };
 }
 
 describe('discover routes', () => {
@@ -122,7 +126,7 @@ describe('discover routes', () => {
   });
 
   it('refuses bad queries, answers 409 without TMDB and 502 when TMDB fails', async () => {
-    const { app } = await setup(
+    const { app, failures } = await setup(
       makeClient({ list: vi.fn(async () => Promise.reject(new TmdbRequestError('/x', 500))) }),
     );
     const none = await setup(null);
@@ -133,6 +137,7 @@ describe('discover routes', () => {
       error: 'tmdb_unavailable',
     });
     expect((await none.app.inject({ url: '/discover/search?q=a' })).statusCode).toBe(409);
+    expect(failures).toEqual([]);
   });
 
   it('searches titles and returns the title sheet with the first billed cast', async () => {
@@ -189,7 +194,7 @@ describe('discover routes', () => {
   });
 
   it('answers 404 title_not_found when TMDB does not know the id', async () => {
-    const { app } = await setup(
+    const { app, failures } = await setup(
       makeClient({ details: vi.fn(async () => Promise.reject(new TmdbRequestError('/m', 404))) }),
     );
 
@@ -198,6 +203,7 @@ describe('discover routes', () => {
 
     expect([sheet.statusCode, put.statusCode]).toEqual([404, 404]);
     expect(sheet.json()).toEqual({ error: 'title_not_found' });
+    expect(failures).toEqual([]); // #178: the handler stops once the answer is sent.
   });
 });
 
@@ -277,12 +283,13 @@ describe('wishlist routes', () => {
   });
 
   it('answers 502 when TMDB fails while adding', async () => {
-    const { app } = await setup(
+    const { app, failures } = await setup(
       makeClient({ details: vi.fn(async () => Promise.reject(new TmdbRequestError('/m', 500))) }),
     );
 
     const put = await app.inject({ method: 'PUT', url: '/profiles/default/wishlist/movie/1' });
 
     expect(put.statusCode).toBe(502);
+    expect(failures).toEqual([]);
   });
 });
