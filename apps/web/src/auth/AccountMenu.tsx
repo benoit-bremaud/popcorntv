@@ -28,8 +28,9 @@ export function AccountMenu({ user, api, onSignedOut, onAdmin }: Props): React.J
   // outside it. Escape is left to a modal dialog open above, which closes first (ADR-0024).
   useEffect(() => {
     if (!open) return;
-    const panel = ref.current;
-    if (!panel) return;
+    const current = ref.current;
+    if (!current) return;
+    const panel: HTMLDetailsElement = current;
     function onKey(event: KeyboardEvent): void {
       if (event.key !== 'Escape' || document.querySelector('dialog[open]')) return;
       panel.open = false;
@@ -91,11 +92,7 @@ export function AccountMenu({ user, api, onSignedOut, onAdmin }: Props): React.J
   }
 
   return (
-    <details
-      ref={ref}
-      className="account"
-      onToggle={(event) => setOpen(event.currentTarget.open)}
-    >
+    <details ref={ref} className="account" onToggle={(event) => setOpen(event.currentTarget.open)}>
       <summary className="account-summary">
         <span className="visually-hidden">Account: </span>
         {user.username}
@@ -142,7 +139,10 @@ export function AccountMenu({ user, api, onSignedOut, onAdmin }: Props): React.J
         ) : (
           <>
             {onAdmin && user.role === 'owner' && (
-              <button type="button" className="button button-quiet" onClick={() => {
+              <button
+                type="button"
+                className="button button-quiet"
+                onClick={() => {
                   close();
                   onAdmin();
                 }}
