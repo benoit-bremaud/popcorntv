@@ -71,6 +71,12 @@
   padding: var(--space-2) 0;
 }
 
+/* The always-mounted live region takes no room while empty (#175). */
+.admin > .admin-report:empty {
+  padding: 0;
+  margin-block-end: calc(-1 * var(--space-4));
+}
+
 .admin-link {
   display: grid;
   gap: var(--space-2);

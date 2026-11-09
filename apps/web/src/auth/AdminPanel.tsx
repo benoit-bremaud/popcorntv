@@ -114,7 +114,7 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
     else if (gone)
       setMessage(`No pending reset link for ${account.username} any more: the list was refreshed.`);
     else setMessage(adminMessage(result.error));
-    noticeRef.current?.focus();
+    if (result.ok) noticeRef.current?.focus();
   }
 
   async function showDevices(userId: string): Promise<void> {
