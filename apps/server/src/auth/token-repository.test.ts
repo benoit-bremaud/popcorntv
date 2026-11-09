@@ -90,6 +90,8 @@ describe('TokenRepository', () => {
     const { db, tokens, userId } = setUp();
     const other = createAccount(db, 'guest', 'viewer').userId;
     const revokedOf = createAccount(db, 'gone', 'viewer').userId;
+    const usedOf = createAccount(db, 'used', 'viewer').userId;
+    tokens.consumeReset(tokens.issueReset(usedOf, T0).token, T0);
     tokens.issueInvite('viewer', T0);
     tokens.issueReset(userId, T0);
     tokens.issueReset(userId, T0);

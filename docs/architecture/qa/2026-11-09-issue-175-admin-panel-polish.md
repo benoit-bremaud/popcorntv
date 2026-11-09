@@ -4,7 +4,7 @@ Staging replay of the #175 admin panel polish, pending the batch QA pass of the 
 
 ## Scope
 
-- Change: ISO 8601 dates with the time zone, "1 device" / "n devices", one box model and
+- Change: ISO 8601 dates with the offset, "1 device" / "n devices", one box model and
   left-packed form rows, and a revoke reset action disabled without a pending link
   (`Account.resetPending`) with feedback after it (UI-06, USA-06,
   `2026-11-08-full-pass-pi.md`).

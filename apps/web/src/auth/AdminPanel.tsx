@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ROLES } from '@popcorntv/shared';
 import type {
   Account,
@@ -12,7 +12,7 @@ import type {
 } from '@popcorntv/shared';
 import type { AdminApi, AdminResult } from '../api.js';
 import { authMessage } from './auth-api.js';
-import { deviceCount, formatDateTime } from './admin-format.js';
+import { deviceCount, formatDateTime as when } from './admin-format.js';
 import { deviceLabel } from './device-label.js';
 import { useFocusedTitle } from './form-hooks.js';
 import { LibrarySection } from './LibrarySection.js';
@@ -45,8 +45,6 @@ export function adminMessage(error: ApiErrorCode | null): string {
   }
 }
 
-const when = (iso: string | null) => formatDateTime(iso);
-
 /**
  * UC21: manage libraries (scan and refresh included). UC15–UC18: invite a person,
  * manage accounts (role, reset link, devices, deletion) and
@@ -67,6 +65,8 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
   const [message, setMessage] = useState<string | null>(null);
   /** What the last action did, when the list alone does not show it. */
   const [notice, setNotice] = useState<string | null>(null);
+  /** Takes the focus after a revoke: the clicked button turns disabled and would drop it. */
+  const noticeRef = useRef<HTMLOutputElement>(null);
   const heading = useFocusedTitle();
 
   const refresh = useCallback(async () => {
@@ -106,15 +106,19 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
     setConfirming(null);
     setNotice(null);
     const result = await api.revokeReset(account.id);
-    forgetResetOf(account.id);
+    // Only a confirmed absence hides the shown-once link: after a network failure it stays valid.
+    const gone = result.ok || result.error === 'not_found';
+    if (gone) forgetResetOf(account.id);
     await refresh();
     if (result.ok) setNotice(`Reset link of ${account.username} revoked.`);
-    else if (result.error === 'not_found')
-      setMessage(`${account.username} has no pending reset link: the list was refreshed.`);
+    else if (gone)
+      setMessage(`No pending reset link for ${account.username} any more: the list was refreshed.`);
     else setMessage(adminMessage(result.error));
+    noticeRef.current?.focus();
   }
 
   async function showDevices(userId: string): Promise<void> {
+    setNotice(null);
     const result = await api.devices(userId);
     if (result.ok) {
       setDevices({ userId, list: result.value });
@@ -139,7 +143,10 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
           {message}
         </p>
       )}
-      {notice && <output className="admin-report">{notice}</output>}
+      {/* Always mounted, so a screen reader announces the text when it changes. */}
+      <output className="admin-report" ref={noticeRef} tabIndex={-1}>
+        {notice}
+      </output>
       {shown && (
         <output className="admin-link">
           <span>
@@ -308,7 +315,10 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
                 <button
                   type="button"
                   className="button button-quiet"
-                  onClick={() => setConfirming(account.id)}
+                  onClick={() => {
+                    setNotice(null);
+                    setConfirming(account.id);
+                  }}
                 >
                   Delete
                 </button>

@@ -3,8 +3,8 @@
 const pad = (value: number) => String(value).padStart(2, '0');
 
 /**
- * ISO 8601 date and time in the viewer's time zone, with the zone name
- * (`2026-11-08 00:34 CET`), whatever the browser language; `never` for no date.
+ * ISO 8601 date and time in the viewer's time zone, with its offset
+ * (`2026-11-08 00:34 +01:00`, `Z` for UTC), whatever the browser language; `never` for no date.
  */
 export function formatDateTime(iso: string | null, timeZone?: string): string {
   if (iso === null) return 'never';
@@ -18,11 +18,13 @@ export function formatDateTime(iso: string | null, timeZone?: string): string {
     hour: '2-digit',
     minute: '2-digit',
     hourCycle: 'h23',
-    timeZoneName: 'short',
+    timeZoneName: 'longOffset',
   }).formatToParts(date);
   const part = (type: Intl.DateTimeFormatPartTypes) =>
     parts.find((candidate) => candidate.type === type)?.value ?? '';
-  return `${part('year')}-${part('month')}-${part('day')} ${pad(Number(part('hour')))}:${part('minute')} ${part('timeZoneName')}`;
+  // `GMT+01:00` → `+01:00`, `GMT` → `Z`: an ISO 8601 offset, never an ambiguous name like IST.
+  const offset = part('timeZoneName').replace(/^GMT$/, 'Z').replace(/^GMT/, '');
+  return `${part('year')}-${part('month')}-${part('day')} ${pad(Number(part('hour')))}:${part('minute')} ${offset}`;
 }
 
 /** `1 device`, `0 devices`, `3 devices`. */

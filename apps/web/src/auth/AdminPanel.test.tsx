@@ -153,7 +153,31 @@ describe('AdminPanel', () => {
     await user.click(kidRevoke as HTMLElement);
 
     expect(api.revokeReset).toHaveBeenCalledWith('u2');
-    expect(await screen.findByText('Reset link of kid revoked.')).toBeInTheDocument();
+    expect(await screen.findByText('Reset link of kid revoked.')).toHaveFocus();
+  });
+
+  it('keeps a shown reset link when the revoke fails on the network', async () => {
+    const user = userEvent.setup();
+    panel({ revokeReset: vi.fn(async () => ({ ok: false as const, error: null })) });
+
+    await user.click(
+      (await screen.findAllByRole('button', { name: 'Reset link' }))[0] as HTMLElement,
+    );
+    await screen.findByLabelText('Link to send');
+    await user.click(
+      screen.getAllByRole('button', { name: 'Revoke reset link' })[0] as HTMLElement,
+    );
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(screen.getByLabelText('Link to send')).toBeInTheDocument();
+  });
+
+  it('shows dates as ISO 8601 with the offset', async () => {
+    panel();
+
+    expect(
+      await screen.findByText(/last sign-in 2026-11-05 \d{2}:\d{2} (Z|[+-]\d{2}:\d{2})/),
+    ).toBeInTheDocument();
   });
 
   it('disables the revoke action of an account without a pending reset link', async () => {
@@ -165,6 +189,7 @@ describe('AdminPanel', () => {
 
     expect(kidRevoke).toBeEnabled();
     expect(ownerRevoke).toBeDisabled();
+    expect(ownerRevoke).toHaveAttribute('title', 'No pending reset link');
   });
 
   it('explains a reset link revoked meanwhile', async () => {
@@ -177,7 +202,7 @@ describe('AdminPanel', () => {
     await user.click(kidRevoke as HTMLElement);
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'kid has no pending reset link: the list was refreshed.',
+      'No pending reset link for kid any more: the list was refreshed.',
     );
     expect(api.accounts).toHaveBeenCalledTimes(2);
     expect(screen.queryByText('Reset link of kid revoked.')).toBeNull();
