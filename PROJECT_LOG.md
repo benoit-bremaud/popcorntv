@@ -4,6 +4,22 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-09 — #175 Administration panel polish (PR #246 merged, `72dd19e`)
+
+- UI-06 / USA-06: admin dates read ISO 8601 in the viewer's zone with its offset
+  (`2026-11-09 00:34 +01:00`, `Z`), "1 device" / "n devices", `.admin .input` border-box
+  (content-box inputs vs border-box selects pushed the Folder / Kind labels down), form
+  rows packed left.
+- Revoke reset link: MCDA option A (owner, 405/500 over client-only B 395): new
+  `Account.resetPending` from `TokenRepository.pendingResetUsers` on `GET /users`; button
+  disabled without a link, success notice in an always-mounted live region that takes the
+  focus, stale 404 explained, a network failure keeps the shown-once link. Spec auth UC17,
+  no ADR.
+- Gate green (shared 45, server 706, web 415, e2e, gitleaks), SonarQube passed,
+  adversarial review round 2 open (5 Should + 7 Nice fixed). `history-layer.test.tsx`
+  flaked once (passed on two reruns). Staging replay pending in
+  `docs/architecture/qa/2026-11-09-issue-175-admin-panel-polish.md`.
+
 ## 2026-11-09 — #174 readable device name (PR #244 merged, `a86b248`)
 
 - USA-06: the admin device list shows "Chrome on Linux" via the pure web `deviceLabel`,
