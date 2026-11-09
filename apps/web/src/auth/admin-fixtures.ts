@@ -11,6 +11,7 @@ export const ownerAccount: Account = {
   createdAt: '2026-11-01T10:00:00.000Z',
   lastLoginAt: '2026-11-05T10:00:00.000Z',
   activeSessions: 1,
+  resetPending: false,
 };
 
 export const kidAccount: Account = {
@@ -20,6 +21,7 @@ export const kidAccount: Account = {
   createdAt: '2026-11-02T10:00:00.000Z',
   lastLoginAt: null,
   activeSessions: 0,
+  resetPending: true,
 };
 
 export const filmsLibrary: Library = {

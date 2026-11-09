@@ -10,8 +10,16 @@
   display: flex;
   flex-wrap: wrap;
   align-items: end;
-  justify-content: space-between;
   gap: var(--space-3);
+}
+
+.admin-head {
+  justify-content: space-between;
+}
+
+/* A form row keeps each action next to its fields (#175). */
+.admin-row {
+  justify-content: flex-start;
 }
 
 .admin-title {
@@ -53,9 +61,20 @@
   min-height: var(--touch-target);
 }
 
+/* A select is border-box in Chromium, an input content-box: one box model lines them up (#175). */
+.admin .input {
+  box-sizing: border-box;
+}
+
 .admin-report {
   display: block;
   padding: var(--space-2) 0;
+}
+
+/* The always-mounted live region takes no room while empty (#175). */
+.admin > .admin-report:empty {
+  padding: 0;
+  margin-block-end: calc(-1 * var(--space-4));
 }
 
 .admin-link {

@@ -59,6 +59,16 @@ export class TokenRepository {
     return result.changes === 1;
   }
 
+  /** The accounts with a pending reset link (UC17: the revoke action is offered only for them). */
+  pendingResetUsers(now: Date): Set<string> {
+    const rows = this.db
+      .selectDistinct({ userId: authTokens.userId })
+      .from(authTokens)
+      .where(and(eq(authTokens.kind, 'reset'), this.pending(now)))
+      .all();
+    return new Set(rows.flatMap((row) => (row.userId === null ? [] : [row.userId])));
+  }
+
   /** Revokes the account's pending reset link (UC16, UC17); true when one was revoked. */
   revokeResets(userId: string, now: Date): boolean {
     const result = this.db

@@ -74,14 +74,21 @@ export class UserRepository {
     this.db.update(users).set({ lastLoginAt: now.toISOString() }).where(eq(users.id, id)).run();
   }
 
-  /** Every account with its live session count from `liveCounts` (UC17), by username. */
-  list(liveCounts: ReadonlyMap<string, number>): Account[] {
+  /**
+   * Every account with its live session count from `liveCounts` and whether it is in
+   * `pendingResets` (UC17), by username.
+   */
+  list(liveCounts: ReadonlyMap<string, number>, pendingResets: ReadonlySet<string>): Account[] {
     return this.db
       .select({ ...publicColumns, createdAt: users.createdAt, lastLoginAt: users.lastLoginAt })
       .from(users)
       .orderBy(asc(users.usernameKey))
       .all()
-      .map((row) => ({ ...row, activeSessions: liveCounts.get(row.id) ?? 0 }));
+      .map((row) => ({
+        ...row,
+        activeSessions: liveCounts.get(row.id) ?? 0,
+        resetPending: pendingResets.has(row.id),
+      }));
   }
 
   /**

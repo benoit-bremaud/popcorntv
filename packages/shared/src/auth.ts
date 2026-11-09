@@ -73,6 +73,8 @@ export interface Account extends User {
   readonly createdAt: string;
   readonly lastLoginAt: string | null;
   readonly activeSessions: number;
+  /** A reset link is pending for this account (UC16): its revoke action has something to do. */
+  readonly resetPending: boolean;
 }
 
 /** A live device of an account in `GET /users/:id/sessions` (UC17). */

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ROLES } from '@popcorntv/shared';
 import type {
   Account,
@@ -12,6 +12,7 @@ import type {
 } from '@popcorntv/shared';
 import type { AdminApi, AdminResult } from '../api.js';
 import { authMessage } from './auth-api.js';
+import { deviceCount, formatDateTime as when } from './admin-format.js';
 import { deviceLabel } from './device-label.js';
 import { useFocusedTitle } from './form-hooks.js';
 import { LibrarySection } from './LibrarySection.js';
@@ -44,8 +45,6 @@ export function adminMessage(error: ApiErrorCode | null): string {
   }
 }
 
-const when = (iso: string | null) => (iso === null ? 'never' : new Date(iso).toLocaleString());
-
 /**
  * UC21: manage libraries (scan and refresh included). UC15–UC18: invite a person,
  * manage accounts (role, reset link, devices, deletion) and
@@ -64,6 +63,10 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
     readonly list: readonly DeviceSession[];
   } | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  /** What the last action did, when the list alone does not show it. */
+  const [notice, setNotice] = useState<string | null>(null);
+  /** Takes the focus after a revoke: the clicked button turns disabled and would drop it. */
+  const noticeRef = useRef<HTMLOutputElement>(null);
   const heading = useFocusedTitle();
 
   const refresh = useCallback(async () => {
@@ -85,6 +88,7 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
     done?: (value: T) => 'closed' | void,
   ): Promise<void> {
     setConfirming(null);
+    setNotice(null);
     const result = await run();
     // Refresh either way: a refusal often means the list is stale (another owner acted).
     if (result.ok && done?.(result.value) === 'closed') return;
@@ -97,7 +101,24 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
     setShown((current) => (current?.resetOf === userId ? null : current));
   }
 
+  /** UC17: a missing link (revoked meanwhile) is explained, a revoked one confirmed. */
+  async function revokeReset(account: Account): Promise<void> {
+    setConfirming(null);
+    setNotice(null);
+    const result = await api.revokeReset(account.id);
+    // Only a confirmed absence hides the shown-once link: after a network failure it stays valid.
+    const gone = result.ok || result.error === 'not_found';
+    if (gone) forgetResetOf(account.id);
+    await refresh();
+    if (result.ok) setNotice(`Reset link of ${account.username} revoked.`);
+    else if (gone)
+      setMessage(`No pending reset link for ${account.username} any more: the list was refreshed.`);
+    else setMessage(adminMessage(result.error));
+    if (result.ok) noticeRef.current?.focus();
+  }
+
   async function showDevices(userId: string): Promise<void> {
+    setNotice(null);
     const result = await api.devices(userId);
     if (result.ok) {
       setDevices({ userId, list: result.value });
@@ -122,6 +143,10 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
           {message}
         </p>
       )}
+      {/* Always mounted, so a screen reader announces the text when it changes. */}
+      <output className="admin-report" ref={noticeRef} tabIndex={-1}>
+        {notice}
+      </output>
       {shown && (
         <output className="admin-link">
           <span>
@@ -195,7 +220,7 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
               {account.username}
               <span className="muted">
                 {' '}
-                · last sign-in {when(account.lastLoginAt)} · {account.activeSessions} device(s)
+                · last sign-in {when(account.lastLoginAt)} · {deviceCount(account.activeSessions)}
               </span>
             </span>
             <select
@@ -244,12 +269,9 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
             <button
               type="button"
               className="button button-quiet"
-              onClick={() =>
-                void act(
-                  () => api.revokeReset(account.id),
-                  () => forgetResetOf(account.id),
-                )
-              }
+              disabled={!account.resetPending}
+              title={account.resetPending ? undefined : 'No pending reset link'}
+              onClick={() => void revokeReset(account)}
             >
               Revoke reset link
             </button>
@@ -293,7 +315,10 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
                 <button
                   type="button"
                   className="button button-quiet"
-                  onClick={() => setConfirming(account.id)}
+                  onClick={() => {
+                    setNotice(null);
+                    setConfirming(account.id);
+                  }}
                 >
                   Delete
                 </button>

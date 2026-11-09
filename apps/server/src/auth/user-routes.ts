@@ -41,7 +41,8 @@ export function registerUserRoutes(app: FastifyInstance, deps: UserRoutesDeps): 
   const notFound = (reply: FastifyReply) => reply.code(404).send(apiError('not_found'));
 
   app.get('/users', OWNER, (_request, reply) => {
-    return reply.send(users.list(sessions.liveCounts(new Date())));
+    const now = new Date();
+    return reply.send(users.list(sessions.liveCounts(now), tokens.pendingResetUsers(now)));
   });
 
   app.patch('/users/:id', OWNER, (request, reply) => {
