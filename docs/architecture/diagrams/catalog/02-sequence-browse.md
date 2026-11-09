@@ -21,8 +21,9 @@ sequenceDiagram
     Api->>Server: GET /api/libraries/:id/media
     Server-->>Api: Media[]
   end
-  Api-->>Page: Media[] (all libraries)
-  Page->>Cat: catalogItems(media), homeRows(items)
+  Api-->>Page: { libraries, media } (all libraries)
+  Page->>Cat: collapseCopies(media, progress, libraries) «#176»
+  Page->>Cat: catalogItems(titles.media), homeRows(items)
   Cat-->>Page: rows
   Page-->>Viewer: hero + rows, posters via GET /api/artwork/:file
   Viewer->>Page: activate a poster

@@ -1,7 +1,7 @@
 # Component diagram — catalog (apps/web)
 
 > **Feature**: UC3 / UC4 / UC22 / UC24 / UC26 ([spec](../../specs/catalog-grid.md), [continue-watching](../../specs/continue-watching.md))
-> **Related ADRs**: ADR-0001, ADR-0004, ADR-0020, ADR-0024
+> **Related ADRs**: ADR-0001, ADR-0004, ADR-0020, ADR-0024, ADR-0026
 
 ## Diagram
 
@@ -21,7 +21,7 @@ flowchart TB
     row --> card[catalog/PosterCard]
     grid --> card
     page --> state[catalog/view-state.ts<br/>reducer, pure]
-    page --> cat[catalog/catalog.ts<br/>rows, searchItems, pure]
+    page --> cat[catalog/catalog.ts<br/>rows, searchItems, collapseCopies «#176», pure]
     page --> api[api.ts<br/>fetch, only HTTP egress]
     app --> discover["discover/DiscoverPage «new #127»"]
     discover --> sheet["discover/TitleSheet «new #127»"]

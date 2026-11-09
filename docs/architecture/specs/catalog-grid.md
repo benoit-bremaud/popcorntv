@@ -48,7 +48,8 @@ Main scenario:
 
 1. The viewer opens the web player.
 2. The system lists the libraries (`GET /libraries`) and the items of every library
-   (`GET /libraries/:id/media`), merged into one catalog.
+   (`GET /libraries/:id/media`), merged into one catalog; a title found in several
+   libraries shows once ([duplicate-titles](duplicate-titles.md)).
 3. The system shows the **home view**: a hero banner (best-rated item with a backdrop),
    then *Continue watching* when non-empty ([continue-watching](continue-watching.md) R1),
    then the rows *Top rated*, *Films*, *Series*, *Documentaries*, *Others* (non-empty only),
