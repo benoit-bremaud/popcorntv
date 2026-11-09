@@ -4,6 +4,20 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-09 — #176 duplicate titles collapsed (PR #251 merged, `8459e28`)
+
+- QA FON-11: a film in two libraries showed two identical posters. ADR-0026, MCDA option
+  A (owner, 410/500 over label B 335 and server dedup C 310): pure `titleKey` /
+  `collapseCopies` in the web catalog, spec `duplicate-titles.md`.
+- Key: TMDB id in the library's movie / TV namespace + part, else kind + folded title +
+  year + part; series never collapsed. The card is the first copy in library order (stable
+  focus); the most recently saved copy drives progress, mark, Continue watching and the
+  dialog's first copy. `loadCatalog` returns `{ libraries, media }`; Copy select in
+  `DetailDialog` (path added when copies share a library, audio reset on switch).
+- Full local gate green (web coverage 98.9 %, e2e 2/2, gitleaks); adversarial round 1:
+  4 Must fixed, round 2 open. Codex out of credit. Pre-existing follow-ups noted: server
+  `identityKeys` lacks the movie / TV namespace; wishlist `mediaId` pick unordered.
+
 ## 2026-11-09 — #248 history-layer test flake (PR #249 merged, `35390bb`)
 
 - Cause: the `back()` helper waited a fixed 20 ms. jsdom fires `popstate` after two
