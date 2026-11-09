@@ -4,6 +4,17 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-09 — #248 history-layer test flake (PR #249 merged, `35390bb`)
+
+- Cause: the `back()` helper waited a fixed 20 ms. jsdom fires `popstate` after two
+  `setImmediate` tasks, and the test-setup `close` event follows in a timer, so a ≥ 20 ms
+  event-loop stall under coverage asserted too early. A 30 ms stall reproduced it.
+- `travel(move)` waits for `popstate`, then one timer, and returns whether it fired. The R4
+  test holds the hook's own `history.back()` with a spy, because that assertion exposed a
+  3/20 race. Test-only, the hook is unchanged.
+- Full local CI green (typecheck, lint, format, coverage, build, e2e, gitleaks, Hadolint,
+  Trivy config), 20/20 green under CPU load, adversarial review round 2 open.
+
 ## 2026-11-09 — #175 Administration panel polish (PR #246 merged, `72dd19e`)
 
 - UI-06 / USA-06: admin dates read ISO 8601 in the viewer's zone with its offset
