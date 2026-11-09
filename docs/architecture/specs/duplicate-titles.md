@@ -25,7 +25,7 @@ for it; the detail dialog names the libraries and lets the viewer pick which fil
   so the card keeps the keyboard focus across a progress reload. The **current copy** —
   the one the profile saved most recently, else the first — gives the card its progress,
   its watched mark and its Continue watching entry; the other copies' rows are ignored
-  for the card.
+  for the card. A watched mark counts as a save (it updates the row).
 - **R4** The detail dialog of a collapsed title shows "In: <library> · <library>" and a
   **Copy** select naming each copy by its library, followed by its path when another copy
   shares that library, by its path alone when the library is unknown.
@@ -48,3 +48,5 @@ for it; the detail dialog names the libraries and lets the viewer pick which fil
   still reaches both.
 - Progress stays per file (ADR-0007): resuming the Animation copy does not move the Films
   copy's position.
+- Unmarking the current copy deletes its row: an older finished copy then becomes current
+  and the card keeps its ✓ (consistent with R3).
