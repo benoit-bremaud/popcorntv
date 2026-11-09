@@ -7,7 +7,7 @@ export const DOCUMENTARY: Genre = { id: 99, name: 'Documentary' };
 /** Test metadata with neutral defaults. */
 export function metadata(overrides: Partial<MediaMetadata> = {}): MediaMetadata {
   return {
-    tmdbId: 1,
+    tmdbId: null,
     overview: 'A synopsis.',
     genres: [],
     releaseDate: null,

@@ -38,7 +38,10 @@ describe('loadCatalog', () => {
       if (url === '/api/libraries/lib%202/media') return respond([b]);
       return respond({ error: 'library_not_found' }, 404);
     });
-    await expect(loadCatalog(fetchFn)).resolves.toEqual([a, b]);
+    await expect(loadCatalog(fetchFn)).resolves.toEqual({
+      libraries: [{ id: 'lib-1' }, { id: 'lib 2' }],
+      media: [a, b],
+    });
   });
 
   it('throws an ApiRequestError on a non-2xx answer', async () => {

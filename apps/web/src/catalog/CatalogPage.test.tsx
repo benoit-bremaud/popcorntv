@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { Media, WatchProgress } from '@popcorntv/shared';
 import { ACTION, DOCUMENTARY, DRAMA, media, metadata } from '../test-fixtures.js';
+import type { Catalog } from '../api.js';
 import type { PlaybackApi } from '../playback/PlayerDialog.js';
 import { CatalogPage } from './CatalogPage.js';
 
@@ -39,8 +40,13 @@ const planet = media({
 
 const CATALOG: Media[] = [heat, alien, dark, pilot, planet];
 
+/** A loaded catalog of the given media, in one library. */
+function catalogOf(media: readonly Media[]): Catalog {
+  return { libraries: [], media };
+}
+
 function renderPage(
-  load: () => Promise<Media[]> = async () => CATALOG,
+  load: () => Promise<Catalog> = async () => catalogOf(CATALOG),
   progress: () => Promise<WatchProgress[]> = async () => [],
 ) {
   return {
@@ -58,7 +64,7 @@ describe('CatalogPage', () => {
     render(
       <CatalogPage
         profileId="default"
-        load={async () => CATALOG}
+        load={async () => catalogOf(CATALOG)}
         progress={async () => []}
         openMediaId="heat"
       />,
@@ -195,16 +201,16 @@ describe('CatalogPage', () => {
   });
 
   it('ignores a stale load that settles after a newer one', async () => {
-    let settleOld: (media: Media[]) => void = () => undefined;
+    let settleOld: (catalog: Catalog) => void = () => undefined;
     const oldLoad = () =>
-      new Promise<Media[]>((resolve) => {
+      new Promise<Catalog>((resolve) => {
         settleOld = resolve;
       });
     const { rerender } = render(<CatalogPage profileId="default" load={oldLoad} />);
 
-    rerender(<CatalogPage profileId="default" load={async () => CATALOG} />);
+    rerender(<CatalogPage profileId="default" load={async () => catalogOf(CATALOG)} />);
     expect(await screen.findByRole('heading', { name: 'Top rated' })).toBeInTheDocument();
-    settleOld([]);
+    settleOld(catalogOf([]));
 
     expect(await screen.findByRole('heading', { name: 'Top rated' })).toBeInTheDocument();
     expect(screen.queryByText(/Nothing to watch yet/)).not.toBeInTheDocument();
@@ -212,9 +218,9 @@ describe('CatalogPage', () => {
 
   it('shows an error with a working Retry', async () => {
     const load = vi
-      .fn<() => Promise<Media[]>>()
+      .fn<() => Promise<Catalog>>()
       .mockRejectedValueOnce(new Error('down'))
-      .mockResolvedValueOnce(CATALOG);
+      .mockResolvedValueOnce(catalogOf(CATALOG));
     const { user } = renderPage(load);
 
     expect(await screen.findByRole('alert')).toHaveTextContent('could not be loaded');
@@ -223,8 +229,26 @@ describe('CatalogPage', () => {
     expect(load).toHaveBeenCalledTimes(2);
   });
 
+  it('should show one card for a title found in two libraries and open it on both copies', async () => {
+    const copy = { ...heat, id: 'heat-copy', libraryId: 'lib-2' };
+    const { user } = renderPage(async () => ({
+      libraries: [
+        { id: 'lib-1', name: 'Films', rootPath: '/m/films', kind: 'films' },
+        { id: 'lib-2', name: 'Animation', rootPath: '/m/animation', kind: 'films' },
+      ],
+      media: [heat, copy],
+    }));
+    const row = await screen.findByRole('region', { name: 'Films' });
+
+    const cards = within(row).getAllByRole('button', { name: /^Heat/ });
+    expect(cards).toHaveLength(1);
+    await user.click(cards[0] as HTMLElement);
+
+    expect(await screen.findByText('Films · Animation')).toBeInTheDocument();
+  });
+
   it('shows the empty state when no library has items', async () => {
-    renderPage(async () => [pilot]);
+    renderPage(async () => catalogOf([pilot]));
 
     await waitFor(() =>
       expect(screen.getByRole('status')).toHaveTextContent('Nothing to watch yet.'),
@@ -232,7 +256,7 @@ describe('CatalogPage', () => {
   });
 
   it('offers a viewer nothing to add when the catalog is empty', async () => {
-    render(<CatalogPage profileId="default" load={async () => []} />);
+    render(<CatalogPage profileId="default" load={async () => catalogOf([])} />);
 
     await waitFor(() =>
       expect(screen.getByRole('status')).toHaveTextContent('Nothing to watch yet.'),
@@ -243,7 +267,13 @@ describe('CatalogPage', () => {
   it('offers an owner to add a library when the catalog is empty', async () => {
     const user = userEvent.setup();
     const onAddLibrary = vi.fn();
-    render(<CatalogPage profileId="default" load={async () => []} onAddLibrary={onAddLibrary} />);
+    render(
+      <CatalogPage
+        profileId="default"
+        load={async () => catalogOf([])}
+        onAddLibrary={onAddLibrary}
+      />,
+    );
 
     await user.click(await screen.findByRole('button', { name: 'Add a library' }));
 
@@ -332,7 +362,7 @@ describe('CatalogPage continue watching', () => {
     render(
       <CatalogPage
         profileId="default"
-        load={async () => CATALOG.map((item) => (item.id === 'alien' ? playable : item))}
+        load={async () => catalogOf(CATALOG.map((item) => (item.id === 'alien' ? playable : item)))}
         progress={progress}
         playback={api}
       />,
@@ -383,7 +413,9 @@ describe('CatalogPage continue watching', () => {
       )
       .mockResolvedValue([{ ...inProgress, positionSec: 900 }]);
     const user = userEvent.setup();
-    render(<CatalogPage profileId="default" load={async () => CATALOG} progress={progress} />);
+    render(
+      <CatalogPage profileId="default" load={async () => catalogOf(CATALOG)} progress={progress} />,
+    );
     const row = await screen.findByRole('region', { name: 'Continue watching' });
 
     for (let round = 0; round < 2; round += 1) {
@@ -496,7 +528,7 @@ describe('CatalogPage search (spec search)', () => {
   });
 
   it('should announce the empty catalog in the region kept from loading (#165)', async () => {
-    render(<CatalogPage profileId="default" load={async () => []} />);
+    render(<CatalogPage profileId="default" load={async () => catalogOf([])} />);
     const status = screen.getByRole('status');
 
     expect(status).toBeEmptyDOMElement();
@@ -506,7 +538,11 @@ describe('CatalogPage search (spec search)', () => {
 
   it('should announce the owner welcome in the same region, landmark kept (#165)', async () => {
     render(
-      <CatalogPage profileId="default" load={async () => []} onAddLibrary={() => undefined} />,
+      <CatalogPage
+        profileId="default"
+        load={async () => catalogOf([])}
+        onAddLibrary={() => undefined}
+      />,
     );
     const status = screen.getByRole('status');
 

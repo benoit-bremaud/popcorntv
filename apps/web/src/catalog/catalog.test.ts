@@ -6,6 +6,7 @@ import {
   byGenreRows,
   availableTypes,
   catalogItems,
+  collapseCopies,
   continueWatchingRow,
   isWatched,
   watchedIds,
@@ -16,6 +17,8 @@ import {
   nextEpisode,
   searchItems,
   seasonsOf,
+  shownIdOf,
+  titleKey,
   topRated,
   typeOf,
 } from './catalog.js';
@@ -359,4 +362,102 @@ describe('searchItems', () => {
     expect(searchItems([heat], '   ')).toEqual([]);
     expect(searchItems([heat], 'zzz')).toEqual([]);
   });
+});
+
+describe('titleKey', () => {
+  it('should key a film by its TMDB id and part when known', () => {
+    const item = media({ id: 'a', title: 'BBB', metadata: metadata({ tmdbId: 10378 }), part: 2 });
+
+    expect(titleKey(item)).toBe('tmdb|10378|2');
+  });
+
+  it('should fall back to the tmdb tag of the file name', () => {
+    expect(titleKey(media({ id: 'a', title: 'BBB', providerIds: { tmdb: '10378' } }))).toBe(
+      'tmdb|10378|',
+    );
+  });
+
+  it('should key an unmatched file by kind, folded title, year and part', () => {
+    const item = media({ id: 'a', title: 'Ame\u0301lie', year: 2001, kind: 'unknown' });
+
+    expect(titleKey(item)).toBe('unknown|am\u00e9lie|2001|');
+  });
+
+  it.each([series, episode])('should never key a series or an episode', (item) => {
+    expect(titleKey(item)).toBeNull();
+  });
+});
+
+describe('collapseCopies', () => {
+  const films = media({ id: 'films', title: 'BBB', metadata: metadata({ tmdbId: 7 }) });
+  const animation = media({
+    id: 'animation',
+    title: 'BBB',
+    libraryId: 'lib-2',
+    metadata: metadata({ tmdbId: 7 }),
+  });
+
+  function saved(mediaId: string): WatchProgress {
+    return {
+      mediaId,
+      positionSec: 60,
+      durationSec: 600,
+      finished: false,
+      updatedAt: '2026-11-09T10:00:00.000Z',
+    };
+  }
+
+  it('should show the first copy in library order when none was played', () => {
+    const { media: shown, copies } = collapseCopies([films, animation, heatFilm()], []);
+
+    expect(shown.map((item) => item.id)).toEqual(['films', 'heat']);
+    expect(copies.get('films')).toEqual([films, animation]);
+  });
+
+  it('should show the copy the profile saved most recently', () => {
+    const { media: shown, copies } = collapseCopies(
+      [films, animation],
+      [saved('animation'), saved('films')],
+    );
+
+    expect(shown).toEqual([animation]);
+    expect(copies.get('animation')).toEqual([films, animation]);
+  });
+
+  it('should keep a different part, a different year and every series apart', () => {
+    const part2 = { ...animation, id: 'part-2', part: 2 };
+    const remake = media({ id: 'remake', title: 'Heat', year: 2030 });
+    const darkCopy = { ...series, id: 's2', libraryId: 'lib-2' };
+
+    const { media: shown, copies } = collapseCopies(
+      [films, part2, heatFilm(), remake, series, darkCopy, episode],
+      [],
+    );
+
+    expect(shown).toHaveLength(7);
+    expect(copies.size).toBe(0);
+  });
+
+  it('should leave an empty catalog empty', () => {
+    expect(collapseCopies([], [])).toEqual({ media: [], copies: new Map() });
+  });
+
+  it('should map a hidden copy to its shown id, any other id to itself', () => {
+    const { copies } = collapseCopies([films, animation], []);
+
+    expect(shownIdOf('animation', copies)).toBe('films');
+    expect(shownIdOf('films', copies)).toBe('films');
+    expect(shownIdOf('other', copies)).toBe('other');
+  });
+
+  it('should mark the shown card watched when a hidden copy is', () => {
+    const { copies } = collapseCopies([films, animation], []);
+    const done = { ...saved('animation'), finished: true };
+
+    expect(watchedIds([films, animation], [done], copies)).toEqual(new Set(['films']));
+  });
+
+  function heatFilm() {
+    return media({ id: 'heat', title: 'Heat', year: 1995, metadata: null });
+  }
 });

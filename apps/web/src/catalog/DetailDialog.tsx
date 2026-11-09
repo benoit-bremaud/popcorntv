@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { audioTracks, decidePlayback, matchAudioTrack } from '@popcorntv/shared';
-import type { AudioTrack, CanPlay, Media, WatchProgress } from '@popcorntv/shared';
+import type { AudioTrack, CanPlay, Library, Media, WatchProgress } from '@popcorntv/shared';
 import { artworkUrl, loadProgress, setWatched } from '../api.js';
 import { browserCanPlay } from '../playback/can-play.js';
 import { PlayerDialog } from '../playback/PlayerDialog.js';
@@ -13,6 +13,12 @@ import { useHistoryLayer } from '../history-layer.js';
 type Props = {
   readonly item: Media;
   readonly seasons: readonly Season[];
+  /** Every file holding this title, in library order (spec duplicate-titles R4); `[item]` alone otherwise. */
+  readonly copies?: readonly Media[];
+  /** The copy shown first; defaults to `item` (R5). */
+  readonly initialCopyId?: string;
+  /** Names the copies by their library (R4). */
+  readonly libraries?: readonly Library[];
   /** The active profile: progress is read and saved for it (UC8). */
   readonly profileId: string;
   /** Called with the player's last save, so the caller reloads once it landed (#140). */
@@ -45,10 +51,20 @@ function episodeName(episode: Media): string {
   return episode.episode === null ? episode.title : `${episode.title}, episode ${episode.episode}`;
 }
 
+/** A copy's label: its library's name, else its path (spec duplicate-titles R4). */
+function copyLabel(copy: Media, libraries: readonly Library[]): string {
+  return (
+    libraries.find((library) => library.id === copy.libraryId)?.name ?? copy.relativePath ?? copy.id
+  );
+}
+
 /** UC4: a modal `<dialog>` over the catalog; Escape, the close button or Back close it. */
 export function DetailDialog({
-  item,
+  item: shownItem,
   seasons,
+  copies = [shownItem],
+  initialCopyId = shownItem.id,
+  libraries = [],
   profileId,
   onClose,
   canPlay = browserCanPlay,
@@ -57,6 +73,9 @@ export function DetailDialog({
   markWatched = setWatched,
 }: Props): React.JSX.Element {
   const ref = useRef<HTMLDialogElement>(null);
+  // Spec duplicate-titles: Play, Resume and the watched mark act on the chosen copy (spec duplicate-titles R5).
+  const [copyId, setCopyId] = useState(initialCopyId);
+  const item = copies.find((copy) => copy.id === copyId) ?? shownItem;
   // Back closes the layer; a close by button or Escape leaves its entry (ADR-0024).
   useHistoryLayer(ref);
   const [playing, setPlaying] = useState<Playing | null>(null);
@@ -123,7 +142,7 @@ export function DetailDialog({
 
   const metadata = item.metadata;
   const backdrop = metadata?.backdropPath ?? null;
-  const titleId = `detail-${item.id}`;
+  const titleId = `detail-${shownItem.id}`;
 
   return (
     <dialog
@@ -154,6 +173,28 @@ export function DetailDialog({
             {item.title}
           </h2>
           <p className="detail__facts">{facts(item).join(' · ')}</p>
+          {copies.length > 1 && (
+            <>
+              <p className="detail__libraries">
+                <span className="muted">In: </span>
+                {copies.map((copy) => copyLabel(copy, libraries)).join(' · ')}
+              </p>
+              <label className="detail__audio">
+                <span className="muted">Copy </span>
+                <select
+                  className="chip"
+                  value={item.id}
+                  onChange={(event) => setCopyId(event.currentTarget.value)}
+                >
+                  {copies.map((copy) => (
+                    <option key={copy.id} value={copy.id}>
+                      {copyLabel(copy, libraries)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </>
+          )}
           {saved !== null && (playable(item) || episodes.length > 0) && (
             <div className="detail__actions">
               {playable(item) && resume(item) > 0 && (

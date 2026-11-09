@@ -28,6 +28,59 @@ export interface Row {
 const TOP_RATED_LIMIT = 20;
 const CONTINUE_WATCHING_LIMIT = 20;
 
+/**
+ * Which title a file holds, for collapsing copies (spec duplicate-titles R1): its TMDB id
+ * and part when known, else its kind, folded title, year and part; null for a series or an
+ * episode, never collapsed (R2). Pure.
+ */
+export function titleKey(item: Media): string | null {
+  if (item.kind === 'series' || item.kind === 'episode') return null;
+  const part = item.part ?? '';
+  const tmdb = item.metadata?.tmdbId ?? item.providerIds.tmdb ?? null;
+  if (tmdb !== null) return `tmdb|${tmdb}|${part}`;
+  return `${item.kind}|${item.title.normalize('NFC').toLowerCase()}|${item.year ?? ''}|${part}`;
+}
+
+/** The catalog with one file per title, and the copies of each collapsed title. */
+export interface Collapsed {
+  /** The media without the hidden copies; episodes and series untouched. */
+  readonly media: readonly Media[];
+  /** Every copy of a title held by two files or more, in library order, by shown id. */
+  readonly copies: ReadonlyMap<string, readonly Media[]>;
+}
+
+/**
+ * Spec duplicate-titles R1–R3: the files holding the same title collapse into the one
+ * most recently saved by the profile, else the first in library order. Pure.
+ */
+export function collapseCopies(
+  media: readonly Media[],
+  progress: readonly WatchProgress[],
+): Collapsed {
+  const groups = new Map<string, Media[]>();
+  for (const item of media) {
+    const key = titleKey(item);
+    if (key !== null) groups.set(key, [...(groups.get(key) ?? []), item]);
+  }
+  const recency = new Map(progress.map((row, index) => [row.mediaId, index]));
+  const rank = (item: Media): number => recency.get(item.id) ?? Number.POSITIVE_INFINITY;
+  const hidden = new Set<string>();
+  const copies = new Map<string, readonly Media[]>();
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    const shown = group.reduce((best, item) => (rank(item) < rank(best) ? item : best));
+    copies.set(shown.id, group);
+    for (const item of group) if (item !== shown) hidden.add(item.id);
+  }
+  return { media: media.filter((item) => !hidden.has(item.id)), copies };
+}
+
+/** The shown id of the title a media id belongs to: itself unless it is a hidden copy. */
+export function shownIdOf(id: string, copies: ReadonlyMap<string, readonly Media[]>): string {
+  for (const [shown, group] of copies) if (group.some((item) => item.id === id)) return shown;
+  return id;
+}
+
 /** Top-level items only: episodes live inside their series (spec §2). */
 export function catalogItems(media: readonly Media[]): Media[] {
   return media.filter((item) => item.kind !== 'episode');
@@ -247,16 +300,20 @@ export function isWatched(
   return episodes.length > 0 && episodes.every((episode) => saved.get(episode.id)?.finished);
 }
 
-/** Ids of the top-level titles a profile has watched, for the poster marks (R4). */
+/**
+ * Ids of the top-level titles a profile has watched, for the poster marks (R4); a collapsed
+ * title counts as watched when any of its copies is (spec duplicate-titles R3).
+ */
 export function watchedIds(
   media: readonly Media[],
   progress: readonly WatchProgress[],
+  copies: ReadonlyMap<string, readonly Media[]> = new Map(),
 ): ReadonlySet<string> {
   const saved = new Map(progress.map((row) => [row.mediaId, row]));
   return new Set(
     catalogItems(media)
       .filter((item) => isWatched(item, media, saved))
-      .map((item) => item.id),
+      .map((item) => shownIdOf(item.id, copies)),
   );
 }
 

@@ -81,15 +81,21 @@ async function getList<T>(fetchFn: Fetch, path: string): Promise<T[]> {
   return body as T[];
 }
 
+/** The libraries and the media of all of them, in library order. */
+export interface Catalog {
+  readonly libraries: readonly Library[];
+  readonly media: readonly Media[];
+}
+
 /** Every media of every library (sequence diagram 02); `fetchFn` is injected for tests. */
-export async function loadCatalog(fetchFn: Fetch = fetch): Promise<Media[]> {
+export async function loadCatalog(fetchFn: Fetch = fetch): Promise<Catalog> {
   const libraries = await getList<Library>(fetchFn, '/libraries');
   const perLibrary = await Promise.all(
     libraries.map((library) =>
       getList<Media>(fetchFn, `/libraries/${encodeURIComponent(library.id)}/media`),
     ),
   );
-  return perLibrary.flat();
+  return { libraries, media: perLibrary.flat() };
 }
 
 /** URL of a cached artwork file served by `GET /artwork/:file`. */

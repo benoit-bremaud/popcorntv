@@ -39,7 +39,7 @@ const MEDIA = TITLES.map(({ id, title, genre, voteAverage }, index) => ({
   edition: null,
   part: null,
   streams: [],
-  metadata: { ...META, genres: [{ id: index + 1, name: genre }], voteAverage },
+  metadata: { ...META, tmdbId: index + 1, genres: [{ id: index + 1, name: genre }], voteAverage },
 })) satisfies Media[];
 
 const PROFILE = { id: 'default', name: 'Me', avatar: 'red' } satisfies Profile;

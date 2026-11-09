@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import type { Media, WatchProgress } from '@popcorntv/shared';
+import type { Catalog } from '../api.js';
 import { LiveStatus, useSettledMessage } from '../a11y/LiveStatus.js';
 import { artworkUrl, loadCatalog, loadProgress } from '../api.js';
 import type { PlaybackApi } from '../playback/PlayerDialog.js';
@@ -7,12 +8,14 @@ import {
   availableGenres,
   availableTypes,
   catalogItems,
+  collapseCopies,
   continueWatchingRow,
   watchedIds,
   heroItem,
   ofType,
   searchItems,
   seasonsOf,
+  shownIdOf,
   topRated,
 } from './catalog.js';
 import { CatalogBody } from './CatalogBody.js';
@@ -25,13 +28,13 @@ import { HOME, viewReducer } from './view-state.js';
 import { WatchedContext } from './watched-context.js';
 import type { CatalogView } from './view-state.js';
 
-type Load = { kind: 'loading' } | { kind: 'failed' } | { kind: 'ready'; media: Media[] };
+type Load = { kind: 'loading' } | { kind: 'failed' } | ({ kind: 'ready' } & Catalog);
 
 type Props = {
   /** The active profile (UC8); the detail dialog reads and saves its progress. */
   readonly profileId: string;
   /** Injected in tests; defaults to the real API. */
-  readonly load?: () => Promise<Media[]>;
+  readonly load?: () => Promise<Catalog>;
   /** `GET /profiles/:profileId/progress`; injected in tests (UC22). */
   readonly progress?: typeof loadProgress;
   /** Owners only: the empty catalog offers to add a library (spec library-management R7). */
@@ -56,7 +59,8 @@ export function CatalogPage({
   const [query, setQuery] = useState('');
   // `seq` numbers each opening: the native `close` event is queued as a task, so a late one
   // from a previous opening must not close a title reopened in the meantime.
-  const [open, setOpen] = useState<{ item: Media; seq: number } | null>(null);
+  // `copyId` is the copy of a collapsed title the dialog starts on (spec duplicate-titles R5).
+  const [open, setOpen] = useState<{ item: Media; copyId: string; seq: number } | null>(null);
   const openings = useRef(0);
   const trigger = useRef<HTMLElement | null>(null);
 
@@ -81,7 +85,7 @@ export function CatalogPage({
     setCatalog({ kind: 'loading' });
     let next: Load;
     try {
-      next = { kind: 'ready', media: await load() };
+      next = { kind: 'ready', ...(await load()) };
     } catch {
       next = { kind: 'failed' };
     }
@@ -95,7 +99,7 @@ export function CatalogPage({
   const onOpen = useCallback<OpenHandler>((item, element) => {
     trigger.current = element;
     openings.current += 1;
-    setOpen({ item, seq: openings.current });
+    setOpen({ item, copyId: item.id, seq: openings.current });
   }, []);
 
   // UC26: the title Discover asked for opens once, as soon as the catalog has it.
@@ -103,11 +107,13 @@ export function CatalogPage({
   useEffect(() => {
     if (catalog.kind !== 'ready' || openMediaId === null || opened.current === openMediaId) return;
     opened.current = openMediaId;
-    const item = catalog.media.find((candidate) => candidate.id === openMediaId);
+    const { copies } = collapseCopies(catalog.media, saved);
+    const shownId = shownIdOf(openMediaId, copies);
+    const item = catalog.media.find((candidate) => candidate.id === shownId);
     if (item === undefined) return;
     openings.current += 1;
-    setOpen({ item, seq: openings.current });
-  }, [catalog, openMediaId]);
+    setOpen({ item, copyId: openMediaId, seq: openings.current });
+  }, [catalog, openMediaId, saved]);
 
   const onClose = useCallback(
     (seq: number, lastSave: Promise<void>) => {
@@ -140,7 +146,9 @@ export function CatalogPage({
     );
   }
 
-  const items = catalogItems(catalog.media);
+  // Spec duplicate-titles: one card per title; the hidden copies stay reachable from the dialog.
+  const { media: shown, copies } = collapseCopies(catalog.media, saved);
+  const items = catalogItems(shown);
   if (items.length === 0) {
     if (!onAddLibrary) {
       return (
@@ -174,7 +182,7 @@ export function CatalogPage({
   const heroBackdrop = hero?.metadata?.backdropPath ?? null;
 
   return (
-    <WatchedContext value={watchedIds(catalog.media, saved)}>
+    <WatchedContext value={watchedIds(catalog.media, saved, copies)}>
       {hero !== null && heroBackdrop !== null && (
         <section className="hero">
           <img className="hero__image" src={artworkUrl(heroBackdrop)} alt="" />
@@ -210,7 +218,7 @@ export function CatalogPage({
               items={items}
               state={state}
               onOpen={onOpen}
-              continueWatching={continueWatchingRow(catalog.media, saved)}
+              continueWatching={continueWatchingRow(shown, saved)}
             />
           </div>
         </>
@@ -219,6 +227,9 @@ export function CatalogPage({
         <DetailDialog
           key={open.seq}
           item={open.item}
+          copies={copies.get(shownIdOf(open.item.id, copies)) ?? [open.item]}
+          initialCopyId={open.copyId}
+          libraries={catalog.libraries}
           seasons={seasonsOf(open.item, catalog.media)}
           profileId={profileId}
           progress={progress}

@@ -143,6 +143,10 @@ a button / Escape close goes back, a hand-off reuses the entry, a reload leaves 
 `index.html` fallback in Caddy, `handle_errors 404` → static `404.html` (second Vite entry)
 with the `(popcorntv_headers)` snippet, raw-path `/api` misses answer JSON,
 `make check-not-found` replays the matrix).
+#176 duplicate titles (spec `docs/architecture/specs/duplicate-titles.md`, ADR-0026: pure
+`titleKey` / `collapseCopies` in the web catalog, one card per title across libraries, the
+most recently saved copy shown, `loadCatalog` returns `{ libraries, media }`, a Copy select
+in `DetailDialog`; series never collapsed).
 
 Server layout (flat, component diagram 03): `src/library/` holds the pure `name-parser`
 and `path-guard`, the `ffprobe` runner (only process egress), the `folder-lister` (one-level `readdir` of `MEDIA_ROOT`), the `scanner`, the pure `identity` (carry-over keys, ADR-0018), the `scheduler` (interval rescans, ADR-0016), the per-library

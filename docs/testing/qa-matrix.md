@@ -246,3 +246,15 @@ Replay with a screen reader (Orca on Firefox, then NVDA or VoiceOver when availa
    revoked." and disables it again; a role change also disables it.
 5. Two owner tabs: revoke in one, then in the other (stale list) → "No pending reset link
    for <name> any more: the list was refreshed." and the button turns disabled.
+
+## Duplicate title checks (#176)
+
+1. Put the same film in two libraries (e.g. Films and Animation), scan both: every row,
+   the type grid and search show one card; its dialog reads "In: Films · Animation" and
+   offers a Copy select.
+2. Pick Animation, play a minute, close: the card's progress follows the Animation copy and
+   Continue watching shows the title once; reopening the dialog starts on that copy.
+3. Mark the Films copy watched from its Copy choice: the single card shows ✓.
+4. Two parts of one film (`Part 1`, `Part 2`) and the same title with two different years
+   stay two cards; a series present in two libraries still shows twice (spec R2).
+5. Discover › a title held twice › "Play in my library": the dialog opens on that copy.

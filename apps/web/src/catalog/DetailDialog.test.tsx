@@ -633,3 +633,68 @@ describe('DetailDialog audio track (spec audio-track)', () => {
     });
   });
 });
+
+describe('DetailDialog copies', () => {
+  const animation = { ...heat, id: 'heat-2', libraryId: 'lib-2', relativePath: 'Heat (1995).mp4' };
+  const libraries = [
+    { id: 'lib-1', name: 'Films', rootPath: '/media/films', kind: 'films' as const },
+    { id: 'lib-2', name: 'Animation', rootPath: '/media/animation', kind: 'films' as const },
+  ];
+
+  function renderCopies(initialCopyId?: string, known = libraries) {
+    const api = fakeApi();
+    const progress = vi.fn(async (): Promise<WatchProgress[]> => [
+      { mediaId: 'heat-2', positionSec: 600, durationSec: 6000, finished: false, updatedAt: 'x' },
+    ]);
+    render(
+      <DetailDialog
+        profileId="kid"
+        item={heat}
+        seasons={[]}
+        copies={[heat, animation]}
+        initialCopyId={initialCopyId}
+        libraries={known}
+        onClose={vi.fn()}
+        canPlay={always}
+        api={api}
+        progress={progress}
+      />,
+    );
+    return { user: userEvent.setup(), api };
+  }
+
+  it('should list the libraries and play the chosen copy from its own resume point', async () => {
+    const { user, api } = renderCopies();
+    const dialog = screen.getByRole('dialog', { name: 'Heat' });
+    expect(within(dialog).getByText('Films · Animation')).toBeInTheDocument();
+
+    await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Copy' }), 'Animation');
+    await user.click(await within(dialog).findByRole('button', { name: /Resume from 10:00/ }));
+
+    await waitFor(() =>
+      expect(api.start).toHaveBeenCalledWith(
+        expect.objectContaining({ mediaId: 'heat-2', startSec: 600 }),
+      ),
+    );
+  });
+
+  it('should start on the copy it was opened for', async () => {
+    renderCopies('heat-2');
+
+    expect(screen.getByRole('combobox', { name: 'Copy' })).toHaveValue('heat-2');
+    expect(await screen.findByRole('button', { name: /Resume from/ })).toBeInTheDocument();
+  });
+
+  it('should name a copy by its path when its library is unknown', () => {
+    renderCopies(undefined, []);
+
+    expect(screen.getByText('Heat.mp4 · Heat (1995).mp4')).toBeInTheDocument();
+  });
+
+  it('should show no copy picker for a single file', async () => {
+    const { user } = renderDetail(heat);
+    await user.click(await screen.findByRole('button', { name: /Play/ }));
+
+    expect(screen.queryByRole('combobox', { name: 'Copy' })).not.toBeInTheDocument();
+  });
+});
