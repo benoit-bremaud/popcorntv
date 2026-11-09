@@ -182,22 +182,31 @@ const depth = (): number => layerDepth(history.state);
  * two queued tasks, and the `close` events it causes follow in a timer (test-setup). A fixed
  * delay raced them under load.
  */
-async function travel(move: () => void): Promise<void> {
+async function travel(move: () => void, bound = 500): Promise<boolean> {
+  let fired = false;
   await act(async () => {
     // A move past the first entry fires nothing: give up after a bound far above any stall.
-    const landed = new Promise<void>((resolve) => {
-      window.addEventListener('popstate', () => resolve(), { once: true });
-      setTimeout(resolve, 500);
+    const stop = new AbortController();
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, bound);
+      const onPopState = (): void => {
+        fired = true;
+        clearTimeout(timer);
+        resolve();
+      };
+      window.addEventListener('popstate', onPopState, { signal: stop.signal });
+      move();
     });
-    move();
-    await landed;
+    stop.abort();
     // Queued after the `close` events the hook's listener just scheduled, so it fires last.
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
+  return fired;
 }
 
+/** A Back that must land: a missing `popstate` fails the test instead of passing silently. */
 async function back(): Promise<void> {
-  await travel(() => history.back());
+  expect(await travel(() => history.back())).toBe(true);
 }
 
 describe('useHistoryLayer', () => {
@@ -236,7 +245,8 @@ describe('useHistoryLayer', () => {
     render(<Stack />);
     act(() => screen.getByText('Close detail').click());
     await waitFor(() => expect(depth()).toBe(0));
-    await back();
+    // Back from the first entry moves nowhere in jsdom.
+    expect(await travel(() => history.back(), 50)).toBe(false);
     expect(screen.queryByRole('dialog', { hidden: true })).toBeNull();
     expect(depth()).toBe(0);
   });
@@ -266,7 +276,7 @@ describe('useHistoryLayer', () => {
     const log: string[] = [];
     render(<Stack log={log} />);
     act(() => screen.getByText('Play').click());
-    await travel(() => history.go(-2));
+    expect(await travel(() => history.go(-2))).toBe(true);
     expect(screen.queryByRole('dialog', { hidden: true })).toBeNull();
     expect(log).toEqual(['player', 'detail']);
   });
@@ -281,16 +291,16 @@ describe('useHistoryLayer', () => {
 
   it('a layer opened before the closed one has gone back is not closed by that Back', async () => {
     render(<Stack />);
-    // Reopened once the close fired, before its Back has landed.
+    // The close's Back is held, so the layer is reopened while that Back is on its way.
+    const goBack = history.back.bind(history);
+    const held = vi.spyOn(history, 'back').mockImplementation(() => undefined);
     act(() => screen.getByText('Close detail').click());
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    });
+    await waitFor(() => expect(held).toHaveBeenCalledTimes(1));
+    held.mockRestore();
     expect(screen.queryByRole('dialog', { hidden: true })).toBeNull();
     act(() => screen.getByText('Open').click());
     expect(depth()).toBe(1);
-    // The closed layer's own Back lands now.
-    await travel(() => undefined);
+    expect(await travel(goBack)).toBe(true);
     expect(screen.getByRole('dialog', { name: 'detail', hidden: true })).toBeInTheDocument();
     expect(depth()).toBe(1);
     await back();
@@ -326,7 +336,7 @@ describe('useHistoryLayer', () => {
   it('Forward onto a closed layer entry goes straight back to the catalog', async () => {
     render(<Stack />);
     await back();
-    await travel(() => history.forward());
+    expect(await travel(() => history.forward())).toBe(true);
     // The hook leaves the stale entry it landed on.
     await waitFor(() => expect(depth()).toBe(0));
     expect(screen.queryByRole('dialog', { hidden: true })).toBeNull();
