@@ -229,22 +229,57 @@ describe('CatalogPage', () => {
     expect(load).toHaveBeenCalledTimes(2);
   });
 
-  it('should show one card for a title found in two libraries and open it on both copies', async () => {
+  describe('duplicate titles (spec duplicate-titles)', () => {
     const copy = { ...heat, id: 'heat-copy', libraryId: 'lib-2' };
-    const { user } = renderPage(async () => ({
+    const twoLibraries = async (): Promise<Catalog> => ({
       libraries: [
         { id: 'lib-1', name: 'Films', rootPath: '/m/films', kind: 'films' },
         { id: 'lib-2', name: 'Animation', rootPath: '/m/animation', kind: 'films' },
       ],
       media: [heat, copy],
-    }));
-    const row = await screen.findByRole('region', { name: 'Films' });
+    });
+    const copyInProgress: WatchProgress = {
+      mediaId: 'heat-copy',
+      positionSec: 3000,
+      durationSec: 6000,
+      finished: false,
+      updatedAt: '2026-11-09T10:00:00.000Z',
+    };
 
-    const cards = within(row).getAllByRole('button', { name: /^Heat/ });
-    expect(cards).toHaveLength(1);
-    await user.click(cards[0] as HTMLElement);
+    it('should show one card that names both libraries', async () => {
+      const { user } = renderPage(twoLibraries);
+      const row = await screen.findByRole('region', { name: 'Films' });
 
-    expect(await screen.findByText('Films · Animation')).toBeInTheDocument();
+      const cards = within(row).getAllByRole('button', { name: /^Heat/ });
+      expect(cards).toHaveLength(1);
+      await user.click(cards[0] as HTMLElement);
+
+      expect(await screen.findByText('Films · Animation')).toBeInTheDocument();
+    });
+
+    it('should list the title once in Continue watching and open it on the saved copy', async () => {
+      const { user } = renderPage(twoLibraries, async () => [copyInProgress]);
+      const row = await screen.findByRole('region', { name: 'Continue watching' });
+
+      await user.click(within(row).getByRole('button', { name: 'Heat (1995), 50% watched' }));
+
+      expect(within(row).getAllByRole('button')).toHaveLength(1);
+      expect(await screen.findByRole('combobox', { name: 'Copy' })).toHaveValue('heat-copy');
+    });
+
+    it("should open the title's card for a hidden copy asked by Discover", async () => {
+      render(
+        <CatalogPage
+          profileId="default"
+          load={twoLibraries}
+          progress={async () => []}
+          openMediaId="heat-copy"
+        />,
+      );
+
+      const dialog = await screen.findByRole('dialog', { name: 'Heat' });
+      expect(within(dialog).getByRole('combobox', { name: 'Copy' })).toHaveValue('heat');
+    });
   });
 
   it('shows the empty state when no library has items', async () => {

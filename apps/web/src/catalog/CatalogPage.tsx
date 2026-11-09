@@ -15,7 +15,6 @@ import {
   ofType,
   searchItems,
   seasonsOf,
-  shownIdOf,
   topRated,
 } from './catalog.js';
 import { CatalogBody } from './CatalogBody.js';
@@ -59,8 +58,7 @@ export function CatalogPage({
   const [query, setQuery] = useState('');
   // `seq` numbers each opening: the native `close` event is queued as a task, so a late one
   // from a previous opening must not close a title reopened in the meantime.
-  // `copyId` is the copy of a collapsed title the dialog starts on (spec duplicate-titles R5).
-  const [open, setOpen] = useState<{ item: Media; copyId: string; seq: number } | null>(null);
+  const [open, setOpen] = useState<{ item: Media; seq: number } | null>(null);
   const openings = useRef(0);
   const trigger = useRef<HTMLElement | null>(null);
 
@@ -99,7 +97,7 @@ export function CatalogPage({
   const onOpen = useCallback<OpenHandler>((item, element) => {
     trigger.current = element;
     openings.current += 1;
-    setOpen({ item, copyId: item.id, seq: openings.current });
+    setOpen({ item, seq: openings.current });
   }, []);
 
   // UC26: the title Discover asked for opens once, as soon as the catalog has it.
@@ -107,13 +105,14 @@ export function CatalogPage({
   useEffect(() => {
     if (catalog.kind !== 'ready' || openMediaId === null || opened.current === openMediaId) return;
     opened.current = openMediaId;
-    const { copies } = collapseCopies(catalog.media, saved);
-    const shownId = shownIdOf(openMediaId, copies);
-    const item = catalog.media.find((candidate) => candidate.id === shownId);
+    // A hidden copy opens its title's card (spec duplicate-titles R5).
+    const { copies } = collapseCopies(catalog.media, [], catalog.libraries);
+    const group = [...copies.values()].find((list) => list.some((copy) => copy.id === openMediaId));
+    const item = group?.[0] ?? catalog.media.find((candidate) => candidate.id === openMediaId);
     if (item === undefined) return;
     openings.current += 1;
-    setOpen({ item, copyId: openMediaId, seq: openings.current });
-  }, [catalog, openMediaId, saved]);
+    setOpen({ item, seq: openings.current });
+  }, [catalog, openMediaId]);
 
   const onClose = useCallback(
     (seq: number, lastSave: Promise<void>) => {
@@ -147,8 +146,8 @@ export function CatalogPage({
   }
 
   // Spec duplicate-titles: one card per title; the hidden copies stay reachable from the dialog.
-  const { media: shown, copies } = collapseCopies(catalog.media, saved);
-  const items = catalogItems(shown);
+  const titles = collapseCopies(catalog.media, saved, catalog.libraries);
+  const items = catalogItems(titles.media);
   if (items.length === 0) {
     if (!onAddLibrary) {
       return (
@@ -182,7 +181,7 @@ export function CatalogPage({
   const heroBackdrop = hero?.metadata?.backdropPath ?? null;
 
   return (
-    <WatchedContext value={watchedIds(catalog.media, saved, copies)}>
+    <WatchedContext value={watchedIds(titles.media, titles.progress)}>
       {hero !== null && heroBackdrop !== null && (
         <section className="hero">
           <img className="hero__image" src={artworkUrl(heroBackdrop)} alt="" />
@@ -218,7 +217,7 @@ export function CatalogPage({
               items={items}
               state={state}
               onOpen={onOpen}
-              continueWatching={continueWatchingRow(shown, saved)}
+              continueWatching={continueWatchingRow(titles.media, titles.progress)}
             />
           </div>
         </>
@@ -227,8 +226,8 @@ export function CatalogPage({
         <DetailDialog
           key={open.seq}
           item={open.item}
-          copies={copies.get(shownIdOf(open.item.id, copies)) ?? [open.item]}
-          initialCopyId={open.copyId}
+          copies={titles.copies.get(open.item.id) ?? [open.item]}
+          initialCopyId={titles.current.get(open.item.id)?.id}
           libraries={catalog.libraries}
           seasons={seasonsOf(open.item, catalog.media)}
           profileId={profileId}

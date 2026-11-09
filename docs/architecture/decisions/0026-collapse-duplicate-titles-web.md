@@ -24,7 +24,8 @@ deduplicate on the server so the routes answer one copy.
 | Regression risk                        |     20 | 3 — progress and mark must follow the copy | 5                                       | 2 — library management (#123) relies on per-library lists |
 | **Total**                              |    100 | **410**                                    | **335**                                 | **310**                                    |
 
-Sensitivity: B overtakes A only with simplicity at 55 or more.
+Sensitivity: B overtakes A when simplicity weighs about 46 or more with the other weights
+scaled down proportionally, 40 when the extra weight comes from experience or consistency.
 
 ## Decision
 
@@ -36,5 +37,6 @@ on the parsed title, which the `Media` contract does not carry.
 ## Consequences
 
 - Series are not collapsed (spec R2).
-- Two keys exist for "same title" (server carry-over, web collapse); they agree on the TMDB
-  id and differ only for unmatched files.
+- Two keys exist for "same title" (server carry-over, web collapse). The server's
+  `identityKeys` keys every file by parsed title and year and adds the TMDB id; the web key
+  uses the TMDB id alone once known, in the library's movie / TV namespace.

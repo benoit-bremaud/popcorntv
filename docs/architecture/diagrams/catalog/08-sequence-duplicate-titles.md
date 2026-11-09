@@ -18,18 +18,20 @@ sequenceDiagram
   Viewer->>Page: open the catalog
   Page->>Api: loadCatalog()
   Api-->>Page: { libraries, media }
-  Page->>Cat: collapseCopies(media, progress)
-  Cat-->>Page: { media without hidden copies, copies by shown id }
-  Page-->>Viewer: one card per title (watched if any copy is)
+  Page->>Cat: collapseCopies(media, progress, libraries)
+  Cat-->>Page: { media: first copy per title, copies, current, progress }
+  Page-->>Viewer: one card per title, progress and mark of its current copy
   Viewer->>Page: open the card
-  Page->>Dialog: item, copies, initialCopyId, libraries
+  Page->>Dialog: item, copies, initialCopyId = current copy, libraries
   Dialog-->>Viewer: "In: Films · Animation", Copy select
   opt the viewer picks another copy
     Viewer->>Dialog: Copy = Animation
-    Dialog-->>Viewer: Play / Resume of that file
+    Dialog-->>Viewer: Play / Resume of that file, audio back to its first track
   end
 ```
 
 ## Notes
 
-- R3: the shown copy is the one saved most recently, else the first in library order.
+- R3: the card is always the first copy in library order, so it keeps its focus across a
+  progress reload; the current copy (saved most recently, else the first) drives its
+  progress, watched mark and Continue watching entry.

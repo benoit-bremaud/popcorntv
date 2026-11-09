@@ -17,15 +17,17 @@ sequenceDiagram
   par
     Page->>Api: loadCatalog()
     Api->>Server: GET /api/libraries (+ media per library)
-    Server-->>Api: Media[]
-    Api-->>Page: Media[]
+    Server-->>Api: Library[], Media[]
+    Api-->>Page: { libraries, media }
   and
     Page->>Api: loadProgress(profileId)
     Api->>Server: GET /api/profiles/:profileId/progress
     Server-->>Api: WatchProgress[] (newest first)
     Api-->>Page: WatchProgress[] ([] on failure)
   end
-  Page->>Cat: continueWatchingRow(media, progress)
+  Page->>Cat: collapseCopies(media, progress, libraries) «#176»
+  Cat-->>Page: titles (one card per title, progress of its current copy)
+  Page->>Cat: continueWatchingRow(titles.media, titles.progress)
   Cat-->>Page: Row | null
   Page-->>Viewer: Continue watching row first, then home rows
   Viewer->>Page: activate a card
@@ -34,7 +36,7 @@ sequenceDiagram
   Note over Page: waits for the player's last PUT progress (R7, #140)
   Page->>Api: loadProgress(profileId)
   Api-->>Page: WatchProgress[]
-  Page->>Cat: continueWatchingRow(media, progress)
+  Page->>Cat: collapseCopies, then continueWatchingRow(titles.media, titles.progress)
   Page-->>Viewer: row reordered
 ```
 

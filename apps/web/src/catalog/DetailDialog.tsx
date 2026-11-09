@@ -51,11 +51,16 @@ function episodeName(episode: Media): string {
   return episode.episode === null ? episode.title : `${episode.title}, episode ${episode.episode}`;
 }
 
-/** A copy's label: its library's name, else its path (spec duplicate-titles R4). */
-function copyLabel(copy: Media, libraries: readonly Library[]): string {
-  return (
-    libraries.find((library) => library.id === copy.libraryId)?.name ?? copy.relativePath ?? copy.id
-  );
+/**
+ * A copy's label (spec duplicate-titles R4): its library's name, with its path when another
+ * copy shares that library; its path alone when the library is unknown.
+ */
+function copyLabel(copy: Media, copies: readonly Media[], libraries: readonly Library[]): string {
+  const path = copy.relativePath ?? copy.id;
+  const name = libraries.find((library) => library.id === copy.libraryId)?.name;
+  if (name === undefined) return path;
+  const shared = copies.filter((other) => other.libraryId === copy.libraryId).length > 1;
+  return shared ? `${name} — ${path}` : name;
 }
 
 /** UC4: a modal `<dialog>` over the catalog; Escape, the close button or Back close it. */
@@ -73,7 +78,7 @@ export function DetailDialog({
   markWatched = setWatched,
 }: Props): React.JSX.Element {
   const ref = useRef<HTMLDialogElement>(null);
-  // Spec duplicate-titles: Play, Resume and the watched mark act on the chosen copy (spec duplicate-titles R5).
+  // Play, Resume, the audio list and the watched mark act on the chosen copy (spec duplicate-titles R5).
   const [copyId, setCopyId] = useState(initialCopyId);
   const item = copies.find((copy) => copy.id === copyId) ?? shownItem;
   // Back closes the layer; a close by button or Escape leaves its entry (ADR-0024).
@@ -177,18 +182,22 @@ export function DetailDialog({
             <>
               <p className="detail__libraries">
                 <span className="muted">In: </span>
-                {copies.map((copy) => copyLabel(copy, libraries)).join(' · ')}
+                {copies.map((copy) => copyLabel(copy, copies, libraries)).join(' · ')}
               </p>
               <label className="detail__audio">
                 <span className="muted">Copy </span>
                 <select
                   className="chip"
                   value={item.id}
-                  onChange={(event) => setCopyId(event.currentTarget.value)}
+                  onChange={(event) => {
+                    // Another file lists its own tracks: back to its first one.
+                    setChosen(null);
+                    setCopyId(event.currentTarget.value);
+                  }}
                 >
                   {copies.map((copy) => (
                     <option key={copy.id} value={copy.id}>
-                      {copyLabel(copy, libraries)}
+                      {copyLabel(copy, copies, libraries)}
                     </option>
                   ))}
                 </select>

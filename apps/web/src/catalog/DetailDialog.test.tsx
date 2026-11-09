@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type {
   CanPlay,
+  Library,
   Media,
   PlaybackSessionBody,
   StreamInfo,
@@ -636,12 +637,12 @@ describe('DetailDialog audio track (spec audio-track)', () => {
 
 describe('DetailDialog copies', () => {
   const animation = { ...heat, id: 'heat-2', libraryId: 'lib-2', relativePath: 'Heat (1995).mp4' };
-  const libraries = [
-    { id: 'lib-1', name: 'Films', rootPath: '/media/films', kind: 'films' as const },
-    { id: 'lib-2', name: 'Animation', rootPath: '/media/animation', kind: 'films' as const },
+  const libraries: Library[] = [
+    { id: 'lib-1', name: 'Films', rootPath: '/media/films', kind: 'films' },
+    { id: 'lib-2', name: 'Animation', rootPath: '/media/animation', kind: 'films' },
   ];
 
-  function renderCopies(initialCopyId?: string, known = libraries) {
+  function renderCopies(initialCopyId?: string, known = libraries, copies = [heat, animation]) {
     const api = fakeApi();
     const progress = vi.fn(async (): Promise<WatchProgress[]> => [
       { mediaId: 'heat-2', positionSec: 600, durationSec: 6000, finished: false, updatedAt: 'x' },
@@ -651,7 +652,7 @@ describe('DetailDialog copies', () => {
         profileId="kid"
         item={heat}
         seasons={[]}
-        copies={[heat, animation]}
+        copies={copies}
         initialCopyId={initialCopyId}
         libraries={known}
         onClose={vi.fn()}
@@ -691,9 +692,33 @@ describe('DetailDialog copies', () => {
     expect(screen.getByText('Heat.mp4 · Heat (1995).mp4')).toBeInTheDocument();
   });
 
+  it('should go back to the first audio track when another copy is chosen', async () => {
+    const dual: StreamInfo[] = [
+      ...H264_AAC,
+      { type: 'audio', codec: 'aac', width: null, height: null, language: 'fra' },
+    ];
+    renderCopies(undefined, libraries, [
+      { ...heat, streams: dual },
+      { ...animation, streams: dual },
+    ]);
+    const user = userEvent.setup();
+    const audio = screen.getByRole('combobox', { name: 'Audio' });
+    await user.selectOptions(audio, '1');
+
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Copy' }), 'Animation');
+
+    expect(screen.getByRole('combobox', { name: 'Audio' })).toHaveValue('0');
+  });
+
+  it('should add the path to copies that share a library', () => {
+    renderCopies(undefined, libraries, [heat, { ...animation, libraryId: 'lib-1' }]);
+
+    expect(screen.getByText('Films — Heat.mp4 · Films — Heat (1995).mp4')).toBeInTheDocument();
+  });
+
   it('should show no copy picker for a single file', async () => {
-    const { user } = renderDetail(heat);
-    await user.click(await screen.findByRole('button', { name: /Play/ }));
+    renderDetail(heat);
+    await screen.findByRole('button', { name: /Play/ });
 
     expect(screen.queryByRole('combobox', { name: 'Copy' })).not.toBeInTheDocument();
   });

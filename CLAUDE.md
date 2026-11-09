@@ -145,7 +145,7 @@ with the `(popcorntv_headers)` snippet, raw-path `/api` misses answer JSON,
 `make check-not-found` replays the matrix).
 #176 duplicate titles (spec `docs/architecture/specs/duplicate-titles.md`, ADR-0026: pure
 `titleKey` / `collapseCopies` in the web catalog, one card per title across libraries, the
-most recently saved copy shown, `loadCatalog` returns `{ libraries, media }`, a Copy select
+first copy as a stable card, the most recently saved copy drives progress and mark, TMDB key per movie / TV namespace, `loadCatalog` returns `{ libraries, media }`, a Copy select
 in `DetailDialog`; series never collapsed).
 
 Server layout (flat, component diagram 03): `src/library/` holds the pure `name-parser`
