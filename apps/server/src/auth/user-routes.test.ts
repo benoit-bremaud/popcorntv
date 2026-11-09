@@ -325,6 +325,39 @@ describe('account administration (UC17)', () => {
     ]);
     expect(list[0]).not.toHaveProperty('passwordHash');
     expect(list[0]?.lastLoginAt).toEqual(expect.any(String));
+    expect(list.map((a) => a.resetPending)).toEqual([false, false]);
+  });
+
+  it('flags the account with a pending reset link until it is revoked', async () => {
+    const h = await harness();
+    const viewer = createAccount(h.db, 'kid', 'viewer');
+    const pendingOf = async () =>
+      (await as(h, h.owner.cookie, 'GET', '/users'))
+        .json<Account[]>()
+        .map((a) => [a.username, a.resetPending]);
+
+    await as(h, h.owner.cookie, 'POST', `/users/${viewer.userId}/reset`);
+    expect(await pendingOf()).toEqual([
+      ['kid', true],
+      ['owner', false],
+    ]);
+
+    await as(h, h.owner.cookie, 'DELETE', `/users/${viewer.userId}/reset`);
+    expect(await pendingOf()).toEqual([
+      ['kid', false],
+      ['owner', false],
+    ]);
+  });
+
+  it('clears the pending reset flag on a role change', async () => {
+    const h = await harness();
+    const viewer = createAccount(h.db, 'kid', 'viewer');
+    await as(h, h.owner.cookie, 'POST', `/users/${viewer.userId}/reset`);
+
+    await as(h, h.owner.cookie, 'PATCH', `/users/${viewer.userId}`, { role: 'owner' });
+
+    const list = (await as(h, h.owner.cookie, 'GET', '/users')).json<Account[]>();
+    expect(list.find((a) => a.username === 'kid')?.resetPending).toBe(false);
   });
 
   it('changes a role, which applies at once and revokes the pending reset', async () => {

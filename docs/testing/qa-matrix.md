@@ -230,3 +230,19 @@ Replay with a screen reader (Orca on Firefox, then NVDA or VoiceOver when availa
    "Device on Tizen".
 4. A session opened by a non-browser client shows its raw User-Agent (e.g. `curl/8.x`); a
    session with no User-Agent header shows "Unknown device".
+
+## Administration panel polish checks (#175)
+
+1. Administration: every date (last sign-in, invitation expiry, shown link validity,
+   device last seen, sign-in activity) reads ISO 8601 in the browser's time zone with
+   its name (e.g. "2026-11-09 00:34 GMT+1"), 24 h clock, never "11/8/2026, 12:34:05 AM",
+   whatever the browser language.
+2. An account with one live session reads "1 device", none "0 devices", two "2 devices".
+3. Add a library on a 1440 px window: the Folder, Path, Name and Kind labels sit on one
+   line, the boxes have the same height, and "Add" follows the Kind box; "Create an
+   invitation link" sits right after its Role select, not at the far right.
+4. Revoke reset link is disabled (tooltip "No pending reset link") for an account without
+   a pending link; issuing a reset link enables it; revoking shows "Reset link of <name>
+   revoked." and disables it again; a role change also disables it.
+5. Two owner tabs: revoke in one, then in the other (stale list) → "<name> has no pending
+   reset link: the list was refreshed." and the button turns disabled.

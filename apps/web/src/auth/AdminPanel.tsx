@@ -12,6 +12,7 @@ import type {
 } from '@popcorntv/shared';
 import type { AdminApi, AdminResult } from '../api.js';
 import { authMessage } from './auth-api.js';
+import { deviceCount, formatDateTime } from './admin-format.js';
 import { deviceLabel } from './device-label.js';
 import { useFocusedTitle } from './form-hooks.js';
 import { LibrarySection } from './LibrarySection.js';
@@ -44,7 +45,7 @@ export function adminMessage(error: ApiErrorCode | null): string {
   }
 }
 
-const when = (iso: string | null) => (iso === null ? 'never' : new Date(iso).toLocaleString());
+const when = (iso: string | null) => formatDateTime(iso);
 
 /**
  * UC21: manage libraries (scan and refresh included). UC15–UC18: invite a person,
@@ -64,6 +65,8 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
     readonly list: readonly DeviceSession[];
   } | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  /** What the last action did, when the list alone does not show it. */
+  const [notice, setNotice] = useState<string | null>(null);
   const heading = useFocusedTitle();
 
   const refresh = useCallback(async () => {
@@ -85,6 +88,7 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
     done?: (value: T) => 'closed' | void,
   ): Promise<void> {
     setConfirming(null);
+    setNotice(null);
     const result = await run();
     // Refresh either way: a refusal often means the list is stale (another owner acted).
     if (result.ok && done?.(result.value) === 'closed') return;
@@ -95,6 +99,19 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
   /** Hides a shown reset link of `userId` once the server has revoked it. */
   function forgetResetOf(userId: string): void {
     setShown((current) => (current?.resetOf === userId ? null : current));
+  }
+
+  /** UC17: a missing link (revoked meanwhile) is explained, a revoked one confirmed. */
+  async function revokeReset(account: Account): Promise<void> {
+    setConfirming(null);
+    setNotice(null);
+    const result = await api.revokeReset(account.id);
+    forgetResetOf(account.id);
+    await refresh();
+    if (result.ok) setNotice(`Reset link of ${account.username} revoked.`);
+    else if (result.error === 'not_found')
+      setMessage(`${account.username} has no pending reset link: the list was refreshed.`);
+    else setMessage(adminMessage(result.error));
   }
 
   async function showDevices(userId: string): Promise<void> {
@@ -122,6 +139,7 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
           {message}
         </p>
       )}
+      {notice && <output className="admin-report">{notice}</output>}
       {shown && (
         <output className="admin-link">
           <span>
@@ -195,7 +213,7 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
               {account.username}
               <span className="muted">
                 {' '}
-                · last sign-in {when(account.lastLoginAt)} · {account.activeSessions} device(s)
+                · last sign-in {when(account.lastLoginAt)} · {deviceCount(account.activeSessions)}
               </span>
             </span>
             <select
@@ -244,12 +262,9 @@ export function AdminPanel({ api, user, onClose }: Props): React.JSX.Element {
             <button
               type="button"
               className="button button-quiet"
-              onClick={() =>
-                void act(
-                  () => api.revokeReset(account.id),
-                  () => forgetResetOf(account.id),
-                )
-              }
+              disabled={!account.resetPending}
+              title={account.resetPending ? undefined : 'No pending reset link'}
+              onClick={() => void revokeReset(account)}
             >
               Revoke reset link
             </button>

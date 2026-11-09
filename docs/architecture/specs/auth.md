@@ -114,8 +114,9 @@ Extensions: 3a token wrong or expired → `404 token_invalid`; 3b a user already
 - **UC16 Reset a person's password** (Owner): issues a reset link valid 24 h for that
   account; a new reset link revokes the previous one; the owner can revoke it.
 - **UC17 Manage accounts** (Owner): lists users with their last sign-in
-  (`users.last_login_at`, kept beyond the 90-day event purge) and active devices,
-  changes a role, ends a device's or all sessions, deletes an account. Changing a role
+  (`users.last_login_at`, kept beyond the 90-day event purge), active devices and
+  whether a reset link is pending (`resetPending`: the revoke action is offered only
+  then), changes a role, ends a device's or all sessions, deletes an account. Changing a role
   or deleting revokes that user's pending reset link; demoting or deleting an owner
   revokes every pending invitation and reset link, since links do not record who issued
   them and a former owner must not keep one. Extension: removing or demoting

@@ -153,6 +153,53 @@ describe('AdminPanel', () => {
     await user.click(kidRevoke as HTMLElement);
 
     expect(api.revokeReset).toHaveBeenCalledWith('u2');
+    expect(await screen.findByText('Reset link of kid revoked.')).toBeInTheDocument();
+  });
+
+  it('disables the revoke action of an account without a pending reset link', async () => {
+    panel();
+
+    const [kidRevoke, ownerRevoke] = await screen.findAllByRole('button', {
+      name: 'Revoke reset link',
+    });
+
+    expect(kidRevoke).toBeEnabled();
+    expect(ownerRevoke).toBeDisabled();
+  });
+
+  it('explains a reset link revoked meanwhile', async () => {
+    const user = userEvent.setup();
+    const { api } = panel({
+      revokeReset: vi.fn(async () => ({ ok: false as const, error: 'not_found' as const })),
+    });
+
+    const [kidRevoke] = await screen.findAllByRole('button', { name: 'Revoke reset link' });
+    await user.click(kidRevoke as HTMLElement);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'kid has no pending reset link: the list was refreshed.',
+    );
+    expect(api.accounts).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText('Reset link of kid revoked.')).toBeNull();
+  });
+
+  it('shows another refusal of the revoke action as such', async () => {
+    const user = userEvent.setup();
+    panel({
+      revokeReset: vi.fn(async () => ({ ok: false as const, error: 'forbidden' as const })),
+    });
+
+    const [kidRevoke] = await screen.findAllByRole('button', { name: 'Revoke reset link' });
+    await user.click(kidRevoke as HTMLElement);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Only an owner can do this.');
+  });
+
+  it('words the device count with a plural', async () => {
+    panel();
+
+    expect(await screen.findByText(/· 1 device$/)).toBeInTheDocument();
+    expect(screen.getByText(/· 0 devices$/)).toBeInTheDocument();
   });
 
   it('hides the reset link of an account once its role changes', async () => {

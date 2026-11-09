@@ -86,6 +86,28 @@ describe('TokenRepository', () => {
     expect(tokens.revokeResets(userId, T0)).toBe(false);
   });
 
+  it('lists the accounts with a pending reset only, not invitations nor spent resets', () => {
+    const { db, tokens, userId } = setUp();
+    const other = createAccount(db, 'guest', 'viewer').userId;
+    const revokedOf = createAccount(db, 'gone', 'viewer').userId;
+    tokens.issueInvite('viewer', T0);
+    tokens.issueReset(userId, T0);
+    tokens.issueReset(userId, T0);
+    tokens.issueReset(other, T0);
+    tokens.issueReset(revokedOf, T0);
+    tokens.revokeResets(revokedOf, T0);
+
+    expect(tokens.pendingResetUsers(T0)).toEqual(new Set([userId, other]));
+  });
+
+  it('drops an expired reset from the pending accounts', () => {
+    const { tokens, userId } = setUp();
+    tokens.issueReset(userId, T0);
+
+    expect(tokens.pendingResetUsers(later(RESET_TTL_MS - 1))).toEqual(new Set([userId]));
+    expect(tokens.pendingResetUsers(later(RESET_TTL_MS))).toEqual(new Set());
+  });
+
   it('lists pending invitations only, oldest first', () => {
     const { tokens } = setUp();
     const spent = tokens.issueInvite('viewer', T0);
