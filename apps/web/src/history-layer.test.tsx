@@ -177,11 +177,27 @@ function Stack({ log = [] }: { readonly log?: string[] }): React.JSX.Element {
 
 const depth = (): number => layerDepth(history.state);
 
-async function back(): Promise<void> {
+/**
+ * Moves through history and waits until the move has landed: jsdom fires `popstate` after
+ * two queued tasks, and the `close` events it causes follow in a timer (test-setup). A fixed
+ * delay raced them under load.
+ */
+async function travel(move: () => void): Promise<void> {
   await act(async () => {
-    history.back();
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    // A move past the first entry fires nothing: give up after a bound far above any stall.
+    const landed = new Promise<void>((resolve) => {
+      window.addEventListener('popstate', () => resolve(), { once: true });
+      setTimeout(resolve, 500);
+    });
+    move();
+    await landed;
+    // Queued after the `close` events the hook's listener just scheduled, so it fires last.
+    await new Promise((resolve) => setTimeout(resolve, 0));
   });
+}
+
+async function back(): Promise<void> {
+  await travel(() => history.back());
 }
 
 describe('useHistoryLayer', () => {
@@ -250,10 +266,7 @@ describe('useHistoryLayer', () => {
     const log: string[] = [];
     render(<Stack log={log} />);
     act(() => screen.getByText('Play').click());
-    await act(async () => {
-      history.go(-2);
-      await new Promise((resolve) => setTimeout(resolve, 20));
-    });
+    await travel(() => history.go(-2));
     expect(screen.queryByRole('dialog', { hidden: true })).toBeNull();
     expect(log).toEqual(['player', 'detail']);
   });
@@ -276,9 +289,8 @@ describe('useHistoryLayer', () => {
     expect(screen.queryByRole('dialog', { hidden: true })).toBeNull();
     act(() => screen.getByText('Open').click());
     expect(depth()).toBe(1);
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 20));
-    });
+    // The closed layer's own Back lands now.
+    await travel(() => undefined);
     expect(screen.getByRole('dialog', { name: 'detail', hidden: true })).toBeInTheDocument();
     expect(depth()).toBe(1);
     await back();
@@ -314,11 +326,9 @@ describe('useHistoryLayer', () => {
   it('Forward onto a closed layer entry goes straight back to the catalog', async () => {
     render(<Stack />);
     await back();
-    await act(async () => {
-      history.forward();
-      await new Promise((resolve) => setTimeout(resolve, 40));
-    });
-    expect(depth()).toBe(0);
+    await travel(() => history.forward());
+    // The hook leaves the stale entry it landed on.
+    await waitFor(() => expect(depth()).toBe(0));
     expect(screen.queryByRole('dialog', { hidden: true })).toBeNull();
   });
 });
