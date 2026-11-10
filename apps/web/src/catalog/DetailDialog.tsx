@@ -9,6 +9,8 @@ import type {
   WatchProgress,
 } from '@popcorntv/shared';
 import { artworkUrl, loadProgress, loadWatchProviders, setWatched } from '../api.js';
+import { TitleLink } from '../discover/TitleLink.js';
+import type { TitleLinkApi } from '../discover/TitleLink.js';
 import { WhereToWatch } from '../discover/WhereToWatch.js';
 import { browserCanPlay } from '../playback/can-play.js';
 import { PlayerDialog } from '../playback/PlayerDialog.js';
@@ -39,6 +41,8 @@ type Props = {
   readonly api?: PlaybackApi;
   /** `GET /discover/:kind/:tmdbId/providers` (UC27); injected by tests. */
   readonly watchProviders?: typeof loadWatchProviders;
+  /** The owner's title link calls (UC30); injected by tests. */
+  readonly titleLink?: TitleLinkApi;
   /** `GET /profiles/:profileId/progress`; injected by tests. */
   readonly progress?: typeof loadProgress;
   /** `PUT | DELETE …/watched`; injected by tests. */
@@ -89,6 +93,7 @@ export function DetailDialog({
   watchProviders = loadWatchProviders,
   progress = loadProgress,
   markWatched = setWatched,
+  titleLink,
 }: Props): React.JSX.Element {
   const ref = useRef<HTMLDialogElement>(null);
   // Play, Resume, the audio list and the watched mark act on the chosen copy (spec duplicate-titles R5).
@@ -296,6 +301,9 @@ export function DetailDialog({
               load={watchProviders}
               profileId={profileId}
             />
+          )}
+          {watchKind !== null && watchTmdbId !== null && (
+            <TitleLink kind={watchKind} tmdbId={watchTmdbId} api={titleLink} />
           )}
           {seasons.map((season) => (
             <section key={season.season ?? 'none'} className="detail__season">

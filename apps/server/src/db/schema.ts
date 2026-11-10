@@ -263,3 +263,15 @@ export const notifications = sqliteTable(
   },
   (table) => [index('notifications_profile_idx').on(table.profileId, table.createdAt)],
 );
+
+/** The owner's own link per TMDB title (UC30, ADR-0031); never fetched by the server. */
+export const titleLinks = sqliteTable(
+  'title_links',
+  {
+    kind: text('kind', { enum: DISCOVER_KINDS }).notNull(),
+    tmdbId: integer('tmdb_id').notNull(),
+    url: text('url').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.kind, table.tmdbId] })],
+);

@@ -3,6 +3,7 @@ import type { DiscoverDetails, DiscoverTitle } from '@popcorntv/shared';
 import { posterUrl } from '../api.js';
 import type { DiscoverApi } from './discover-api.js';
 import { useHistoryLayer } from '../history-layer.js';
+import { TitleLink } from './TitleLink.js';
 import { WhereToWatch } from './WhereToWatch.js';
 
 type Props = {
@@ -119,6 +120,7 @@ export function TitleSheet({
               load={api.providers}
               profileId={profileId}
             />
+            <TitleLink kind={title.kind} tmdbId={title.tmdbId} api={api.titleLink} />
           </div>
         </div>
       </div>

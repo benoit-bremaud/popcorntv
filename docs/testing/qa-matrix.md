@@ -360,3 +360,20 @@ Replay on every Pi deploy:
    (migration 0009 baseline).
 9. Keyboard and screen reader: the bell is reachable by Tab, announced "Notifications, N unread",
    `aria-expanded` follows the panel.
+
+## Personal title link checks (#278, ADR-0031)
+
+1. As the owner, on a Discover title sheet choose **+ Add my link**, paste
+   `https://example.org/watch`, Save: **Open my link** appears; it opens a new tab with
+   `window.opener` null and no `Referer`.
+2. The same title in the library detail dialog (film or series with a TMDB match) shows the
+   same link; an episode or an unmatched file shows none.
+3. Signed in as a viewer: the link shows, no **Edit link**; `PUT /api/title-links/movie/<id>`
+   from the console → 403 `forbidden`.
+4. Save `javascript:alert(1)`, `data:text/html,x`, `https://u:p@example.org/`: refused with
+   "Enter an http(s) link."; the same bodies sent by `curl` → 400 `invalid_request`.
+5. **Edit link** → **Remove**: the button disappears for every viewer.
+6. DevTools Network and the server log: no request to the link's host from the server; the
+   log has `title_link.set` / `title_link.removed` without the URL.
+7. Keyboard: the button, the field and Save / Remove / Cancel are reachable by Tab; the error
+   is announced (`role="alert"`).

@@ -13,6 +13,8 @@ import {
   loadWishlist,
   markNotificationsRead,
   setMyProvider,
+  loadTitleLink,
+  saveTitleLink,
   posterUrl,
   searchDiscover,
   setWishlisted,
@@ -402,6 +404,54 @@ describe('notifications and my providers (UC28 / UC29)', () => {
     );
     await expect(
       setMyProvider('p1', netflix, true, async () => Promise.reject(new TypeError('offline'))),
+    ).resolves.toBe(false);
+  });
+});
+
+describe('loadTitleLink', () => {
+  it('should answer the title link', async () => {
+    const fetchFn = vi.fn(async () => respond({ url: 'https://e.org/', editable: true }));
+
+    await expect(loadTitleLink('movie', 603, fetchFn)).resolves.toEqual({
+      url: 'https://e.org/',
+      editable: true,
+    });
+    expect(fetchFn).toHaveBeenCalledWith('/api/title-links/movie/603');
+  });
+
+  it.each([
+    ['an error status', async () => respond({}, 500)],
+    ['another shape', async () => respond([])],
+    ['a network failure', async () => Promise.reject(new Error('offline'))],
+  ])('should throw on %s', async (_label, fetchFn) => {
+    await expect(loadTitleLink('tv', 1, fetchFn)).rejects.toThrow();
+  });
+});
+
+describe('saveTitleLink', () => {
+  it('should PUT a link and DELETE on null', async () => {
+    const fetchFn = vi.fn(async () => new Response(null, { status: 204 }));
+
+    await expect(saveTitleLink('movie', 603, 'https://e.org/', fetchFn)).resolves.toBe(true);
+    await expect(saveTitleLink('movie', 603, null, fetchFn)).resolves.toBe(true);
+
+    expect(fetchFn.mock.calls).toEqual([
+      [
+        '/api/title-links/movie/603',
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{"url":"https://e.org/"}',
+        },
+      ],
+      ['/api/title-links/movie/603', { method: 'DELETE' }],
+    ]);
+  });
+
+  it('should answer false when refused or unreachable', async () => {
+    await expect(saveTitleLink('movie', 1, 'x', async () => respond({}, 400))).resolves.toBe(false);
+    await expect(
+      saveTitleLink('movie', 1, null, async () => Promise.reject(new Error('offline'))),
     ).resolves.toBe(false);
   });
 });

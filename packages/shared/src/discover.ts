@@ -90,3 +90,31 @@ export interface NotificationList {
   readonly items: readonly AppNotification[];
   readonly unread: number;
 }
+
+/** Longest personal title link accepted (spec title-link R4). */
+export const TITLE_LINK_MAX = 2048;
+
+/** `GET /title-links/:kind/:tmdbId` (spec title-link R2). */
+export interface TitleLink {
+  readonly url: string | null;
+  /** True when the caller is an owner and may set or remove the link. */
+  readonly editable: boolean;
+}
+
+/**
+ * The normalised `href` of an acceptable personal link, or null (spec title-link R4): http or
+ * https only, a host, no user name nor password, `TITLE_LINK_MAX` characters at most.
+ */
+export function normaliseTitleLink(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (trimmed === '' || trimmed.length > TITLE_LINK_MAX) return null;
+  let url: URL;
+  try {
+    url = new URL(trimmed);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+  if (url.hostname === '' || url.username !== '' || url.password !== '') return null;
+  return url.href.length > TITLE_LINK_MAX ? null : url.href;
+}

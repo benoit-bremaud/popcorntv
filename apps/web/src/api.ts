@@ -8,6 +8,7 @@ import type {
   CreateLibraryBody,
   CreateProfileBody,
   DiscoverDetails,
+  TitleLink,
   WatchProviders,
   DiscoverKind,
   DiscoverList,
@@ -614,5 +615,53 @@ export async function loadVersion(fetchFn: Fetch = fetch): Promise<string | null
     return ((await response.json()) as VersionResponse).version;
   } catch {
     return null;
+  }
+}
+
+/** `GET /title-links/:kind/:tmdbId` (UC30 R2); throws `ApiRequestError` when refused. */
+export async function loadTitleLink(
+  kind: DiscoverKind,
+  tmdbId: number,
+  fetchFn: Fetch = fetch,
+): Promise<TitleLink> {
+  const path = `/title-links/${kind}/${tmdbId}`;
+  let response: Response;
+  try {
+    response = watched(await fetchFn(`${API}${path}`));
+  } catch {
+    throw new ApiRequestError(path, null);
+  }
+  if (!response.ok) throw new ApiRequestError(path, response.status);
+  const body: unknown = await response.json();
+  if (typeof body !== 'object' || body === null || !('editable' in body) || !('url' in body)) {
+    throw new ApiRequestError(path, response.status);
+  }
+  return body as TitleLink;
+}
+
+/**
+ * `PUT /title-links/:kind/:tmdbId` with `url`, or `DELETE` when `url` is null (UC30 R3); false
+ * when the server refused (invalid link, not an owner) or was unreachable.
+ */
+export async function saveTitleLink(
+  kind: DiscoverKind,
+  tmdbId: number,
+  url: string | null,
+  fetchFn: Fetch = fetch,
+): Promise<boolean> {
+  try {
+    const response = await fetchFn(
+      `${API}/title-links/${kind}/${tmdbId}`,
+      url === null
+        ? { method: 'DELETE' }
+        : {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url }),
+          },
+    );
+    return watched(response).ok;
+  } catch {
+    return false;
   }
 }

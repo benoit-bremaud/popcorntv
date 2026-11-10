@@ -89,6 +89,27 @@
   margin-top: var(--space-3);
 }
 
+/* UC30: the owner's own link (spec title-link R6). */
+.title-link {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.title-link__form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.title-link__form input {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
 /* UC28: the header bell and its panel (ADR-0030). */
 .bell {
   position: relative;

@@ -156,6 +156,11 @@ stale-while-refresh, 500 titles LRU; link pinned to `https://www.themoviedb.org`
 offer; logos at `w92` via `GET /discover/logo/:file`, issued paths only; web `WhereToWatch` in
 `TitleSheet` and `DetailDialog` (film / series with a `tmdbId`), every offer opens the TMDB
 watch page in a new tab, `noopener noreferrer`; no third-party stream ever touched).
+#278 personal title link (spec `docs/architecture/specs/title-link.md`, ADR-0031: `title_links`
+keyed by `(kind, tmdb_id)`, `GET /title-links/:kind/:tmdbId` answers `{ url, editable }` to any
+signed-in caller, `PUT | DELETE` owner-only, pure `normaliseTitleLink` in `packages/shared`
+(http(s), host, no credentials, ≤ 2048), web `TitleLink` under *Where to watch* opens it in a
+new tab; the server never fetches it, never logs it).
 #277 wishlist notifications (spec `docs/architecture/specs/wishlist-notifications.md`, ADR-0030:
 in-app only — `notifications` table + header `NotificationBell` polled every 5 min, `PUT
 …/notifications/read` on open; "my providers" per profile in `profile_providers`, toggled from
@@ -174,7 +179,7 @@ FFmpeg sessions, `spawn` injected), the `keyframe-probe` (ADR-0023), the `sessio
 (and the local `tmdb_id` match, the `seen_*` state), the `my-provider-repository`, the
 `notification-repository` and `notification-routes` (#277), the `availability-check` (timer +
 pure `availabilityEvents`, ADR-0030), the generic `stale-cache` (ADR-0027 pattern, lists and watch
-providers) and the Discover `routes` (ADR-0020); `src/metadata/` the `tmdb-client` (only HTTP egress,
+providers) and the Discover `routes` (ADR-0020), the `title-link-repository` and `title-link-routes` (ADR-0031); `src/metadata/` the `tmdb-client` (only HTTP egress,
 `fetch` injected), the pure `matcher` (match + map), the `artwork-cache`, its
 `repository`, the `service` and the `routes`; `src/auth/` the `hasher` (only argon2 import), the `token` helpers, the `setup-token`, the
 in-memory `limiter`, the `user` / `session` / `token` / `event` repositories, the access `hook`, the
