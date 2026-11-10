@@ -4,6 +4,20 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-10 — #277 wishlist availability notifications (PR #283 merged, `ee9681d`)
+
+- Decision ADR-0030 (option A, 420/500): in-app notifications only (table + header bell, polled
+  every 5 min); Web Push (315) wins only if "reach with the app closed" weighs ≥ 40.
+- Per-profile "my providers" (`profile_providers`, "Mine" toggle in Where to watch, flatrate /
+  free / ads only); `WISHLIST_CHECK_INTERVAL_MIN` (default 60, `0` off) runs a serial check
+  through the shared providers `StaleCache.getFresh` (≤ 1 TMDB call per title a day, newest
+  500 titles); first look is a baseline, `seen` saved before notifying, migration 0009
+  baselines existing rows; notifications purged after 90 days. Shared `startSerialTimer`.
+- Adversarial round 1: Must 1 (no Play from a notification sheet), Should 5, Nice 6, all
+  fixed; round 2 open, 2 of 3 Nice fixed. Gate: server 794, web 468, shared 45, coverage server
+  97 % / web 98.6 %, SonarQube PASSED (S3776 fixed), gitleaks clean, e2e 2/2, staging smoke OK.
+  Owner waiver: doc coverage counter absent; signed-in QA deferred.
+
 ## 2026-11-10 — #184 where to watch in France (PR #281 merged, `7d17bff`)
 
 - Decision ADR-0029 (option A, 450/500): every French legal offer (TMDB watch providers,
