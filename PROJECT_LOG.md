@@ -4,6 +4,22 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-10 — #257 fresh-load timing, Discover lists warm and stale (PR #269 merged, `4ae86cf`)
+
+- Measured: local staging cold start answers `/health` in 1.4 s (scheduled scan never runs
+  at start); the Pi log since the container start (12:46Z) holds no slow home call, only
+  four `GET /discover` at 4.3–6.2 s (TMDB, memo expired). Disk-sleep hypothesis (SQLite
+  session slide on the HDD) refuted by those logs. The home delay seen earlier stays
+  unexplained (old container log gone); QA deploy step 2 records the slowest `/api` call.
+- Decision ADR-0027 (option C, 430/500 after the owner kept a rescored grid; a first
+  scoring had a totals error, corrected in chat): stale list served while one shared call
+  refreshes it, four lists warmed on `onReady`, no maximum age; ADR-0020 amended.
+- Adversarial round 1: Must 4 (stale 15-minute copies in CLAUDE.md, spec R9 / 1a, ADR-0020,
+  an unrunnable QA step) → verify round open. Gate: server 712, e2e 2/2, build, gitleaks,
+  SonarQube new coverage 94.9 %; `pnpm coverage` red on a pre-existing web flake under the
+  parallel run (#273), merged on the owner's explicit yes. Codex out of quota. Follow-ups
+  #270 (ADR index), #271 (visibility rule), #273.
+
 ## 2026-11-10 — #264 spilled popcorn on the 404 page (PR #266 merged, `0b9fdc8`)
 
 - Owner request: a fun popcorn illustration on the static 404. Inline `aria-hidden` SVG
