@@ -234,6 +234,43 @@ describe('LibraryScanner', () => {
     ]);
   });
 
+  it('never carries the watch progress over to a file of another library (#253)', async () => {
+    // TMDB movie and TV ids share numbers; carry-over stays inside one library, whose kind
+    // fixes the namespace, so the bare `tmdb|<id>` key of identity.ts cannot mix movie and
+    // TV ids.
+    const matched = (title: string): MetadataInput => ({ ...SOPRANOS, tmdbId: 1399, title });
+    const films = repository.createLibrary({
+      name: 'Movies',
+      rootPath: join(root, 'films'),
+      kind: 'films',
+    });
+    const shows = repository.createLibrary({
+      name: 'Shows',
+      rootPath: join(root, 'shows'),
+      kind: 'series',
+    });
+    const old = await touch(root, 'films/Heat (1995).mkv');
+    await touch(root, 'films/Alien (1979).mkv');
+    await touch(root, 'shows/Game of Thrones (2011).mkv');
+    await scanner.scan(films);
+    await scanner.scan(shows);
+    const film = repository.listMedia(films.id).find((item) => item.title === 'Heat');
+    const [show] = repository.listMedia(shows.id);
+    expect(show?.kind).toBe('unknown');
+    if (film === undefined || show === undefined) throw new Error('fixture rows missing');
+    const metadata = new MetadataRepository(db);
+    metadata.saveMetadata(film.id, matched('Heat'), NOW);
+    metadata.saveMetadata(show.id, matched('Game of Thrones'), NOW);
+    db.insert(watchProgress)
+      .values({ profileId: 'default', mediaId: film.id, positionSec: 600, updatedAt: NOW })
+      .run();
+    await rm(old);
+
+    await scanner.scan(films);
+
+    expect(db.select().from(watchProgress).all()).toEqual([]);
+  });
+
   it('keeps the newer position when the new file already has one', async () => {
     const old = await touch(root, 'Heat (1995).mkv');
     await scanner.scan(library);
