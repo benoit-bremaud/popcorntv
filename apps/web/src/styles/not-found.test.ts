@@ -21,6 +21,8 @@ describe('static 404 page (#177, #264)', () => {
 
   it('never loops the popcorn forever (WCAG 2.2.2)', () => {
     expect(css).not.toMatch(/infinite/);
+    // One 3.2 s wobble: two would run 6.4 s, past the 5 s budget.
+    expect(css).toMatch(/\.spill__box\s*\{[^}]*animation:[^;]*\s1;/);
   });
 
   it('stops the popcorn under reduced motion', () => {

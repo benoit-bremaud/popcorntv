@@ -91,7 +91,7 @@ body {
 .spill__box {
   transform-box: fill-box;
   transform-origin: 0% 100%;
-  animation: spill-wobble calc(var(--duration-hop) * 2) var(--ease-in-out) 2;
+  animation: spill-wobble calc(var(--duration-hop) * 2) var(--ease-in-out) 1;
 }
 
 /* Finite on purpose: each loop ends at rest, all motion stops before 5 s (WCAG 2.2.2). */
