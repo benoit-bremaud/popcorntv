@@ -499,7 +499,11 @@ describe('library routes', () => {
 });
 
 describe('scheduled scan (spec scheduled-scan)', () => {
-  async function scheduledApp(mediaRoot: string, scanIntervalMin: number) {
+  async function scheduledApp(
+    mediaRoot: string,
+    scanIntervalMin: number,
+    wishlistCheckIntervalMin = 0,
+  ) {
     const db = openDatabase(':memory:');
     const timer = {
       tick: (): void => undefined,
@@ -521,6 +525,7 @@ describe('scheduled scan (spec scheduled-scan)', () => {
       },
       transcodeDir: tmpdir(),
       scanIntervalMin,
+      wishlistCheckIntervalMin,
       scheduleTimer: { setInterval: timer.setInterval, clearInterval: timer.clearInterval },
       ...testAuthOptions,
     });
@@ -567,6 +572,22 @@ describe('scheduled scan (spec scheduled-scan)', () => {
       await app.close();
 
       expect(timer.setInterval).not.toHaveBeenCalled();
+    } finally {
+      await rm(mediaRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('should start the wishlist check timer too and stop both on close (ADR-0030)', async () => {
+    const mediaRoot = await mkdtemp(join(tmpdir(), 'popcorntv-schedule-'));
+    try {
+      const { app, timer } = await scheduledApp(mediaRoot, 0, 30);
+      await app.ready();
+      timer.tick();
+      await app.close();
+
+      expect(timer.setInterval).toHaveBeenCalledTimes(1);
+      expect(timer.setInterval).toHaveBeenCalledWith(expect.any(Function), 1_800_000);
+      expect(timer.clearInterval).toHaveBeenCalledWith('timer');
     } finally {
       await rm(mediaRoot, { recursive: true, force: true });
     }

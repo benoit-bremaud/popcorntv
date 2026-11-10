@@ -83,3 +83,84 @@
   margin-top: var(--space-2);
   font-size: var(--text-sm);
 }
+
+/* UC29: "Mine" toggles under the offers (spec wishlist-notifications R2). */
+.watch__mine {
+  margin-top: var(--space-3);
+}
+
+/* UC28: the header bell and its panel (ADR-0030). */
+.bell {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.bell__button {
+  position: relative;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--text-lg);
+  cursor: pointer;
+}
+
+.bell__count {
+  position: absolute;
+  top: calc(-1 * var(--space-1));
+  right: calc(-1 * var(--space-1));
+  min-width: 1.25rem;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  line-height: 1.25rem;
+}
+
+.bell__panel {
+  position: absolute;
+  right: 0;
+  z-index: 10;
+  width: min(22rem, calc(100vw - 2 * var(--space-4)));
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-raised);
+  background: var(--color-surface-raised);
+}
+
+.bell__list {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bell__item {
+  width: 100%;
+  padding: var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bell__item--new {
+  color: var(--color-text);
+  font-weight: var(--weight-medium);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .bell__item:hover {
+    background: var(--color-surface);
+  }
+}

@@ -35,6 +35,7 @@ const app = await buildApp({
   publicUrl: config.publicUrl,
   trustProxy: config.trustProxy,
   scanIntervalMin: config.scanIntervalMin,
+  wishlistCheckIntervalMin: config.wishlistCheckIntervalMin,
   logger: loggerOptions(config.logLevel),
 });
 
@@ -42,7 +43,12 @@ const proxyWarning = trustProxyWarning(config);
 if (proxyWarning) app.log.warn(proxyWarning);
 if (!config.tmdbApiKey) app.log.warn('TMDB_API_KEY not set: metadata enrichment disabled');
 app.log.info(
-  { event: 'server.config', logLevel: config.logLevel, scanIntervalMin: config.scanIntervalMin },
+  {
+    event: 'server.config',
+    logLevel: config.logLevel,
+    scanIntervalMin: config.scanIntervalMin,
+    wishlistCheckIntervalMin: config.wishlistCheckIntervalMin,
+  },
   'configuration loaded',
 );
 

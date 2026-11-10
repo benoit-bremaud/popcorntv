@@ -290,7 +290,12 @@ export function DetailDialog({
             </p>
           )}
           {watchKind !== null && watchTmdbId !== null && (
-            <WhereToWatch kind={watchKind} tmdbId={watchTmdbId} load={watchProviders} />
+            <WhereToWatch
+              kind={watchKind}
+              tmdbId={watchTmdbId}
+              load={watchProviders}
+              profileId={profileId}
+            />
           )}
           {seasons.map((season) => (
             <section key={season.season ?? 'none'} className="detail__season">

@@ -36,23 +36,23 @@ describe('migration 0003 reprobe-cover-art', () => {
   });
 });
 
-describe('migration 0006 accounts', () => {
-  /** Applies the migration files after `after` up to and including `last`, like the migrator. */
-  function migrate(client: Database.Database, after: string, last: string): void {
-    const folder = new URL('../../drizzle/', import.meta.url);
-    for (const file of readdirSync(folder)
-      .filter((f) => f.endsWith('.sql'))
-      .sort()) {
-      if (file <= after) continue;
-      if (file > last) break;
-      for (const statement of readFileSync(new URL(file, folder), 'utf8').split(
-        '--> statement-breakpoint',
-      )) {
-        client.exec(statement);
-      }
+/** Applies the migration files after `after` up to and including `last`, like the migrator. */
+function migrate(client: Database.Database, after: string, last: string): void {
+  const folder = new URL('../../drizzle/', import.meta.url);
+  for (const file of readdirSync(folder)
+    .filter((f) => f.endsWith('.sql'))
+    .sort()) {
+    if (file <= after) continue;
+    if (file > last) break;
+    for (const statement of readFileSync(new URL(file, folder), 'utf8').split(
+      '--> statement-breakpoint',
+    )) {
+      client.exec(statement);
     }
   }
+}
 
+describe('migration 0006 accounts', () => {
   it('keeps every profile and its progress, owner-less until setup', () => {
     const client = new Database(':memory:');
     client.pragma('foreign_keys = ON');
@@ -72,5 +72,35 @@ describe('migration 0006 accounts', () => {
       { profile_id: 'default', position_sec: 42 },
     ]);
     expect(client.pragma('foreign_key_check')).toEqual([]);
+  });
+});
+
+describe('migration 0009 wishlist-notifications', () => {
+  it('starts existing wishlist rows from what is on disk, providers not looked at yet', () => {
+    const client = new Database(':memory:');
+    client.pragma('foreign_keys = ON');
+    migrate(client, '', '0008_wishlist.sql');
+    client.exec(`
+      INSERT INTO libraries VALUES ('l', 'Films', '/m', 'films', 'now');
+      INSERT INTO media (id, library_id, kind, title, tmdb_id) VALUES ('m', 'l', 'film', 'Dune', 1);
+      INSERT INTO media (id, library_id, kind, title, tmdb_id) VALUES ('s', 'l', 'series', 'Dark', 2);
+      INSERT INTO wishlist VALUES ('default', 'movie', 1, 'Dune', 2021, '', 7, NULL, 'now');
+      INSERT INTO wishlist VALUES ('default', 'movie', 2, 'Other', 2021, '', 7, NULL, 'now');
+      INSERT INTO wishlist VALUES ('default', 'tv', 2, 'Dark', 2017, '', 8, NULL, 'now');
+    `);
+
+    migrate(client, '0008_wishlist.sql', '0009_wishlist-notifications.sql');
+
+    expect(
+      client
+        .prepare(
+          'SELECT kind, tmdb_id, seen_in_library, seen_provider_ids FROM wishlist ORDER BY kind, tmdb_id',
+        )
+        .all(),
+    ).toEqual([
+      { kind: 'movie', tmdb_id: 1, seen_in_library: 1, seen_provider_ids: null },
+      { kind: 'movie', tmdb_id: 2, seen_in_library: 0, seen_provider_ids: null },
+      { kind: 'tv', tmdb_id: 2, seen_in_library: 1, seen_provider_ids: null },
+    ]);
   });
 });

@@ -2,7 +2,13 @@ import { join } from 'node:path';
 import rateLimit from '@fastify/rate-limit';
 import Fastify from 'fastify';
 import type { FastifyError, FastifyInstance, FastifyRequest } from 'fastify';
-import type { ApiError, HealthResponse, Library, VersionResponse } from '@popcorntv/shared';
+import type {
+  ApiError,
+  HealthResponse,
+  Library,
+  VersionResponse,
+  WatchProviders,
+} from '@popcorntv/shared';
 import { apiError } from './http.js';
 import { EventRepository } from './auth/event-repository.js';
 import { OneLinePerRequest, registerRequestLog } from './logging.js';
@@ -27,7 +33,17 @@ import { startScanSchedule } from './library/scheduler.js';
 import { LibraryScanner } from './library/scanner.js';
 import { ArtworkCache } from './metadata/artwork-cache.js';
 import { MetadataRepository } from './metadata/repository.js';
-import { registerDiscoverRoutes } from './discover/routes.js';
+import { startAvailabilityCheck } from './discover/availability-check.js';
+import { MyProviderRepository } from './discover/my-provider-repository.js';
+import { NotificationRepository } from './discover/notification-repository.js';
+import { registerNotificationRoutes } from './discover/notification-routes.js';
+import {
+  PROVIDERS_MAX,
+  PROVIDERS_TTL_MS,
+  registerDiscoverRoutes,
+  watchProvidersOf,
+} from './discover/routes.js';
+import { StaleCache } from './discover/stale-cache.js';
 import { WishlistRepository } from './discover/wishlist-repository.js';
 import { registerMetadataRoutes } from './metadata/routes.js';
 import { MetadataService } from './metadata/service.js';
@@ -82,6 +98,8 @@ export interface AppOptions {
   readonly trustProxy?: string | null;
   /** Minutes between automatic rescans (`ServerConfig.scanIntervalMin`); 0 or absent disables them. */
   readonly scanIntervalMin?: number;
+  /** Minutes between wishlist availability checks (ADR-0030); 0 or absent disables them. */
+  readonly wishlistCheckIntervalMin?: number;
   /** Timer boundary of the scan schedule; injected by tests. */
   readonly scheduleTimer?: {
     readonly setInterval: (run: () => void, ms: number) => unknown;
@@ -260,13 +278,20 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     origin: cookie.origin,
   });
   registerProgressRoutes(app, { progress: new ProgressRepository(options.db), profiles });
+  const wishlist = new WishlistRepository(options.db);
+  const providers = new StaleCache<WatchProviders>(PROVIDERS_TTL_MS, PROVIDERS_MAX, Date.now);
   registerDiscoverRoutes(app, {
     tmdb: options.tmdb,
     artwork,
     artworkDir: options.artworkDir,
-    wishlist: new WishlistRepository(options.db),
+    wishlist,
     profiles,
+    providers,
   });
+  const notifications = new NotificationRepository(options.db);
+  const myProviders = new MyProviderRepository(options.db);
+  registerNotificationRoutes(app, { notifications, myProviders, profiles });
+  let stopCheck: (() => Promise<void>) | null = null;
   // Sessions live in memory: directories left by a previous run belong to no one.
   app.addHook('onReady', async () => {
     await sessions.clean();
@@ -279,7 +304,20 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
         ...options.scheduleTimer,
       });
     }
+    if ((options.wishlistCheckIntervalMin ?? 0) > 0) {
+      const tmdb = options.tmdb;
+      stopCheck = startAvailabilityCheck({
+        intervalMin: options.wishlistCheckIntervalMin ?? 0,
+        wishlist,
+        notifications,
+        myProviders,
+        offers: tmdb ? watchProvidersOf(providers, tmdb, app.log) : null,
+        logger: app.log,
+        ...options.scheduleTimer,
+      });
+    }
     const now = new Date();
+    notifications.purge(now);
     sessionRepository.purge(now);
     events.purge(now);
     tokens.purge(now);
@@ -299,7 +337,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   app.addHook('preClose', async () => {
     // Kill FFmpeg first: a scan in flight may outlast the shutdown deadline.
     extractor.closeAll();
-    await Promise.all([sessions.closeAll(), stopSchedule?.()]);
+    await Promise.all([sessions.closeAll(), stopSchedule?.(), stopCheck?.()]);
   });
 
   return app;

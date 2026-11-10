@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { WatchProviders } from '@popcorntv/shared';
 import { WhereToWatch } from './WhereToWatch.js';
@@ -59,5 +60,109 @@ describe('WhereToWatch', () => {
 
     expect(screen.getByText('Loading offers…')).toBeInTheDocument();
     expect(await screen.findByText('Offers could not be loaded.')).toBeInTheDocument();
+  });
+});
+
+describe('WhereToWatch — my providers (UC29)', () => {
+  function mineApi(initial: number[] = [9], ok = true) {
+    return {
+      load: vi.fn(async () =>
+        initial.map((providerId) => ({ providerId, name: `P${providerId}` })),
+      ),
+      set: vi.fn(async () => ok),
+    };
+  }
+
+  it('offers a toggle per subscription, free or ads provider, pressed when mine', async () => {
+    const api = mineApi();
+    render(
+      <WhereToWatch
+        kind="movie"
+        tmdbId={1}
+        load={async () => answer()}
+        profileId="p1"
+        myProviders={api}
+      />,
+    );
+
+    expect(await screen.findByRole('button', { name: 'Arte' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'Netflix' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+    expect(screen.queryByRole('button', { name: 'Google Play' })).toBeNull();
+    expect(api.load).toHaveBeenCalledWith('p1');
+  });
+
+  it('marks and unmarks a provider as mine', async () => {
+    const user = userEvent.setup();
+    const api = mineApi();
+    render(
+      <WhereToWatch
+        kind="movie"
+        tmdbId={1}
+        load={async () => answer()}
+        profileId="p1"
+        myProviders={api}
+      />,
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Netflix' }));
+    expect(screen.getByRole('button', { name: 'Netflix' })).toHaveAttribute('aria-pressed', 'true');
+    await user.click(screen.getByRole('button', { name: 'Arte' }));
+    expect(screen.getByRole('button', { name: 'Arte' })).toHaveAttribute('aria-pressed', 'false');
+    expect(api.set.mock.calls).toEqual([
+      ['p1', { providerId: 8, name: 'Netflix' }, true],
+      ['p1', { providerId: 9, name: 'Arte' }, false],
+    ]);
+  });
+
+  it('keeps the toggle as it was when the server refuses', async () => {
+    const user = userEvent.setup();
+    const api = mineApi([], false);
+    render(
+      <WhereToWatch
+        kind="movie"
+        tmdbId={1}
+        load={async () => answer()}
+        profileId="p1"
+        myProviders={api}
+      />,
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Netflix' }));
+    expect(screen.getByRole('button', { name: 'Netflix' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+  });
+
+  it('shows no toggle without a profile or without a counting offer', async () => {
+    const api = mineApi();
+    const { unmount } = render(
+      <WhereToWatch kind="movie" tmdbId={1} load={async () => answer()} myProviders={api} />,
+    );
+    await screen.findByRole('link', { name: 'Netflix' });
+    expect(screen.queryByRole('button')).toBeNull();
+    expect(api.load).not.toHaveBeenCalled();
+    unmount();
+
+    const rentOnly = answer({
+      offers: [{ providerId: 3, name: 'Google Play', logoPath: null, type: 'rent' }],
+    });
+    render(
+      <WhereToWatch
+        kind="movie"
+        tmdbId={1}
+        load={async () => rentOnly}
+        profileId="p1"
+        myProviders={api}
+      />,
+    );
+    await screen.findByRole('link', { name: 'Google Play' });
+    expect(screen.queryByRole('button')).toBeNull();
   });
 });

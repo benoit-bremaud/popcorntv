@@ -63,7 +63,9 @@ curl -b jar localhost:3000/libraries/<id>/media            # films / episodes wi
 ```
 
 Every library is also rescanned every `SCAN_INTERVAL_MIN` minutes (default 60, `0` disables),
-so files added by hand show up without a manual scan.
+so files added by hand show up without a manual scan. Every `WISHLIST_CHECK_INTERVAL_MIN`
+minutes (default 60, `0` disables) the My list titles are checked: one arriving in a library
+or on a provider a profile marked "Mine" raises an in-app notification (bell in the header).
 
 ### Metadata from TMDB
 

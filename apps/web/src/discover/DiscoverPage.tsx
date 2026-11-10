@@ -30,6 +30,8 @@ type Props = {
   readonly onPlayInLibrary: (mediaId: string) => void;
   /** Injected in tests; defaults to the real API. */
   readonly api?: DiscoverApi;
+  /** A title to open at once (a notification line, UC28 R11). */
+  readonly openTitle?: DiscoverTitle | null;
 };
 
 /** One TMDB row, or `failed` when the server refused or was unreachable (spec R9). */
@@ -60,6 +62,7 @@ export function DiscoverPage({
   profileId,
   onPlayInLibrary,
   api = discoverApi,
+  openTitle = null,
 }: Props): React.JSX.Element {
   const [rows, setRows] = useState<readonly RowState[]>(DISCOVER_ROWS.map(() => 'loading'));
   const [wishlist, setWishlist] = useState<readonly WishlistEntry[]>([]);
@@ -90,6 +93,10 @@ export function DiscoverPage({
       );
     });
   }, [api, refreshWishlist]);
+
+  useEffect(() => {
+    if (openTitle !== null) setOpen(openTitle);
+  }, [openTitle]);
 
   const onOpen = useCallback<OpenHandler>((title, element) => {
     trigger.current = element;

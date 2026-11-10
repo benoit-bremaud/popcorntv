@@ -207,6 +207,7 @@ export type ApiErrorCode =
   | 'profile_not_found'
   | 'profile_name_taken'
   | 'profile_limit'
+  | 'too_many_providers'
   | 'last_profile'
   | 'subtitle_not_found'
   | 'unauthenticated'

@@ -64,6 +64,13 @@
       "when": 1794092495587,
       "tag": "0008_wishlist",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1794345619165,
+      "tag": "0009_wishlist-notifications",
+      "breakpoints": true
     }
   ]
 }

@@ -1,7 +1,7 @@
 # Component diagram — catalog (apps/web)
 
-> **Feature**: UC3 / UC4 / UC22 / UC24 / UC26 / UC27 ([spec](../../specs/catalog-grid.md), [continue-watching](../../specs/continue-watching.md), [where-to-watch](../../specs/where-to-watch.md))
-> **Related ADRs**: ADR-0001, ADR-0004, ADR-0020, ADR-0024, ADR-0026, ADR-0029
+> **Feature**: UC3 / UC4 / UC22 / UC24 / UC26 / UC27 / UC28 / UC29 ([spec](../../specs/catalog-grid.md), [continue-watching](../../specs/continue-watching.md), [where-to-watch](../../specs/where-to-watch.md), [wishlist-notifications](../../specs/wishlist-notifications.md))
+> **Related ADRs**: ADR-0001, ADR-0004, ADR-0020, ADR-0024, ADR-0026, ADR-0029, ADR-0030
 
 ## Diagram
 
@@ -30,6 +30,9 @@ flowchart TB
     sheet --> watch
     detail --> watch
     watch --> api
+    bell["discover/NotificationBell «new #277»<br/>unread count, panel, polls 5 min"]
+    app --> bell
+    bell --> api
     tokens[(styles/tokens.css)]
   end
   shared[packages/shared<br/>Media, isDocumentary, WatchProgress]
@@ -38,14 +41,19 @@ flowchart TB
   api --> shared
   api -->|/api/libraries, /api/libraries/:id/media, /api/profiles/:profileId/progress| server[apps/server]
   card -->|/api/artwork/:file| server
-  api -->|/api/discover, /api/discover/search, /api/discover/:kind/:tmdbId,<br/>/api/discover/poster/:file, /api/profiles/:profileId/wishlist,<br/>/api/discover/:kind/:tmdbId/providers, /api/discover/logo/:file «#184»| droutes
+  api -->|/api/discover, /api/discover/search, /api/discover/:kind/:tmdbId,<br/>/api/discover/poster/:file, /api/profiles/:profileId/wishlist,<br/>/api/discover/:kind/:tmdbId/providers, /api/discover/logo/:file «#184»,<br/>/api/profiles/:profileId/notifications, /api/profiles/:profileId/providers «#277»| droutes
   subgraph srv[apps/server «#127 delta»]
     droutes[discover/routes] --> wrepo[discover/wishlist-repository]
     droutes --> tmdbc[metadata/tmdb-client<br/>only HTTP egress]
     droutes --> cache[metadata/artwork-cache]
     droutes --> stale["discover/stale-cache «new #184»<br/>fresh, then stale-while-refresh, LRU"]
     cache --> tmdbc
-    wrepo --> db[(SQLite wishlist, media)]
+    wrepo --> db[(SQLite wishlist, media,<br/>profile_providers, notifications)]
+    check["discover/availability-check «new #277»<br/>timer, pure availabilityEvents"] --> wrepo
+    check --> stale
+    check --> nrepo["discover/notification-repository «new #277»"]
+    droutes --> nrepo
+    nrepo --> db
   end
   tmdbc -->|HTTPS| tmdb([TMDB])
 ```
@@ -58,3 +66,5 @@ flowchart TB
   entry is a join on `media.tmdb_id` in `wishlist-repository`.
 - #184: `WhereToWatch` shows the French legal offers on both sheets; an offer is a plain
   link to the TMDB watch page (ADR-0029). Lists and providers share `stale-cache`.
+- #277: `availability-check` runs on a timer (ADR-0016 pattern), reads offers through the
+  shared `stale-cache` and writes in-app notifications (ADR-0030); `NotificationBell` polls them.

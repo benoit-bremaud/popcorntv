@@ -113,7 +113,12 @@ export function TitleSheet({
                 {wishlisted ? '✓ In my list' : '+ My list'}
               </button>
             </div>
-            <WhereToWatch kind={title.kind} tmdbId={title.tmdbId} load={api.providers} />
+            <WhereToWatch
+              kind={title.kind}
+              tmdbId={title.tmdbId}
+              load={api.providers}
+              profileId={profileId}
+            />
           </div>
         </div>
       </div>

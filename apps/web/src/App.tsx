@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { Profile } from '@popcorntv/shared';
+import type { AppNotification, DiscoverTitle, Profile } from '@popcorntv/shared';
 import { loadProfiles } from './api.js';
 import { CatalogPage } from './catalog/CatalogPage.js';
 import { DiscoverPage } from './discover/DiscoverPage.js';
 import type { DiscoverApi } from './discover/discover-api.js';
+import { NotificationBell } from './discover/NotificationBell.js';
+import type { NotificationApi } from './discover/NotificationBell.js';
 import { rememberProfileId, rememberedProfileId } from './profiles/active-profile.js';
 import { Avatar } from './profiles/Avatar.js';
 import { ManageProfiles } from './profiles/ManageProfiles.js';
@@ -30,11 +32,28 @@ type Props = {
   readonly onAddLibrary?: () => void;
   /** Injected in tests; defaults to the real Discover API (UC26). */
   readonly discover?: DiscoverApi;
+  /** Injected in tests; defaults to the real notification API (UC28). */
+  readonly notifications?: NotificationApi;
 };
 
 /** The two catalog tabs: the files on disk, or TMDB titles beyond them (UC26). */
 type Tab =
-  { readonly kind: 'library'; readonly openMediaId: string | null } | { readonly kind: 'discover' };
+  | { readonly kind: 'library'; readonly openMediaId: string | null }
+  | { readonly kind: 'discover'; readonly openTitle: DiscoverTitle | null };
+
+/** The title sheet a notification line opens; the sheet loads the rest (UC28 R11). */
+function titleOf(notification: AppNotification): DiscoverTitle {
+  return {
+    kind: notification.kind,
+    tmdbId: notification.tmdbId,
+    title: notification.title,
+    year: null,
+    overview: '',
+    voteAverage: 0,
+    posterPath: null,
+    mediaId: null,
+  };
+}
 
 /** The web player shell: brand header, "Who's watching?" (UC8 / UC9), then the catalog. */
 export function App({
@@ -44,6 +63,7 @@ export function App({
   account,
   onAddLibrary,
   discover,
+  notifications,
 }: Props): React.JSX.Element {
   const [view, setView] = useState<View>({ kind: 'loading' });
   const [tab, setTab] = useState<Tab>({ kind: 'library', openMediaId: null });
@@ -116,6 +136,14 @@ export function App({
             <span className="visually-hidden">, switch profile</span>
           </button>
         )}
+        {view.kind === 'active' && (
+          <NotificationBell
+            key={view.profile.id}
+            profileId={view.profile.id}
+            api={notifications}
+            onOpen={(item) => setTab({ kind: 'discover', openTitle: titleOf(item) })}
+          />
+        )}
         {account}
       </header>
       <main className="shell">
@@ -158,7 +186,7 @@ export function App({
                 type="button"
                 className="chip"
                 aria-pressed={tab.kind === 'discover'}
-                onClick={() => setTab({ kind: 'discover' })}
+                onClick={() => setTab({ kind: 'discover', openTitle: null })}
               >
                 Discover
               </button>
@@ -173,6 +201,7 @@ export function App({
               <DiscoverPage
                 profileId={view.profile.id}
                 api={discover}
+                openTitle={tab.openTitle}
                 onPlayInLibrary={(mediaId) => setTab({ kind: 'library', openMediaId: mediaId })}
               />
             )}
