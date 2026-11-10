@@ -4,6 +4,20 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-10 — #278 personal title link (PR #286 merged, `ff17cc3`)
+
+- Decision ADR-0031: D1 A (445/500) a `title_links` table keyed by `(kind, tmdb_id)`, shared
+  by library and Discover (C, every title, wins only if coverage weighs > 52); D2 A (460/500)
+  owner-only writes, shown to every signed-in viewer (per-profile B wins if personal fit > 41).
+- `GET /title-links/:kind/:tmdbId` → `{ url, editable }`, `PUT | DELETE` owner; shared
+  `normaliseTitleLink` (http(s), host, no credentials, ≤ 2048), re-checked by the web; web
+  `TitleLink` opens it with `noopener noreferrer`; never fetched nor logged by the server.
+- Adversarial round 1: Must 0, Should 3 (error kinds, tests reaching real fetch, mount untested),
+  Nice 10, all fixed but the ambient `whatwg-url.d.ts` (kept, agreed); round 2 open. SonarQube
+  first failed on a deprecated `FormEvent`, fixed, PASSED. Gate: server 813, web 484, shared 57,
+  coverage server 97 % / web 99 %, gitleaks clean, e2e 2/2, staging smoke OK. Codex review hit
+  its quota (no findings). Owner waiver: doc coverage counter absent; signed-in QA deferred.
+
 ## 2026-11-10 — #277 wishlist availability notifications (PR #283 merged, `ee9681d`)
 
 - Decision ADR-0030 (option A, 420/500): in-app notifications only (table + header bell, polled
