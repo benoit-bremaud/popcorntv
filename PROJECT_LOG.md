@@ -4,6 +4,17 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-11 — #253 closed as not planned, carry-over scope pinned (PR #291 merged, `999557a`)
+
+- Decision (owner, MCDA A 450 / namespace the key anyway 350 / close only 380): #253 is not a
+  bug. Carry-over compares rows of one library only, the TMDB lookup kind comes from the
+  immutable `library.kind`, so movie and TV ids never meet. A scanner test pins the invariant
+  (fails when targets come from every library); `identity.ts` documents it.
+- Adversarial round 1: Must 0, Should 2 (mutation proof, unguarded fixture) fixed; round 2 open.
+  Gate: server 814, web 484, shared 57, coverage server 97 % / web 99 % / shared 100 %, gitleaks
+  clean, e2e 2/2, SonarQube PASSED. Codex hit its quota (no findings).
+- Follow-up #290: extras of one show share the folder's TMDB key and can swap progress.
+
 ## 2026-11-10 — #278 personal title link (PR #286 merged, `ff17cc3`)
 
 - Decision ADR-0031: D1 A (445/500) a `title_links` table keyed by `(kind, tmdb_id)`, shared
