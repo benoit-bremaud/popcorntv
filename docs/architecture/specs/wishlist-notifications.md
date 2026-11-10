@@ -45,8 +45,8 @@ behind a bell with an unread count.
   wishlisted title one after the other; no overlap; stopped and awaited in `preClose`.
 - **R7** The check reads the offers through the providers route's memo with `getFresh`: a
   value under 24 h is reused, an older or missing one is awaited, so a title costs at most one
-  TMDB call a day and the run stays serial. Only the first 500 distinct titles of a run
-  (`PROVIDERS_MAX`, the memo's size) get the provider side; the library side covers all. Without
+  TMDB call a day and the run stays serial. Only the first 500 distinct titles of a run, newest
+  wish first (`PROVIDERS_MAX`, the memo's size), get the provider side; the library side covers all. Without
   `TMDB_API_KEY` only the library check runs, and only titles enriched earlier carry a
   `tmdb_id`, so a file added meanwhile matches nothing. A TMDB failure for a title is logged
   `wishlist.check.title_failed` (warn) and that title keeps its provider `seen` state; the run

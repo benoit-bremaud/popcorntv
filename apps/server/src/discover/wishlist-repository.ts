@@ -125,7 +125,7 @@ export class WishlistRepository {
       .run();
   }
 
-  /** Every row with what the availability check last saw and its local match (R4). */
+  /** Every row, newest wish first, with what the check last saw and its local match (R4, R7). */
   checkRows(): CheckRow[] {
     const rows = this.db
       .select({
@@ -137,6 +137,7 @@ export class WishlistRepository {
         seenProviderIds: wishlist.seenProviderIds,
       })
       .from(wishlist)
+      .orderBy(desc(wishlist.addedAt))
       .all();
     return this.withMediaIds(rows);
   }

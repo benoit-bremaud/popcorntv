@@ -41,7 +41,11 @@ export class StaleCache<T> {
    */
   async getFresh(key: string, load: () => Promise<T>): Promise<T> {
     const hit = this.entries.get(key);
-    if (hit !== undefined && this.now() - hit.at < this.ttlMs) return hit.value;
+    if (hit !== undefined && this.now() - hit.at < this.ttlMs) {
+      this.entries.delete(key);
+      this.entries.set(key, hit);
+      return hit.value;
+    }
     return this.load(key, load);
   }
 
