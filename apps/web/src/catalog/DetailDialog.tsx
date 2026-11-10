@@ -3,6 +3,7 @@ import { audioTracks, decidePlayback, matchAudioTrack } from '@popcorntv/shared'
 import type { AudioTrack, CanPlay, Library, Media, WatchProgress } from '@popcorntv/shared';
 import { artworkUrl, loadProgress, setWatched } from '../api.js';
 import { browserCanPlay } from '../playback/can-play.js';
+import { languageLabel } from '../playback/language.js';
 import { PlayerDialog } from '../playback/PlayerDialog.js';
 import type { PlaybackApi } from '../playback/PlayerDialog.js';
 import { formatPosition, resumeAt } from '../playback/resume.js';
@@ -253,7 +254,7 @@ export function DetailDialog({
               >
                 {tracks.map((track) => (
                   <option key={track.index} value={track.index}>
-                    {track.language ?? `Track ${track.index + 1}`} ({track.codec})
+                    {languageLabel(track.language) ?? `Track ${track.index + 1}`} ({track.codec})
                   </option>
                 ))}
               </select>

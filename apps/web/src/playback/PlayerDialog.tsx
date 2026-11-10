@@ -3,6 +3,7 @@ import { isFinished, subtitleTracks } from '@popcorntv/shared';
 import type { Media, PlaybackStart } from '@popcorntv/shared';
 import { saveProgress, sendHeartbeat, startPlayback, stopPlayback, subtitleUrl } from '../api.js';
 import { attachHls } from './hls-source.js';
+import { languageLabel } from './language.js';
 import { useHistoryLayer } from '../history-layer.js';
 
 /** The server calls the player needs; injected by tests. */
@@ -266,7 +267,7 @@ export function PlayerDialog({
               key={track.index}
               kind="subtitles"
               src={subtitleUrl(item.id, track.index, offsetSec)}
-              label={track.language ?? `Track ${track.index + 1}`}
+              label={languageLabel(track.language) ?? `Track ${track.index + 1}`}
               srcLang={track.language ?? undefined}
             />
           ))}

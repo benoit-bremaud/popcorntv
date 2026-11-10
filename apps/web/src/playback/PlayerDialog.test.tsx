@@ -604,7 +604,7 @@ describe('PlayerDialog subtitles', () => {
     expect(
       tracks.map((track) => [track.kind, track.label, track.srclang, track.getAttribute('src')]),
     ).toEqual([
-      ['subtitles', 'fre', 'fre', '/api/media/heat/subtitles/1?offsetSec=754'],
+      ['subtitles', 'Français', 'fre', '/api/media/heat/subtitles/1?offsetSec=754'],
       ['subtitles', 'Track 3', '', '/api/media/heat/subtitles/2?offsetSec=754'],
     ]);
   });
