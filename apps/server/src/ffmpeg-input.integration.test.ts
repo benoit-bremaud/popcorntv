@@ -11,9 +11,11 @@ import { ffprobeArgs } from './library/ffprobe.js';
 const execFileAsync = promisify(execFile);
 
 /**
- * Opt-in (`FFMPEG_IT=1`): the real ffprobe refuses, with \"not on whitelist\", crafted library
- * files a manifest or concat demuxer would follow (ADR-0028), while a real Matroska file
- * still probes. The concat control shows the protocol whitelist alone does not stop it.
+ * Opt-in (`FFMPEG_IT=1`): the real ffprobe refuses, with "Format not on whitelist", crafted
+ * library files a manifest or concat demuxer would follow (ADR-0028), while a real Matroska
+ * file still probes. The concat control shows the protocol whitelist alone does not stop it;
+ * FFmpeg already refuses the DASH network fetch by default, so that case guards against a
+ * future change of that default.
  */
 describe.runIf(process.env['FFMPEG_IT'] === '1')('confined FFmpeg input', () => {
   let dir: string;
@@ -72,7 +74,9 @@ describe.runIf(process.env['FFMPEG_IT'] === '1')('confined FFmpeg input', () => 
       file,
     ]);
     expect(protocolOnly.stdout.trim()).toBe('concat');
-    await expect(execFileAsync('ffprobe', ffprobeArgs(file))).rejects.toThrow(/not on whitelist/);
+    await expect(execFileAsync('ffprobe', ffprobeArgs(file))).rejects.toThrow(
+      /Format not on whitelist/,
+    );
   });
 
   it('refuses a DASH manifest named .mkv without connecting', async () => {
@@ -82,7 +86,9 @@ describe.runIf(process.env['FFMPEG_IT'] === '1')('confined FFmpeg input', () => 
       `<?xml version="1.0"?><MPD xmlns="urn:mpeg:dash:schema:mpd:2011" type="static" mediaPresentationDuration="PT1S" minBufferTime="PT1S" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011"><Period><AdaptationSet mimeType="video/mp4"><Representation id="1" bandwidth="1"><BaseURL>http://127.0.0.1:${port}/x.mp4</BaseURL></Representation></AdaptationSet></Period></MPD>`,
     );
 
-    await expect(execFileAsync('ffprobe', ffprobeArgs(file))).rejects.toThrow(/not on whitelist/);
+    await expect(execFileAsync('ffprobe', ffprobeArgs(file))).rejects.toThrow(
+      /Format not on whitelist/,
+    );
     expect(connections).toBe(0);
   });
 });

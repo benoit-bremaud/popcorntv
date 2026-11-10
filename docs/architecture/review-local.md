@@ -1,35 +1,47 @@
-# Local review — end of run #127 / #131–#136
+# Local review — popcorntv (fix/118-ffmpeg-local-protocols)
 
-End-of-run gate on `main` `f770fa3`, 2026-11-08 (owner rule 2026-11-07: features chained, checks
-at the end). Opus adversarial review of #127 plus a verify round of the #134–#136 stack review,
-then the full local CI.
+- Date: 2026-11-10
+- Commit: b6ff7e9 + round-2 Should fixes
+- Scope: branch diff origin/main...HEAD
+- Checks run: adversarial (Opus, 2 rounds, covering correctness, security, tests, docs and design of the diff) · execution checks
+- Verdict: ship · Must 0 · Should 0 open · Nice 0
 
-## Verify round, #134–#136 stack review
+## Adversarial review (#236)
 
-M1, M2, S1, S3–S6 confirmed fixed on `main`. S2 (track index applied to every episode) had
-regressed into Must 3 below; S7 (Next episode keeps the track) and the `audioIndex` 400 test were
-missing: both added.
+- Round 1 on `edd60b7`: Must 1 · Should 4 · Nice 3 · unverified 0 · Push gate: closed
+- Round 2 on `b6ff7e9`: 8 fixed · 0 not fixed · 0 regressed · new Must 0 · **Push gate: open** (2 new Should, fixed in the next commit)
+- Optional second review (owner's OpenAI account): ChatGPT/Codex not run
 
-## Findings (#127 and the regression)
+## Pre-merge gate (head SHA: see PR)
 
-| # | Level | Finding | Outcome |
-|---|---|---|---|
-| 1 | Must | Poster route downloaded any TMDB path a viewer named: unbounded queue and disk | Fixed: only paths the server handed out (last 2000), test proves no download otherwise |
-| 2 | Must | Four docs said TMDB only receives a title, year or provider id | Fixed: data-flow 06 (Discover flow, wishlist store), enrich sequence, tmdb spec, client docblock |
-| 3 | Must | A series switched to HLS with no track picked when episodes order tracks differently | Fixed: no pick = first track, spec audio-track R4 states the language match, 2 tests |
-| 4 | Should | `openMediaId` reopened a title after a profile switch | Fixed: cleared on pick |
-| 5 | Should | Unknown TMDB id answered 502 | Fixed: `404 title_not_found`, spec R9 |
-| 6 | Should | Poster answer `Cache-Control: public` on a signed-in route | Fixed: `private` |
-| 7 | Should | UC26 extend arrow reversed | Fixed: UC4 extends UC26 at *title on disk* |
-| 8 | Should | `CLAUDE.md` layout and auth note missed `src/discover/`, UC26 | Fixed |
-| 9 | Should | ADR-0020 "four calls per quarter hour" too broad | Fixed: limited to the lists, poster rule added |
-| 10 | Should | ADR-0018 tie-breaker cited a criterion where A and B tie | Fixed |
-| 11 | Should | No test for the tabs hand-off nor another account's profile | Fixed: both added |
-| 12 | Should | No unit test of `matchAudioTrack` / `effectiveAudioIndex` | Fixed: shared coverage 75 % → 100 % |
-| 13 | Nice | Search over 100 characters shown as a TMDB failure | Fixed: `maxLength={100}` |
-| 14 | Nice | ADR-0020 "two route modules", component header without UC26, `CLAUDE.md` PUT wording | Fixed |
-| 15 | Nice | Index on `media.tmdb_id`, shared pending list promise, wishlist cap, artwork eviction | Filed #156 |
-| 16 | Nice | #136: identity ignores `edition` / `episodeEnd`, duplicate labels and `und`, Audio select without Play, `decidePlayback` vs default disposition | Filed #157 |
-| 17 | Disagree | Drop `MEDIA_ROUTE` from the poster route | Kept: a Discover page loads ~80 posters, the 300 / min bucket would throttle it; finding 1 already bounds what the route can fetch |
+| Step | Result |
+|---|---|
+| 1 Tests | ✅ shared 45 · server 733 with `FFMPEG_IT=1` · web 440 (UC26 flaky once, green on rerun, #273) |
+| 2 Coverage | server 96.96 % stmts / 92.57 % branches / 95.98 % funcs / 98.32 % lines · docs ⏸ deferred to the pre-merge run (`--push`) |
+| 3 SonarQube | ⏸ deferred to the pre-merge run (`--push`) |
+| 4 Secrets | ✅ gitleaks clean (origin/main..HEAD) · only `.env*.example` tracked · diff read: nothing sensitive |
+| 5 E2E/smoke | ⏸ deferred to the pre-merge run (`--push`) |
 
-SonarQube: 3 new issues on #127 (S7721, S2004, S1874) fixed, gate PASSED.
+- Gate: `--push`: **pre-push green** — typecheck, lint, format, tests passed; SonarQube, doc coverage, E2E deferred
+
+## 🔴 Must Have
+
+- `apps/server/src/ffmpeg-input.integration.test.ts` `[adversarial|tests]` · crafted-file tests passed without the fix · fixed: sibling concat with protocol-only control, assertions on "Format not on whitelist"
+
+## 🟡 Should Have
+
+- `docs/architecture/decisions/0028-local-only-ffmpeg-input.md` `[adversarial|docs]` · threat overstated, MCDA totals wrong, `mpegts` unexplained · fixed
+- `SECURITY.md`, ADR-0006/0009/0023 `[docs]` · no mention or back-link · fixed
+- `docs/testing/qa-matrix.md` `[docs]` · QA steps expected a log line the server never writes · fixed
+
+## 🔵 Nice to Have
+
+- `apps/server/src/ffmpeg-input.test.ts`, `ffmpeg-input.ts`, `CLAUDE.md` `[tests|docs]` · literal array assertion, `as const`, layout entry · fixed
+
+## ⚪ Disagree / Intentional
+
+- `apps/server/src/ffmpeg-input.ts` `[adversarial]` · `file` only, not `file,pipe`: input options do not affect outputs (`framecrc` to `-` verified)
+
+## Per-dimension summary
+
+- Adversarial: 2 rounds, gate open · Design: one pure helper, four call sites, no new layer · Docs: ADR-0028, SECURITY, back-links · Tests: unit + discriminating FFmpeg integration · Security: closes sibling concat and demuxer surface · Correctness: all six containers probe, transcode, seek and extract subtitles

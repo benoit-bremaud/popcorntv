@@ -37,7 +37,8 @@ MPEG-TS is kept because files remuxed from a TS carry it under another name (ADR
 A unit test keeps the list in step with `SUPPORTED_EXTENSIONS`; an opt-in integration test
 (`FFMPEG_IT=1`) runs the real ffprobe on a sibling concat list (with a control showing the
 protocol whitelist alone lets it through) and on a DASH manifest pointing at a local
-listener, both named `.mkv` and refused with "not on whitelist".
+listener, both named `.mkv` and refused with "Format not on whitelist". FFmpeg already
+refuses the DASH network fetch by default; that case guards against a change of that default.
 
 ## Options (MCDA, weights validated by the owner)
 
