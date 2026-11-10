@@ -93,6 +93,10 @@ them. The 2026-11-08 FULL QA pass found 18 log calls in 9 of ~50 server files, a
 | `discover.logo.failed`                                    | warn         | `err`                                                   | `discover/routes.ts`   |
 | `discover.providers.refresh_failed`                       | warn         | `kind`, `tmdbId`, `err`                                 | `discover/routes.ts`   |
 | `library.schedule.done` / `.busy` / `.failed`             | info / info / warn | `libraryId`, counts, `err`                        | `library/scheduler.ts` |
+| `wishlist.check.done`                                     | info         | `titles`, `notified`, `failed`                          | `discover/availability-check.ts` |
+| `wishlist.check.title_failed`                             | warn         | `kind`, `tmdbId`, `err`                                 | `discover/availability-check.ts` |
+| `wishlist.check.failed`                                   | warn         | `err`                                                   | `discover/availability-check.ts` |
+| `notification.created`                                    | info         | `profileId`, `reason`, `kind`, `tmdbId`, `providerId`   | `discover/availability-check.ts` |
 | `auth.setup_link`                                         | warn         | `setupLink` (ADR-0010)                                  | `app.ts`               |
 
 The scheduled scan keeps its own `library.schedule.*` lines and also emits the

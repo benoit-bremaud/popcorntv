@@ -38,8 +38,8 @@ subscription, free, with ads, rent, buy — and opens the chosen one in a new ta
   "Offers could not be loaded" line; the rest of the sheet is unaffected.
 - **R8** PopCornTV never fetches, proxies, embeds or plays a third-party stream: only the
   TMDB metadata and logos cross the server (project rule: own media only; ADR-0028).
-- **R9** Offers carry the stable TMDB `providerId` so a later "my providers" setting (#277)
-  can filter or notify on them without a new contract.
+- **R9** Offers carry the stable TMDB `providerId`; the "my providers" setting and its
+  notifications use it (spec [wishlist-notifications](wishlist-notifications.md) R1–R3).
 
 ## 2. Main scenario
 

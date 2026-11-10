@@ -17,7 +17,13 @@ import { createTmdbClient, TmdbRequestError } from '../metadata/tmdb-client.js';
 import type { TmdbClient, TmdbSummary } from '../metadata/tmdb-client.js';
 import { ProfileRepository } from '../profiles/repository.js';
 import { actAs, createAccount } from '../test-fixtures.js';
-import { LIST_TTL_MS, PROVIDERS_TTL_MS, registerDiscoverRoutes } from './routes.js';
+import {
+  freshWatchProvidersOf,
+  LIST_TTL_MS,
+  PROVIDERS_TTL_MS,
+  registerDiscoverRoutes,
+} from './routes.js';
+import { StaleCache } from './stale-cache.js';
 import { WishlistRepository } from './wishlist-repository.js';
 
 const DUNE: TmdbSummary = {
@@ -594,5 +600,16 @@ describe('wishlist routes', () => {
       expect(off.statusCode).toBe(409);
       expect((await bare.app.inject({ url: '/discover/logo/a.jpg' })).statusCode).toBe(409);
     });
+  });
+});
+
+describe('freshWatchProvidersOf', () => {
+  it('should read the offers through the memo, one TMDB call while fresh', async () => {
+    const client = makeClient();
+    const offers = freshWatchProvidersOf(new StaleCache(PROVIDERS_TTL_MS, 10, () => 0), client);
+    await expect(offers('movie', 438631)).resolves.toEqual(NETFLIX);
+    await expect(offers('movie', 438631)).resolves.toEqual(NETFLIX);
+    expect(client.watchProviders).toHaveBeenCalledTimes(1);
+    expect(client.watchProviders).toHaveBeenCalledWith('movie', 438631);
   });
 });

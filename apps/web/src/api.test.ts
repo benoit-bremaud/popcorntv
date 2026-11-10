@@ -8,7 +8,11 @@ import {
   artworkUrl,
   loadDiscover,
   loadDiscoverDetails,
+  loadMyProviders,
+  loadNotifications,
   loadWishlist,
+  markNotificationsRead,
+  setMyProvider,
   posterUrl,
   searchDiscover,
   setWishlisted,
@@ -340,6 +344,64 @@ describe('Discover helpers (UC26)', () => {
     );
     await expect(
       setWishlisted('p1', 'tv', 4, true, async () => Promise.reject(new TypeError('offline'))),
+    ).resolves.toBe(false);
+  });
+});
+
+describe('notifications and my providers (UC28 / UC29)', () => {
+  it('loads the notifications, and throws on an error status or a network failure', async () => {
+    const list = { items: [], unread: 2 };
+    await expect(loadNotifications('p1', async () => respond(list))).resolves.toEqual(list);
+    await expect(loadNotifications('p1', async () => respond({}, 404))).rejects.toMatchObject({
+      status: 404,
+    });
+    await expect(loadNotifications('p1', async () => respond([]))).rejects.toMatchObject({
+      status: 200,
+    });
+    await expect(
+      loadNotifications('p1', async () => Promise.reject(new TypeError('offline'))),
+    ).rejects.toMatchObject({ status: null });
+  });
+
+  it('marks the notifications read with PUT, false when refused or offline', async () => {
+    const fetchFn = vi.fn(async () => new Response(null, { status: 204 }));
+    await expect(markNotificationsRead('p1', fetchFn)).resolves.toBe(true);
+    expect(fetchFn.mock.calls).toEqual([
+      ['/api/profiles/p1/notifications/read', { method: 'PUT' }],
+    ]);
+    await expect(markNotificationsRead('p1', async () => respond({}, 404))).resolves.toBe(false);
+    await expect(
+      markNotificationsRead('p1', async () => Promise.reject(new TypeError('offline'))),
+    ).resolves.toBe(false);
+  });
+
+  it('reads my providers, empty when the server fails', async () => {
+    const mine = [{ providerId: 8, name: 'Netflix' }];
+    await expect(loadMyProviders('p1', async () => respond(mine))).resolves.toEqual(mine);
+    await expect(loadMyProviders('p1', async () => respond({}, 500))).resolves.toEqual([]);
+  });
+
+  it('adds a provider with PUT and its name, removes it with DELETE, false when refused', async () => {
+    const fetchFn = vi.fn(async () => new Response(null, { status: 204 }));
+    const netflix = { providerId: 8, name: 'Netflix' };
+    await expect(setMyProvider('p1', netflix, true, fetchFn)).resolves.toBe(true);
+    await expect(setMyProvider('p1', netflix, false, fetchFn)).resolves.toBe(true);
+    expect(fetchFn.mock.calls).toEqual([
+      [
+        '/api/profiles/p1/providers/8',
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{"name":"Netflix"}',
+        },
+      ],
+      ['/api/profiles/p1/providers/8', { method: 'DELETE' }],
+    ]);
+    await expect(setMyProvider('p1', netflix, true, async () => respond({}, 409))).resolves.toBe(
+      false,
+    );
+    await expect(
+      setMyProvider('p1', netflix, true, async () => Promise.reject(new TypeError('offline'))),
     ).resolves.toBe(false);
   });
 });

@@ -14,6 +14,7 @@ import {
   DISCOVER_KINDS,
   LIBRARY_KINDS,
   MEDIA_KINDS,
+  NOTIFICATION_REASONS,
   ROLES,
   STREAM_TYPES,
 } from '@popcorntv/shared';
@@ -205,8 +206,9 @@ export const watchProgress = sqliteTable(
 
 /**
  * A profile's wishlist (UC26, ADR-0020): one row per TMDB title, with the facts the row
- * shows read from TMDB when added. Availability is not stored: it is a join on
- * `media.tmdb_id` at read time (spec discover-wishlist R6).
+ * shows read from TMDB when added. Availability shown is a join on `media.tmdb_id` at read
+ * time (spec discover-wishlist R6); the `seen_*` columns hold what the availability check last
+ * saw, so it notifies only on a change (spec wishlist-notifications R4).
  */
 export const wishlist = sqliteTable(
   'wishlist',
@@ -222,6 +224,42 @@ export const wishlist = sqliteTable(
     voteAverage: real('vote_average').notNull(),
     posterPath: text('poster_path'),
     addedAt: text('added_at').notNull(),
+    seenInLibrary: integer('seen_in_library', { mode: 'boolean' }).notNull().default(false),
+    /** JSON array of counting provider ids last seen; null until the first check (R4). */
+    seenProviderIds: text('seen_provider_ids', { mode: 'json' }).$type<number[]>(),
   },
   (table) => [primaryKey({ columns: [table.profileId, table.kind, table.tmdbId] })],
+);
+
+/** The streaming providers a profile subscribes to (UC29, spec wishlist-notifications R1). */
+export const profileProviders = sqliteTable(
+  'profile_providers',
+  {
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    providerId: integer('provider_id').notNull(),
+    name: text('name').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.profileId, table.providerId] })],
+);
+
+/** In-app notifications of a profile (UC28, ADR-0030); facts copied so a line outlives its source. */
+export const notifications = sqliteTable(
+  'notifications',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    kind: text('kind', { enum: DISCOVER_KINDS }).notNull(),
+    tmdbId: integer('tmdb_id').notNull(),
+    title: text('title').notNull(),
+    reason: text('reason', { enum: NOTIFICATION_REASONS }).notNull(),
+    providerId: integer('provider_id'),
+    providerName: text('provider_name'),
+    createdAt: text('created_at').notNull(),
+    readAt: text('read_at'),
+  },
+  (table) => [index('notifications_profile_idx').on(table.profileId, table.createdAt)],
 );

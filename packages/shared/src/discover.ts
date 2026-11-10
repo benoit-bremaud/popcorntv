@@ -52,3 +52,41 @@ export interface WatchProviders {
   readonly link: string | null;
   readonly offers: readonly WatchOffer[];
 }
+
+/** Offer types that make a title "available on a provider" (spec wishlist-notifications R3). */
+export const COUNTING_OFFER_TYPES: readonly WatchOfferType[] = ['flatrate', 'free', 'ads'];
+
+/** A provider a profile subscribes to (spec wishlist-notifications R1). */
+export interface MyProvider {
+  readonly providerId: number;
+  readonly name: string;
+}
+
+/** Body of `PUT /profiles/:profileId/providers/:providerId`. */
+export type MyProviderBody = Omit<MyProvider, 'providerId'>;
+
+/** A profile may mark this many providers at most (spec wishlist-notifications R1). */
+export const MY_PROVIDERS_MAX = 50;
+
+/** Why a notification was raised (spec wishlist-notifications R9). */
+export const NOTIFICATION_REASONS = ['library', 'provider'] as const;
+export type NotificationReason = (typeof NOTIFICATION_REASONS)[number];
+
+/** One in-app notification (ADR-0030); `providerId` / `providerName` set for `provider` only. */
+export interface AppNotification {
+  readonly id: number;
+  readonly kind: DiscoverKind;
+  readonly tmdbId: number;
+  readonly title: string;
+  readonly reason: NotificationReason;
+  readonly providerId: number | null;
+  readonly providerName: string | null;
+  readonly createdAt: string;
+  readonly readAt: string | null;
+}
+
+/** `GET /profiles/:profileId/notifications` (spec wishlist-notifications R10). */
+export interface NotificationList {
+  readonly items: readonly AppNotification[];
+  readonly unread: number;
+}

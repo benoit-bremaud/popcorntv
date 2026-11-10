@@ -1,9 +1,14 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { FastifyInstance, FastifyReply } from 'fastify';
+import type { FastifyBaseLogger, FastifyInstance, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { DISCOVER_KINDS, DISCOVER_LISTS } from '@popcorntv/shared';
-import type { DiscoverDetails, DiscoverTitle, WatchProviders } from '@popcorntv/shared';
+import type {
+  DiscoverDetails,
+  DiscoverKind,
+  DiscoverTitle,
+  WatchProviders,
+} from '@popcorntv/shared';
 import { apiError, callerOf, invalid, MEDIA_ROUTE } from '../http.js';
 import type { ArtworkCache } from '../metadata/artwork-cache.js';
 import { TmdbRequestError } from '../metadata/tmdb-client.js';
@@ -21,6 +26,8 @@ export interface DiscoverRoutesDeps {
   readonly artworkDir: string;
   readonly wishlist: WishlistRepository;
   readonly profiles: Pick<ProfileRepository, 'exists'>;
+  /** The watch-provider memo, shared with the wishlist check (ADR-0030); built here if absent. */
+  readonly providers?: StaleCache<WatchProviders>;
   /** Clock of the list memo; tests move it. */
   readonly now?: () => number;
 }
@@ -137,6 +144,38 @@ async function details(
 }
 
 /**
+ * The French offers of a title through `cache` (spec where-to-watch R3), served stale while one
+ * call refreshes them: the providers route.
+ */
+export function watchProvidersOf(
+  cache: StaleCache<WatchProviders>,
+  tmdb: TmdbClient,
+  logger: Pick<FastifyBaseLogger, 'warn'>,
+): (kind: DiscoverKind, id: number) => Promise<WatchProviders> {
+  return (of, id) =>
+    cache.get(
+      `${of}:${id}`,
+      () => tmdb.watchProviders(of, id),
+      (error) =>
+        logger.warn(
+          { event: 'discover.providers.refresh_failed', kind: of, tmdbId: id, err: error },
+          'watch providers refresh failed',
+        ),
+    );
+}
+
+/**
+ * The French offers of a title, fresh (≤ 24 h) or awaited: the wishlist check reads the route's
+ * memo, so a title costs at most one TMDB call a day (spec wishlist-notifications R7).
+ */
+export function freshWatchProvidersOf(
+  cache: StaleCache<WatchProviders>,
+  tmdb: TmdbClient,
+): (kind: DiscoverKind, id: number) => Promise<WatchProviders> {
+  return (of, id) => cache.getFresh(`${of}:${id}`, () => tmdb.watchProviders(of, id));
+}
+
+/**
  * UC26 (spec discover-wishlist): `GET /discover`, `GET /discover/search`, `GET
  * /discover/:kind/:tmdbId`, `GET /discover/:kind/:tmdbId/providers` (UC27), `GET
  * /discover/poster/:file`, `GET /discover/logo/:file`, and `GET | PUT | DELETE` on
@@ -151,7 +190,8 @@ export function registerDiscoverRoutes(app: FastifyInstance, deps: DiscoverRoute
   );
   const issued = new Set<string>();
   const issuedLogos = new Set<string>();
-  const providers = new StaleCache<WatchProviders>(PROVIDERS_TTL_MS, PROVIDERS_MAX, now);
+  const providers =
+    deps.providers ?? new StaleCache<WatchProviders>(PROVIDERS_TTL_MS, PROVIDERS_MAX, now);
 
   /** Records the poster paths of an answer so the poster route may serve them, then returns it. */
   function issue<T extends { readonly posterPath: string | null }>(titles: T[]): T[] {
@@ -235,17 +275,7 @@ export function registerDiscoverRoutes(app: FastifyInstance, deps: DiscoverRoute
     const tmdb = deps.tmdb;
     if (!tmdb) return reply.code(409).send(apiError('tmdb_not_configured'));
     const { kind: of, tmdbId: id } = params.data;
-    const answer = await viaTmdb(reply, () =>
-      providers.get(
-        `${of}:${id}`,
-        () => tmdb.watchProviders(of, id),
-        (error) =>
-          app.log.warn(
-            { event: 'discover.providers.refresh_failed', kind: of, tmdbId: id, err: error },
-            'watch providers refresh failed',
-          ),
-      ),
-    );
+    const answer = await viaTmdb(reply, () => watchProvidersOf(providers, tmdb, app.log)(of, id));
     if (answer === SENT) return reply;
     for (const offer of answer.offers) remember(issuedLogos, offer.logoPath);
     return reply.send(answer satisfies WatchProviders);

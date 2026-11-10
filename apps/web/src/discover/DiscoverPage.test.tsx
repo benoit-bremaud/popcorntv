@@ -35,8 +35,8 @@ function makeApi(overrides: Partial<DiscoverApi> = {}): DiscoverApi {
       list === 'trending' && kind === 'movie' ? [DUNE] : kind === 'tv' ? [DARK] : [],
     ),
     search: vi.fn<DiscoverApi['search']>(async () => [DUNE]),
-    details: vi.fn<DiscoverApi['details']>(async () => ({
-      ...DUNE,
+    details: vi.fn<DiscoverApi['details']>(async (_kind, tmdbId) => ({
+      ...(tmdbId === DARK.tmdbId ? DARK : DUNE),
       genres: ['Science Fiction'],
       cast: ['Zendaya'],
     })),
@@ -52,6 +52,25 @@ function rowOf(name: string): HTMLElement {
 }
 
 describe('DiscoverPage', () => {
+  it('opens a requested title with its My list match when the details fail (UC28 R11)', async () => {
+    const api = makeApi({
+      details: vi.fn(async () => Promise.reject(new Error('offline'))),
+      wishlist: vi.fn(async () => [{ ...DUNE, mediaId: 'm-dune', addedAt: 'now' }]),
+    });
+    const onPlayInLibrary = vi.fn();
+    render(
+      <DiscoverPage
+        profileId="p1"
+        api={api}
+        onPlayInLibrary={onPlayInLibrary}
+        openTitle={{ ...DUNE, mediaId: null }}
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Play in my library' }));
+    expect(onPlayInLibrary).toHaveBeenCalledWith('m-dune');
+  });
+
   it('opts the search out of the browser identity autofill (#168)', () => {
     render(<DiscoverPage profileId="p1" onPlayInLibrary={() => undefined} api={makeApi()} />);
 

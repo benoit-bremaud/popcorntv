@@ -34,6 +34,21 @@ export class StaleCache<T> {
     return hit.value;
   }
 
+  /**
+   * A fresh value of `key`, waiting for `load` when the cached one is missing or stale (the
+   * wishlist check, spec wishlist-notifications R7); a failed load rejects, so the caller never
+   * diffs data older than the TTL.
+   */
+  async getFresh(key: string, load: () => Promise<T>): Promise<T> {
+    const hit = this.entries.get(key);
+    if (hit !== undefined && this.now() - hit.at < this.ttlMs) {
+      this.entries.delete(key);
+      this.entries.set(key, hit);
+      return hit.value;
+    }
+    return this.load(key, load);
+  }
+
   /** Loads `key` now (a warm-up or a miss); concurrent loads of a key share one call. */
   load(key: string, load: () => Promise<T>): Promise<T> {
     const pending = this.inFlight.get(key);

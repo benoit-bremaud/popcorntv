@@ -6,6 +6,21 @@ import { media, wishlist } from '../db/schema.js';
 /** A Discover title before its local match is known. */
 export type TitleFacts = Omit<DiscoverTitle, 'mediaId'>;
 
+/** The key of a wishlist row. */
+export interface WishlistKey {
+  readonly profileId: string;
+  readonly kind: DiscoverKind;
+  readonly tmdbId: number;
+}
+
+/** A row as the availability check reads it (spec wishlist-notifications R4). */
+export interface CheckRow extends WishlistKey {
+  readonly title: string;
+  readonly seenInLibrary: boolean;
+  readonly seenProviderIds: number[] | null;
+  readonly mediaId: string | null;
+}
+
 /** The local media kind a TMDB kind matches (spec discover-wishlist R4). */
 const LOCAL_KIND = { movie: 'film', tv: 'series' } as const;
 
@@ -19,7 +34,9 @@ export class WishlistRepository {
   constructor(private readonly db: AppDatabase) {}
 
   /** The titles with `mediaId` set when a local film / series carries their `tmdb_id`. */
-  withMediaIds<T extends TitleFacts>(titles: readonly T[]): (T & { mediaId: string | null })[] {
+  withMediaIds<T extends Pick<TitleFacts, 'kind' | 'tmdbId'>>(
+    titles: readonly T[],
+  ): (T & { mediaId: string | null })[] {
     const local = new Map<string, string>();
     for (const kind of ['movie', 'tv'] as const) {
       const ids = titles.filter((title) => title.kind === kind).map((title) => title.tmdbId);
@@ -65,9 +82,19 @@ export class WishlistRepository {
     return this.withMediaIds(rows);
   }
 
-  /** Adds (or refreshes) a title on a profile's list; the caller checks the profile exists. */
+  /**
+   * Adds (or refreshes) a title on a profile's list; the caller checks the profile exists. A new
+   * row starts from its current local match, its providers not looked at yet (spec
+   * wishlist-notifications R4).
+   */
   add(profileId: string, title: TitleFacts, now: Date = new Date()): void {
-    const row = { ...title, profileId, addedAt: now.toISOString() };
+    const [match] = this.withMediaIds([title]);
+    const row = {
+      ...title,
+      profileId,
+      addedAt: now.toISOString(),
+      seenInLibrary: (match?.mediaId ?? null) !== null,
+    };
     this.db
       .insert(wishlist)
       .values(row)
@@ -96,5 +123,41 @@ export class WishlistRepository {
         ),
       )
       .run();
+  }
+
+  /** Every row, newest wish first, with what the check last saw and its local match (R4, R7). */
+  checkRows(): CheckRow[] {
+    const rows = this.db
+      .select({
+        profileId: wishlist.profileId,
+        kind: wishlist.kind,
+        tmdbId: wishlist.tmdbId,
+        title: wishlist.title,
+        seenInLibrary: wishlist.seenInLibrary,
+        seenProviderIds: wishlist.seenProviderIds,
+      })
+      .from(wishlist)
+      .orderBy(desc(wishlist.addedAt))
+      .all();
+    return this.withMediaIds(rows);
+  }
+
+  /** Records what the check saw for a row; false when the row is gone (removed meanwhile). */
+  saveSeen(row: WishlistKey, inLibrary: boolean, providerIds: readonly number[] | null): boolean {
+    const result = this.db
+      .update(wishlist)
+      .set({
+        seenInLibrary: inLibrary,
+        seenProviderIds: providerIds === null ? null : [...providerIds],
+      })
+      .where(
+        and(
+          eq(wishlist.profileId, row.profileId),
+          eq(wishlist.kind, row.kind),
+          eq(wishlist.tmdbId, row.tmdbId),
+        ),
+      )
+      .run();
+    return result.changes > 0;
   }
 }

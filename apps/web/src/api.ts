@@ -20,6 +20,8 @@ import type {
   Library,
   Media,
   MediaFolderList,
+  MyProvider,
+  NotificationList,
   PlaybackSessionBody,
   PlaybackStart,
   Profile,
@@ -317,6 +319,76 @@ export async function setWishlisted(
     const response = await fetchFn(`${API}${profilePath(profileId)}/wishlist/${kind}/${tmdbId}`, {
       method: value ? 'PUT' : 'DELETE',
     });
+    return watched(response).ok;
+  } catch {
+    return false;
+  }
+}
+
+/** `GET /profiles/:profileId/notifications` (UC28 R10); throws `ApiRequestError` when refused. */
+export async function loadNotifications(
+  profileId: string,
+  fetchFn: Fetch = fetch,
+): Promise<NotificationList> {
+  const path = `${profilePath(profileId)}/notifications`;
+  let response: Response;
+  try {
+    response = watched(await fetchFn(`${API}${path}`));
+  } catch {
+    throw new ApiRequestError(path, null);
+  }
+  if (!response.ok) throw new ApiRequestError(path, response.status);
+  const body = (await response.json()) as Partial<NotificationList> | null;
+  if (!Array.isArray(body?.items)) throw new ApiRequestError(path, response.status);
+  return body as NotificationList;
+}
+
+/** `PUT /profiles/:profileId/notifications/read` (UC28 R10); false when refused. */
+export async function markNotificationsRead(
+  profileId: string,
+  fetchFn: Fetch = fetch,
+): Promise<boolean> {
+  try {
+    const response = await fetchFn(`${API}${profilePath(profileId)}/notifications/read`, {
+      method: 'PUT',
+    });
+    return watched(response).ok;
+  } catch {
+    return false;
+  }
+}
+
+/** `GET /profiles/:profileId/providers` (UC29 R1); an unreachable server means none. */
+export async function loadMyProviders(
+  profileId: string,
+  fetchFn: Fetch = fetch,
+): Promise<MyProvider[]> {
+  try {
+    return await getList<MyProvider>(fetchFn, `${profilePath(profileId)}/providers`);
+  } catch {
+    return [];
+  }
+}
+
+/** `PUT | DELETE /profiles/:profileId/providers/:providerId` (UC29 R1); false when refused. */
+export async function setMyProvider(
+  profileId: string,
+  provider: MyProvider,
+  value: boolean,
+  fetchFn: Fetch = fetch,
+): Promise<boolean> {
+  try {
+    const url = `${API}${profilePath(profileId)}/providers/${provider.providerId}`;
+    const response = await fetchFn(
+      url,
+      value
+        ? {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: provider.name }),
+          }
+        : { method: 'DELETE' },
+    );
     return watched(response).ok;
   } catch {
     return false;

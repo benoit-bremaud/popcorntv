@@ -1,7 +1,15 @@
 import { useEffect, useState } from 'react';
-import { WATCH_OFFER_TYPES } from '@popcorntv/shared';
-import type { DiscoverKind, WatchOfferType, WatchProviders } from '@popcorntv/shared';
-import { loadWatchProviders, logoUrl } from '../api.js';
+import { COUNTING_OFFER_TYPES, WATCH_OFFER_TYPES } from '@popcorntv/shared';
+import type { DiscoverKind, MyProvider, WatchOfferType, WatchProviders } from '@popcorntv/shared';
+import { loadMyProviders, loadWatchProviders, logoUrl, setMyProvider } from '../api.js';
+
+/** The "my providers" calls (UC29); injected by tests. */
+export interface MyProvidersApi {
+  readonly load: typeof loadMyProviders;
+  readonly set: typeof setMyProvider;
+}
+
+const myProvidersApi: MyProvidersApi = { load: loadMyProviders, set: setMyProvider };
 
 const TYPE_LABELS: Record<WatchOfferType, string> = {
   flatrate: 'Subscription',
@@ -16,6 +24,9 @@ type Props = {
   readonly tmdbId: number;
   /** `GET /discover/:kind/:tmdbId/providers`; injected by tests. */
   readonly load?: typeof loadWatchProviders;
+  /** The active profile: set, the block offers a "Mine" toggle per provider (UC29). */
+  readonly profileId?: string;
+  readonly myProviders?: MyProvidersApi;
 };
 
 type State =
@@ -30,6 +41,8 @@ export function WhereToWatch({
   kind,
   tmdbId,
   load = loadWatchProviders,
+  profileId,
+  myProviders = myProvidersApi,
 }: Props): React.JSX.Element {
   const [state, setState] = useState<State>({ status: 'loading' });
 
@@ -51,6 +64,9 @@ export function WhereToWatch({
       {state.status === 'loading' && <p className="muted">Loading offers…</p>}
       {state.status === 'failed' && <p className="muted">Offers could not be loaded.</p>}
       {state.status === 'ready' && <Offers answer={state.answer} />}
+      {state.status === 'ready' && profileId !== undefined && (
+        <MineToggles answer={state.answer} profileId={profileId} api={myProviders} />
+      )}
     </section>
   );
 }
@@ -98,5 +114,72 @@ function Offers({ answer }: { readonly answer: WatchProviders }): React.JSX.Elem
       })}
       {credit}
     </>
+  );
+}
+
+/**
+ * One "Mine" toggle per provider whose offer counts (spec wishlist-notifications R2, R3): a
+ * My list title arriving on a provider marked mine raises a notification.
+ */
+function MineToggles({
+  answer,
+  profileId,
+  api,
+}: {
+  readonly answer: WatchProviders;
+  readonly profileId: string;
+  readonly api: MyProvidersApi;
+}): React.JSX.Element | null {
+  const [mine, setMine] = useState<ReadonlySet<number> | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    void api.load(profileId).then((list) => {
+      if (live) setMine(new Set(list.map((provider) => provider.providerId)));
+    });
+    return () => {
+      live = false;
+    };
+  }, [api, profileId]);
+
+  const providers = new Map<number, MyProvider>();
+  for (const offer of answer.offers) {
+    if (COUNTING_OFFER_TYPES.includes(offer.type)) {
+      providers.set(offer.providerId, { providerId: offer.providerId, name: offer.name });
+    }
+  }
+  if (mine === null || providers.size === 0) return null;
+
+  async function toggle(provider: MyProvider, value: boolean): Promise<void> {
+    if (!(await api.set(profileId, provider, value))) return;
+    setMine((current) => {
+      const next = new Set(current);
+      if (value) next.add(provider.providerId);
+      else next.delete(provider.providerId);
+      return next;
+    });
+  }
+
+  return (
+    <div className="watch__mine">
+      <p className="muted">My providers (notified when a My list title arrives):</p>
+      <ul className="watch__offers">
+        {[...providers.values()].map((provider) => {
+          const pressed = mine.has(provider.providerId);
+          return (
+            <li key={provider.providerId}>
+              <button
+                type="button"
+                className="chip"
+                aria-pressed={pressed}
+                onClick={() => void toggle(provider, !pressed)}
+              >
+                {provider.name}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }

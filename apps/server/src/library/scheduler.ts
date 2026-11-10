@@ -1,18 +1,17 @@
 import type { FastifyBaseLogger } from 'fastify';
 import type { Library, ScanReport } from '@popcorntv/shared';
+import { startSerialTimer } from '../timer.js';
+import type { TimerFns } from '../timer.js';
 import { LibraryBusyError } from './lock.js';
 
 /** What a scheduled scan run needs; `buildApp` wires the real ones, tests fakes. */
-export interface ScanScheduleDeps {
+export interface ScanScheduleDeps extends TimerFns {
   /** Minutes between two runs (spec scheduled-scan R1). */
   readonly intervalMin: number;
   readonly libraries: () => readonly Library[];
   /** The same lock-held scan + included enrichment as `POST /libraries/:id/scan`. */
   readonly scan: (library: Library) => Promise<ScanReport>;
   readonly logger: Pick<FastifyBaseLogger, 'info' | 'warn'>;
-  /** Timer boundary, injected so tests drive time. */
-  readonly setInterval?: (run: () => void, ms: number) => unknown;
-  readonly clearInterval?: (handle: unknown) => void;
 }
 
 /**
@@ -63,25 +62,11 @@ export async function scanAllLibraries(
  * flight (if any) has finished its current library.
  */
 export function startScanSchedule(deps: ScanScheduleDeps): () => Promise<void> {
-  const set = deps.setInterval ?? ((run, ms) => globalThis.setInterval(run, ms).unref());
-  const clear =
-    deps.clearInterval ??
-    ((handle) => globalThis.clearInterval(handle as ReturnType<typeof globalThis.setInterval>));
-  let stopped = false;
-  let running: Promise<void> | null = null;
-  const handle = set(() => {
-    if (running || stopped) return;
-    running = scanAllLibraries(deps, () => stopped)
-      .catch((error: unknown) =>
-        deps.logger.warn({ event: 'library.schedule.failed', err: error }, 'scheduled scan failed'),
-      )
-      .finally(() => {
-        running = null;
-      });
-  }, deps.intervalMin * 60_000);
-  return async () => {
-    stopped = true;
-    clear(handle);
-    await running;
-  };
+  return startSerialTimer(
+    deps.intervalMin,
+    (stopped) => scanAllLibraries(deps, stopped),
+    (error) =>
+      deps.logger.warn({ event: 'library.schedule.failed', err: error }, 'scheduled scan failed'),
+    deps,
+  );
 }

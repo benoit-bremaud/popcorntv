@@ -337,3 +337,26 @@ Replay on every Pi deploy:
 5. TMDB unreachable on a title never opened: "Offers could not be loaded", the sheet works.
 6. `GET /discover/logo/abc.png` for a path never handed out → 404 `artwork_not_found`.
 7. DevTools Network: no request to any provider domain until the click; no media stream.
+
+## Wishlist notification checks (#277, ADR-0030)
+
+1. On a title sheet with a Subscription offer, **My providers** shows one toggle per
+   subscription / free / ads provider (none for Rent / Buy); pressing Netflix persists across a
+   reload and per profile (another profile sees it unpressed).
+2. Add a title on Netflix to My list, mark Netflix mine: no notification after a check (the
+   first look is a baseline, R5).
+3. Add a title to My list, then drop its file in a library and scan; after the next check
+   (`WISHLIST_CHECK_INTERVAL_MIN=1` on staging) the bell shows **1**; opening it lists
+   "*Title* is now in your library" and the count clears; a further check adds nothing.
+4. Click a line: the Discover tab opens the title sheet; Play in my library works from it.
+5. A profile of another account never sees these lines (`GET /profiles/<theirs>/notifications`
+   → 404 `profile_not_found`).
+6. `WISHLIST_CHECK_INTERVAL_MIN=0`: no `wishlist.check.done` line in the log; `TMDB_API_KEY`
+   unset: no TMDB call, and only titles enriched earlier can match (a new file has no
+   `tmdb_id`), so no new library notification.
+7. Server log: one `wishlist.check.done` per run; one `notification.created` per line; a TMDB
+   outage logs `wishlist.check.title_failed` and the next run catches up.
+8. Upgrade an instance whose wishlist already holds titles on disk: no notification for them
+   (migration 0009 baseline).
+9. Keyboard and screen reader: the bell is reachable by Tab, announced "Notifications, N unread",
+   `aria-expanded` follows the panel.

@@ -47,6 +47,7 @@ describe('loadConfig', () => {
       publicUrl: 'http://localhost:5173',
       trustProxy: null,
       scanIntervalMin: 60,
+      wishlistCheckIntervalMin: 60,
       logLevel: 'info',
       appVersion: 'dev',
     });
@@ -69,6 +70,7 @@ describe('loadConfig', () => {
         PUBLIC_URL: ' https://tv.example.org/ ',
         TRUST_PROXY: '172.18.0.0/16, 10.0.0.2',
         SCAN_INTERVAL_MIN: '0',
+        WISHLIST_CHECK_INTERVAL_MIN: '15',
         LOG_LEVEL: 'debug',
         APP_VERSION: 'v1.0.0',
       }),
@@ -87,6 +89,7 @@ describe('loadConfig', () => {
       publicUrl: 'https://tv.example.org',
       trustProxy: '172.18.0.0/16,10.0.0.2',
       scanIntervalMin: 0,
+      wishlistCheckIntervalMin: 15,
       logLevel: 'debug',
       appVersion: 'v1.0.0',
     });
@@ -165,5 +168,22 @@ describe('SCAN_INTERVAL_MIN', () => {
 
   it('should accept the largest interval a timer can hold', () => {
     expect(loadConfig({ ...BASE, SCAN_INTERVAL_MIN: '35791' }).scanIntervalMin).toBe(35791);
+  });
+});
+
+describe('WISHLIST_CHECK_INTERVAL_MIN', () => {
+  it.each(['', 'abc', '-1', '1.5', '35792'])('falls back to 60 for %j', (value) => {
+    expect(
+      loadConfig({ ...BASE, WISHLIST_CHECK_INTERVAL_MIN: value }).wishlistCheckIntervalMin,
+    ).toBe(60);
+  });
+
+  it('accepts 0 (off) and the timer cap', () => {
+    expect(loadConfig({ ...BASE, WISHLIST_CHECK_INTERVAL_MIN: '0' }).wishlistCheckIntervalMin).toBe(
+      0,
+    );
+    expect(
+      loadConfig({ ...BASE, WISHLIST_CHECK_INTERVAL_MIN: '35791' }).wishlistCheckIntervalMin,
+    ).toBe(35791);
   });
 });

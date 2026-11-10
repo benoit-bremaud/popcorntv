@@ -35,6 +35,8 @@ export interface ServerConfig {
   readonly trustProxy: string | null;
   /** Minutes between two automatic rescans of every library; 0 disables them (spec scheduled-scan R1). */
   readonly scanIntervalMin: number;
+  /** Minutes between wishlist availability checks (spec wishlist-notifications R6); 0 = off. */
+  readonly wishlistCheckIntervalMin: number;
   /** pino level from `LOG_LEVEL`, `info` by default (spec logging R1). */
   readonly logLevel: LogLevel;
   /** The build baked at `docker build` (`APP_VERSION`), `dev` when unset (spec app-version R1). */
@@ -67,6 +69,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): ServerConfig {
     publicUrl,
     trustProxy: parseTrustProxy(env['TRUST_PROXY']),
     scanIntervalMin: scanInterval(env['SCAN_INTERVAL_MIN'], 60),
+    wishlistCheckIntervalMin: scanInterval(env['WISHLIST_CHECK_INTERVAL_MIN'], 60),
     logLevel: parseLogLevel(env['LOG_LEVEL']),
     appVersion: parseAppVersion(env['APP_VERSION']),
   };

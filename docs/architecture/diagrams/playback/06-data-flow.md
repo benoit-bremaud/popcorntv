@@ -6,7 +6,8 @@
 ## Context
 
 Which data crosses which boundary, with personal data flagged. The only PII in the MVP
-is the profile name, the watch history and the wishlist (#127), and none leaves the server.
+is the profile name, the watch history, the wishlist (#127), the profile's providers and its notifications
+(#277), and none leaves the server.
 
 ## Diagram
 
@@ -24,7 +25,7 @@ flowchart LR
   Server -.->|"artwork files by digest"| Art[("data/artwork")]
   Server -->|"catalog, artwork"| Web[Web player]
   Web -.->|"PII: profile name, watch position"| Server
-  Server -.->|"PII: profile name, watch history, wishlist"| DB[("SQLite")]
+  Server -.->|"PII: profile name, watch history, wishlist, providers, notifications"| DB[("SQLite")]
   Server -->|"video bytes / HLS segments"| Web
 ```
 
