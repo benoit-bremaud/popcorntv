@@ -723,3 +723,58 @@ describe('DetailDialog copies', () => {
     expect(screen.queryByRole('combobox', { name: 'Copy' })).not.toBeInTheDocument();
   });
 });
+
+describe('DetailDialog where to watch (UC27)', () => {
+  const offers = { link: null, offers: [] };
+
+  it.each([
+    ['film', 'movie'],
+    ['series', 'tv'],
+  ] as const)('asks the offers of a matched %s as TMDB %s', async (kind, tmdbKind) => {
+    const watchProviders = vi.fn(async () => offers);
+    const item = media({ id: 'm', title: 'Dune', kind, metadata: metadata({ tmdbId: 7 }) });
+
+    render(
+      <DetailDialog
+        profileId="kid"
+        item={item}
+        seasons={[]}
+        onClose={vi.fn()}
+        canPlay={always}
+        api={fakeApi()}
+        progress={async () => []}
+        watchProviders={watchProviders}
+      />,
+    );
+
+    expect(await screen.findByText('No legal offer in France for now.')).toBeInTheDocument();
+    expect(watchProviders).toHaveBeenCalledWith(tmdbKind, 7);
+  });
+
+  it.each([
+    [
+      'an episode',
+      media({ id: 'e', title: 'Pilot', kind: 'episode', metadata: metadata({ tmdbId: 7 }) }),
+    ],
+    ['an unmatched film', media({ id: 'f', title: 'Home', kind: 'film', metadata: metadata() })],
+  ])('shows no offer block for %s', async (_label, item) => {
+    const watchProviders = vi.fn(async () => offers);
+
+    render(
+      <DetailDialog
+        profileId="kid"
+        item={item}
+        seasons={[]}
+        onClose={vi.fn()}
+        canPlay={always}
+        api={fakeApi()}
+        progress={async () => []}
+        watchProviders={watchProviders}
+      />,
+    );
+
+    await screen.findByRole('dialog');
+    expect(screen.queryByText('Where to watch (France)')).toBeNull();
+    expect(watchProviders).not.toHaveBeenCalled();
+  });
+});

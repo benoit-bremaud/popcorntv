@@ -143,6 +143,7 @@ describe('App', () => {
       details: vi.fn(async () => Promise.reject(new Error('offline'))),
       wishlist: vi.fn(async () => []),
       setWishlisted: vi.fn(async () => true),
+      providers: vi.fn(async () => ({ link: null, offers: [] })),
     };
     render(
       <App
@@ -191,6 +192,7 @@ describe('App', () => {
       details: vi.fn(async () => Promise.reject(new Error('offline'))),
       wishlist: vi.fn(async () => []),
       setWishlisted: vi.fn(async () => true),
+      providers: vi.fn(async () => ({ link: null, offers: [] })),
     };
     render(
       <App

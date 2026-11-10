@@ -1,7 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { audioTracks, decidePlayback, matchAudioTrack } from '@popcorntv/shared';
-import type { AudioTrack, CanPlay, Library, Media, WatchProgress } from '@popcorntv/shared';
-import { artworkUrl, loadProgress, setWatched } from '../api.js';
+import type {
+  AudioTrack,
+  CanPlay,
+  DiscoverKind,
+  Library,
+  Media,
+  WatchProgress,
+} from '@popcorntv/shared';
+import { artworkUrl, loadProgress, loadWatchProviders, setWatched } from '../api.js';
+import { WhereToWatch } from '../discover/WhereToWatch.js';
 import { browserCanPlay } from '../playback/can-play.js';
 import { PlayerDialog } from '../playback/PlayerDialog.js';
 import type { PlaybackApi } from '../playback/PlayerDialog.js';
@@ -9,6 +17,8 @@ import { formatPosition, resumeAt } from '../playback/resume.js';
 import { isWatched, nextEpisode } from './catalog.js';
 import type { Season } from './catalog.js';
 import { useHistoryLayer } from '../history-layer.js';
+
+const WATCH_KINDS: Partial<Record<Media['kind'], DiscoverKind>> = { film: 'movie', series: 'tv' };
 
 type Props = {
   readonly item: Media;
@@ -27,6 +37,8 @@ type Props = {
   readonly canPlay?: CanPlay;
   /** Playback server calls; injected by tests. */
   readonly api?: PlaybackApi;
+  /** `GET /discover/:kind/:tmdbId/providers` (UC27); injected by tests. */
+  readonly watchProviders?: typeof loadWatchProviders;
   /** `GET /profiles/:profileId/progress`; injected by tests. */
   readonly progress?: typeof loadProgress;
   /** `PUT | DELETE …/watched`; injected by tests. */
@@ -74,6 +86,7 @@ export function DetailDialog({
   onClose,
   canPlay = browserCanPlay,
   api,
+  watchProviders = loadWatchProviders,
   progress = loadProgress,
   markWatched = setWatched,
 }: Props): React.JSX.Element {
@@ -146,6 +159,8 @@ export function DetailDialog({
   }, []);
 
   const metadata = item.metadata;
+  // UC27 R7: films and series only; an episode or an unmatched title shows no offer.
+  const watchKind = WATCH_KINDS[item.kind] ?? null;
   const backdrop = metadata?.backdropPath ?? null;
   const titleId = `detail-${shownItem.id}`;
 
@@ -272,6 +287,9 @@ export function DetailDialog({
               <span className="muted">Cast: </span>
               {metadata.cast.map((member) => member.name).join(', ')}
             </p>
+          )}
+          {watchKind !== null && metadata !== null && metadata.tmdbId !== null && (
+            <WhereToWatch kind={watchKind} tmdbId={metadata.tmdbId} load={watchProviders} />
           )}
           {seasons.map((season) => (
             <section key={season.season ?? 'none'} className="detail__season">

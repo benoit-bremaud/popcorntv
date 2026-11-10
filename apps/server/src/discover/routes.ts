@@ -3,13 +3,14 @@ import { join } from 'node:path';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { DISCOVER_KINDS, DISCOVER_LISTS } from '@popcorntv/shared';
-import type { DiscoverDetails, DiscoverTitle } from '@popcorntv/shared';
+import type { DiscoverDetails, DiscoverTitle, WatchProviders } from '@popcorntv/shared';
 import { apiError, callerOf, invalid, MEDIA_ROUTE } from '../http.js';
 import type { ArtworkCache } from '../metadata/artwork-cache.js';
 import { TmdbRequestError } from '../metadata/tmdb-client.js';
 import type { TmdbClient, TmdbSummary } from '../metadata/tmdb-client.js';
 import type { ProfileRepository } from '../profiles/repository.js';
 import { profileParams } from '../profiles/routes.js';
+import { StaleCache } from './stale-cache.js';
 import type { TitleFacts, WishlistRepository } from './wishlist-repository.js';
 
 /** What the Discover routes need; `tmdb` and `artwork` are null without `TMDB_API_KEY`. */
@@ -34,6 +35,12 @@ const MAX_TITLES = 20;
 /** Discover posters are smaller than the library's `w500` (spec R8). */
 export const DISCOVER_POSTER_SIZE = 'w342';
 const CAST_SHOWN = 10;
+/** Watch providers are fresh a day, then served stale while one call refreshes them (spec R3). */
+export const PROVIDERS_TTL_MS = 24 * 60 * 60_000;
+/** Titles whose watch providers are kept in memory (spec where-to-watch R3). */
+export const PROVIDERS_MAX = 500;
+/** Provider logos are small (spec where-to-watch R5). */
+export const LOGO_SIZE = 'w92';
 /**
  * Poster paths the server has handed out and may therefore download (ADR-0020): a viewer can
  * never make the server fetch an arbitrary TMDB path. Oldest forgotten first past this size.
@@ -46,7 +53,7 @@ const listQuery = z.object({ list: z.enum(DISCOVER_LISTS), kind });
 const searchQuery = z.object({ q: z.string().trim().min(1).max(100) });
 const titleParams = z.object({ kind, tmdbId });
 const wishParams = profileParams.extend({ kind, tmdbId });
-const posterParams = z.object({ file: z.string().regex(/^[A-Za-z0-9]+\.(?:jpg|png)$/) });
+const imageParams = z.object({ file: z.string().regex(/^[A-Za-z0-9]+\.(?:jpg|png)$/) });
 
 function toFacts(row: TmdbSummary): TitleFacts {
   return {
@@ -58,6 +65,17 @@ function toFacts(row: TmdbSummary): TitleFacts {
     voteAverage: row.vote_average,
     posterPath: row.poster_path,
   };
+}
+
+/** Adds `path` last to `paths` (recently shown kept longest), forgetting the oldest past the cap. */
+function remember(paths: Set<string>, path: string | null): void {
+  if (path === null) return;
+  paths.delete(path);
+  paths.add(path);
+  if (paths.size > ISSUED_POSTERS_MAX) {
+    const oldest = paths.values().next().value;
+    if (oldest !== undefined) paths.delete(oldest);
+  }
 }
 
 /** The year of a TMDB date (`YYYY-MM-DD`), null when absent. */
@@ -119,7 +137,8 @@ async function details(
 
 /**
  * UC26 (spec discover-wishlist): `GET /discover`, `GET /discover/search`, `GET
- * /discover/:kind/:tmdbId`, `GET /discover/poster/:file`, and `GET | PUT | DELETE` on
+ * /discover/:kind/:tmdbId`, `GET /discover/:kind/:tmdbId/providers` (UC27), `GET
+ * /discover/poster/:file`, `GET /discover/logo/:file`, and `GET | PUT | DELETE` on
  * `/profiles/:profileId/wishlist[/:kind/:tmdbId]`. Every route needs a signed-in caller.
  */
 export function registerDiscoverRoutes(app: FastifyInstance, deps: DiscoverRoutesDeps): void {
@@ -127,18 +146,12 @@ export function registerDiscoverRoutes(app: FastifyInstance, deps: DiscoverRoute
   const memo = new Map<string, { readonly at: number; readonly titles: readonly TitleFacts[] }>();
   const inFlight = new Map<string, Promise<readonly TitleFacts[]>>();
   const issued = new Set<string>();
+  const issuedLogos = new Set<string>();
+  const providers = new StaleCache<WatchProviders>(PROVIDERS_TTL_MS, PROVIDERS_MAX, now);
 
   /** Records the poster paths of an answer so the poster route may serve them, then returns it. */
   function issue<T extends { readonly posterPath: string | null }>(titles: T[]): T[] {
-    for (const { posterPath } of titles) {
-      if (posterPath === null) continue;
-      issued.delete(posterPath); // Re-inserted last: recently shown paths are kept longest.
-      issued.add(posterPath);
-      if (issued.size > ISSUED_POSTERS_MAX) {
-        const oldest = issued.values().next().value;
-        if (oldest !== undefined) issued.delete(oldest);
-      }
-    }
+    for (const { posterPath } of titles) remember(issued, posterPath);
     return titles;
   }
 
@@ -224,6 +237,28 @@ export function registerDiscoverRoutes(app: FastifyInstance, deps: DiscoverRoute
     return reply.send(issue(deps.wishlist.withMediaIds(titles)) satisfies DiscoverTitle[]);
   });
 
+  app.get('/discover/:kind/:tmdbId/providers', async (request, reply) => {
+    const params = titleParams.safeParse(request.params);
+    if (!params.success) return reply.code(400).send(invalid(params.error.issues));
+    const tmdb = deps.tmdb;
+    if (!tmdb) return reply.code(409).send(apiError('tmdb_not_configured'));
+    const { kind: of, tmdbId: id } = params.data;
+    const answer = await viaTmdb(reply, () =>
+      providers.get(
+        `${of}:${id}`,
+        () => tmdb.watchProviders(of, id),
+        (error) =>
+          app.log.warn(
+            { event: 'discover.providers.refresh_failed', kind: of, tmdbId: id, err: error },
+            'watch providers refresh failed',
+          ),
+      ),
+    );
+    if (answer === SENT) return reply;
+    for (const offer of answer.offers) remember(issuedLogos, offer.logoPath);
+    return reply.send(answer satisfies WatchProviders);
+  });
+
   app.get('/discover/:kind/:tmdbId', async (request, reply) => {
     const params = titleParams.safeParse(request.params);
     if (!params.success) return reply.code(400).send(invalid(params.error.issues));
@@ -235,28 +270,36 @@ export function registerDiscoverRoutes(app: FastifyInstance, deps: DiscoverRoute
     return reply.send(withId satisfies DiscoverDetails | undefined);
   });
 
-  app.get('/discover/poster/:file', MEDIA_ROUTE, async (request, reply) => {
-    const params = posterParams.safeParse(request.params);
-    if (!params.success) return reply.code(400).send(invalid(params.error.issues));
-    const artwork = deps.artwork;
-    if (!artwork) return reply.code(409).send(apiError('tmdb_not_configured'));
-    // Only a path this server handed out may reach TMDB (ADR-0020, adversarial review #127).
-    if (!issued.has(`/${params.data.file}`)) {
-      return reply.code(404).send(apiError('artwork_not_found'));
-    }
-    const file = await artwork.cache(`/${params.data.file}`, DISCOVER_POSTER_SIZE, (error) =>
-      request.log.warn(
-        { event: 'discover.poster.failed', err: error },
-        'discover poster download failed',
-      ),
-    );
-    if (file === null) return reply.code(404).send(apiError('artwork_not_found'));
-    const bytes = await readFile(join(deps.artworkDir, file));
-    return reply
-      .header('cache-control', 'private, max-age=31536000, immutable')
-      .type(file.endsWith('.png') ? 'image/png' : 'image/jpeg')
-      .send(bytes);
-  });
+  /** Serves an issued TMDB image of `paths` at `size` through the artwork cache. */
+  function imageRoute(
+    route: string,
+    paths: ReadonlySet<string>,
+    size: string,
+    event: string,
+  ): void {
+    app.get(route, MEDIA_ROUTE, async (request, reply) => {
+      const params = imageParams.safeParse(request.params);
+      if (!params.success) return reply.code(400).send(invalid(params.error.issues));
+      const artwork = deps.artwork;
+      if (!artwork) return reply.code(409).send(apiError('tmdb_not_configured'));
+      // Only a path this server handed out may reach TMDB (ADR-0020, adversarial review #127).
+      if (!paths.has(`/${params.data.file}`)) {
+        return reply.code(404).send(apiError('artwork_not_found'));
+      }
+      const file = await artwork.cache(`/${params.data.file}`, size, (error) =>
+        request.log.warn({ event, err: error }, 'discover image download failed'),
+      );
+      if (file === null) return reply.code(404).send(apiError('artwork_not_found'));
+      const bytes = await readFile(join(deps.artworkDir, file));
+      return reply
+        .header('cache-control', 'private, max-age=31536000, immutable')
+        .type(file.endsWith('.png') ? 'image/png' : 'image/jpeg')
+        .send(bytes);
+    });
+  }
+
+  imageRoute('/discover/poster/:file', issued, DISCOVER_POSTER_SIZE, 'discover.poster.failed');
+  imageRoute('/discover/logo/:file', issuedLogos, LOGO_SIZE, 'discover.logo.failed');
 
   app.get('/profiles/:profileId/wishlist', (request, reply) => {
     const params = profileParams.safeParse(request.params);

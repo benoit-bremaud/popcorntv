@@ -4,7 +4,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import Fastify from 'fastify';
-import type { DiscoverDetails, DiscoverTitle, WishlistEntry } from '@popcorntv/shared';
+import type {
+  DiscoverDetails,
+  DiscoverTitle,
+  WatchProviders,
+  WishlistEntry,
+} from '@popcorntv/shared';
 import { openDatabase } from '../db/index.js';
 import { libraries, media } from '../db/schema.js';
 import { ArtworkCache } from '../metadata/artwork-cache.js';
@@ -12,7 +17,7 @@ import { createTmdbClient, TmdbRequestError } from '../metadata/tmdb-client.js';
 import type { TmdbClient, TmdbSummary } from '../metadata/tmdb-client.js';
 import { ProfileRepository } from '../profiles/repository.js';
 import { actAs, createAccount } from '../test-fixtures.js';
-import { LIST_TTL_MS, registerDiscoverRoutes } from './routes.js';
+import { LIST_TTL_MS, PROVIDERS_TTL_MS, registerDiscoverRoutes } from './routes.js';
 import { WishlistRepository } from './wishlist-repository.js';
 
 const DUNE: TmdbSummary = {
@@ -23,6 +28,11 @@ const DUNE: TmdbSummary = {
   overview: 'Spice.',
   vote_average: 7.8,
   poster_path: '/dune.jpg',
+};
+
+const NETFLIX: WatchProviders = {
+  link: 'https://www.themoviedb.org/movie/438631/watch?locale=FR',
+  offers: [{ providerId: 8, name: 'Netflix', logoPath: '/netflix.jpg', type: 'flatrate' }],
 };
 
 function makeClient(overrides: Partial<TmdbClient> = {}): TmdbClient {
@@ -48,6 +58,7 @@ function makeClient(overrides: Partial<TmdbClient> = {}): TmdbClient {
     season: vi.fn(async () => []),
     list: vi.fn<TmdbClient['list']>(async () => [DUNE]),
     searchTitles: vi.fn<TmdbClient['searchTitles']>(async () => [DUNE]),
+    watchProviders: vi.fn<TmdbClient['watchProviders']>(async () => NETFLIX),
     image: vi.fn(async () => new Uint8Array([0xff, 0xd8])),
     ...overrides,
   };
@@ -79,6 +90,7 @@ async function setup(client: TmdbClient | null = makeClient()) {
         write: (line: string) => {
           if (line.includes('"event":"discover.tmdb.failed"')) tmdbFailures.push(line);
           else if (line.includes('"event":"discover.list.')) listFailures.push(line);
+          else if (line.includes('"event":"discover.providers.')) listFailures.push(line);
           else failures.push(line);
         },
       },
@@ -481,6 +493,106 @@ describe('wishlist routes', () => {
       expect(tmdbFailures).toHaveLength(routes.length);
       expect(tmdbFailures.join('\n')).not.toContain('tmdb-secret-test-key');
       expect((await app.inject({ url: '/profiles/default/wishlist' })).json()).toEqual([]);
+    });
+  });
+
+  describe('watch providers (UC27)', () => {
+    it('answers the French offers and lets their logos be served at w92', async () => {
+      const client = makeClient();
+      const { app } = await setup(client);
+
+      const answer = await app.inject({ url: `/discover/movie/${DUNE.id}/providers` });
+      const logo = await app.inject({ url: '/discover/logo/netflix.jpg' });
+
+      expect(answer.statusCode).toBe(200);
+      expect(answer.json<WatchProviders>()).toEqual(NETFLIX);
+      expect(client.watchProviders).toHaveBeenCalledWith('movie', DUNE.id);
+      expect(logo.statusCode).toBe(200);
+      expect(client.image).toHaveBeenCalledWith('/netflix.jpg', 'w92');
+    });
+
+    it('never downloads a logo it did not hand out, nor a poster path as a logo', async () => {
+      const client = makeClient();
+      const { app } = await setup(client);
+      await app.inject({ url: '/discover?list=trending&kind=movie' }); // Issues /dune.jpg.
+
+      const unknown = await app.inject({ url: '/discover/logo/other.jpg' });
+      const poster = await app.inject({ url: '/discover/logo/dune.jpg' });
+      const bad = await app.inject({ url: '/discover/logo/..%2Fx.jpg' });
+
+      expect([unknown.statusCode, poster.statusCode, bad.statusCode]).toEqual([404, 404, 400]);
+      expect(client.image).not.toHaveBeenCalled();
+    });
+
+    it('answers an empty list when TMDB has no French offer', async () => {
+      const empty = { link: null, offers: [] };
+      const { app } = await setup(makeClient({ watchProviders: vi.fn(async () => empty) }));
+
+      expect((await app.inject({ url: '/discover/tv/1/providers' })).json()).toEqual(empty);
+    });
+
+    it('caches a title a day, then serves it stale while one call refreshes it', async () => {
+      const client = makeClient();
+      const { app, advance } = await setup(client);
+      const url = `/discover/movie/${DUNE.id}/providers`;
+
+      await app.inject({ url });
+      advance(PROVIDERS_TTL_MS - 1);
+      await app.inject({ url });
+      expect(client.watchProviders).toHaveBeenCalledTimes(1);
+
+      advance(1);
+      const stale = await app.inject({ url });
+      await settle();
+
+      expect(stale.json()).toEqual(NETFLIX);
+      expect(client.watchProviders).toHaveBeenCalledTimes(2);
+    });
+
+    it('keeps the old answer and logs a failed refresh', async () => {
+      const watchProviders = vi
+        .fn<TmdbClient['watchProviders']>()
+        .mockResolvedValueOnce(NETFLIX)
+        .mockRejectedValue(new TmdbRequestError('/w', 500));
+      const { app, advance, failures, listFailures } = await setup(makeClient({ watchProviders }));
+      const url = '/discover/movie/1/providers';
+      await app.inject({ url });
+      advance(PROVIDERS_TTL_MS);
+
+      const stale = await app.inject({ url });
+      await settle();
+
+      expect(stale.json()).toEqual(NETFLIX);
+      expect(listFailures).toHaveLength(1);
+      expect(listFailures[0]).toContain('"event":"discover.providers.refresh_failed"');
+      expect(failures).toEqual([]);
+    });
+
+    it.each([
+      [500, 502, 'tmdb_unavailable'],
+      [404, 404, 'title_not_found'],
+    ])('maps a TMDB %i with nothing cached to %i', async (status, code, error) => {
+      const { app } = await setup(
+        makeClient({
+          watchProviders: vi.fn(async () => Promise.reject(new TmdbRequestError('/w', status))),
+        }),
+      );
+
+      const answer = await app.inject({ url: '/discover/movie/1/providers' });
+
+      expect(answer.statusCode).toBe(code);
+      expect(answer.json()).toEqual({ error });
+    });
+
+    it('refuses bad params and answers 409 without TMDB', async () => {
+      const { app } = await setup();
+      const bare = await setup(null);
+
+      expect((await app.inject({ url: '/discover/book/1/providers' })).statusCode).toBe(400);
+      expect((await app.inject({ url: '/discover/movie/0/providers' })).statusCode).toBe(400);
+      const off = await bare.app.inject({ url: '/discover/movie/1/providers' });
+      expect(off.statusCode).toBe(409);
+      expect((await bare.app.inject({ url: '/discover/logo/a.jpg' })).statusCode).toBe(409);
     });
   });
 });

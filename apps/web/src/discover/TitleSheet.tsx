@@ -3,6 +3,7 @@ import type { DiscoverDetails, DiscoverTitle } from '@popcorntv/shared';
 import { posterUrl } from '../api.js';
 import type { DiscoverApi } from './discover-api.js';
 import { useHistoryLayer } from '../history-layer.js';
+import { WhereToWatch } from './WhereToWatch.js';
 
 type Props = {
   readonly title: DiscoverTitle;
@@ -112,6 +113,7 @@ export function TitleSheet({
                 {wishlisted ? '✓ In my list' : '+ My list'}
               </button>
             </div>
+            <WhereToWatch kind={title.kind} tmdbId={title.tmdbId} load={api.providers} />
           </div>
         </div>
       </div>

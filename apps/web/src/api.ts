@@ -8,6 +8,7 @@ import type {
   CreateLibraryBody,
   CreateProfileBody,
   DiscoverDetails,
+  WatchProviders,
   DiscoverKind,
   DiscoverList,
   DiscoverTitle,
@@ -234,6 +235,28 @@ export async function loadProgress(
 /** URL of a Discover poster served by `GET /discover/poster/:file` (spec discover-wishlist R8). */
 export function posterUrl(posterPath: string): string {
   return `${API}/discover/poster/${encodeURIComponent(posterPath.replace(/^\//, ''))}`;
+}
+
+/** URL of a provider logo served by `GET /discover/logo/:file` (spec where-to-watch R5). */
+export function logoUrl(logoPath: string): string {
+  return `${API}/discover/logo/${encodeURIComponent(logoPath.replace(/^\//, ''))}`;
+}
+
+/** `GET /discover/:kind/:tmdbId/providers` (UC27 R1): the French legal offers. */
+export async function loadWatchProviders(
+  kind: DiscoverKind,
+  tmdbId: number,
+  fetchFn: Fetch = fetch,
+): Promise<WatchProviders> {
+  const path = `/discover/${kind}/${tmdbId}/providers`;
+  let response: Response;
+  try {
+    response = watched(await fetchFn(`${API}${path}`));
+  } catch {
+    throw new ApiRequestError(path, null);
+  }
+  if (!response.ok) throw new ApiRequestError(path, response.status);
+  return (await response.json()) as WatchProviders;
 }
 
 /** `GET /discover?list=&kind=` (UC26 R1); throws `ApiRequestError` like the catalog load. */

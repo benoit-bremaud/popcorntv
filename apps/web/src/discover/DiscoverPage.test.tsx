@@ -42,6 +42,7 @@ function makeApi(overrides: Partial<DiscoverApi> = {}): DiscoverApi {
     })),
     wishlist: vi.fn<DiscoverApi['wishlist']>(async () => []),
     setWishlisted: vi.fn<DiscoverApi['setWishlisted']>(async () => true),
+    providers: vi.fn<DiscoverApi['providers']>(async () => ({ link: null, offers: [] })),
     ...overrides,
   };
 }

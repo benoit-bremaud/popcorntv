@@ -13,7 +13,8 @@ subscription, free, with ads, rent, buy — and opens the chosen one in a new ta
 
 - **R1** `GET /discover/:kind/:tmdbId/providers` (signed-in caller) answers
   `WatchProviders`: `{ link, offers }`. `link` is the TMDB watch page of the title for
-  France (`results.FR.link`, JustWatch data), null when TMDB has no French entry. `offers`
+  France (`results.FR.link`, JustWatch data), null when TMDB has no French entry or the link
+  is not an `https://www.themoviedb.org/` URL (a hostile payload cannot redirect). `offers`
   lists `{ providerId, name, logoPath, type }`, `type` one of `flatrate`, `free`, `ads`,
   `rent`, `buy`, in that order, each group sorted by TMDB `display_priority`. No French
   entry → `{ link: null, offers: [] }`, not an error.
