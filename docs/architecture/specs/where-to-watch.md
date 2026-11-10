@@ -1,4 +1,4 @@
-# UC27 — See where to watch a title legally in France
+# UC27 — See where to watch legally in France
 
 A viewer opening a title sheet (Discover or library) sees the French legal offers for it —
 subscription, free, with ads, rent, buy — and opens the chosen one in a new tab.

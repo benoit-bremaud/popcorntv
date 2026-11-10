@@ -593,7 +593,8 @@ describe('createTmdbClient', () => {
       ['plain http', 'http://www.themoviedb.org/movie/1/watch'],
       ['a script URL', 'javascript:alert(1)'],
       ['not a URL', 'nope'],
-    ])('drops a link to %s but keeps the offers', async (_label, link) => {
+      ['null', null],
+    ])('drops a link to %s and its offers', async (_label, link) => {
       const fetch = makeFetch({
         '/movie/1/watch/providers': () =>
           jsonResponse({ results: { FR: { link, flatrate: fr.flatrate.slice(1) } } }),
@@ -601,8 +602,7 @@ describe('createTmdbClient', () => {
 
       const answer = await makeClient(fetch).watchProviders('movie', 1);
 
-      expect(answer.link).toBeNull();
-      expect(answer.offers).toHaveLength(1);
+      expect(answer).toEqual({ link: null, offers: [] });
     });
 
     it('reports a malformed provider row as an invalid shape', async () => {

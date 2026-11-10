@@ -57,8 +57,14 @@ export function WhereToWatch({
 
 function Offers({ answer }: { readonly answer: WatchProviders }): React.JSX.Element {
   const { link, offers } = answer;
+  const credit = <p className="watch__credit muted">Data: JustWatch via TMDB</p>;
   if (link === null || offers.length === 0) {
-    return <p className="muted">No legal offer in France for now.</p>;
+    return (
+      <>
+        <p className="muted">No legal offer in France for now.</p>
+        {credit}
+      </>
+    );
   }
   return (
     <>
@@ -90,7 +96,7 @@ function Offers({ answer }: { readonly answer: WatchProviders }): React.JSX.Elem
           </div>
         );
       })}
-      <p className="watch__credit muted">Data: JustWatch via TMDB</p>
+      {credit}
     </>
   );
 }

@@ -19,13 +19,13 @@ B — a curated `provider_id` → homepage table; C — a curated per-provider s
 
 | Criterion                    | Weight | A                       | B                         | C                         |
 | ---------------------------- | -----: | ----------------------- | ------------------------- | ------------------------- |
-| Legal / attribution          |     30 | 5 — TMDB terms followed | 4                         | 3 — URL templates guessed |
+| Legal / attribution          |     30 | 5 — TMDB terms followed | 4 — attribution kept, own table | 3 — URL templates guessed |
 | Clicks to watch              |     25 | 3 — one extra click     | 2 — home page, then search | 4 — search results        |
 | Maintenance                  |     25 | 5 — none                | 2 — table to keep current | 1 — templates break       |
-| Simplicity                   |     20 | 5                       | 3                         | 2                         |
-| **Total /500**               |    100 | **445**                 | **275**                   | **250**                   |
+| Simplicity                   |     20 | 5 — one link per answer | 3 — a lookup table        | 2 — templates and encoding |
+| **Total /500**               |    100 | **450**                 | **280**                   | **255**                   |
 
-Sensitivity: C overtakes A only when "clicks to watch" weighs above about 70.
+Sensitivity: C overtakes A only when "clicks to watch" weighs above about 75.
 
 ## Decision
 
@@ -38,4 +38,5 @@ through the artwork cache at `w92`, issued paths only.
 
 - One extra click (TMDB page) before the provider; no table to maintain.
 - Offers keep `providerId`, so #277 can add a "my providers" filter or notification later.
-- No title has an offer without `link`: when TMDB has no French entry the block says so.
+- No title has an offer without `link`: when TMDB has no French entry, or its link is not an
+  `https://www.themoviedb.org/` URL, the answer has no offer and the block says so.

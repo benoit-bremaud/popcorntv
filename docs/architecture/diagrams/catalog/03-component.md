@@ -1,7 +1,7 @@
 # Component diagram — catalog (apps/web)
 
-> **Feature**: UC3 / UC4 / UC22 / UC24 / UC26 / UC27 ([spec](../../specs/catalog-grid.md), [continue-watching](../../specs/continue-watching.md))
-> **Related ADRs**: ADR-0001, ADR-0004, ADR-0020, ADR-0024, ADR-0026
+> **Feature**: UC3 / UC4 / UC22 / UC24 / UC26 / UC27 ([spec](../../specs/catalog-grid.md), [continue-watching](../../specs/continue-watching.md), [where-to-watch](../../specs/where-to-watch.md))
+> **Related ADRs**: ADR-0001, ADR-0004, ADR-0020, ADR-0024, ADR-0026, ADR-0029
 
 ## Diagram
 
@@ -26,6 +26,10 @@ flowchart TB
     app --> discover["discover/DiscoverPage «new #127»"]
     discover --> sheet["discover/TitleSheet «new #127»"]
     discover --> api
+    watch["discover/WhereToWatch «new #184»<br/>French offers, links to TMDB watch page"]
+    sheet --> watch
+    detail --> watch
+    watch --> api
     tokens[(styles/tokens.css)]
   end
   shared[packages/shared<br/>Media, isDocumentary, WatchProgress]
@@ -34,11 +38,12 @@ flowchart TB
   api --> shared
   api -->|/api/libraries, /api/libraries/:id/media, /api/profiles/:profileId/progress| server[apps/server]
   card -->|/api/artwork/:file| server
-  api -->|/api/discover, /api/discover/search, /api/discover/:kind/:tmdbId,<br/>/api/discover/poster/:file, /api/profiles/:profileId/wishlist| droutes
+  api -->|/api/discover, /api/discover/search, /api/discover/:kind/:tmdbId,<br/>/api/discover/poster/:file, /api/profiles/:profileId/wishlist,<br/>/api/discover/:kind/:tmdbId/providers, /api/discover/logo/:file «#184»| droutes
   subgraph srv[apps/server «#127 delta»]
     droutes[discover/routes] --> wrepo[discover/wishlist-repository]
     droutes --> tmdbc[metadata/tmdb-client<br/>only HTTP egress]
     droutes --> cache[metadata/artwork-cache]
+    droutes --> stale["discover/stale-cache «new #184»<br/>fresh, then stale-while-refresh, LRU"]
     cache --> tmdbc
     wrepo --> db[(SQLite wishlist, media)]
   end
@@ -51,3 +56,5 @@ flowchart TB
   the logic and are unit-tested; components only render.
 - #127: Discover never talks to TMDB from the browser (ADR-0020); availability of a wishlist
   entry is a join on `media.tmdb_id` in `wishlist-repository`.
+- #184: `WhereToWatch` shows the French legal offers on both sheets; an offer is a plain
+  link to the TMDB watch page (ADR-0029). Lists and providers share `stale-cache`.

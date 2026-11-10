@@ -69,13 +69,13 @@
 .watch__offer {
   display: inline-flex;
   align-items: center;
-  min-height: 2.75rem;
+  min-height: var(--touch-target);
   border-radius: var(--radius-sm);
 }
 
 .watch__offer img {
-  width: 2.75rem;
-  height: 2.75rem;
+  width: var(--touch-target);
+  height: var(--touch-target);
   border-radius: var(--radius-sm);
 }
 

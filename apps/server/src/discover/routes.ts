@@ -42,10 +42,11 @@ export const PROVIDERS_MAX = 500;
 /** Provider logos are small (spec where-to-watch R5). */
 export const LOGO_SIZE = 'w92';
 /**
- * Poster paths the server has handed out and may therefore download (ADR-0020): a viewer can
- * never make the server fetch an arbitrary TMDB path. Oldest forgotten first past this size.
+ * Poster and logo paths the server has handed out and may therefore download (ADR-0020): a
+ * viewer can never make the server fetch an arbitrary TMDB path. Each set forgets its oldest
+ * path first past this size.
  */
-export const ISSUED_POSTERS_MAX = 2000;
+export const ISSUED_PATHS_MAX = 2000;
 
 const kind = z.enum(DISCOVER_KINDS);
 const tmdbId = z.coerce.number().int().positive().max(2_147_483_647);
@@ -72,7 +73,7 @@ function remember(paths: Set<string>, path: string | null): void {
   if (path === null) return;
   paths.delete(path);
   paths.add(path);
-  if (paths.size > ISSUED_POSTERS_MAX) {
+  if (paths.size > ISSUED_PATHS_MAX) {
     const oldest = paths.values().next().value;
     if (oldest !== undefined) paths.delete(oldest);
   }
@@ -143,8 +144,11 @@ async function details(
  */
 export function registerDiscoverRoutes(app: FastifyInstance, deps: DiscoverRoutesDeps): void {
   const now = deps.now ?? Date.now;
-  const memo = new Map<string, { readonly at: number; readonly titles: readonly TitleFacts[] }>();
-  const inFlight = new Map<string, Promise<readonly TitleFacts[]>>();
+  const lists = new StaleCache<readonly TitleFacts[]>(
+    LIST_TTL_MS,
+    DISCOVER_LISTS.length * DISCOVER_KINDS.length,
+    now,
+  );
   const issued = new Set<string>();
   const issuedLogos = new Set<string>();
   const providers = new StaleCache<WatchProviders>(PROVIDERS_TTL_MS, PROVIDERS_MAX, now);
@@ -155,47 +159,33 @@ export function registerDiscoverRoutes(app: FastifyInstance, deps: DiscoverRoute
     return titles;
   }
 
-  async function cachedList(
+  /** The first `MAX_TITLES` of a TMDB list as Discover keeps them. */
+  async function loadList(
     list: (typeof DISCOVER_LISTS)[number],
     of: (typeof DISCOVER_KINDS)[number],
     tmdb: TmdbClient,
   ): Promise<readonly TitleFacts[]> {
-    const memoKey = `${list}:${of}`;
-    const hit = memo.get(memoKey);
-    if (hit === undefined) return fetchList(memoKey, list, of, tmdb);
-    // ADR-0027: a stale list is served at once and refreshed behind the answer, one call at a
-    // time (a visit during a refresh neither starts nor logs another).
-    if (now() - hit.at >= LIST_TTL_MS && !inFlight.has(memoKey)) {
-      fetchList(memoKey, list, of, tmdb).catch((error: unknown) =>
+    return (await tmdb.list(list, of)).slice(0, MAX_TITLES).map(toFacts);
+  }
+
+  /**
+   * ADR-0027: a stale list is served at once and refreshed behind the answer, one call at a
+   * time (a visit during a refresh neither starts nor logs another).
+   */
+  function cachedList(
+    list: (typeof DISCOVER_LISTS)[number],
+    of: (typeof DISCOVER_KINDS)[number],
+    tmdb: TmdbClient,
+  ): Promise<readonly TitleFacts[]> {
+    return lists.get(
+      `${list}:${of}`,
+      () => loadList(list, of, tmdb),
+      (error) =>
         app.log.warn(
           { event: 'discover.list.refresh_failed', list, kind: of, err: error },
           'list refresh failed',
         ),
-      );
-    }
-    return hit.titles;
-  }
-
-  /** One TMDB call per list at a time: concurrent callers share the call in flight. */
-  function fetchList(
-    memoKey: string,
-    list: (typeof DISCOVER_LISTS)[number],
-    of: (typeof DISCOVER_KINDS)[number],
-    tmdb: TmdbClient,
-  ): Promise<readonly TitleFacts[]> {
-    const pending = inFlight.get(memoKey);
-    if (pending !== undefined) return pending;
-    const call = (async () => {
-      try {
-        const titles = (await tmdb.list(list, of)).slice(0, MAX_TITLES).map(toFacts);
-        memo.set(memoKey, { at: now(), titles });
-        return titles;
-      } finally {
-        inFlight.delete(memoKey);
-      }
-    })();
-    inFlight.set(memoKey, call);
-    return call;
+    );
   }
 
   // ADR-0027: the four lists are fetched once at start; a visit past the warm-up never waits.
@@ -204,12 +194,14 @@ export function registerDiscoverRoutes(app: FastifyInstance, deps: DiscoverRoute
     if (!tmdb) return;
     for (const list of DISCOVER_LISTS) {
       for (const kindOf of DISCOVER_KINDS) {
-        fetchList(`${list}:${kindOf}`, list, kindOf, tmdb).catch((error: unknown) =>
-          app.log.warn(
-            { event: 'discover.list.warm_failed', list, kind: kindOf, err: error },
-            'list warm-up failed',
-          ),
-        );
+        lists
+          .load(`${list}:${kindOf}`, () => loadList(list, kindOf, tmdb))
+          .catch((error: unknown) =>
+            app.log.warn(
+              { event: 'discover.list.warm_failed', list, kind: kindOf, err: error },
+              'list warm-up failed',
+            ),
+          );
       }
     }
   });

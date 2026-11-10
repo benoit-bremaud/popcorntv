@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { WATCH_OFFER_TYPES } from '@popcorntv/shared';
-import type { WatchOfferType } from '@popcorntv/shared';
+import type { WatchProviders } from '@popcorntv/shared';
 
 /**
  * TMDB v3 client — the single HTTP egress of the server (component diagram, ADR-0003).
@@ -69,19 +69,8 @@ export interface TmdbSummary {
   readonly poster_path: string | null;
 }
 
-/** One offer of a title in France as UC27 keeps it (spec where-to-watch R1). */
-export interface TmdbWatchOffer {
-  readonly providerId: number;
-  readonly name: string;
-  readonly logoPath: string | null;
-  readonly type: WatchOfferType;
-}
-
-/** The French watch providers of a title; `link` null when TMDB has no French entry. */
-export interface TmdbWatchProviders {
-  readonly link: string | null;
-  readonly offers: readonly TmdbWatchOffer[];
-}
+/** The French watch providers of a title (spec where-to-watch R1), the shared contract. */
+export type TmdbWatchProviders = WatchProviders;
 
 /** The Discover lists (spec discover-wishlist R1). */
 export type TmdbList = 'trending' | 'popular';
@@ -250,13 +239,13 @@ const providerList = z
       provider_id: z.number().int(),
       provider_name: z.string().max(NAME_MAX),
       logo_path: nullableString,
-      display_priority: z.number().optional().default(0),
+      display_priority: z.number().nullable().optional(),
     }),
   )
   .optional()
   .default([]);
 const watchRegion = z.object({
-  link: z.string().max(NAME_MAX).optional(),
+  link: z.string().max(NAME_MAX).nullable().optional(),
   flatrate: providerList,
   free: providerList,
   ads: providerList,
@@ -268,18 +257,22 @@ const watchResponse = z.object({ results: z.object({ FR: watchRegion.optional() 
 const WATCH_HOST = 'www.themoviedb.org';
 
 /** `link` when it is an `https://www.themoviedb.org/...` URL, else null. */
-function watchLink(link: string | undefined): string | null {
-  if (link === undefined || !URL.canParse(link)) return null;
+function watchLink(link: string | null | undefined): string | null {
+  if (link === undefined || link === null || !URL.canParse(link)) return null;
   const url = new URL(link);
   return url.protocol === 'https:' && url.hostname === WATCH_HOST ? url.toString() : null;
 }
 
-/** The FR entry as offers grouped in `WATCH_OFFER_TYPES` order, each by display priority. */
+/**
+ * The FR entry as offers grouped in `WATCH_OFFER_TYPES` order, each by display priority. No
+ * safe link means no offer: every offer opens that link (ADR-0029).
+ */
 function toWatchProviders(region: z.infer<typeof watchRegion> | undefined): TmdbWatchProviders {
-  if (region === undefined) return { link: null, offers: [] };
+  const link = watchLink(region?.link);
+  if (region === undefined || link === null) return { link: null, offers: [] };
   const offers = WATCH_OFFER_TYPES.flatMap((type) =>
     [...region[type]]
-      .sort((a, b) => a.display_priority - b.display_priority)
+      .sort((a, b) => (a.display_priority ?? 0) - (b.display_priority ?? 0))
       .map((row) => ({
         providerId: row.provider_id,
         name: row.provider_name,
@@ -287,7 +280,7 @@ function toWatchProviders(region: z.infer<typeof watchRegion> | undefined): Tmdb
         type,
       })),
   );
-  return { link: watchLink(region.link), offers };
+  return { link, offers };
 }
 
 const configurationResponse = z.object({

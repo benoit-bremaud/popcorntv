@@ -23,18 +23,19 @@ export class StaleCache<T> {
     onRefreshError: (error: unknown) => void,
   ): Promise<T> {
     const hit = this.entries.get(key);
-    if (hit === undefined) return this.fetch(key, load);
+    if (hit === undefined) return this.load(key, load);
     // Re-inserted last: recently read keys are kept longest.
     this.entries.delete(key);
     this.entries.set(key, hit);
     if (this.now() - hit.at >= this.ttlMs && !this.inFlight.has(key)) {
       // log: n/a — onRefreshError is the caller's logger (discover.providers.refresh_failed)
-      this.fetch(key, load).catch(onRefreshError);
+      this.load(key, load).catch(onRefreshError);
     }
     return hit.value;
   }
 
-  private fetch(key: string, load: () => Promise<T>): Promise<T> {
+  /** Loads `key` now (a warm-up or a miss); concurrent loads of a key share one call. */
+  load(key: string, load: () => Promise<T>): Promise<T> {
     const pending = this.inFlight.get(key);
     if (pending !== undefined) return pending;
     const call = (async () => {

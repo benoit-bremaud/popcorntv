@@ -109,6 +109,20 @@ describe('DiscoverPage', () => {
     expect(api.wishlist).toHaveBeenCalledTimes(2);
   });
 
+  it('shows where to watch the title in France on its sheet (UC27)', async () => {
+    const user = userEvent.setup();
+    const api = makeApi();
+    render(<DiscoverPage profileId="p1" onPlayInLibrary={() => undefined} api={api} />);
+
+    await user.click(await screen.findByRole('button', { name: 'Dune (2021)' }));
+    const sheet = screen.getByRole('dialog', { name: 'Dune' });
+
+    expect(
+      await within(sheet).findByRole('heading', { name: 'Where to watch (France)' }),
+    ).toBeInTheDocument();
+    expect(api.providers).toHaveBeenCalledWith('movie', DUNE.tmdbId);
+  });
+
   it('shows no cast line when TMDB gives no cast (#172)', async () => {
     const user = userEvent.setup();
     const api = makeApi({

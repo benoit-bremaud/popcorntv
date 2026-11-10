@@ -49,6 +49,7 @@ describe('WhereToWatch', () => {
 
     expect(await screen.findByText('No legal offer in France for now.')).toBeInTheDocument();
     expect(screen.queryByRole('link')).toBeNull();
+    expect(screen.getByText('Data: JustWatch via TMDB')).toBeInTheDocument();
   });
 
   it('says the offers could not be loaded when the call fails', async () => {
