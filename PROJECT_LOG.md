@@ -4,6 +4,16 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-10 — #262 QA pass on the Pi (image `11b2edd`)
+
+- Owner decision: the Pi is the test target (tailnet-only, owner-only); no staging split.
+- Report `docs/architecture/qa/2026-11-10-full-pass-pi.md`: #165–#169 and #172–#176 verified on the Pi (#170, #171 still open);
+  SEC-01…06, 08–10 pass. Findings: #256 bb-homelab Caddyfile not synced (#177 not live,
+  19 / 26 not-found lines fail), #257 15–20 s fresh-load "Loading…" not reproduced warm
+  (catalog ~1.1 s; Discover cold lists 4.4–6.5 s), #258 Sprite Fright unmatched, #259 no
+  French synopsis fallback, #260 subtitle labels as ISO codes, #261 pink avatar ≈ red.
+- `qa-matrix.md` gains the Pi replay table and deploy parity / data checks.
+
 ## 2026-11-09 — #176 duplicate titles collapsed (PR #251 merged, `8459e28`)
 
 - QA FON-11: a film in two libraries showed two identical posters. ADR-0026, MCDA option

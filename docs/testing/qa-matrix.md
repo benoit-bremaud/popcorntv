@@ -1,15 +1,15 @@
 # QA coverage ledger — PopCornTV
 
-One row per screen or flow. Cell format: `date · SHA · environment · OK | KO #N | — (reason)`. Source: [full pass of 2026-11-08](../architecture/qa/2026-11-08-full-pass-pi.md). Responsive cells: only 619 px and 1728 px were reachable. Offline cells: no probe possible with the tool in use. A row is complete when every cell carries a date or a reason.
+One row per screen or flow. Cell format: `date · SHA · environment · OK | KO #N | — (reason)`. Source: [full pass of 2026-11-08](../architecture/qa/2026-11-08-full-pass-pi.md), [pass of 2026-11-10](../architecture/qa/2026-11-10-full-pass-pi.md). Responsive cells: only 619 px and 1728 px were reachable. Offline cells: no probe possible with the tool in use. A row is complete when every cell carries a date or a reason.
 
 | Flow | Nominal | Error | Offline | Back | Accessibility | Responsive |
 |---|---|---|---|---|---|---|
 | Sign-in / setup | — (owner session in use, no sign-out) | — (needs sign-out or a new account, forbidden by the rules of this pass) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | — (not reachable) | — (A11Y-08 not reachable) | — (window floor 619 px, 320/390 not reachable) |
 | Redeem link | — (no link redeemed (would consume or create one)) | — (needs sign-out or a new account, forbidden by the rules of this pass) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | — (not reachable) | — (not reachable) | — (window floor 619 px, 320/390 not reachable) |
-| Profile picker + management | 2026-11-08 · 0698684 · Pi · OK | 2026-11-08 · 0698684 · Pi · OK (XSS, empty, RTL, whitespace probes; alert shown) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK (reload keeps profile) | 2026-11-09 · 15b9179 · unit (jsdom) + e2e · OK (A11Y-02 false positive, [report](../architecture/qa/2026-11-09-issue-173-profile-picker-name.md)), pending Full QA | — (window floor 619 px, 320/390 not reachable) |
+| Profile picker + management | 2026-11-08 · 0698684 · Pi · OK | 2026-11-08 · 0698684 · Pi · OK (XSS, empty, RTL, whitespace probes; alert shown) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK (reload keeps profile) | 2026-11-09 · 15b9179 · unit (jsdom) + e2e · OK (A11Y-02 false positive, [report](../architecture/qa/2026-11-09-issue-173-profile-picker-name.md)); 2026-11-10 · 11b2edd · Pi · OK ([report](../architecture/qa/2026-11-10-full-pass-pi.md)) | — (window floor 619 px, 320/390 not reachable) |
 | Library catalog + rows | 2026-11-08 · 0698684 · Pi · OK · [shot](../architecture/qa/2026-11-08-full-pass-pi/03-continue-watching-and-top-rated.jpg) | 2026-11-08 · 0698684 · Pi · OK (empty/missing artwork states) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | 2026-11-08 · 0698684 · Pi · KO #170 · [shot](../architecture/qa/2026-11-08-full-pass-pi/03-continue-watching-and-top-rated.jpg) | 2026-11-08 · 0698684 · Pi · OK (619 px) · [shot](../architecture/qa/2026-11-08-full-pass-pi/17-narrow-619-home.jpg) |
-| Search | 2026-11-08 · 0698684 · Pi · OK · [shot](../architecture/qa/2026-11-08-full-pass-pi/07-library-search-results.jpg) | 2026-11-08 · 0698684 · Pi · OK (%, tags, 500 chars, whitespace) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | 2026-11-08 · 0698684 · Pi · KO #165 | 2026-11-08 · 0698684 · Pi · OK (619 px) |
-| Detail dialog | 2026-11-08 · 0698684 · Pi · OK | — (no error path in this flow) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · f5ef04f · e2e · OK (#169, [report](../architecture/qa/2026-11-08-issue-169-history-back.md)) | 2026-11-08 · 0698684 · Pi · KO #172 | 2026-11-08 · 0698684 · Pi · OK (619 px) · [shot](../architecture/qa/2026-11-08-full-pass-pi/18-narrow-619-dialog.jpg) |
+| Search | 2026-11-08 · 0698684 · Pi · OK · [shot](../architecture/qa/2026-11-08-full-pass-pi/07-library-search-results.jpg) | 2026-11-08 · 0698684 · Pi · OK (%, tags, 500 chars, whitespace) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | 2026-11-10 · 11b2edd · Pi · OK ([report](../architecture/qa/2026-11-10-full-pass-pi.md)) | 2026-11-08 · 0698684 · Pi · OK (619 px) |
+| Detail dialog | 2026-11-08 · 0698684 · Pi · OK | — (no error path in this flow) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · f5ef04f · e2e · OK (#169, [report](../architecture/qa/2026-11-08-issue-169-history-back.md)) | 2026-11-10 · 11b2edd · Pi · OK ([report](../architecture/qa/2026-11-10-full-pass-pi.md)) | 2026-11-08 · 0698684 · Pi · OK (619 px) · [shot](../architecture/qa/2026-11-08-full-pass-pi/18-narrow-619-dialog.jpg) |
 | Direct play | 2026-11-08 · 0698684 · Pi · OK · [shot](../architecture/qa/2026-11-08-full-pass-pi/20-direct-play-sprite-fright.jpg) | — (no error path in this flow) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · bdc52fc · unit (jsdom) · OK, pending Full QA (#169, [report](../architecture/qa/2026-11-08-issue-169-history-back.md)) | — (player controls native, not audited) | — (window floor 619 px, 320/390 not reachable) |
 | HLS play | 2026-11-08 · 0698684 · Pi · OK · [shot](../architecture/qa/2026-11-08-full-pass-pi/06-hls-player-sintel.jpg) | — (no error path in this flow) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · bdc52fc · unit (jsdom) · OK, pending Full QA (#169, [report](../architecture/qa/2026-11-08-issue-169-history-back.md)) | — (player controls native, not audited) | — (window floor 619 px, 320/390 not reachable) |
 | Resume | 2026-11-08 · a0aedb0 · local prod build · OK (#55 fixed: copied resume reports the real start) · [report](../architecture/qa/2026-11-08-issue-55-resume-offset.md) | — (no error path in this flow) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | — (not audited) | — (window floor 619 px, 320/390 not reachable) |
@@ -19,17 +19,17 @@ One row per screen or flow. Cell format: `date · SHA · environment · OK | KO 
 | Watched marks | 2026-11-08 · 0698684 · Pi · OK | 2026-11-08 · 0698684 · Pi · OK (double click, delete twice) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | — (not audited) | — (window floor 619 px, 320/390 not reachable) |
 | Continue watching | 2026-11-08 · 0698684 · Pi · OK · [shot](../architecture/qa/2026-11-08-full-pass-pi/03-continue-watching-and-top-rated.jpg) | — (no error path in this flow) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | 2026-11-08 · 0698684 · Pi · KO #170 · [shot](../architecture/qa/2026-11-08-full-pass-pi/03-continue-watching-and-top-rated.jpg) | — (window floor 619 px, 320/390 not reachable) |
 | Discover rows | 2026-11-08 · 0698684 · Pi · OK | 2026-11-08 · 0698684 · Pi · OK (bad list/kind, ids probes: 400/404) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | — (not audited) | — (window floor 619 px, 320/390 not reachable) |
-| Discover search | 2026-11-08 · 0698684 · Pi · OK | 2026-11-08 · 0698684 · Pi · OK (XSS, SQL-ish, empty, 300 chars) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | 2026-11-08 · 0698684 · Pi · KO #166 | — (window floor 619 px, 320/390 not reachable) |
+| Discover search | 2026-11-08 · 0698684 · Pi · OK | 2026-11-08 · 0698684 · Pi · OK (XSS, SQL-ish, empty, 300 chars) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | 2026-11-10 · 11b2edd · Pi · OK ([report](../architecture/qa/2026-11-10-full-pass-pi.md)) | — (window floor 619 px, 320/390 not reachable) |
 | Discover with TMDB unreachable (#179) | — (error-only flow) | 2026-11-08 · local prod build · OK (502 on rows, search, sheet, add) · [report](../architecture/qa/2026-11-08-issue-179-tmdb-unavailable.md) | 2026-11-08 · local prod build · OK (proxy to a closed port) | — (no navigation in this flow) | — (no UI change) | — (no UI change) |
 | Title sheet | 2026-11-08 · 0698684 · Pi · OK | 2026-11-08 · 0698684 · Pi · OK (movie/abc, -1, 99999999) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · bdc52fc · unit (jsdom) · OK, pending Full QA (#169, [report](../architecture/qa/2026-11-08-issue-169-history-back.md)) | — (not audited) | — (window floor 619 px, 320/390 not reachable) |
 | My list | 2026-11-08 · 0698684 · Pi · OK | 2026-11-08 · 0698684 · Pi · OK (random profile 404, book kind 400) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | — (not audited) | — (window floor 619 px, 320/390 not reachable) |
 | Play in my library | 2026-11-08 · 0698684 · Pi · OK | — (no error path in this flow) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · bdc52fc · unit (jsdom) · OK, pending Full QA (#169, [report](../architecture/qa/2026-11-08-issue-169-history-back.md)) | — (not audited) | — (window floor 619 px, 320/390 not reachable) |
-| Admin: accounts | 2026-11-08 · 0698684 · Pi · OK | — (no destructive action by rule) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | 2026-11-08 · 0698684 · Pi · KO #175 | — (window floor 619 px, 320/390 not reachable) |
-| Admin: devices | 2026-11-08 · 0698684 · Pi · OK | — (no revoke by rule) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | 2026-11-08 · 0698684 · Pi · KO #174 | — (window floor 619 px, 320/390 not reachable) |
-| Admin: links | 2026-11-08 · 0698684 · Pi · OK | — (no link created or revoked by this pass) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | 2026-11-08 · 0698684 · Pi · KO #175 | — (window floor 619 px, 320/390 not reachable) |
-| Admin: events | 2026-11-08 · 0698684 · Pi · OK | — (no error path in this flow) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | 2026-11-08 · 0698684 · Pi · KO #175 | — (window floor 619 px, 320/390 not reachable) |
+| Admin: accounts | 2026-11-08 · 0698684 · Pi · OK | — (no destructive action by rule) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | 2026-11-10 · 11b2edd · Pi · OK ([report](../architecture/qa/2026-11-10-full-pass-pi.md)) | — (window floor 619 px, 320/390 not reachable) |
+| Admin: devices | 2026-11-08 · 0698684 · Pi · OK | — (no revoke by rule) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | 2026-11-10 · 11b2edd · Pi · OK ([report](../architecture/qa/2026-11-10-full-pass-pi.md)) | — (window floor 619 px, 320/390 not reachable) |
+| Admin: links | 2026-11-08 · 0698684 · Pi · OK | — (no link created or revoked by this pass) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | 2026-11-10 · 11b2edd · Pi · OK ([report](../architecture/qa/2026-11-10-full-pass-pi.md)) | — (window floor 619 px, 320/390 not reachable) |
+| Admin: events | 2026-11-08 · 0698684 · Pi · OK | — (no error path in this flow) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | 2026-11-10 · 11b2edd · Pi · OK ([report](../architecture/qa/2026-11-10-full-pass-pi.md)) | — (window floor 619 px, 320/390 not reachable) |
 | Libraries add / edit / delete / scan | 2026-11-08 · 0698684 · Pi · KO #163 | 2026-11-08 · f69a401 · inject tests · OK, staging owner replay pending (#163, [report](../architecture/qa/2026-11-08-issue-163-library-root.md)) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | 2026-11-08 · 0698684 · Pi · OK | — (not audited) | — (window floor 619 px, 320/390 not reachable) |
-| Unknown paths (#177) | 2026-11-08 · local staging · OK (`/`, assets 200) · [report](../architecture/qa/2026-11-08-issue-177-not-found.md) | 2026-11-08 · local staging · OK (24-path matrix, 404 page, `/api` JSON) | — (static page, no network call) | — (no layer) | — (not audited) | — (not audited) |
+| Unknown paths (#177) | 2026-11-10 · 11b2edd · Pi · OK (`/`, assets 200) | 2026-11-10 · 11b2edd · Pi · KO #256 (19 / 26 lines fail, [report](../architecture/qa/2026-11-10-full-pass-pi.md)) | — (static page, no network call) | — (no layer) | — (not audited) | — (not audited) |
 | Scheduled scan | — (timer needs server logs, ROB-07) | — (needs server logs) | — (BLOCKED) | — (no UI) | — (no UI) | — (no UI) |
 
 ## Library root checks (#163)
@@ -264,3 +264,34 @@ Replay with a screen reader (Orca on Firefox, then NVDA or VoiceOver when availa
 6. Two versions in one library (`Heat (1995) - 1080p.mkv`, `- 2160p.mkv`): one card, the
    Copy select reads "Films — <path>" for each.
 7. Pick French audio on one copy, switch copy: the Audio select is back on the first track.
+
+## Replay of #165–#169 and #172–#177 on the Pi (2026-11-10)
+
+Source: [pass of 2026-11-10](../architecture/qa/2026-11-10-full-pass-pi.md).
+
+| Checks | Result |
+|---|---|
+| #165 search announcements 1, 2, 7 | 2026-11-10 · 11b2edd · Pi · OK (DOM only; screen reader not run) |
+| #166 Discover live search 1, 2, 5, 6 | 2026-11-10 · 11b2edd · Pi · OK |
+| #167 placeholder contrast 1 | 2026-11-10 · 11b2edd · Pi · OK |
+| #168 identity autofill 3 | 2026-11-10 · 11b2edd · Pi · OK |
+| #169 back navigation 1, 2, 4 | 2026-11-10 · 11b2edd · Pi · OK |
+| #172 title dialog actions 1, 2, 5, 6 | 2026-11-10 · 11b2edd · Pi · OK |
+| #173 profile picker name 1, 3 | 2026-11-10 · 11b2edd · Pi · OK |
+| #174 device label 1 | 2026-11-10 · 11b2edd · Pi · OK |
+| #175 admin polish 1, 2, 4 (disabled state only) | 2026-11-10 · 11b2edd · Pi · OK (3, 5 not run; issue / revoke not run on the live instance) |
+| #176 duplicate titles 1 | 2026-11-10 · 11b2edd · Pi · OK (2–7 not run: no matching data) |
+| #177 not-found 5 | 2026-11-10 · 11b2edd · Pi · KO #256 |
+
+## Deploy parity and data checks (added 2026-11-10)
+
+Replay on every Pi deploy:
+
+1. `sh scripts/not-found-check.sh https://popcorntv.bb-homelab.local`: every line `ok` (the
+   bb-homelab Caddyfile is copied by hand and can drift, #256).
+2. Restart the app container, load the home page at once: catalog shown with LCP ≤ 2.5 s (PERF-01); note
+   the slowest `/api` call (#257).
+3. Per library: unmatched titles and matched titles without a synopsis are counted and each
+   one explained (#258, #259).
+4. Subtitle and audio menus read language names, not ISO codes (#260).
+5. Profile avatars are told apart at a glance (#261).
