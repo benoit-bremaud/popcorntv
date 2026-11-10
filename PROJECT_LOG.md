@@ -4,6 +4,21 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-10 — #264 spilled popcorn on the 404 page (PR #266 merged, `0b9fdc8`)
+
+- Owner request: a fun popcorn illustration on the static 404. Inline `aria-hidden` SVG
+  (striped box on the floor, scattered kernels, four hopping), CSS-only motion, no script.
+- Adversarial round 1 Must: infinite loops break WCAG 2.2.2 on a page that cannot offer a
+  pause; every animation is now finite and stops by 4.8 s, off under reduced motion. New
+  tokens `--color-popcorn`, `--color-popcorn-butter`, `--duration-hop`, `--hop`;
+  `not-found.test.ts` guards no script / inline style, `aria-hidden`, finite motion
+  (`vite.config.ts` keeps `not-found.css` readable in Vitest).
+- Gate: tests, coverage (web 98.9 %), build, e2e 2/2, gitleaks, SonarQube passed after two
+  pre-existing #176 smells in `collapseCopies` were cleared (S6606, S6959, no behaviour
+  change). Gotcha: `sonar-scanner` needs `-Dsonar.host.url=http://localhost:9000`, else it
+  hits SonarCloud and answers 403. Codex out of credit. Follow-ups #265 (hero Ken Burns
+  loop, WCAG 2.2.2), #267 (`titleKey` fallback test).
+
 ## 2026-11-10 — #262 QA pass on the Pi (image `11b2edd`)
 
 - Owner decision: the Pi is the test target (tailnet-only, owner-only); no staging split.
