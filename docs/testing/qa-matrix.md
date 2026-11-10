@@ -285,11 +285,11 @@ the proxy trick cannot do: the route tests cover it (`routes.test.ts`, ADR-0027)
 
 ## Confined FFmpeg input checks (#118, ADR-0028)
 
-1. Put a text file named `trap.mkv` holding an HLS playlist (`#EXTM3U`, `#EXTINF:1,`,
-   `http://<a host you watch>/x.ts`) in a library and scan: the file is skipped as
-   unprobeable, the watched host gets no request, the scan finishes.
-2. Same with an `ffconcat version 1.0` list naming `/etc/hostname`: skipped, no content of
-   that file appears anywhere (log, catalog, subtitles).
+1. Next to a real `ok.mkv`, put a text file `trap.mkv` holding `ffconcat version 1.0` and
+   `file 'ok.mkv'` (relative), then scan: `trap.mkv` is skipped as unprobeable and the log
+   shows "Format not on whitelist"; before #118 it probed as `concat`.
+2. Same with a DASH manifest (`<MPD …>` whose `BaseURL` points at a host you watch) named
+   `trap2.mkv`: skipped with "not on whitelist", the watched host gets no request.
 3. Play one real file of each kept container (mkv, webm, mp4, m4v, mov, avi), one direct
    play and one HLS transcode with a resume and a subtitle track: all work as before.
 4. Opt-in automated check: `FFMPEG_IT=1 pnpm --filter server exec vitest run src/ffmpeg-input`.

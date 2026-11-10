@@ -25,21 +25,25 @@ function expectConfinedInput(args: readonly string[], file: string): void {
 }
 
 describe('localInputArgs', () => {
-  it('allows the file protocol only', () => {
-    expect(localInputArgs().slice(0, 2)).toEqual(['-protocol_whitelist', 'file']);
+  it('allows the file protocol and the container demuxers only', () => {
+    expect(localInputArgs()).toEqual([
+      '-protocol_whitelist',
+      'file',
+      '-format_whitelist',
+      'matroska,mov,avi,mpegts',
+    ]);
   });
 
-  it('whitelists container demuxers and no playlist demuxer', () => {
-    const formats = localInputArgs()[3]?.split(',') ?? [];
-    expect(formats).toEqual([...INPUT_FORMATS]);
-    for (const playlist of ['hls', 'concat', 'ffconcat', 'tee', 'image2', 'data', 'lavfi']) {
-      expect(formats).not.toContain(playlist);
-    }
-  });
+  it.each(['hls', 'dash', 'concat', 'imf', 'sdp', 'rtsp', 'image2', 'lavfi'])(
+    'keeps the %s demuxer out',
+    (demuxer) => {
+      expect<readonly string[]>(INPUT_FORMATS).not.toContain(demuxer);
+    },
+  );
 
   it('covers the demuxer of every extension the scanner keeps', () => {
     for (const extension of SUPPORTED_EXTENSIONS) {
-      expect(INPUT_FORMATS).toContain(DEMUXER_OF[extension]);
+      expect<readonly string[]>(INPUT_FORMATS).toContain(DEMUXER_OF[extension]);
     }
   });
 });

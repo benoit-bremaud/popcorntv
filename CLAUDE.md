@@ -163,6 +163,7 @@ FFmpeg sessions, `spawn` injected), the `keyframe-probe` (ADR-0023), the `sessio
 `repository`, the `service` and the `routes`; `src/auth/` the `hasher` (only argon2 import), the `token` helpers, the `setup-token`, the
 in-memory `limiter`, the `user` / `session` / `token` / `event` repositories, the access `hook`, the
 `routes` (public and self-service) and the owner `user-routes`;
+`src/ffmpeg-input.ts` the `localInputArgs` put before every FFmpeg / ffprobe `-i` (ADR-0028);
 `src/http.ts` the route helpers and the `Caller` type; `src/logging.ts` the logger options
 (`LOG_LEVELS`, `REDACT_PATHS`, `loggerOptions`), `requestLevel`, the `OneLinePerRequest`
 log controller and `registerRequestLog`; `src/db/`

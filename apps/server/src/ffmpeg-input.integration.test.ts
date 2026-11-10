@@ -11,9 +11,9 @@ import { ffprobeArgs } from './library/ffprobe.js';
 const execFileAsync = promisify(execFile);
 
 /**
- * Opt-in (`FFMPEG_IT=1`): the real ffprobe refuses crafted library files that a playlist
- * demuxer would follow to the network or to another local file (ADR-0028), while a real
- * Matroska file still probes.
+ * Opt-in (`FFMPEG_IT=1`): the real ffprobe refuses, with \"not on whitelist\", crafted library
+ * files a manifest or concat demuxer would follow (ADR-0028), while a real Matroska file
+ * still probes. The concat control shows the protocol whitelist alone does not stop it.
  */
 describe.runIf(process.env['FFMPEG_IT'] === '1')('confined FFmpeg input', () => {
   let dir: string;
@@ -54,18 +54,35 @@ describe.runIf(process.env['FFMPEG_IT'] === '1')('confined FFmpeg input', () => 
     expect(stdout).toContain('"codec_type": "video"');
   });
 
-  it('refuses an HLS playlist named .mkv without connecting', async () => {
-    const file = join(dir, 'remote.mkv');
-    await writeFile(file, `#EXTM3U\n#EXTINF:1,\nhttp://127.0.0.1:${port}/x.ts\n#EXT-X-ENDLIST\n`);
+  it('confines a sibling concat list that the protocol whitelist alone lets through', async () => {
+    const file = join(dir, 'concat.mkv');
+    // A relative sibling passes concat's `safe=1`: the format whitelist is what stops it.
+    await writeFile(file, "ffconcat version 1.0\nfile 'ok.mkv'\n");
 
-    await expect(execFileAsync('ffprobe', ffprobeArgs(file))).rejects.toThrow();
-    expect(connections).toBe(0);
+    const protocolOnly = await execFileAsync('ffprobe', [
+      '-v',
+      'error',
+      '-show_entries',
+      'format=format_name',
+      '-of',
+      'csv=p=0',
+      '-protocol_whitelist',
+      'file',
+      '-i',
+      file,
+    ]);
+    expect(protocolOnly.stdout.trim()).toBe('concat');
+    await expect(execFileAsync('ffprobe', ffprobeArgs(file))).rejects.toThrow(/not on whitelist/);
   });
 
-  it('refuses a concat list named .mkv that points at another local file', async () => {
-    const file = join(dir, 'concat.mkv');
-    await writeFile(file, `ffconcat version 1.0\nfile '${join(dir, 'ok.mkv')}'\n`);
+  it('refuses a DASH manifest named .mkv without connecting', async () => {
+    const file = join(dir, 'remote.mkv');
+    await writeFile(
+      file,
+      `<?xml version="1.0"?><MPD xmlns="urn:mpeg:dash:schema:mpd:2011" type="static" mediaPresentationDuration="PT1S" minBufferTime="PT1S" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011"><Period><AdaptationSet mimeType="video/mp4"><Representation id="1" bandwidth="1"><BaseURL>http://127.0.0.1:${port}/x.mp4</BaseURL></Representation></AdaptationSet></Period></MPD>`,
+    );
 
-    await expect(execFileAsync('ffprobe', ffprobeArgs(file))).rejects.toThrow();
+    await expect(execFileAsync('ffprobe', ffprobeArgs(file))).rejects.toThrow(/not on whitelist/);
+    expect(connections).toBe(0);
   });
 });

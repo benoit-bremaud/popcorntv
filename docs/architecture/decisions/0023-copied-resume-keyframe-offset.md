@@ -1,6 +1,6 @@
 # ADR-0023 — Copied resume starts on the probed keyframe
 
-- Status: accepted (brick #55, owner approval 2026-11-08)
+- Status: accepted (brick #55, owner approval 2026-11-08); input options per ADR-0028 (#118)
 - Date: 2026-11-08
 - Deciders: owner
 - Related: spec [resume-playback](../specs/resume-playback.md) 4a, spec
@@ -33,7 +33,7 @@ Sensitivity: with exactness at 50 and CPU at 10, A stays first (470 against C's 
 ## Decision
 
 A. `KeyframeProbe` (`src/playback/keyframe-probe.ts`) runs FFmpeg itself with the
-session's seek and maps: `ffmpeg -ss <startSec> -copyts -start_at_zero -i <file> -map 0:V:0
+session's seek and maps: `ffmpeg -ss <startSec> -copyts -start_at_zero <ADR-0028 input options> -i <file> -map 0:V:0
 [-map 0:a:<track>] -c copy -frames:v 1 -f framecrc -`, and the pure `parseFramecrc` keeps the
 smallest pts over the printed packets, each in its stream's time base: the player's timeline
 starts at the earliest packet, and audio can lead the video keyframe by seconds (MPEG-TS, not a scanned container, or a file
