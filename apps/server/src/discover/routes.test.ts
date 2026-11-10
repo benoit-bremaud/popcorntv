@@ -70,12 +70,17 @@ async function setup(client: TmdbClient | null = makeClient()) {
    */
   const failures: string[] = [];
   const tmdbFailures: string[] = [];
+  /** Expected `discover.list.warm_failed` / `refresh_failed` lines (ADR-0027). */
+  const listFailures: string[] = [];
   const app = Fastify({
     logger: {
       level: 'warn',
       stream: {
-        write: (line: string) =>
-          (line.includes('"event":"discover.tmdb.failed"') ? tmdbFailures : failures).push(line),
+        write: (line: string) => {
+          if (line.includes('"event":"discover.tmdb.failed"')) tmdbFailures.push(line);
+          else if (line.includes('"event":"discover.list.')) listFailures.push(line);
+          else failures.push(line);
+        },
       },
     },
   });
@@ -98,7 +103,24 @@ async function setup(client: TmdbClient | null = makeClient()) {
     db.insert(media).values({ id, libraryId, kind: 'film', title: 'Dune', tmdbId }).run();
     return id;
   };
-  return { app, db, failures, tmdbFailures, addFilm, advance: (ms: number) => (clock += ms) };
+  // The warm-up runs on ready (ADR-0027): let it settle, then count only the test's own calls.
+  await app.ready();
+  await settle();
+  if (client && vi.isMockFunction(client.list)) vi.mocked(client.list).mockClear();
+  return {
+    app,
+    db,
+    failures,
+    tmdbFailures,
+    listFailures,
+    addFilm,
+    advance: (ms: number) => (clock += ms),
+  };
+}
+
+/** Lets the background TMDB calls (warm-up, refresh) finish. */
+async function settle(): Promise<void> {
+  await new Promise((resolve) => setImmediate(resolve));
 }
 
 describe('discover routes', () => {
@@ -123,16 +145,102 @@ describe('discover routes', () => {
     ]);
   });
 
-  it('memoises a list for 15 minutes', async () => {
+  it('warms the four lists at start, so the first visit makes no TMDB call', async () => {
+    const client = makeClient();
+    const { app } = await setup(client);
+
+    const response = await app.inject({ url: '/discover?list=popular&kind=tv' });
+
+    expect(response.json<DiscoverTitle[]>()).toHaveLength(1);
+    expect(client.list).not.toHaveBeenCalled();
+  });
+
+  it('calls every list once at start', async () => {
+    const calls: [string, string][] = [];
+    // A plain function: `setup` clears mocked `list` calls once the warm-up has run.
+    await setup(
+      makeClient({
+        list: async (list, of) => {
+          calls.push([list, of]);
+          return [DUNE];
+        },
+      }),
+    );
+
+    expect(calls).toEqual([
+      ['trending', 'movie'],
+      ['trending', 'tv'],
+      ['popular', 'movie'],
+      ['popular', 'tv'],
+    ]);
+  });
+
+  it('serves a list fresh for 15 minutes, then stale while one call refreshes it', async () => {
     const client = makeClient();
     const { app, advance } = await setup(client);
+    const url = '/discover?list=popular&kind=tv';
 
-    await app.inject({ url: '/discover?list=popular&kind=tv' });
-    await app.inject({ url: '/discover?list=popular&kind=tv' });
+    advance(LIST_TTL_MS - 1);
+    await app.inject({ url });
+    expect(client.list).not.toHaveBeenCalled();
+
+    vi.mocked(client.list).mockResolvedValueOnce([{ ...DUNE, title: 'Dune: Part Two' }]);
+    advance(1);
+    const stale = await app.inject({ url });
+    await settle();
+    const fresh = await app.inject({ url });
+
+    expect(stale.json<DiscoverTitle[]>()[0]?.title).toBe('Dune');
+    expect(fresh.json<DiscoverTitle[]>()[0]?.title).toBe('Dune: Part Two');
+    expect(client.list).toHaveBeenCalledTimes(1);
+  });
+
+  it('shares one refresh between concurrent visits of a stale list', async () => {
+    const client = makeClient();
+    const { app, advance } = await setup(client);
     advance(LIST_TTL_MS);
-    await app.inject({ url: '/discover?list=popular&kind=tv' });
 
-    expect(client.list).toHaveBeenCalledTimes(2);
+    await Promise.all([
+      app.inject({ url: '/discover?list=trending&kind=movie' }),
+      app.inject({ url: '/discover?list=trending&kind=movie' }),
+    ]);
+    await settle();
+
+    expect(client.list).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps serving the stale list and logs when the refresh fails', async () => {
+    const client = makeClient();
+    const { app, advance, failures, listFailures } = await setup(client);
+    vi.mocked(client.list).mockRejectedValue(new TmdbRequestError('/x', 500));
+    advance(LIST_TTL_MS);
+
+    const first = await app.inject({ url: '/discover?list=trending&kind=movie' });
+    await settle();
+    const second = await app.inject({ url: '/discover?list=trending&kind=movie' });
+    await settle();
+
+    expect(first.json<DiscoverTitle[]>()).toHaveLength(1);
+    expect(second.json<DiscoverTitle[]>()).toHaveLength(1);
+    expect(listFailures).toHaveLength(2);
+    expect(listFailures[0]).toContain('"event":"discover.list.refresh_failed"');
+    expect(failures).toEqual([]);
+  });
+
+  it('waits for TMDB on the first visit when the warm-up failed, and logs the failure', async () => {
+    const list = vi
+      .fn<TmdbClient['list']>()
+      .mockRejectedValueOnce(new TmdbRequestError('/x', 500))
+      .mockResolvedValue([DUNE]);
+    const { app, failures, listFailures } = await setup(makeClient({ list }));
+
+    const response = await app.inject({ url: '/discover?list=trending&kind=movie' });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json<DiscoverTitle[]>()).toHaveLength(1);
+    expect(listFailures).toHaveLength(1);
+    expect(listFailures[0]).toContain('"event":"discover.list.warm_failed"');
+    expect(failures).toEqual([]);
   });
 
   it('refuses bad queries, answers 409 without TMDB and 502 when TMDB fails', async () => {

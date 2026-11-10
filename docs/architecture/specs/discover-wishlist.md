@@ -14,7 +14,8 @@ whether the title is already on disk, and keeps a per-profile wishlist whose ent
 - **R1** A **Discover** tab next to **Library** shows four TMDB rows — trending films,
   trending series, popular films, popular series — and the profile's **My list** row first
   when it is not empty. `GET /discover?list=trending|popular&kind=movie|tv` answers at
-  most 20 `DiscoverTitle`s; a list is kept in memory for 15 minutes.
+  most 20 `DiscoverTitle`s; a list is fresh in memory for 15 minutes, then served stale while
+  one TMDB call refreshes it, and the four lists are fetched at start (ADR-0027).
 - **R2** A search field queries `GET /discover/search?q=` (1–100 characters, TMDB
   `/search/multi`, films and series only, at most 20). Like the library search, it is
   live (#166): the trimmed query goes out 400 ms after the last keystroke, Enter sends it
