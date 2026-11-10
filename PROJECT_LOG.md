@@ -4,6 +4,20 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-11 — Full QA pass on local staging (`1088e1a`)
+
+- Level full on `make staging-up` (production image of `1088e1a`), report
+  `docs/architecture/qa/2026-11-11-full-pass-staging.md`, 54 checks: Pass 40, Fail 7, Mixed 2,
+  Not tested 5; Must 0, Should 3 (#293, #294, #296), Nice 6 (#295, #297, #298, #299, #170, #171
+  still reproducing). Each defect issue embeds its screenshot.
+- Verified: replays #164–#176, #118 all four containers played (seek, resume), #277 case 5,
+  #278 API, SEC-01…SEC-11, both rate-limit buckets burst and recovered, Lighthouse sign-in
+  100/100/100/90, responsive, Firefox, WebKit, dark, keyboard.
+- Blocked: every TMDB-dependent case (placeholder staging key, #300) — #184, #257, #277,
+  #278 UI, #166; screen reader and password manager not tested.
+- Verdict: no blocker for a Pi deploy of `1088e1a` (Caddyfile copy for #177, then smoke the
+  TMDB features on the Pi).
+
 ## 2026-11-11 — #253 closed as not planned, carry-over scope pinned (PR #291 merged, `999557a`)
 
 - Decision (owner, MCDA A 450 / namespace the key anyway 350 / close only 380): #253 is not a

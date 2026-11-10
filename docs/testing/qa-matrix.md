@@ -313,6 +313,39 @@ Source: [pass of 2026-11-10](../architecture/qa/2026-11-10-full-pass-pi.md).
 | #176 duplicate titles 1 | 2026-11-10 · 11b2edd · Pi · OK (2–7 not run: no matching data) |
 | #177 not-found 5 | 2026-11-10 · 11b2edd · Pi · KO #256 |
 
+## Replay on local staging (2026-11-11)
+
+Source: [full pass of 2026-11-11](../architecture/qa/2026-11-11-full-pass-staging.md), production image of `1088e1a` on the local staging tier. TMDB key was a placeholder, so TMDB-dependent checks are not run.
+
+| Checks | Result |
+|---|---|
+| #164 account menu 1–7 | 2026-11-11 · 1088e1a · local staging · OK |
+| #165 search announcements 1–4, 7 | 2026-11-11 · 1088e1a · local staging · OK (5, 6 screen reader not run) |
+| #166 Discover live search 2, 5, 6 | 2026-11-11 · 1088e1a · local staging · OK (1, 3, 4, 7–10 BLOCKED: no TMDB) |
+| #167 placeholder contrast 1 | 2026-11-11 · 1088e1a · local staging · OK (ratio 6.52) |
+| #168 identity autofill 3 | 2026-11-11 · 1088e1a · local staging · OK (1, 2, 4 not run) |
+| #169 back navigation 1–4, 7 | 2026-11-11 · 1088e1a · local staging · OK |
+| #172 title dialog actions 1, 2, 5, 6 | 2026-11-11 · 1088e1a · local staging · OK (3, 4, 7 not run) |
+| #173 profile picker name 1, 3 | 2026-11-11 · 1088e1a · local staging · OK |
+| #174 device label 1–4 | 2026-11-11 · 1088e1a · local staging · OK (Firefox, WebKit, curl user agents) |
+| #175 admin polish 1, 4, 5 | 2026-11-11 · 1088e1a · local staging · OK (2, 3 not run) |
+| #176 duplicate titles 1, 2 (3–7 per screenshots) | 2026-11-11 · 1088e1a · local staging · OK |
+| #177 not-found 1–5 | 2026-11-11 · 1088e1a · local staging · OK (`make check-not-found`, 26 / 26) |
+| #118 confined FFmpeg input 1–4 | 2026-11-11 · 1088e1a · local staging · OK (avi, mov HLS; m4v, webm direct; seek and resume; avi seeks only within the transcoded part, ADR-0006) |
+| #184 where to watch | 2026-11-11 · BLOCKED (no TMDB key) |
+| #257 discover list freshness | 2026-11-11 · BLOCKED (no TMDB key) |
+| #277 wishlist notifications 5, 9 | 2026-11-11 · 1088e1a · local staging · 5 OK, 9 KO #295 (Escape / outside click); 1–4, 6–8 BLOCKED (no TMDB) |
+| #278 personal title link API 3–6 | 2026-11-11 · 1088e1a · local staging · OK (UI 1, 2, 7 BLOCKED: no TMDB) |
+| #170 first poster aligned with the title | 2026-11-11 · 1088e1a · local staging · KO #170 (still reproduces, screenshot added) |
+| #171 account trigger | 2026-11-11 · 1088e1a · local staging · KO #171 (still reproduces, screenshot added) |
+| Rate limits #72 (300 / min API, 3000 / min media) | 2026-11-11 · 1088e1a · local staging · OK (429 then recovery after the window, buckets independent) |
+| Lighthouse, sign-in page | 2026-11-11 · 1088e1a · local staging · OK (100 / 100 / 100 / SEO 90, #299) |
+| Username format hint on the invitation form | 2026-11-11 · 1088e1a · local staging · KO #298 |
+| Responsive 320 px | 2026-11-11 · 1088e1a · local staging · KO #296 (329 px scroll width) |
+| axe-core catalog | 2026-11-11 · 1088e1a · local staging · KO #297 (`landmark-unique`) |
+| Profile name control characters | 2026-11-11 · 1088e1a · local staging · KO #293 |
+| Mark watched with the backend down | 2026-11-11 · 1088e1a · local staging · KO #294 |
+
 ## Deploy parity and data checks (added 2026-11-10)
 
 Replay on every Pi deploy:
