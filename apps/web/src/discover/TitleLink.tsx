@@ -52,7 +52,7 @@ export function TitleLink({ kind, tmdbId, api = titleLinkApi }: Props): React.JS
     setDraft(null);
   }
 
-  function submit(event: React.FormEvent<HTMLFormElement>): void {
+  function submit(event: React.SyntheticEvent<HTMLFormElement, SubmitEvent>): void {
     event.preventDefault();
     const url = normaliseTitleLink(draft ?? '');
     if (url === null) {
