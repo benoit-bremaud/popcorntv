@@ -37,7 +37,7 @@ C — one private link per user account.
 | Security (abuse) |     35 | 5 — only the admin publishes a URL | 4 — seen by its profile only | 4 — seen by its user   |
 | Simplicity       |     30 | 5 — existing `access: 'owner'`    | 3 — profile key and cascade   | 3 — user key and cascade |
 | Personal fit     |     20 | 3 — one link per title            | 5 — each viewer their own     | 4 — per account        |
-| Role coherence   |     15 | 5 — matches library management    | 3 — any viewer writes         | 4                      |
+| Role coherence   |     15 | 5 — matches library management    | 3 — any viewer writes         | 4 — per account, not role-gated |
 | **Total**        |    100 | **460**                           | **375**                       | **370**                |
 
 A = 175 + 150 + 60 + 75; B = 140 + 90 + 100 + 45; C = 140 + 90 + 80 + 60.

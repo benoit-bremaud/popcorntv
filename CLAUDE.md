@@ -156,11 +156,6 @@ stale-while-refresh, 500 titles LRU; link pinned to `https://www.themoviedb.org`
 offer; logos at `w92` via `GET /discover/logo/:file`, issued paths only; web `WhereToWatch` in
 `TitleSheet` and `DetailDialog` (film / series with a `tmdbId`), every offer opens the TMDB
 watch page in a new tab, `noopener noreferrer`; no third-party stream ever touched).
-#278 personal title link (spec `docs/architecture/specs/title-link.md`, ADR-0031: `title_links`
-keyed by `(kind, tmdb_id)`, `GET /title-links/:kind/:tmdbId` answers `{ url, editable }` to any
-signed-in caller, `PUT | DELETE` owner-only, pure `normaliseTitleLink` in `packages/shared`
-(http(s), host, no credentials, ≤ 2048), web `TitleLink` under *Where to watch* opens it in a
-new tab; the server never fetches it, never logs it).
 #277 wishlist notifications (spec `docs/architecture/specs/wishlist-notifications.md`, ADR-0030:
 in-app only — `notifications` table + header `NotificationBell` polled every 5 min, `PUT
 …/notifications/read` on open; "my providers" per profile in `profile_providers`, toggled from
@@ -168,6 +163,11 @@ in-app only — `notifications` table + header `NotificationBell` polled every 5
 serially on the shared providers `StaleCache`, pure `availabilityEvents` diffs `wishlist.seen_in_library`
 / `seen_provider_ids` — first provider look is a baseline, only flatrate / free / ads of my providers
 notify; the timer helper `src/timer.ts` is shared with the scheduled scan).
+#278 personal title link (spec `docs/architecture/specs/title-link.md`, ADR-0031: `title_links`
+keyed by `(kind, tmdb_id)`, `GET /title-links/:kind/:tmdbId` answers `{ url, editable }` to any
+signed-in caller, `PUT | DELETE` owner-only, pure `normaliseTitleLink` in `packages/shared`
+(http(s), host, no credentials, ≤ 2048), web `TitleLink` under *Where to watch* opens it in a
+new tab; the server never fetches it, never logs it).
 
 Server layout (flat, component diagram 03): `src/library/` holds the pure `name-parser`
 and `path-guard`, the `ffprobe` runner (only process egress), the `folder-lister` (one-level `readdir` of `MEDIA_ROOT`), the `scanner`, the pure `identity` (carry-over keys, ADR-0018), the `scheduler` (interval rescans, ADR-0016), the per-library

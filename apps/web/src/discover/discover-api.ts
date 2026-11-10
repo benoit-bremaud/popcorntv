@@ -5,8 +5,9 @@ import {
   loadWishlist,
   searchDiscover,
   setWishlisted,
+  loadTitleLink,
+  saveTitleLink,
 } from '../api.js';
-import { loadTitleLink, saveTitleLink } from '../api.js';
 import type { TitleLinkApi } from './TitleLink.js';
 
 /** The server calls of UC26; the page and the sheet take it as a prop so tests inject fakes. */
@@ -17,8 +18,7 @@ export interface DiscoverApi {
   readonly wishlist: typeof loadWishlist;
   readonly setWishlisted: typeof setWishlisted;
   readonly providers: typeof loadWatchProviders;
-  /** UC30 calls; the block falls back to the real ones when absent. */
-  readonly titleLink?: TitleLinkApi;
+  readonly titleLink: TitleLinkApi;
 }
 
 export const discoverApi: DiscoverApi = {

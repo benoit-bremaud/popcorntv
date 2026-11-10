@@ -144,6 +144,10 @@ describe('App', () => {
       wishlist: vi.fn(async () => []),
       setWishlisted: vi.fn(async () => true),
       providers: vi.fn(async () => ({ link: null, offers: [] })),
+      titleLink: {
+        load: vi.fn(async () => ({ url: null, editable: false })),
+        save: vi.fn(async () => true),
+      },
     };
     render(
       <App
@@ -172,6 +176,10 @@ describe('App', () => {
       wishlist: vi.fn(async () => []),
       setWishlisted: vi.fn(async () => true),
       providers: vi.fn(async () => ({ link: null, offers: [] })),
+      titleLink: {
+        load: vi.fn(async () => ({ url: null, editable: false })),
+        save: vi.fn(async () => true),
+      },
     };
     const notifications = {
       load: vi.fn(async () => ({
@@ -234,6 +242,10 @@ describe('App', () => {
       wishlist: vi.fn(async () => []),
       setWishlisted: vi.fn(async () => true),
       providers: vi.fn(async () => ({ link: null, offers: [] })),
+      titleLink: {
+        load: vi.fn(async () => ({ url: null, editable: false })),
+        save: vi.fn(async () => true),
+      },
     };
     const notifications = {
       load: vi.fn(async () => ({
@@ -300,6 +312,10 @@ describe('App', () => {
       wishlist: vi.fn(async () => []),
       setWishlisted: vi.fn(async () => true),
       providers: vi.fn(async () => ({ link: null, offers: [] })),
+      titleLink: {
+        load: vi.fn(async () => ({ url: null, editable: false })),
+        save: vi.fn(async () => true),
+      },
     };
     render(
       <App

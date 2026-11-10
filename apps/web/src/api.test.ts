@@ -422,6 +422,7 @@ describe('loadTitleLink', () => {
   it.each([
     ['an error status', async () => respond({}, 500)],
     ['another shape', async () => respond([])],
+    ['a non-string url', async () => respond({ url: 42, editable: true })],
     ['a network failure', async () => Promise.reject(new Error('offline'))],
   ])('should throw on %s', async (_label, fetchFn) => {
     await expect(loadTitleLink('tv', 1, fetchFn)).rejects.toThrow();

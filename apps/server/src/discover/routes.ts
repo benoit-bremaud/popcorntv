@@ -59,7 +59,8 @@ const kind = z.enum(DISCOVER_KINDS);
 const tmdbId = z.coerce.number().int().positive().max(2_147_483_647);
 const listQuery = z.object({ list: z.enum(DISCOVER_LISTS), kind });
 const searchQuery = z.object({ q: z.string().trim().min(1).max(100) });
-const titleParams = z.object({ kind, tmdbId });
+/** `:kind/:tmdbId` of a TMDB title; shared with the title-link routes. */
+export const titleParams = z.object({ kind, tmdbId });
 const wishParams = profileParams.extend({ kind, tmdbId });
 const imageParams = z.object({ file: z.string().regex(/^[A-Za-z0-9]+\.(?:jpg|png)$/) });
 

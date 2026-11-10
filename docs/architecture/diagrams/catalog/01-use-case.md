@@ -45,7 +45,8 @@ flowchart LR
   uc30 -. extend .-> uc26
   uc30 -. extend .-> uc4
   owner --- uc30a
-  owner -->|is a| viewer
+  owner -. "specializes" .-> viewer
+  uc30a -. extend .-> uc30
   uc3b -. extend .-> uc3a
 ```
 

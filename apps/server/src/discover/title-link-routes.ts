@@ -1,15 +1,12 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { DISCOVER_KINDS, normaliseTitleLink, TITLE_LINK_MAX } from '@popcorntv/shared';
+import { normaliseTitleLink, TITLE_LINK_MAX } from '@popcorntv/shared';
 import type { TitleLink } from '@popcorntv/shared';
 import { callerOf, invalid } from '../http.js';
+import { titleParams } from './routes.js';
 import type { TitleLinkRepository } from './title-link-repository.js';
 
 const OWNER = { config: { access: 'owner' } } as const;
-const linkParams = z.object({
-  kind: z.enum(DISCOVER_KINDS),
-  tmdbId: z.coerce.number().int().positive().max(2_147_483_647),
-});
 // Raw length is capped before parsing; the shared rule checks scheme, host and credentials (R4).
 const linkBody = z.object({
   url: z
@@ -34,7 +31,7 @@ export function registerTitleLinkRoutes(
   deps: { readonly links: TitleLinkRepository },
 ): void {
   app.get('/title-links/:kind/:tmdbId', (request, reply) => {
-    const params = linkParams.safeParse(request.params);
+    const params = titleParams.safeParse(request.params);
     if (!params.success) return reply.code(400).send(invalid(params.error.issues));
     return reply.send({
       url: deps.links.get(params.data.kind, params.data.tmdbId),
@@ -43,7 +40,7 @@ export function registerTitleLinkRoutes(
   });
 
   app.put('/title-links/:kind/:tmdbId', OWNER, (request, reply) => {
-    const params = linkParams.safeParse(request.params);
+    const params = titleParams.safeParse(request.params);
     if (!params.success) return reply.code(400).send(invalid(params.error.issues));
     const body = linkBody.safeParse(request.body);
     if (!body.success) return reply.code(400).send(invalid(body.error.issues));
@@ -58,7 +55,7 @@ export function registerTitleLinkRoutes(
   });
 
   app.delete('/title-links/:kind/:tmdbId', OWNER, (request, reply) => {
-    const params = linkParams.safeParse(request.params);
+    const params = titleParams.safeParse(request.params);
     if (!params.success) return reply.code(400).send(invalid(params.error.issues));
     const { kind, tmdbId } = params.data;
     if (deps.links.remove(kind, tmdbId)) {

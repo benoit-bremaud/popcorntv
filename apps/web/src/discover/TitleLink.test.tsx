@@ -79,7 +79,9 @@ describe('TitleLink', () => {
     await userEvent.type(screen.getByLabelText('My link'), URL);
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
 
-    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Could not save the link. Try again.',
+    );
     expect(screen.queryByRole('link', { name: 'Open my link' })).not.toBeInTheDocument();
   });
 
@@ -94,6 +96,15 @@ describe('TitleLink', () => {
     expect(api.save).toHaveBeenCalledWith('movie', 603, null);
     expect(await screen.findByRole('button', { name: '+ Add my link' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Open my link' })).not.toBeInTheDocument();
+  });
+
+  it('should not render a stored link the shared rule refuses', async () => {
+    const api = fakeApi({ url: 'data:text/html,x', editable: false });
+
+    const { container } = render(<TitleLink kind="movie" tmdbId={603} api={api} />);
+
+    await waitFor(() => expect(api.load).toHaveBeenCalled());
+    expect(container).toBeEmptyDOMElement();
   });
 
   it('should close the form on Cancel without saving', async () => {

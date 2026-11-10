@@ -24,7 +24,7 @@ type Props = {
 export function TitleLink({ kind, tmdbId, api = titleLinkApi }: Props): React.JSX.Element | null {
   const [link, setLink] = useState<Link | null>(null);
   const [draft, setDraft] = useState<string | null>(null);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<'invalid' | 'failed' | null>(null);
   const [busy, setBusy] = useState(false);
   const fieldId = useId();
 
@@ -46,7 +46,7 @@ export function TitleLink({ kind, tmdbId, api = titleLinkApi }: Props): React.JS
     setBusy(true);
     const ok = await api.save(kind, tmdbId, url);
     setBusy(false);
-    setError(!ok);
+    setError(ok ? null : 'failed');
     if (!ok || link === null) return;
     setLink({ ...link, url });
     setDraft(null);
@@ -54,21 +54,23 @@ export function TitleLink({ kind, tmdbId, api = titleLinkApi }: Props): React.JS
 
   function submit(event: React.FormEvent<HTMLFormElement>): void {
     event.preventDefault();
-    if (draft === null) return;
-    const url = normaliseTitleLink(draft);
+    const url = normaliseTitleLink(draft ?? '');
     if (url === null) {
-      setError(true);
+      setError('invalid');
       return;
     }
     void save(url);
   }
 
-  if (link === null || (link.url === null && !link.editable)) return null;
+  if (link === null) return null;
+  // Defence in depth: only a link the shared rule accepts becomes an href (R4).
+  const href = link.url === null ? null : normaliseTitleLink(link.url);
+  if (href === null && !link.editable) return null;
 
   return (
     <div className="title-link">
-      {link.url !== null && (
-        <a className="button" href={link.url} target="_blank" rel="noopener noreferrer">
+      {href !== null && (
+        <a className="button" href={href} target="_blank" rel="noopener noreferrer">
           Open my link
         </a>
       )}
@@ -77,7 +79,7 @@ export function TitleLink({ kind, tmdbId, api = titleLinkApi }: Props): React.JS
           type="button"
           className="chip"
           onClick={() => {
-            setError(false);
+            setError(null);
             setDraft(link.url ?? '');
           }}
         >
@@ -85,7 +87,7 @@ export function TitleLink({ kind, tmdbId, api = titleLinkApi }: Props): React.JS
         </button>
       )}
       {link.editable && draft !== null && (
-        <form className="title-link__form" onSubmit={submit}>
+        <form className="title-link__form" noValidate onSubmit={submit}>
           <label className="visually-hidden" htmlFor={fieldId}>
             My link
           </label>
@@ -96,7 +98,7 @@ export function TitleLink({ kind, tmdbId, api = titleLinkApi }: Props): React.JS
             inputMode="url"
             placeholder="https://"
             value={draft}
-            aria-invalid={error}
+            aria-invalid={error === 'invalid'}
             onChange={(event) => setDraft(event.target.value)}
           />
           <button type="submit" className="button" disabled={busy}>
@@ -110,9 +112,11 @@ export function TitleLink({ kind, tmdbId, api = titleLinkApi }: Props): React.JS
           <button type="button" className="chip" onClick={() => setDraft(null)}>
             Cancel
           </button>
-          {error && (
+          {error !== null && (
             <p className="muted" role="alert">
-              Enter an http(s) link.
+              {error === 'invalid'
+                ? 'Enter an http(s) link.'
+                : 'Could not save the link. Try again.'}
             </p>
           )}
         </form>

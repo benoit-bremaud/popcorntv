@@ -54,6 +54,15 @@ describe('title link routes', () => {
     expect(get).toEqual({ url: null, editable: false });
   });
 
+  it('should answer the stored link to a viewer', async () => {
+    const t = await setup('viewer');
+    t.links.set('movie', 603, 'https://example.org/');
+
+    const get = (await t.app.inject({ url: URL_PATH })).json<TitleLink>();
+
+    expect(get).toEqual({ url: 'https://example.org/', editable: false });
+  });
+
   it('should keep links apart per kind', async () => {
     const t = await setup();
     t.links.set('movie', 603, 'https://film.example/');

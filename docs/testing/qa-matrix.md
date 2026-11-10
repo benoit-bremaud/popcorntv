@@ -373,7 +373,7 @@ Replay on every Pi deploy:
 4. Save `javascript:alert(1)`, `data:text/html,x`, `https://u:p@example.org/`: refused with
    "Enter an http(s) link."; the same bodies sent by `curl` → 400 `invalid_request`.
 5. **Edit link** → **Remove**: the button disappears for every viewer.
-6. DevTools Network and the server log: no request to the link's host from the server; the
-   log has `title_link.set` / `title_link.removed` without the URL.
+6. The server log and the container egress (`ss -tnp`) show no connection to the link's
+   host; the log has `title_link.set` / `title_link.removed` without the URL.
 7. Keyboard: the button, the field and Save / Remove / Cancel are reachable by Tab; the error
    is announced (`role="alert"`).

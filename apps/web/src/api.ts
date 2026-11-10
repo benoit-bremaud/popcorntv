@@ -633,7 +633,14 @@ export async function loadTitleLink(
   }
   if (!response.ok) throw new ApiRequestError(path, response.status);
   const body: unknown = await response.json();
-  if (typeof body !== 'object' || body === null || !('editable' in body) || !('url' in body)) {
+  if (
+    typeof body !== 'object' ||
+    body === null ||
+    !('editable' in body) ||
+    typeof body.editable !== 'boolean' ||
+    !('url' in body) ||
+    (body.url !== null && typeof body.url !== 'string')
+  ) {
     throw new ApiRequestError(path, response.status);
   }
   return body as TitleLink;

@@ -22,13 +22,15 @@ title sheet as a button that opens it in a new tab.
 - **R4** The server accepts a URL only when: it is at most 2048 characters after trimming;
   `new URL()` parses it; the scheme is `http:` or `https:` (so no `javascript:`, `data:`,
   `file:`…); it has a host; it carries no user name nor password. Anything else → `400
-  invalid_request`. The stored value is the normalised `URL.href`.
+  invalid_request`. The stored value is the normalised `URL.href`, itself 2048 characters at
+  most. The web re-checks a stored link with the same rule before rendering it.
 - **R5** PopCornTV never fetches, proxies, embeds nor plays the link: the server only stores
   and returns the string (project rule: own media only; ADR-0028).
 - **R6** The web shows **Open my link** (an `<a target="_blank" rel="noopener noreferrer">`)
   under *Where to watch* when a link exists. An owner also gets **Add my link** / **Edit
-  link**, a URL field with Save, Cancel and Remove; a refused save shows "Enter an http(s)
-  link". A load failure shows nothing; the rest of the sheet is unaffected.
+  link**, a URL field with Save, Cancel and Remove; a link the shared rule refuses shows
+  "Enter an http(s) link"; a save or remove the server refuses shows "Could not save the
+  link. Try again." A load failure shows nothing; the rest of the sheet is unaffected.
 - **R7** Each change logs `title_link.set` or `title_link.removed` (info) with `kind`,
   `tmdbId`, `userId` — never the URL (it may carry a private token in its query).
 
