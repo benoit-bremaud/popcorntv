@@ -35,8 +35,9 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test-setup.ts'],
-    // Vitest blanks CSS by default; tokens.css must stay readable for its contrast test (#167).
-    css: { include: [/\/styles\/tokens\.css(\?|$)/] },
+    // Vitest blanks CSS by default; tokens.css (contrast, #167) and not-found.css (404 motion
+    // guard, #264) must stay readable for their tests.
+    css: { include: [/\/styles\/(tokens|not-found)\.css(\?|$)/] },
     include: ['src/**/*.test.{ts,tsx}'],
     coverage: {
       provider: 'v8',

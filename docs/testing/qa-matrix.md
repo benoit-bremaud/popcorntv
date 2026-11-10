@@ -61,8 +61,8 @@ Replay on every pass that touches a Caddyfile, the web build entries or the depl
    application/json`, never HTML; `/api/health` still `200`.
 3. The 404 page renders with the token styles (no CSP violation in the console) and its
    link lands on the catalog.
-   The spilled popcorn box (#264) shows above the code, the four kernels in the air hop and
-   stay near the box, nothing moves with reduced motion, and at 320 / 390 px the
+   The spilled popcorn box (#264) shows above the code, the four kernels in the air hop for a
+   few seconds then rest (under 5 s), nothing moves with reduced motion, and at 320 / 390 px the
    illustration shrinks without a horizontal scroll; a screen reader skips it.
 4. A setup or redeem link (`/#…`) still opens its form: the hash flows only use `/`.
 5. On the Pi, after an owner deploy that copies the homelab Caddyfile: same matrix with the

@@ -60,13 +60,13 @@ body {
 .spill {
   display: block;
   width: 100%;
-  max-width: 420px;
+  max-width: 26rem;
   height: auto;
   margin: 0 auto var(--space-4);
 }
 
 .spill__shadow {
-  fill: var(--color-scrim);
+  fill: var(--color-surface);
 }
 
 .spill__stripe-light,
@@ -91,26 +91,30 @@ body {
 .spill__box {
   transform-box: fill-box;
   transform-origin: 0% 100%;
-  animation: spill-wobble 3s ease-in-out infinite;
+  animation: spill-wobble calc(var(--duration-hop) * 2) var(--ease-in-out) 2;
 }
 
+/* Finite on purpose: each loop ends at rest, all motion stops before 5 s (WCAG 2.2.2). */
 .spill__fly {
-  animation: spill-hop 1.6s ease-in-out infinite;
+  animation: spill-hop var(--duration-hop) var(--ease-in-out) 3;
 }
 
 .spill__fly--2 {
-  animation-delay: -0.4s;
-  animation-duration: 1.9s;
+  animation-delay: calc(var(--duration-hop) / -4);
+  animation-duration: calc(var(--duration-hop) * 1.2);
+  animation-iteration-count: 2;
 }
 
 .spill__fly--3 {
-  animation-delay: -0.9s;
-  animation-duration: 2.2s;
+  animation-delay: calc(var(--duration-hop) / -2);
+  animation-duration: calc(var(--duration-hop) * 1.4);
+  animation-iteration-count: 2;
 }
 
 .spill__fly--4 {
-  animation-delay: -1.2s;
-  animation-duration: 1.4s;
+  animation-delay: calc(var(--duration-hop) * -0.75);
+  animation-duration: calc(var(--duration-hop) * 0.9);
+  animation-iteration-count: 4;
 }
 
 @keyframes spill-hop {
@@ -119,7 +123,7 @@ body {
     transform: translateY(0);
   }
   50% {
-    transform: translateY(-18px);
+    transform: translateY(var(--hop));
   }
 }
 

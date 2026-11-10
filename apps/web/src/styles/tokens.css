@@ -86,6 +86,8 @@
   --duration-overlay: 300ms;
   --duration-enter: 500ms;
   --duration-ken-burns: 24s;
+  --duration-hop: 1.6s; /* 404 popcorn: one hop; the spill stops within 5 s (WCAG 2.2.2) */
+  --hop: -18px;
   --stagger: 60ms;
   --travel: 12px;
   --lift: -6px;
