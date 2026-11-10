@@ -46,7 +46,8 @@ whether the title is already on disk, and keeps a per-profile wishlist whose ent
   TMDB, the answer is `Cache-Control: private` (ADR-0020).
 - **R9** Errors: `400 invalid_request`, `404 profile_not_found` / `title_not_found` (an id
   TMDB does not know), `409 tmdb_not_configured`,
-  `502 tmdb_unavailable` when TMDB fails: an error status, a network failure or the 15 s
+  `502 tmdb_unavailable` when TMDB fails (for `GET /discover`, only while no list was fetched
+  since start: afterwards the last list is served, ADR-0027): an error status, a network failure or the 15 s
   timeout, a body that is not JSON or fails validation (#179). The web shows a muted line
   instead of a row.
 - **R10** Out of scope: requests to Seerr / Radarr / Sonarr (#128), downloads, playback of
@@ -63,6 +64,8 @@ whether the title is already on disk, and keeps a per-profile wishlist whose ent
 
 ## 3. Extensions
 
-- 1a. TMDB is not configured or fails: each row is replaced by a muted line; My list stays.
+- 1a. TMDB is not configured, or fails before a list was ever fetched since start: each row
+  is replaced by a muted line; My list stays. Once fetched, the last list stays shown
+  (ADR-0027).
 - 2a. The search matches nothing: "No title matches".
 - 3a. The server refuses: the sheet reloads the list and keeps the old state.

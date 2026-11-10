@@ -274,13 +274,14 @@ Replay with a screen reader (Orca on Firefox, then NVDA or VoiceOver when availa
    "Loading…" lasting more than a second; the log has no `/discover` `http.request` above
    1 s.
 2. Leave Discover for more than 15 minutes, open it again: the rows show at once (the
-   previous lists); reload after a few seconds: the log shows the refreshed lists, no
-   `discover.list.refresh_failed`.
-3. With TMDB unreachable (`HTTPS_PROXY=http://127.0.0.1:9`) after a warm start and past
-   15 minutes: Discover still shows the last lists, the log has one
-   `discover.list.refresh_failed` per list visited, no 500.
-4. Start with TMDB unreachable: one `discover.list.warm_failed` per list, the app starts,
+   previous lists); the `/discover` `http.request` lines are under 100 ms and the log has
+   no `discover.list.refresh_failed`.
+3. Start with TMDB unreachable (`NODE_USE_ENV_PROXY=1 HTTPS_PROXY=http://127.0.0.1:9`):
+   one `discover.list.warm_failed` per list (with `list` and `kind`), the app starts,
    Discover shows "TMDB could not be reached".
+
+A stale list kept while its refresh fails needs TMDB to go away on a running server, which
+the proxy trick cannot do: the route tests cover it (`routes.test.ts`, ADR-0027).
 
 ## Replay of #165–#169 and #172–#177 on the Pi (2026-11-10)
 

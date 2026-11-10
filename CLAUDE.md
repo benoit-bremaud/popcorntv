@@ -125,7 +125,8 @@ rows); #136 audio track (spec `docs/architecture/specs/audio-track.md`, ADR-0019
 0–99 on `POST /playback/sessions`, a non-default track forces HLS with `-map 0:a:N`, Audio
 select in `DetailDialog` matched by language on each played episode); #127 Discover + wishlist (spec
 `docs/architecture/specs/discover-wishlist.md`, ADR-0020: `src/discover/` routes over the
-TMDB client — `GET /discover?list=trending|popular&kind=movie|tv` memoised 15 min,
+TMDB client — `GET /discover?list=trending|popular&kind=movie|tv` fresh 15 min, then served stale
+while one shared call refreshes it, the four lists warmed on `onReady` (ADR-0027, #257),
 `/discover/search`, `/discover/:kind/:tmdbId`, lazy `w342` posters through the artwork cache
 at `/discover/poster/:file` for handed-out paths only — per-profile `wishlist` table (FK cascade), `PUT|DELETE
 /profiles/:profileId/wishlist/:kind/:tmdbId` (`PUT` reads the facts from TMDB), "Available" is a join

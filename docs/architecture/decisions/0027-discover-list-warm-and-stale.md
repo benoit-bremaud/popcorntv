@@ -37,7 +37,8 @@ warm-up at start plus B, without a timer (B keeps the lists warm once they exist
 | Risk                |     20 | 4                                         | 4 — a list may be one visit old                           | 4                                  |
 | **Total**           |    100 | **415**                                   | **385**                                                   | **430**                            |
 
-Sensitivity: C stays first for any weighting where simplicity weighs under about 60. A first
+Sensitivity: with the other weights rescaled proportionally, C stays first while
+simplicity weighs under about 35 (A overtakes it beyond). A first
 scoring (B 4 on wait, C 4 on calls) gave B 420, C 410; the owner kept the rescored grid
 above, as the first visit after a start is the reported symptom and four calls per start
 are negligible.
@@ -57,7 +58,8 @@ C, in `apps/server/src/discover/routes.ts`:
 ## Consequences
 
 - The first Discover visit after a start (past the warm-up, a few seconds) and every later
-  visit answer from memory. Stale lists differ by at most one visit; "Available" and the
+  visit answer from memory. While TMDB answers, a stale list is at most one visit old (during an outage it keeps its
+age); "Available" and the
   wishlist state are joined per request, so they stay exact.
 - TMDB is called four more times per start; otherwise the call rate is ADR-0020's.
 - The home-page delay seen before the Pi container restart stays unexplained; QA check

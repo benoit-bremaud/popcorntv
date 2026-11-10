@@ -1,6 +1,7 @@
 # ADR-0020 — Discover goes through the server, wishlist in its own table
 
-- Status: accepted (brick #127, owner brainstorm 2026-11-07)
+- Status: accepted (brick #127, owner brainstorm 2026-11-07); §A list memo amended by
+  ADR-0027 (#257)
 - Date: 2026-11-07
 - Deciders: owner
 - Related: spec [discover-wishlist](../specs/discover-wishlist.md), ADR-0003, issue #127

@@ -150,10 +150,14 @@ export function registerDiscoverRoutes(app: FastifyInstance, deps: DiscoverRoute
     const memoKey = `${list}:${of}`;
     const hit = memo.get(memoKey);
     if (hit === undefined) return fetchList(memoKey, list, of, tmdb);
-    if (now() - hit.at >= LIST_TTL_MS) {
-      // ADR-0027: a stale list is served at once and refreshed behind the answer.
+    // ADR-0027: a stale list is served at once and refreshed behind the answer, one call at a
+    // time (a visit during a refresh neither starts nor logs another).
+    if (now() - hit.at >= LIST_TTL_MS && !inFlight.has(memoKey)) {
       fetchList(memoKey, list, of, tmdb).catch((error: unknown) =>
-        app.log.warn({ event: 'discover.list.refresh_failed', err: error }, 'list refresh failed'),
+        app.log.warn(
+          { event: 'discover.list.refresh_failed', list, kind: of, err: error },
+          'list refresh failed',
+        ),
       );
     }
     return hit.titles;
@@ -181,14 +185,17 @@ export function registerDiscoverRoutes(app: FastifyInstance, deps: DiscoverRoute
     return call;
   }
 
-  // ADR-0027: the four lists are fetched once at start, so the first Discover visit never waits.
+  // ADR-0027: the four lists are fetched once at start; a visit past the warm-up never waits.
   app.addHook('onReady', () => {
     const tmdb = deps.tmdb;
     if (!tmdb) return;
     for (const list of DISCOVER_LISTS) {
       for (const kindOf of DISCOVER_KINDS) {
         fetchList(`${list}:${kindOf}`, list, kindOf, tmdb).catch((error: unknown) =>
-          app.log.warn({ event: 'discover.list.warm_failed', err: error }, 'list warm-up failed'),
+          app.log.warn(
+            { event: 'discover.list.warm_failed', list, kind: kindOf, err: error },
+            'list warm-up failed',
+          ),
         );
       }
     }
