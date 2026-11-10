@@ -43,10 +43,14 @@ behind a bell with an unread count.
 - **R6** `WISHLIST_CHECK_INTERVAL_MIN` (default 60, `0` off, same bounds as
   `SCAN_INTERVAL_MIN`) starts an unref-ed timer (ADR-0016 pattern): a run checks every distinct
   wishlisted title one after the other; no overlap; stopped and awaited in `preClose`.
-- **R7** Provider offers come from the same `StaleCache` as the providers route (fresh 24 h,
-  ADR-0027): a title costs at most one TMDB call a day, run serially. Without `TMDB_API_KEY`
-  only the library check runs. A TMDB failure for a title is logged
-  `wishlist.check.title_failed` (warn) and that title keeps its `seen` state; the run goes on.
+- **R7** The check reads the offers through the providers route's memo with `getFresh`: a
+  value under 24 h is reused, an older or missing one is awaited, so a title costs at most one
+  TMDB call a day and the run stays serial. Only the first 500 distinct titles of a run
+  (`PROVIDERS_MAX`, the memo's size) get the provider side; the library side covers all. Without
+  `TMDB_API_KEY` only the library check runs, and only titles enriched earlier carry a
+  `tmdb_id`, so a file added meanwhile matches nothing. A TMDB failure for a title is logged
+  `wishlist.check.title_failed` (warn) and that title keeps its provider `seen` state; the run
+  goes on.
 - **R8** Each run logs `wishlist.check.done` (info, `titles`, `notified`, `failed`); every
   notification created logs `notification.created` (info, `profileId`, `reason`, `kind`,
   `tmdbId`, `providerId`).
@@ -58,7 +62,8 @@ behind a bell with an unread count.
   `provider_name` are copied so the line survives a removed wishlist row or provider.
 - **R10** `GET /profiles/:profileId/notifications` answers `{ items, unread }`: the 50 newest
   `AppNotification`s and the unread count. `PUT /profiles/:profileId/notifications/read` marks
-  all of the profile's as read (`204`). Notifications older than 90 days are purged at start.
+  all of the profile's as read (`204`). Notifications older than 90 days are purged at start
+  and at the end of every check run.
 - **R11** The web header shows a bell with the unread count (none shown at 0), fetched when
   the profile is picked and every 5 minutes. Opening the panel lists the lines ("*Title* is
   now in your library" / "*Title* is now on *Provider*") and marks them read; a line opens the
@@ -78,7 +83,8 @@ behind a bell with an unread count.
 ## 3. Extensions
 
 - 2a. TMDB fails for a title → R7: logged, retried next run.
-- 2b. The title was removed from the list meanwhile → no event (only present rows are read).
+- 2b. The title was removed from the list meanwhile → no event: the row's `seen` state is
+  saved first and nothing is raised when no row was updated.
 - 2c. First look at a title → baseline only (R5).
 - 4a. No notification → "Nothing new on your list".
 

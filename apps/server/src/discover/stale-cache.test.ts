@@ -81,4 +81,22 @@ describe('StaleCache', () => {
     expect(await cache.get('b', reload, ignore)).toBe('b2');
     expect(reload).toHaveBeenCalledTimes(1);
   });
+
+  it('getFresh should serve a fresh hit, await a stale or missing one, and reject on failure', async () => {
+    let clock = 0;
+    const cache = new StaleCache<string>(100, 10, () => clock);
+    const load = vi.fn(async () => `v${clock}`);
+
+    await expect(cache.getFresh('k', load)).resolves.toBe('v0');
+    clock = 99;
+    await expect(cache.getFresh('k', load)).resolves.toBe('v0');
+    clock = 100;
+    await expect(cache.getFresh('k', load)).resolves.toBe('v100');
+    expect(load).toHaveBeenCalledTimes(2);
+
+    clock = 300;
+    await expect(
+      cache.getFresh('k', async () => Promise.reject(new Error('down'))),
+    ).rejects.toThrow('down');
+  });
 });

@@ -352,7 +352,8 @@ Replay on every Pi deploy:
 5. A profile of another account never sees these lines (`GET /profiles/<theirs>/notifications`
    → 404 `profile_not_found`).
 6. `WISHLIST_CHECK_INTERVAL_MIN=0`: no `wishlist.check.done` line in the log; `TMDB_API_KEY`
-   unset: library notifications still arrive, no TMDB call.
+   unset: no TMDB call, and only titles enriched earlier can match (a new file has no
+   `tmdb_id`), so no new library notification.
 7. Server log: one `wishlist.check.done` per run; one `notification.created` per line; a TMDB
    outage logs `wishlist.check.title_failed` and the next run catches up.
 8. Upgrade an instance whose wishlist already holds titles on disk: no notification for them

@@ -144,8 +144,8 @@ async function details(
 }
 
 /**
- * The French offers of a title through `cache` (spec where-to-watch R3): the providers route and
- * the wishlist check read the same memo, so a title costs one TMDB call a day.
+ * The French offers of a title through `cache` (spec where-to-watch R3), served stale while one
+ * call refreshes them: the providers route.
  */
 export function watchProvidersOf(
   cache: StaleCache<WatchProviders>,
@@ -162,6 +162,17 @@ export function watchProvidersOf(
           'watch providers refresh failed',
         ),
     );
+}
+
+/**
+ * The French offers of a title, fresh (≤ 24 h) or awaited: the wishlist check reads the route's
+ * memo, so a title costs at most one TMDB call a day (spec wishlist-notifications R7).
+ */
+export function freshWatchProvidersOf(
+  cache: StaleCache<WatchProviders>,
+  tmdb: TmdbClient,
+): (kind: DiscoverKind, id: number) => Promise<WatchProviders> {
+  return (of, id) => cache.getFresh(`${of}:${id}`, () => tmdb.watchProviders(of, id));
 }
 
 /**

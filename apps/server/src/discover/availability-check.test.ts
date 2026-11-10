@@ -12,6 +12,7 @@ import {
   countingProviders,
   startAvailabilityCheck,
 } from './availability-check.js';
+import { PROVIDERS_MAX } from './routes.js';
 import { MyProviderRepository } from './my-provider-repository.js';
 import { NotificationRepository } from './notification-repository.js';
 import { WishlistRepository } from './wishlist-repository.js';
@@ -259,6 +260,34 @@ describe('checkAvailability', () => {
     expect(offers).toHaveBeenCalledTimes(1);
   });
 
+  it('should raise nothing for a row removed during the run', async () => {
+    const t = setup();
+    t.wish(1);
+    await checkAvailability({ ...t, offers: null });
+    t.addFilm(1);
+    const offers = vi.fn(async () => {
+      t.wishlist.remove(t.profile.id, 'movie', 1);
+      return NETFLIX;
+    });
+    await checkAvailability({ ...t, offers });
+    expect(t.notifications.list(t.profile.id).unread).toBe(0);
+  });
+
+  it('should look the providers up for the first PROVIDERS_MAX titles only', async () => {
+    const t = setup();
+    for (let id = 1; id <= PROVIDERS_MAX + 1; id += 1) t.wish(id);
+    const offers = vi.fn(async () => NETFLIX);
+    await checkAvailability({ ...t, offers });
+    expect(offers).toHaveBeenCalledTimes(PROVIDERS_MAX);
+  });
+
+  it('should purge old notifications at the end of a run', async () => {
+    const t = setup();
+    const purge = vi.spyOn(t.notifications, 'purge');
+    await checkAvailability({ ...t, offers: null });
+    expect(purge).toHaveBeenCalledTimes(1);
+  });
+
   it('should do nothing on an empty wishlist', async () => {
     const t = setup();
     const offers = vi.fn(async () => NETFLIX);
@@ -311,7 +340,7 @@ describe('startAvailabilityCheck', () => {
         checkRows: () => {
           throw new Error('db gone');
         },
-        saveSeen: vi.fn(),
+        saveSeen: vi.fn(() => true),
       },
       offers: null,
       intervalMin: 1,

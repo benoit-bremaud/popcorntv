@@ -52,6 +52,16 @@ function replaceAt(rows: readonly RowState[], index: number, state: RowState): r
   return rows.map((row, at) => (at === index ? state : row));
 }
 
+/**
+ * `title` with the local match of its My list entry when it carries none (a notification line,
+ * UC28 R11): the sheet offers Play in my library even if its details cannot load.
+ */
+function withLocalMatch(title: DiscoverTitle, wishlist: readonly WishlistEntry[]): DiscoverTitle {
+  if (title.mediaId !== null) return title;
+  const entry = wishlist.find((candidate) => titleKey(candidate) === titleKey(title));
+  return entry === undefined ? title : { ...title, mediaId: entry.mediaId };
+}
+
 /** Key of a title in the wishlist lookup. */
 export function titleKey(title: Pick<DiscoverTitle, 'kind' | 'tmdbId'>): string {
   return `${title.kind}:${title.tmdbId}`;
@@ -202,7 +212,7 @@ export function DiscoverPage({
       {open !== null && (
         <TitleSheet
           key={titleKey(open)}
-          title={open}
+          title={withLocalMatch(open, wishlist)}
           profileId={profileId}
           wishlisted={listed.has(titleKey(open))}
           api={api}

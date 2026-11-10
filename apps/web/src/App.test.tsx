@@ -213,6 +213,63 @@ describe('App', () => {
     expect(notifications.load).toHaveBeenCalledWith('default');
   });
 
+  it('offers Play in my library on a notification line once the sheet knows the local match', async () => {
+    const user = userEvent.setup();
+    const heat = {
+      kind: 'movie',
+      tmdbId: 7,
+      title: 'Heat',
+      year: 1995,
+      overview: '',
+      voteAverage: 0,
+      posterPath: null,
+      mediaId: 'm1',
+      genres: [],
+      cast: [],
+    } as const;
+    const discover: DiscoverApi = {
+      list: vi.fn(async () => []),
+      search: vi.fn(async () => []),
+      details: vi.fn(async () => heat),
+      wishlist: vi.fn(async () => []),
+      setWishlisted: vi.fn(async () => true),
+      providers: vi.fn(async () => ({ link: null, offers: [] })),
+    };
+    const notifications = {
+      load: vi.fn(async () => ({
+        items: [
+          {
+            id: 1,
+            kind: 'movie',
+            tmdbId: 7,
+            title: 'Heat',
+            reason: 'library',
+            providerId: null,
+            providerName: null,
+            createdAt: '2026-11-10T00:00:00.000Z',
+            readAt: 'x',
+          } as const,
+        ],
+        unread: 0,
+      })),
+      markRead: vi.fn(async () => true),
+    };
+    render(
+      <App
+        load={async () => [me]}
+        storage={memoryStorage({ 'popcorntv.activeProfileId': 'default' })}
+        discover={discover}
+        notifications={notifications}
+      />,
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Notifications' }));
+    await user.click(await screen.findByRole('button', { name: 'Heat is now in your library' }));
+    await user.click(await screen.findByRole('button', { name: 'Play in my library' }));
+
+    expect(screen.getByRole('button', { name: 'Library' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
   it('keeps one history entry from the sheet to the detail on "Play in my library" (#169)', async () => {
     const user = userEvent.setup();
     const dune = media({ id: 'm1', title: 'Dune', libraryId: 'lib-1' });

@@ -82,7 +82,7 @@ export function TitleSheet({
               {shown.title}
             </h2>
             <p className="detail__facts">{facts.join(' · ')}</p>
-            {title.mediaId !== null && <p className="sheet__badge">In my library</p>}
+            {shown.mediaId !== null && <p className="sheet__badge">In my library</p>}
             {details !== null && details.genres.length > 0 && (
               <p className="detail__genres">{details.genres.join(', ')}</p>
             )}
@@ -94,11 +94,11 @@ export function TitleSheet({
               </p>
             )}
             <div className="detail__actions">
-              {title.mediaId !== null && (
+              {shown.mediaId !== null && (
                 <button
                   type="button"
                   className="button"
-                  onClick={() => title.mediaId !== null && onPlayInLibrary(title.mediaId)}
+                  onClick={() => shown.mediaId !== null && onPlayInLibrary(shown.mediaId)}
                 >
                   Play in my library
                 </button>

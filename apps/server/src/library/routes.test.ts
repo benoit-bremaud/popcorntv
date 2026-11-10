@@ -577,7 +577,7 @@ describe('scheduled scan (spec scheduled-scan)', () => {
     }
   });
 
-  it('should start the wishlist check timer too and stop both on close (ADR-0030)', async () => {
+  it('should start the wishlist check timer alone and stop it on close (ADR-0030)', async () => {
     const mediaRoot = await mkdtemp(join(tmpdir(), 'popcorntv-schedule-'));
     try {
       const { app, timer } = await scheduledApp(mediaRoot, 0, 30);

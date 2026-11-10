@@ -41,7 +41,8 @@ flowchart TB
   api --> shared
   api -->|/api/libraries, /api/libraries/:id/media, /api/profiles/:profileId/progress| server[apps/server]
   card -->|/api/artwork/:file| server
-  api -->|/api/discover, /api/discover/search, /api/discover/:kind/:tmdbId,<br/>/api/discover/poster/:file, /api/profiles/:profileId/wishlist,<br/>/api/discover/:kind/:tmdbId/providers, /api/discover/logo/:file «#184»,<br/>/api/profiles/:profileId/notifications, /api/profiles/:profileId/providers «#277»| droutes
+  api -->|/api/discover, /api/discover/search, /api/discover/:kind/:tmdbId,<br/>/api/discover/poster/:file, /api/profiles/:profileId/wishlist,<br/>/api/discover/:kind/:tmdbId/providers, /api/discover/logo/:file «#184»| droutes
+  api -->|/api/profiles/:profileId/notifications,<br/>/api/profiles/:profileId/providers «#277»| nroutes
   subgraph srv[apps/server «#127 delta»]
     droutes[discover/routes] --> wrepo[discover/wishlist-repository]
     droutes --> tmdbc[metadata/tmdb-client<br/>only HTTP egress]
@@ -52,7 +53,10 @@ flowchart TB
     check["discover/availability-check «new #277»<br/>timer, pure availabilityEvents"] --> wrepo
     check --> stale
     check --> nrepo["discover/notification-repository «new #277»"]
-    droutes --> nrepo
+    nroutes["discover/notification-routes «new #277»"] --> nrepo
+    nroutes --> mprepo["discover/my-provider-repository «new #277»"]
+    check --> mprepo
+    mprepo --> db
     nrepo --> db
   end
   tmdbc -->|HTTPS| tmdb([TMDB])

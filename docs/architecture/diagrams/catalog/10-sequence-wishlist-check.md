@@ -17,26 +17,30 @@ sequenceDiagram
   participant Notes as notification-repository.ts
   actor Viewer
   participant Bell as NotificationBell (React)
-  participant Routes as discover/routes.ts
+  participant Routes as discover/notification-routes.ts
 
-  Timer->>Wish: checkTargets() (distinct titles, rows, local match)
+  Timer->>Wish: checkRows() (rows, seen state, local match)
   loop each title, one at a time
     opt TMDB configured
-      Timer->>Cache: get(kind:id)
-      alt cached
+      Timer->>Cache: getFresh(kind:id)
+      alt fresh (< 24 h)
         Cache-->>Timer: offers
-      else miss
+      else stale or missing
         Cache->>Tmdb: watchProviders(kind, id)
         Tmdb-->>Cache: FR offers
         Cache-->>Timer: offers
       end
     end
     loop each profile row of the title
-      Timer->>Timer: availabilityEvents(seen, current, mine)
-      Timer->>Notes: add(events)
       Timer->>Wish: saveSeen(current)
+      Wish-->>Timer: row still there?
+      opt row still there
+        Timer->>Timer: availabilityEvents(seen, current, mine)
+        Timer->>Notes: add(events)
+      end
     end
   end
+  Timer->>Notes: purge(90 days)
   Viewer->>Bell: pick a profile / every 5 min
   Bell->>Routes: GET /profiles/:p/notifications
   Routes-->>Bell: { items, unread }

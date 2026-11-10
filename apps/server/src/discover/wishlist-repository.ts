@@ -93,7 +93,7 @@ export class WishlistRepository {
       ...title,
       profileId,
       addedAt: now.toISOString(),
-      seenInLibrary: match?.mediaId != null,
+      seenInLibrary: (match?.mediaId ?? null) !== null,
     };
     this.db
       .insert(wishlist)
@@ -141,9 +141,9 @@ export class WishlistRepository {
     return this.withMediaIds(rows);
   }
 
-  /** Records what the check saw for a row; an absent row (removed meanwhile) is left alone. */
-  saveSeen(row: WishlistKey, inLibrary: boolean, providerIds: readonly number[] | null): void {
-    this.db
+  /** Records what the check saw for a row; false when the row is gone (removed meanwhile). */
+  saveSeen(row: WishlistKey, inLibrary: boolean, providerIds: readonly number[] | null): boolean {
+    const result = this.db
       .update(wishlist)
       .set({
         seenInLibrary: inLibrary,
@@ -157,5 +157,6 @@ export class WishlistRepository {
         ),
       )
       .run();
+    return result.changes > 0;
   }
 }

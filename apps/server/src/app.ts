@@ -41,7 +41,7 @@ import {
   PROVIDERS_MAX,
   PROVIDERS_TTL_MS,
   registerDiscoverRoutes,
-  watchProvidersOf,
+  freshWatchProvidersOf,
 } from './discover/routes.js';
 import { StaleCache } from './discover/stale-cache.js';
 import { WishlistRepository } from './discover/wishlist-repository.js';
@@ -100,7 +100,7 @@ export interface AppOptions {
   readonly scanIntervalMin?: number;
   /** Minutes between wishlist availability checks (ADR-0030); 0 or absent disables them. */
   readonly wishlistCheckIntervalMin?: number;
-  /** Timer boundary of the scan schedule; injected by tests. */
+  /** Timer boundary of the scan schedule and the wishlist check; injected by tests. */
   readonly scheduleTimer?: {
     readonly setInterval: (run: () => void, ms: number) => unknown;
     readonly clearInterval: (handle: unknown) => void;
@@ -311,7 +311,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
         wishlist,
         notifications,
         myProviders,
-        offers: tmdb ? watchProvidersOf(providers, tmdb, app.log) : null,
+        offers: tmdb ? freshWatchProvidersOf(providers, tmdb) : null,
         logger: app.log,
         ...options.scheduleTimer,
       });

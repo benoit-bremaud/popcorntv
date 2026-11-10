@@ -3,6 +3,7 @@ import { COUNTING_OFFER_TYPES } from '@popcorntv/shared';
 import type { DiscoverKind, NotificationReason, WatchProviders } from '@popcorntv/shared';
 import { startSerialTimer } from '../timer.js';
 import type { TimerFns } from '../timer.js';
+import { PROVIDERS_MAX } from './routes.js';
 import type { MyProviderRepository } from './my-provider-repository.js';
 import type { NotificationRepository } from './notification-repository.js';
 import type { CheckRow, WishlistRepository } from './wishlist-repository.js';
@@ -50,7 +51,7 @@ export function countingProviders(answer: WatchProviders): number[] {
 /** What a check run needs; `buildApp` wires the real ones, tests fakes. */
 export interface AvailabilityCheckDeps {
   readonly wishlist: Pick<WishlistRepository, 'checkRows' | 'saveSeen'>;
-  readonly notifications: Pick<NotificationRepository, 'add'>;
+  readonly notifications: Pick<NotificationRepository, 'add' | 'purge'>;
   readonly myProviders: Pick<MyProviderRepository, 'idsByProfile'>;
   /** The French offers of a title (the shared providers cache), null without TMDB (R7). */
   readonly offers: ((kind: DiscoverKind, tmdbId: number) => Promise<WatchProviders>) | null;
@@ -68,8 +69,9 @@ function byTitle(rows: readonly CheckRow[]): Map<string, CheckRow[]> {
 }
 
 /**
- * One check run (R5–R8): every wishlisted title in turn, its offers read once, then each
- * profile row diffed, notified and saved. A TMDB failure skips the provider side of a title.
+ * One check run (R5–R8, R10): every wishlisted title in turn, its offers read once (for the first
+ * `PROVIDERS_MAX` titles, the memo's size), then each profile row diffed, saved and notified. A
+ * TMDB failure skips the provider side of a title. Old notifications are purged at the end.
  */
 export async function checkAvailability(
   deps: AvailabilityCheckDeps,
@@ -85,7 +87,7 @@ export async function checkAvailability(
     if (first === undefined) continue;
     titles += 1;
     let answer: WatchProviders | null = null;
-    if (deps.offers) {
+    if (deps.offers && titles <= PROVIDERS_MAX) {
       try {
         // One title at a time on purpose: keeps the TMDB load low (#279).
         answer = await deps.offers(first.kind, first.tmdbId); // NOSONAR
@@ -107,6 +109,11 @@ export async function checkAvailability(
       const seen = { inLibrary: row.seenInLibrary, providerIds: row.seenProviderIds };
       const current = { inLibrary: row.mediaId !== null, providerIds };
       const mine = mineByProfile.get(row.profileId) ?? new Set<number>();
+      // Saved first: a row removed during the run raises nothing (extension 2b), and a crash
+      // between the two writes loses a line rather than repeating it.
+      if (!deps.wishlist.saveSeen(row, current.inLibrary, providerIds ?? seen.providerIds)) {
+        continue;
+      }
       for (const event of availabilityEvents(seen, current, mine)) {
         const providerName =
           answer?.offers.find((offer) => offer.providerId === event.providerId)?.name ?? null;
@@ -132,9 +139,9 @@ export async function checkAvailability(
           'notification created',
         );
       }
-      deps.wishlist.saveSeen(row, current.inLibrary, providerIds ?? seen.providerIds);
     }
   }
+  deps.notifications.purge();
   deps.logger.info(
     { event: 'wishlist.check.done', titles, notified, failed },
     'wishlist check done',

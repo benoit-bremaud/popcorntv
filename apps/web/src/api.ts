@@ -338,7 +338,9 @@ export async function loadNotifications(
     throw new ApiRequestError(path, null);
   }
   if (!response.ok) throw new ApiRequestError(path, response.status);
-  return (await response.json()) as NotificationList;
+  const body = (await response.json()) as Partial<NotificationList> | null;
+  if (!Array.isArray(body?.items)) throw new ApiRequestError(path, response.status);
+  return body as NotificationList;
 }
 
 /** `PUT /profiles/:profileId/notifications/read` (UC28 R10); false when refused. */

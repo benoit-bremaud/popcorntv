@@ -81,30 +81,29 @@ export function NotificationBell({
           </span>
         )}
       </button>
-      {expanded && (
-        <div id="bell-panel" className="bell__panel">
-          {list.items.length === 0 ? (
-            <p className="muted">Nothing new on your list.</p>
-          ) : (
-            <ul className="bell__list">
-              {list.items.map((item) => (
-                <li key={item.id}>
-                  <button
-                    type="button"
-                    className={item.readAt === null ? 'bell__item bell__item--new' : 'bell__item'}
-                    onClick={() => {
-                      setExpanded(false);
-                      onOpen(item);
-                    }}
-                  >
-                    {notificationText(item)}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
+      {/* Kept mounted (hidden) so `aria-controls` always points at it. */}
+      <div id="bell-panel" className="bell__panel" hidden={!expanded}>
+        {list.items.length === 0 ? (
+          <p className="muted">Nothing new on your list.</p>
+        ) : (
+          <ul className="bell__list">
+            {list.items.map((item) => (
+              <li key={item.id}>
+                <button
+                  type="button"
+                  className={item.readAt === null ? 'bell__item bell__item--new' : 'bell__item'}
+                  onClick={() => {
+                    setExpanded(false);
+                    onOpen(item);
+                  }}
+                >
+                  {notificationText(item)}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }

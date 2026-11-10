@@ -355,6 +355,9 @@ describe('notifications and my providers (UC28 / UC29)', () => {
     await expect(loadNotifications('p1', async () => respond({}, 404))).rejects.toMatchObject({
       status: 404,
     });
+    await expect(loadNotifications('p1', async () => respond([]))).rejects.toMatchObject({
+      status: 200,
+    });
     await expect(
       loadNotifications('p1', async () => Promise.reject(new TypeError('offline'))),
     ).rejects.toMatchObject({ status: null });
