@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { WATCH_OFFER_TYPES } from '@popcorntv/shared';
+import type { WatchProviders } from '@popcorntv/shared';
 
 /**
  * TMDB v3 client — the single HTTP egress of the server (component diagram, ADR-0003).
@@ -67,6 +69,9 @@ export interface TmdbSummary {
   readonly poster_path: string | null;
 }
 
+/** The French watch providers of a title (spec where-to-watch R1), the shared contract. */
+export type TmdbWatchProviders = WatchProviders;
+
 /** The Discover lists (spec discover-wishlist R1). */
 export type TmdbList = 'trending' | 'popular';
 
@@ -84,6 +89,8 @@ export interface TmdbClient {
   list(list: TmdbList, kind: TmdbKind): Promise<readonly TmdbSummary[]>;
   /** `/search/multi`, films and series only (people dropped). */
   searchTitles(query: string): Promise<readonly TmdbSummary[]>;
+  /** `/{kind}/{id}/watch/providers`, the `FR` region only (spec where-to-watch R2). */
+  watchProviders(kind: TmdbKind, id: number): Promise<TmdbWatchProviders>;
   /** Image bytes for a TMDB path (`/abc.jpg`) at a size (`w500`); base URL from `/configuration`. */
   image(path: string, size: string): Promise<Uint8Array>;
 }
@@ -224,6 +231,56 @@ function toSummary(row: z.infer<typeof summaryRow>, kind: string | undefined): T
 /** Drops the rows `toSummary` refused. */
 function summaries(rows: readonly (TmdbSummary | null)[]): readonly TmdbSummary[] {
   return rows.filter((row): row is TmdbSummary => row !== null);
+}
+
+const providerList = z
+  .array(
+    z.object({
+      provider_id: z.number().int(),
+      provider_name: z.string().max(NAME_MAX),
+      logo_path: nullableString,
+      display_priority: z.number().nullable().optional(),
+    }),
+  )
+  .optional()
+  .default([]);
+const watchRegion = z.object({
+  link: z.string().max(NAME_MAX).nullable().optional(),
+  flatrate: providerList,
+  free: providerList,
+  ads: providerList,
+  rent: providerList,
+  buy: providerList,
+});
+const watchResponse = z.object({ results: z.object({ FR: watchRegion.optional() }) });
+/** The only host an offer may send a viewer to (ADR-0029): a hostile payload cannot set another. */
+const WATCH_HOST = 'www.themoviedb.org';
+
+/** `link` when it is an `https://www.themoviedb.org/...` URL, else null. */
+function watchLink(link: string | null | undefined): string | null {
+  if (link === undefined || link === null || !URL.canParse(link)) return null;
+  const url = new URL(link);
+  return url.protocol === 'https:' && url.hostname === WATCH_HOST ? url.toString() : null;
+}
+
+/**
+ * The FR entry as offers grouped in `WATCH_OFFER_TYPES` order, each by display priority. No
+ * safe link means no offer: every offer opens that link (ADR-0029).
+ */
+function toWatchProviders(region: z.infer<typeof watchRegion> | undefined): TmdbWatchProviders {
+  const link = watchLink(region?.link);
+  if (region === undefined || link === null) return { link: null, offers: [] };
+  const offers = WATCH_OFFER_TYPES.flatMap((type) =>
+    [...region[type]]
+      .sort((a, b) => (a.display_priority ?? 0) - (b.display_priority ?? 0))
+      .map((row) => ({
+        providerId: row.provider_id,
+        name: row.provider_name,
+        logoPath: row.logo_path ?? null,
+        type,
+      })),
+  );
+  return { link, offers };
 }
 
 const configurationResponse = z.object({
@@ -448,6 +505,11 @@ export function createTmdbClient(options: TmdbClientOptions): TmdbClient {
       const params = { query, include_adult: 'false' };
       const body = await parsed('/search/multi', params, summaryResponse);
       return summaries(body.results.map((row) => toSummary(row, row.media_type)));
+    },
+
+    async watchProviders(kind, id) {
+      const body = await parsed(`/${kind}/${id}/watch/providers`, {}, watchResponse);
+      return toWatchProviders(body.results.FR);
     },
 
     async image(path, size) {

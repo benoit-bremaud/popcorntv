@@ -42,6 +42,7 @@ function makeApi(overrides: Partial<DiscoverApi> = {}): DiscoverApi {
     })),
     wishlist: vi.fn<DiscoverApi['wishlist']>(async () => []),
     setWishlisted: vi.fn<DiscoverApi['setWishlisted']>(async () => true),
+    providers: vi.fn<DiscoverApi['providers']>(async () => ({ link: null, offers: [] })),
     ...overrides,
   };
 }
@@ -106,6 +107,20 @@ describe('DiscoverPage', () => {
 
     expect(api.setWishlisted).toHaveBeenCalledWith('p1', 'movie', 1, true);
     expect(api.wishlist).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows where to watch the title in France on its sheet (UC27)', async () => {
+    const user = userEvent.setup();
+    const api = makeApi();
+    render(<DiscoverPage profileId="p1" onPlayInLibrary={() => undefined} api={api} />);
+
+    await user.click(await screen.findByRole('button', { name: 'Dune (2021)' }));
+    const sheet = screen.getByRole('dialog', { name: 'Dune' });
+
+    expect(
+      await within(sheet).findByRole('heading', { name: 'Where to watch (France)' }),
+    ).toBeInTheDocument();
+    expect(api.providers).toHaveBeenCalledWith('movie', DUNE.tmdbId);
   });
 
   it('shows no cast line when TMDB gives no cast (#172)', async () => {

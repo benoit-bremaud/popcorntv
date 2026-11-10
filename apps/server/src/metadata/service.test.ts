@@ -58,6 +58,7 @@ function makeClient(overrides: Partial<TmdbClient> = {}) {
     season: vi.fn<TmdbClient['season']>(async () => []),
     list: vi.fn<TmdbClient['list']>(async () => []),
     searchTitles: vi.fn<TmdbClient['searchTitles']>(async () => []),
+    watchProviders: vi.fn<TmdbClient['watchProviders']>(async () => ({ link: null, offers: [] })),
     image: vi.fn<TmdbClient['image']>(async () => new Uint8Array([1])),
     ...overrides,
   };

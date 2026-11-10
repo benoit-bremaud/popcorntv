@@ -1,6 +1,7 @@
 import {
   loadDiscover,
   loadDiscoverDetails,
+  loadWatchProviders,
   loadWishlist,
   searchDiscover,
   setWishlisted,
@@ -13,6 +14,7 @@ export interface DiscoverApi {
   readonly details: typeof loadDiscoverDetails;
   readonly wishlist: typeof loadWishlist;
   readonly setWishlisted: typeof setWishlisted;
+  readonly providers: typeof loadWatchProviders;
 }
 
 export const discoverApi: DiscoverApi = {
@@ -21,4 +23,5 @@ export const discoverApi: DiscoverApi = {
   details: loadDiscoverDetails,
   wishlist: loadWishlist,
   setWishlisted,
+  providers: loadWatchProviders,
 };

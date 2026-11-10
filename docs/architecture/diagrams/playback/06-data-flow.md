@@ -19,6 +19,8 @@ flowchart LR
   TMDB -->|"synopsis, genres, rating, cast, artwork paths"| Server
   Server -->|"GET image (path, size)"| IMG[("image.tmdb.org")]
   IMG -->|"poster / backdrop bytes"| Server
+  Server -->|"GET logo (path, w92) «#184»"| IMG
+  Web -.->|"viewer click: TMDB watch page, no referrer «#184»"| TMDBW[("www.themoviedb.org")]
   Server -.->|"artwork files by digest"| Art[("data/artwork")]
   Server -->|"catalog, artwork"| Web[Web player]
   Web -.->|"PII: profile name, watch position"| Server
@@ -32,9 +34,13 @@ flowchart LR
   TMDB id or list name, or the text a viewer types in Discover search (#127), plus the owner's API key in the `Authorization` header, never who is watching.
   The key is never logged nor echoed in an error (ADR-0003). Image downloads go to
   `image.tmdb.org` only (the announced base URL is pinned to that host, no redirect).
+- #184: opening a title sheet (Discover or library) asks TMDB the watch providers by TMDB
+  id, at most once a day per title, never who asks; provider logos follow the poster path
+  at `w92`. The browser reaches TMDB only when the viewer clicks an offer: a deliberate
+  navigation to `www.themoviedb.org` in a new tab, `noopener noreferrer` (ADR-0029).
 - Watch history stays in the local SQLite file; no telemetry, no cloud sync.
 - Artwork is cached on disk under `data/artwork` (file name = SHA-256 of `size + path`)
   and served by the server (`GET /artwork/:file`): the web player never contacts
-  TMDB, so no viewer IP leaves the home network. Discover posters follow the same path
+  TMDB by itself (an offer click, #184, is the viewer's own navigation), so no viewer IP leaves the home network. Discover posters follow the same path
   (`GET /discover/poster/:file`, only for paths the server handed out, ADR-0020). Cast photos are not cached in the MVP
   and therefore not shown (follow-up).

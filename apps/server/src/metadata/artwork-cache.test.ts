@@ -15,6 +15,7 @@ function makeClient(image: TmdbClient['image']): TmdbClient {
     season: unused,
     list: unused,
     searchTitles: unused,
+    watchProviders: unused,
   };
 }
 

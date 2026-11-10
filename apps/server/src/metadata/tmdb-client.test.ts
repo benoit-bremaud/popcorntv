@@ -543,4 +543,77 @@ describe('createTmdbClient', () => {
     await expect(client.search('movie', 'Alien', null)).rejects.toMatchObject({ status: 0 });
     await expect(client.search('movie', 'Alien', null)).resolves.toEqual([{ id: 7, year: null }]);
   });
+
+  describe('watchProviders (UC27)', () => {
+    const fr = {
+      link: 'https://www.themoviedb.org/movie/438631-dune/watch?locale=FR',
+      flatrate: [
+        {
+          provider_id: 337,
+          provider_name: 'Disney Plus',
+          logo_path: '/d.jpg',
+          display_priority: 2,
+        },
+        { provider_id: 8, provider_name: 'Netflix', logo_path: '/n.jpg', display_priority: 1 },
+      ],
+      buy: [{ provider_id: 2, provider_name: 'Apple TV', logo_path: null }],
+      rent: [{ provider_id: 3, provider_name: 'Google Play', logo_path: '/g.jpg' }],
+    };
+
+    it('keeps the FR entry only, grouped by type in order and by display priority', async () => {
+      const fetch = makeFetch({
+        '/movie/438631/watch/providers': () =>
+          jsonResponse({ id: 438631, results: { FR: fr, US: { link: 'x', flatrate: [] } } }),
+      });
+
+      const answer = await makeClient(fetch).watchProviders('movie', 438631);
+
+      expect(requestedUrl(fetch).pathname).toBe('/3/movie/438631/watch/providers');
+      expect(answer).toEqual({
+        link: fr.link,
+        offers: [
+          { providerId: 8, name: 'Netflix', logoPath: '/n.jpg', type: 'flatrate' },
+          { providerId: 337, name: 'Disney Plus', logoPath: '/d.jpg', type: 'flatrate' },
+          { providerId: 3, name: 'Google Play', logoPath: '/g.jpg', type: 'rent' },
+          { providerId: 2, name: 'Apple TV', logoPath: null, type: 'buy' },
+        ],
+      });
+    });
+
+    it('answers no link and no offer when TMDB has no French entry', async () => {
+      const fetch = makeFetch({
+        '/tv/1/watch/providers': () => jsonResponse({ id: 1, results: { US: fr } }),
+      });
+
+      expect(await makeClient(fetch).watchProviders('tv', 1)).toEqual({ link: null, offers: [] });
+    });
+
+    it.each([
+      ['another host', 'https://evil.example/watch'],
+      ['plain http', 'http://www.themoviedb.org/movie/1/watch'],
+      ['a script URL', 'javascript:alert(1)'],
+      ['not a URL', 'nope'],
+      ['null', null],
+    ])('drops a link to %s and its offers', async (_label, link) => {
+      const fetch = makeFetch({
+        '/movie/1/watch/providers': () =>
+          jsonResponse({ results: { FR: { link, flatrate: fr.flatrate.slice(1) } } }),
+      });
+
+      const answer = await makeClient(fetch).watchProviders('movie', 1);
+
+      expect(answer).toEqual({ link: null, offers: [] });
+    });
+
+    it('reports a malformed provider row as an invalid shape', async () => {
+      const fetch = makeFetch({
+        '/movie/1/watch/providers': () =>
+          jsonResponse({ results: { FR: { flatrate: [{ provider_id: 'x' }] } } }),
+      });
+
+      await expect(makeClient(fetch).watchProviders('movie', 1)).rejects.toMatchObject({
+        status: 200,
+      });
+    });
+  });
 });

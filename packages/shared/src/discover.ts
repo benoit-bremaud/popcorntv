@@ -33,3 +33,22 @@ export interface DiscoverDetails extends DiscoverTitle {
 export interface WishlistEntry extends DiscoverTitle {
   readonly addedAt: string;
 }
+
+/** Offer types of UC27, in the order the sheet shows them (spec where-to-watch R1). */
+export const WATCH_OFFER_TYPES = ['flatrate', 'free', 'ads', 'rent', 'buy'] as const;
+export type WatchOfferType = (typeof WATCH_OFFER_TYPES)[number];
+
+/** One legal offer in France; `providerId` is TMDB's stable id (spec R9, #277). */
+export interface WatchOffer {
+  readonly providerId: number;
+  readonly name: string;
+  /** TMDB logo path, served by `GET /discover/logo/:file`; null when none. */
+  readonly logoPath: string | null;
+  readonly type: WatchOfferType;
+}
+
+/** `GET /discover/:kind/:tmdbId/providers` (spec R1); `link` is the TMDB watch page (ADR-0029). */
+export interface WatchProviders {
+  readonly link: string | null;
+  readonly offers: readonly WatchOffer[];
+}

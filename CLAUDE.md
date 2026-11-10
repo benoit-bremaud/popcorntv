@@ -150,6 +150,12 @@ first copy as a stable card, the most recently saved copy drives progress and ma
 in `DetailDialog`; series never collapsed).
 #118 confined FFmpeg input (ADR-0028: `localInputArgs()` from `src/ffmpeg-input.ts` before every
 `-i` — `-protocol_whitelist file` + `-format_whitelist` of the scanner's containers and MPEG-TS).
+#184 where to watch (spec `docs/architecture/specs/where-to-watch.md`, ADR-0029: `GET
+/discover/:kind/:tmdbId/providers` reads TMDB watch providers for `FR` only, fresh 24 h then
+stale-while-refresh, 500 titles LRU; link pinned to `https://www.themoviedb.org`, none → no
+offer; logos at `w92` via `GET /discover/logo/:file`, issued paths only; web `WhereToWatch` in
+`TitleSheet` and `DetailDialog` (film / series with a `tmdbId`), every offer opens the TMDB
+watch page in a new tab, `noopener noreferrer`; no third-party stream ever touched).
 
 Server layout (flat, component diagram 03): `src/library/` holds the pure `name-parser`
 and `path-guard`, the `ffprobe` runner (only process egress), the `folder-lister` (one-level `readdir` of `MEDIA_ROOT`), the `scanner`, the pure `identity` (carry-over keys, ADR-0018), the `scheduler` (interval rescans, ADR-0016), the per-library
@@ -158,7 +164,8 @@ and the `routes`; `src/playback/` the pure `range` parser, the
 streaming `routes`, the pure `ffmpeg-args`, the `transcoder` (child-process egress to
 FFmpeg sessions, `spawn` injected), the `keyframe-probe` (ADR-0023), the `session-manager` and the `session-routes`; `src/progress/` the `watch_progress`
 `repository` and its `routes`; `src/profiles/` the `profiles` `repository` and its `routes`; `src/discover/` the `wishlist-repository`
-(and the local `tmdb_id` match) and the Discover `routes` (ADR-0020); `src/metadata/` the `tmdb-client` (only HTTP egress,
+(and the local `tmdb_id` match), the generic `stale-cache` (ADR-0027 pattern, lists and watch
+providers) and the Discover `routes` (ADR-0020); `src/metadata/` the `tmdb-client` (only HTTP egress,
 `fetch` injected), the pure `matcher` (match + map), the `artwork-cache`, its
 `repository`, the `service` and the `routes`; `src/auth/` the `hasher` (only argon2 import), the `token` helpers, the `setup-token`, the
 in-memory `limiter`, the `user` / `session` / `token` / `event` repositories, the access `hook`, the

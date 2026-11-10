@@ -72,8 +72,10 @@ Set `TMDB_API_KEY` to your free **API Read Access Token** (the long `eyJ…` tok
 enriches the new titles: official
 title, synopsis, genres, release date, runtime, rating, top cast, poster and backdrop. The
 images are cached under `ARTWORK_DIR` (default `data/artwork`) and served by
-`GET /artwork/<file>`, so the browser never contacts TMDB. Only a title, a year or the
-`[tmdbid-…]` / `[imdbid-…]` tag of a file name is ever sent. `TMDB_LANGUAGE` (default
+`GET /artwork/<file>`, so the browser never contacts TMDB unless the viewer clicks a
+"Where to watch" offer (a new tab on the TMDB watch page). Enrichment sends only a title, a
+year or the `[tmdbid-…]` / `[imdbid-…]` tag of a file name; Discover sends list names,
+search text and TMDB ids, never who asks. `TMDB_LANGUAGE` (default
 `en-US`) picks the language of titles and synopses.
 
 ```bash

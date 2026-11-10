@@ -325,3 +325,15 @@ Replay on every Pi deploy:
    one explained (#258, #259).
 4. Subtitle and audio menus read language names, not ISO codes (#260).
 5. Profile avatars are told apart at a glance (#261).
+
+## Where to watch checks (#184, ADR-0029)
+
+1. Open a recent popular film in Discover: **Where to watch (France)** lists offers grouped
+   Subscription / Free / With ads / Rent / Buy with logos and "Data: JustWatch via TMDB".
+2. Click an offer: the TMDB watch page of the title opens in a new tab; `window.opener` is
+   null there (noopener) and no `Referer` reaches it.
+3. Open a library film with a TMDB match: the same block shows; an episode shows none.
+4. A title with no French offer (an obscure one): "No legal offer in France for now".
+5. TMDB unreachable on a title never opened: "Offers could not be loaded", the sheet works.
+6. `GET /discover/logo/abc.png` for a path never handed out → 404 `artwork_not_found`.
+7. DevTools Network: no request to any provider domain until the click; no media stream.
