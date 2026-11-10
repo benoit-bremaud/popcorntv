@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import { effectiveAudioIndex } from '@popcorntv/shared';
 import type { StreamInfo } from '@popcorntv/shared';
+import { localInputArgs } from '../ffmpeg-input.js';
 
 /** Playlist and segment names FFmpeg writes in a session directory (spec hls-transcode §2.3). */
 export const PLAYLIST_NAME = 'index.m3u8';
@@ -75,6 +76,7 @@ export function ffmpegArgs(
     '-loglevel',
     'error',
     ...(startSec > 0 ? ['-ss', String(startSec)] : []),
+    ...localInputArgs(),
     '-i',
     inputPath,
     // Capital V skips attached pictures (cover art stored as a video stream).

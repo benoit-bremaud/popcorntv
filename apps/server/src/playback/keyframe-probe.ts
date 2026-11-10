@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { localInputArgs } from '../ffmpeg-input.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -29,33 +30,43 @@ export function createKeyframeProbe(ffmpegPath: string): KeyframeProbe {
   return async (filePath, startSec, audioTrack) => {
     const { stdout } = await execFileAsync(
       ffmpegPath,
-      [
-        '-v',
-        'error',
-        '-nostdin',
-        '-ss',
-        String(startSec),
-        '-copyts',
-        '-start_at_zero',
-        '-i',
-        filePath,
-        '-map',
-        '0:V:0',
-        ...(audioTrack === null ? [] : ['-map', `0:a:${audioTrack}`]),
-        '-c',
-        'copy',
-        '-frames:v',
-        '1',
-        '-f',
-        'framecrc',
-        '-',
-      ],
+      keyframeArgs(filePath, startSec, audioTrack),
       { timeout: PROBE_TIMEOUT_MS, killSignal: 'SIGKILL', maxBuffer: PROBE_MAX_OUTPUT_BYTES },
     );
     const start = parseFramecrc(stdout);
     if (start === null) throw new Error('no video packet after the seek');
     return start;
   };
+}
+
+/** FFmpeg arguments of the probe: the session's seek and maps, the input confined (ADR-0028). */
+export function keyframeArgs(
+  filePath: string,
+  startSec: number,
+  audioTrack: number | null,
+): string[] {
+  return [
+    '-v',
+    'error',
+    '-nostdin',
+    '-ss',
+    String(startSec),
+    '-copyts',
+    '-start_at_zero',
+    ...localInputArgs(),
+    '-i',
+    filePath,
+    '-map',
+    '0:V:0',
+    ...(audioTrack === null ? [] : ['-map', `0:a:${audioTrack}`]),
+    '-c',
+    'copy',
+    '-frames:v',
+    '1',
+    '-f',
+    'framecrc',
+    '-',
+  ];
 }
 
 /**

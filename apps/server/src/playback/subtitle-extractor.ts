@@ -1,5 +1,6 @@
 import { mkdir, readFile, readdir, rename, rm, stat } from 'node:fs/promises';
 import { join } from 'node:path';
+import { localInputArgs } from '../ffmpeg-input.js';
 import type { TranscodeHandle, Transcoder } from './transcoder.js';
 
 /** What the extractor needs; built by `buildApp`. */
@@ -24,6 +25,7 @@ export function subtitleArgs(filePath: string, index: number, output: string): s
     'error',
     '-nostdin',
     '-y',
+    ...localInputArgs(),
     '-i',
     filePath,
     '-map',

@@ -148,6 +148,8 @@ with the `(popcorntv_headers)` snippet, raw-path `/api` misses answer JSON,
 `titleKey` / `collapseCopies` in the web catalog, one card per title across libraries, the
 first copy as a stable card, the most recently saved copy drives progress and mark, TMDB key per movie / TV namespace, `loadCatalog` returns `{ libraries, media }`, a Copy select
 in `DetailDialog`; series never collapsed).
+#118 confined FFmpeg input (ADR-0028: `localInputArgs()` from `src/ffmpeg-input.ts` before every
+`-i` — `-protocol_whitelist file` + `-format_whitelist` of the scanner's containers and MPEG-TS).
 
 Server layout (flat, component diagram 03): `src/library/` holds the pure `name-parser`
 and `path-guard`, the `ffprobe` runner (only process egress), the `folder-lister` (one-level `readdir` of `MEDIA_ROOT`), the `scanner`, the pure `identity` (carry-over keys, ADR-0018), the `scheduler` (interval rescans, ADR-0016), the per-library
