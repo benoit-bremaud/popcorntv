@@ -4,6 +4,20 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-10 — #118 FFmpeg and ffprobe input confined to local container files (PR #275 merged, `6366074`)
+
+- Decision ADR-0028 (option B, 430/500; the chat grid had totals off by 10, corrected in
+  review, ranking unchanged): `localInputArgs()` puts `-protocol_whitelist file` and
+  `-format_whitelist matroska,mov,avi,mpegts` before the `-i` of the four calls (scan probe,
+  HLS transcode, keyframe probe, subtitle extraction). Closes a crafted `.mkv` concat list
+  reading sibling files and the demuxer CVE surface of #110; HLS / DASH network fetches were
+  already refused by FFmpeg 8 / 9 defaults.
+- Adversarial round 1: Must 1 (crafted-file tests passed without the fix) → sibling concat
+  with a protocol-only control, assertions on "Format not on whitelist"; round 2 open, two
+  Should fixed. Gate: server 733 with `FFMPEG_IT=1`, web 440, e2e 2/2 (run just after the
+  merge), coverage server 96.96 %, SonarQube PASSED, gitleaks clean, staging smoke OK; doc
+  coverage counter absent, merged on the owner's explicit waiver. Codex out of quota.
+
 ## 2026-11-10 — #257 fresh-load timing, Discover lists warm and stale (PR #269 merged, `4ae86cf`)
 
 - Measured: local staging cold start answers `/health` in 1.4 s (scheduled scan never runs
