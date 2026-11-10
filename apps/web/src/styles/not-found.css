@@ -55,3 +55,87 @@ body {
   outline: 2px solid var(--color-accent-text);
   outline-offset: 3px;
 }
+
+/* The spilled popcorn box (#264): decorative inline SVG, CSS-only animation. */
+.spill {
+  display: block;
+  width: 100%;
+  max-width: 420px;
+  height: auto;
+  margin: 0 auto var(--space-4);
+}
+
+.spill__shadow {
+  fill: var(--color-scrim);
+}
+
+.spill__stripe-light,
+.spill__puff {
+  fill: var(--color-popcorn);
+}
+
+.spill__stripe-red {
+  fill: var(--color-accent);
+}
+
+.spill__mouth {
+  fill: var(--color-surface-raised);
+  stroke: var(--color-accent-hover);
+  stroke-width: 3;
+}
+
+.spill__butter {
+  fill: var(--color-popcorn-butter);
+}
+
+.spill__box {
+  transform-box: fill-box;
+  transform-origin: 0% 100%;
+  animation: spill-wobble 3s ease-in-out infinite;
+}
+
+.spill__fly {
+  animation: spill-hop 1.6s ease-in-out infinite;
+}
+
+.spill__fly--2 {
+  animation-delay: -0.4s;
+  animation-duration: 1.9s;
+}
+
+.spill__fly--3 {
+  animation-delay: -0.9s;
+  animation-duration: 2.2s;
+}
+
+.spill__fly--4 {
+  animation-delay: -1.2s;
+  animation-duration: 1.4s;
+}
+
+@keyframes spill-hop {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-18px);
+  }
+}
+
+@keyframes spill-wobble {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-2deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spill__box,
+  .spill__fly {
+    animation: none;
+  }
+}

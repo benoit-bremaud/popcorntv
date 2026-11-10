@@ -19,6 +19,8 @@
   --color-gold: #c9a24a; /* rating, hairlines, hover ring: 8.2:1 on bg */
   --color-gold-soft: rgb(201 162 74 / 0.35);
   --color-gold-sheen: rgb(255 226 150 / 0.18);
+  --color-popcorn: #fff4d6; /* illustration only: popped kernels */
+  --color-popcorn-butter: #f2c14e; /* illustration only: buttered kernel shade */
   --color-navy: #0f1a33;
   --color-navy-deep: #0b1222;
   --color-violet: #8b5cc4; /* glows and non-text accents only: 4.1:1 on bg */
