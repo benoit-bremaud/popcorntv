@@ -1,6 +1,6 @@
 # Component diagram — catalog (apps/web)
 
-> **Feature**: UC3 / UC4 / UC22 / UC24 / UC26 ([spec](../../specs/catalog-grid.md), [continue-watching](../../specs/continue-watching.md))
+> **Feature**: UC3 / UC4 / UC22 / UC24 / UC26 / UC27 ([spec](../../specs/catalog-grid.md), [continue-watching](../../specs/continue-watching.md))
 > **Related ADRs**: ADR-0001, ADR-0004, ADR-0020, ADR-0024, ADR-0026
 
 ## Diagram

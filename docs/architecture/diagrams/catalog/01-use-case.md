@@ -1,7 +1,7 @@
 # Use case diagram — catalog
 
-> **Feature**: UC3 Browse the catalog, UC4 Open a title ([spec](../../specs/catalog-grid.md)), UC22 Continue watching ([spec](../../specs/continue-watching.md)), UC24 Search ([spec](../../specs/search.md)), UC26 Discover and wishlist ([spec](../../specs/discover-wishlist.md))
-> **Related ADRs**: ADR-0004, ADR-0020
+> **Feature**: UC3 Browse the catalog, UC4 Open a title ([spec](../../specs/catalog-grid.md)), UC22 Continue watching ([spec](../../specs/continue-watching.md)), UC24 Search ([spec](../../specs/search.md)), UC26 Discover and wishlist ([spec](../../specs/discover-wishlist.md)), UC27 Where to watch ([spec](../../specs/where-to-watch.md))
+> **Related ADRs**: ADR-0004, ADR-0020, ADR-0029
 
 ## Diagram
 
@@ -17,6 +17,7 @@ flowchart LR
     uc24((UC24 Search titles and people))
     uc26((UC26 Discover titles beyond the library))
     uc26a((Keep a wishlist))
+    uc27((UC27 Watch on a legal provider in France))
   end
   tmdb([TMDB])
   viewer --- uc3
@@ -25,6 +26,9 @@ flowchart LR
   viewer --- uc24
   viewer --- uc26
   uc26 --- tmdb
+  uc27 --- tmdb
+  uc27 -. extend .-> uc26
+  uc27 -. extend .-> uc4
   uc26a -. extend .-> uc26
   uc4 -. extend .-> uc26
   uc24 -. include .-> uc4
@@ -40,3 +44,5 @@ flowchart LR
 - *Watch a title* (UC5, #7) will extend UC4 from the detail dialog.
 - *Keep a wishlist* extends UC26 from the title sheet; UC4 extends UC26 at the extension point
   *title on disk* (**Play in my library**). TMDB is a secondary actor reached by the server.
+- UC27 extends UC26 and UC4 from the title sheet: the viewer leaves for a legal provider's
+  page (ADR-0029); PopCornTV never plays that stream.
