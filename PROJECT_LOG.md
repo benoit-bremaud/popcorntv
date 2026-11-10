@@ -4,6 +4,23 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-10 — #184 where to watch in France (PR #281 merged, `7d17bff`)
+
+- Decision ADR-0029 (option A, 450/500): every French legal offer (TMDB watch providers,
+  JustWatch data, credited) opens the TMDB watch page in a new tab, `noopener noreferrer`;
+  TMDB has no per-provider deep link. Link pinned to `https://www.themoviedb.org`, no safe
+  link → no offer. No third-party stream is ever fetched, proxied or played.
+- `GET /discover/:kind/:tmdbId/providers` (FR only, 24 h fresh then stale-while-refresh, 500
+  titles LRU through a new `StaleCache`, now shared with the Discover lists), `GET
+  /discover/logo/:file` at w92 for issued paths only; web `WhereToWatch` in `TitleSheet` and
+  `DetailDialog`. Offers carry `providerId` for #277.
+- Adversarial round 1: Must 3 (logging catalog, component diagram, CLAUDE.md stale), Should 5,
+  Nice 6, all fixed; round 2 open. Gate: server 748, web 449, coverage server 97.08 % / web
+  98.41 %, SonarQube PASSED (one optional-chain issue fixed), gitleaks clean, e2e 2/2, build
+  and staging smoke OK. Not run, owner waiver: doc coverage counter absent, `FFMPEG_IT` n/a,
+  signed-in QA with real TMDB deferred (QA matrix cases). Codex out of quota. Follow-ups #279,
+  #280.
+
 ## 2026-11-10 — #118 FFmpeg and ffprobe input confined to local container files (PR #275 merged, `6366074`)
 
 - Decision ADR-0028 (option B, 430/500; the chat grid had totals off by 10, corrected in
