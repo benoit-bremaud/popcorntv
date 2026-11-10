@@ -37,6 +37,8 @@ import { startAvailabilityCheck } from './discover/availability-check.js';
 import { MyProviderRepository } from './discover/my-provider-repository.js';
 import { NotificationRepository } from './discover/notification-repository.js';
 import { registerNotificationRoutes } from './discover/notification-routes.js';
+import { TitleLinkRepository } from './discover/title-link-repository.js';
+import { registerTitleLinkRoutes } from './discover/title-link-routes.js';
 import {
   PROVIDERS_MAX,
   PROVIDERS_TTL_MS,
@@ -291,6 +293,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   const notifications = new NotificationRepository(options.db);
   const myProviders = new MyProviderRepository(options.db);
   registerNotificationRoutes(app, { notifications, myProviders, profiles });
+  registerTitleLinkRoutes(app, { links: new TitleLinkRepository(options.db) });
   let stopCheck: (() => Promise<void>) | null = null;
   // Sessions live in memory: directories left by a previous run belong to no one.
   app.addHook('onReady', async () => {

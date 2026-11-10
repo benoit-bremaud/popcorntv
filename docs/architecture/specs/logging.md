@@ -30,7 +30,7 @@ them. The 2026-11-08 FULL QA pass found 18 log calls in 9 of ~50 server files, a
   on a media route (a player retrying a segment) at `debug`; media routes
   (`rateBucket: 'media'`) at `debug` when they succeed.
 - **R4 — never logged.** Passwords, session tokens, invitation or reset tokens, cookies,
-  `Authorization` headers, the TMDB key, the username typed at a failed login. pino
+  `Authorization` headers, the TMDB key, the username typed at a failed login, the personal title link URL (ADR-0031). pino
   `redact` is a safety net at fixed paths only (`REDACT_PATHS`: `req.headers.cookie`,
   `headers.authorization`, `password`, `*.token`, `*.current`, `*.next`…, top level or one
   level deep, case-sensitive): call sites must still never pass a request body or raw
@@ -97,6 +97,8 @@ them. The 2026-11-08 FULL QA pass found 18 log calls in 9 of ~50 server files, a
 | `wishlist.check.title_failed`                             | warn         | `kind`, `tmdbId`, `err`                                 | `discover/availability-check.ts` |
 | `wishlist.check.failed`                                   | warn         | `err`                                                   | `discover/availability-check.ts` |
 | `notification.created`                                    | info         | `profileId`, `reason`, `kind`, `tmdbId`, `providerId`   | `discover/availability-check.ts` |
+| `title_link.set`                                          | info         | `kind`, `tmdbId`, `userId` (never the URL)              | `discover/title-link-routes.ts` |
+| `title_link.removed`                                      | info         | `kind`, `tmdbId`, `userId`                              | `discover/title-link-routes.ts` |
 | `auth.setup_link`                                         | warn         | `setupLink` (ADR-0010)                                  | `app.ts`               |
 
 The scheduled scan keeps its own `library.schedule.*` lines and also emits the

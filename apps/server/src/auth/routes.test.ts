@@ -557,6 +557,8 @@ describe('access control (spec auth R1, R2, R7)', () => {
     ['GET', '/libraries/folders'],
     ['PATCH', '/libraries/00000000-0000-4000-8000-000000000000'],
     ['DELETE', '/libraries/00000000-0000-4000-8000-000000000000'],
+    ['PUT', '/title-links/movie/603'],
+    ['DELETE', '/title-links/movie/603'],
   ] as const)('answers 403 forbidden to a viewer on %s %s', async (method, url) => {
     const db = openDatabase(':memory:');
     createAccount(db);
@@ -567,7 +569,12 @@ describe('access control (spec auth R1, R2, R7)', () => {
       method,
       url,
       headers: { cookie: viewer.cookie },
-      payload: method === 'PATCH' ? { name: 'X' } : undefined,
+      payload:
+        method === 'PATCH'
+          ? { name: 'X' }
+          : method === 'PUT'
+            ? { url: 'https://example.org/' }
+            : undefined,
     });
 
     expect(response.statusCode).toBe(403);

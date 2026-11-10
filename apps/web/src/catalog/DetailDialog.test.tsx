@@ -42,6 +42,9 @@ function fakeApi(): PlaybackApi & { start: ReturnType<typeof vi.fn> } {
   };
 }
 
+/** No personal link: keeps the UC30 block off the network (boundary mock). */
+const noLink = { load: async () => ({ url: null, editable: false }), save: async () => true };
+
 function renderDetail(
   item: Media,
   canPlay: CanPlay = always,
@@ -58,6 +61,7 @@ function renderDetail(
     progress,
     ...render(
       <DetailDialog
+        titleLink={noLink}
         profileId="kid"
         item={item}
         seasons={seasons}
@@ -163,6 +167,7 @@ describe('DetailDialog playback', () => {
     const user = userEvent.setup();
     render(
       <DetailDialog
+        titleLink={noLink}
         profileId="kid"
         item={dark}
         seasons={[{ season: 1, episodes: [pilot] }]}
@@ -336,6 +341,7 @@ describe('DetailDialog progress refresh and next episode', () => {
     const user = userEvent.setup();
     render(
       <DetailDialog
+        titleLink={noLink}
         profileId="kid"
         item={heat}
         seasons={[]}
@@ -419,6 +425,7 @@ describe('DetailDialog watched mark (spec watched-marks)', () => {
     const user = userEvent.setup();
     render(
       <DetailDialog
+        titleLink={noLink}
         profileId="kid"
         item={heat}
         seasons={[]}
@@ -444,6 +451,7 @@ describe('DetailDialog watched mark (spec watched-marks)', () => {
     const user = userEvent.setup();
     render(
       <DetailDialog
+        titleLink={noLink}
         profileId="kid"
         item={heat}
         seasons={[]}
@@ -465,6 +473,7 @@ describe('DetailDialog watched mark (spec watched-marks)', () => {
     const user = userEvent.setup();
     render(
       <DetailDialog
+        titleLink={noLink}
         profileId="kid"
         item={heat}
         seasons={[]}
@@ -649,6 +658,7 @@ describe('DetailDialog copies', () => {
     ]);
     render(
       <DetailDialog
+        titleLink={noLink}
         profileId="kid"
         item={heat}
         seasons={[]}
@@ -732,10 +742,12 @@ describe('DetailDialog where to watch (UC27)', () => {
     ['series', 'tv'],
   ] as const)('asks the offers of a matched %s as TMDB %s', async (kind, tmdbKind) => {
     const watchProviders = vi.fn(async () => offers);
+    const titleLink = { ...noLink, load: vi.fn(noLink.load) };
     const item = media({ id: 'm', title: 'Dune', kind, metadata: metadata({ tmdbId: 7 }) });
 
     render(
       <DetailDialog
+        titleLink={titleLink}
         profileId="kid"
         item={item}
         seasons={[]}
@@ -749,6 +761,7 @@ describe('DetailDialog where to watch (UC27)', () => {
 
     expect(await screen.findByText('No legal offer in France for now.')).toBeInTheDocument();
     expect(watchProviders).toHaveBeenCalledWith(tmdbKind, 7);
+    expect(titleLink.load).toHaveBeenCalledWith(tmdbKind, 7);
   });
 
   it.each([
@@ -757,11 +770,13 @@ describe('DetailDialog where to watch (UC27)', () => {
       media({ id: 'e', title: 'Pilot', kind: 'episode', metadata: metadata({ tmdbId: 7 }) }),
     ],
     ['an unmatched film', media({ id: 'f', title: 'Home', kind: 'film', metadata: metadata() })],
-  ])('shows no offer block for %s', async (_label, item) => {
+  ])('shows no offer block nor title link for %s', async (_label, item) => {
     const watchProviders = vi.fn(async () => offers);
+    const titleLink = { ...noLink, load: vi.fn(noLink.load) };
 
     render(
       <DetailDialog
+        titleLink={titleLink}
         profileId="kid"
         item={item}
         seasons={[]}
@@ -776,5 +791,6 @@ describe('DetailDialog where to watch (UC27)', () => {
     await screen.findByRole('dialog');
     expect(screen.queryByText('Where to watch (France)')).toBeNull();
     expect(watchProviders).not.toHaveBeenCalled();
+    expect(titleLink.load).not.toHaveBeenCalled();
   });
 });

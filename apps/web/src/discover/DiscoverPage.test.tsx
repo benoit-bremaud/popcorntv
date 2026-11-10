@@ -43,6 +43,10 @@ function makeApi(overrides: Partial<DiscoverApi> = {}): DiscoverApi {
     wishlist: vi.fn<DiscoverApi['wishlist']>(async () => []),
     setWishlisted: vi.fn<DiscoverApi['setWishlisted']>(async () => true),
     providers: vi.fn<DiscoverApi['providers']>(async () => ({ link: null, offers: [] })),
+    titleLink: {
+      load: vi.fn(async () => ({ url: null, editable: false })),
+      save: vi.fn(async () => true),
+    },
     ...overrides,
   };
 }
@@ -140,6 +144,7 @@ describe('DiscoverPage', () => {
       await within(sheet).findByRole('heading', { name: 'Where to watch (France)' }),
     ).toBeInTheDocument();
     expect(api.providers).toHaveBeenCalledWith('movie', DUNE.tmdbId);
+    expect(api.titleLink.load).toHaveBeenCalledWith('movie', DUNE.tmdbId);
   });
 
   it('shows no cast line when TMDB gives no cast (#172)', async () => {
