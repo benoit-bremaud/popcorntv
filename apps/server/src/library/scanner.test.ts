@@ -234,6 +234,35 @@ describe('LibraryScanner', () => {
     ]);
   });
 
+  it('never carries the watch progress over to a file of another library (#253)', async () => {
+    // TMDB movie and TV ids share numbers; carry-over stays inside one library, whose kind
+    // fixes the namespace, so the bare `tmdb|<id>` key of identity.ts cannot collide.
+    const shows = repository.createLibrary({
+      name: 'Shows',
+      rootPath: join(root, 'shows'),
+      kind: 'series',
+    });
+    const films = { ...library, rootPath: join(root, 'films') };
+    const old = await touch(root, 'films/Heat (1995).mkv');
+    await touch(root, 'films/Alien (1979).mkv');
+    await touch(root, 'shows/Game of Thrones (2011).mkv');
+    await scanner.scan(films);
+    await scanner.scan(shows);
+    const metadata = new MetadataRepository(db);
+    const film = repository.listMedia(library.id).find((item) => item.title === 'Heat');
+    const [show] = repository.listMedia(shows.id);
+    metadata.saveMetadata(film?.id ?? '', { ...SOPRANOS, tmdbId: 1399, title: 'Heat' }, NOW);
+    metadata.saveMetadata(show?.id ?? '', { ...SOPRANOS, tmdbId: 1399, title: 'GoT' }, NOW);
+    db.insert(watchProgress)
+      .values({ profileId: 'default', mediaId: film?.id ?? '', positionSec: 600, updatedAt: NOW })
+      .run();
+    await rm(old);
+
+    await scanner.scan(films);
+
+    expect(db.select().from(watchProgress).all()).toEqual([]);
+  });
+
   it('keeps the newer position when the new file already has one', async () => {
     const old = await touch(root, 'Heat (1995).mkv');
     await scanner.scan(library);

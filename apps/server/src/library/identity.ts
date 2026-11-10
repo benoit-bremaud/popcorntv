@@ -16,7 +16,8 @@ export interface MediaIdentity {
 /**
  * Keys under which two files hold the same title (spec progress-carry-over R2): an episode
  * by its series row and numbers, anything else by its TMDB id when known and by its parsed
- * title and year. Pure.
+ * title and year. Pure. The TMDB key carries no movie / TV namespace: callers compare rows
+ * of one library, whose kind fixes it (#253).
  */
 export function identityKeys(row: MediaIdentity): string[] {
   if (row.kind === 'series') return [];
