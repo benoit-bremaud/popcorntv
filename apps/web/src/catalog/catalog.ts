@@ -38,7 +38,7 @@ export function titleKey(item: Media, libraryKind: LibraryKind | undefined): str
   if (item.kind === 'series' || item.kind === 'episode') return null;
   const tmdb = item.metadata?.tmdbId ?? item.providerIds.tmdb ?? null;
   if (tmdb !== null) {
-    const namespace = libraryKind === undefined ? item.libraryId : libraryKind;
+    const namespace = libraryKind ?? item.libraryId;
     return JSON.stringify(['tmdb', namespace, String(tmdb), item.part]);
   }
   return JSON.stringify([
@@ -89,7 +89,7 @@ export function collapseCopies(
     copies.set(shown.id, group);
     current.set(
       shown.id,
-      group.reduce((best, item) => (rank(item) < rank(best) ? item : best)),
+      group.reduce((best, item) => (rank(item) < rank(best) ? item : best), shown),
     );
     for (const item of group) shownOf.set(item.id, shown.id);
   }
