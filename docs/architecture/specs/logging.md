@@ -54,8 +54,8 @@ them. The 2026-11-08 FULL QA pass found 18 log calls in 9 of ~50 server files, a
   `loggerOptions(level, stream)`. Not asserted: `server.config` (start-up script),
   `playback.ffmpeg.exit` (debug), `playback.session.cleanup_failed`,
   `metadata.enrich.skipped`, `auth.setup_link` (tests inject `onSetupLink`) and the
-  `discover.*` / `playback.subtitle.failed` lines, whose routes already test the failure
-  answer.
+  `discover.tmdb.failed` / `discover.poster.failed` / `playback.subtitle.failed` lines,
+  whose routes already test the failure answer.
 
 ## 3. Event catalog
 
@@ -88,6 +88,7 @@ them. The 2026-11-08 FULL QA pass found 18 log calls in 9 of ~50 server files, a
 | `playback.subtitle.failed`                                | error        | `mediaId`, `index`, `err`                               | `subtitle-routes.ts`   |
 | `discover.tmdb.failed`                                    | warn         | `err`                                                   | `discover/routes.ts`   |
 | `discover.poster.failed`                                  | warn         | `err`                                                   | `discover/routes.ts`   |
+| `discover.list.warm_failed` / `.refresh_failed`           | warn         | `list`, `kind`, `err`                                   | `discover/routes.ts`   |
 | `library.schedule.done` / `.busy` / `.failed`             | info / info / warn | `libraryId`, counts, `err`                        | `library/scheduler.ts` |
 | `auth.setup_link`                                         | warn         | `setupLink` (ADR-0010)                                  | `app.ts`               |
 

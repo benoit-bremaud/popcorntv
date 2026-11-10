@@ -24,7 +24,10 @@ export interface DiscoverRoutesDeps {
   readonly now?: () => number;
 }
 
-/** A TMDB list is reused this long (ADR-0020): four calls per quarter hour at most. */
+/**
+ * A TMDB list is fresh this long (ADR-0020): four calls per quarter hour at most. Past it, the
+ * list is still served while one call refreshes it (ADR-0027).
+ */
 export const LIST_TTL_MS = 15 * 60_000;
 /** Discover rows and search show this many titles at most (spec R1, R2). */
 const MAX_TITLES = 20;
@@ -122,6 +125,7 @@ async function details(
 export function registerDiscoverRoutes(app: FastifyInstance, deps: DiscoverRoutesDeps): void {
   const now = deps.now ?? Date.now;
   const memo = new Map<string, { readonly at: number; readonly titles: readonly TitleFacts[] }>();
+  const inFlight = new Map<string, Promise<readonly TitleFacts[]>>();
   const issued = new Set<string>();
 
   /** Records the poster paths of an answer so the poster route may serve them, then returns it. */
@@ -145,11 +149,57 @@ export function registerDiscoverRoutes(app: FastifyInstance, deps: DiscoverRoute
   ): Promise<readonly TitleFacts[]> {
     const memoKey = `${list}:${of}`;
     const hit = memo.get(memoKey);
-    if (hit !== undefined && now() - hit.at < LIST_TTL_MS) return hit.titles;
-    const titles = (await tmdb.list(list, of)).slice(0, MAX_TITLES).map(toFacts);
-    memo.set(memoKey, { at: now(), titles });
-    return titles;
+    if (hit === undefined) return fetchList(memoKey, list, of, tmdb);
+    // ADR-0027: a stale list is served at once and refreshed behind the answer, one call at a
+    // time (a visit during a refresh neither starts nor logs another).
+    if (now() - hit.at >= LIST_TTL_MS && !inFlight.has(memoKey)) {
+      fetchList(memoKey, list, of, tmdb).catch((error: unknown) =>
+        app.log.warn(
+          { event: 'discover.list.refresh_failed', list, kind: of, err: error },
+          'list refresh failed',
+        ),
+      );
+    }
+    return hit.titles;
   }
+
+  /** One TMDB call per list at a time: concurrent callers share the call in flight. */
+  function fetchList(
+    memoKey: string,
+    list: (typeof DISCOVER_LISTS)[number],
+    of: (typeof DISCOVER_KINDS)[number],
+    tmdb: TmdbClient,
+  ): Promise<readonly TitleFacts[]> {
+    const pending = inFlight.get(memoKey);
+    if (pending !== undefined) return pending;
+    const call = (async () => {
+      try {
+        const titles = (await tmdb.list(list, of)).slice(0, MAX_TITLES).map(toFacts);
+        memo.set(memoKey, { at: now(), titles });
+        return titles;
+      } finally {
+        inFlight.delete(memoKey);
+      }
+    })();
+    inFlight.set(memoKey, call);
+    return call;
+  }
+
+  // ADR-0027: the four lists are fetched once at start; a visit past the warm-up never waits.
+  app.addHook('onReady', () => {
+    const tmdb = deps.tmdb;
+    if (!tmdb) return;
+    for (const list of DISCOVER_LISTS) {
+      for (const kindOf of DISCOVER_KINDS) {
+        fetchList(`${list}:${kindOf}`, list, kindOf, tmdb).catch((error: unknown) =>
+          app.log.warn(
+            { event: 'discover.list.warm_failed', list, kind: kindOf, err: error },
+            'list warm-up failed',
+          ),
+        );
+      }
+    }
+  });
 
   app.get('/discover', async (request, reply) => {
     const query = listQuery.safeParse(request.query);

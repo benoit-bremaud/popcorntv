@@ -268,6 +268,21 @@ Replay with a screen reader (Orca on Firefox, then NVDA or VoiceOver when availa
    Copy select reads "Films — <path>" for each.
 7. Pick French audio on one copy, switch copy: the Audio select is back on the first track.
 
+## Discover list freshness checks (#257, ADR-0027)
+
+1. Restart the app container, wait 10 s, open Discover: the four rows fill without a
+   "Loading…" lasting more than a second; the log has no `/discover` `http.request` above
+   1 s.
+2. Leave Discover for more than 15 minutes, open it again: the rows show at once (the
+   previous lists); the `/discover` `http.request` lines are under 100 ms and the log has
+   no `discover.list.refresh_failed`.
+3. Start with TMDB unreachable (`NODE_USE_ENV_PROXY=1 HTTPS_PROXY=http://127.0.0.1:9`):
+   one `discover.list.warm_failed` per list (with `list` and `kind`), the app starts,
+   Discover shows "TMDB could not be reached".
+
+A stale list kept while its refresh fails needs TMDB to go away on a running server, which
+the proxy trick cannot do: the route tests cover it (`routes.test.ts`, ADR-0027).
+
 ## Replay of #165–#169 and #172–#177 on the Pi (2026-11-10)
 
 Source: [pass of 2026-11-10](../architecture/qa/2026-11-10-full-pass-pi.md).
