@@ -161,6 +161,7 @@ export function DetailDialog({
   const metadata = item.metadata;
   // UC27 R7: films and series only; an episode or an unmatched title shows no offer.
   const watchKind = WATCH_KINDS[item.kind] ?? null;
+  const watchTmdbId = metadata?.tmdbId ?? null;
   const backdrop = metadata?.backdropPath ?? null;
   const titleId = `detail-${shownItem.id}`;
 
@@ -288,8 +289,8 @@ export function DetailDialog({
               {metadata.cast.map((member) => member.name).join(', ')}
             </p>
           )}
-          {watchKind !== null && metadata !== null && metadata.tmdbId !== null && (
-            <WhereToWatch kind={watchKind} tmdbId={metadata.tmdbId} load={watchProviders} />
+          {watchKind !== null && watchTmdbId !== null && (
+            <WhereToWatch kind={watchKind} tmdbId={watchTmdbId} load={watchProviders} />
           )}
           {seasons.map((season) => (
             <section key={season.season ?? 'none'} className="detail__season">

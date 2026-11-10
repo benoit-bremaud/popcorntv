@@ -17,7 +17,8 @@ subscription, free, with ads, rent, buy — and opens the chosen one in a new ta
   is not an `https://www.themoviedb.org/` URL (a hostile payload cannot redirect). `offers`
   lists `{ providerId, name, logoPath, type }`, `type` one of `flatrate`, `free`, `ads`,
   `rent`, `buy`, in that order, each group sorted by TMDB `display_priority`. No French
-  entry → `{ link: null, offers: [] }`, not an error.
+  entry, or no safe link → `{ link: null, offers: [] }`, not an error (ADR-0029: every offer
+  opens that link).
 - **R2** Only the `FR` region is read; other regions are dropped by the client parser.
 - **R3** Caching (ADR-0027 pattern): an answer is fresh for 24 hours, then served stale while
   one TMDB call refreshes it; concurrent requests for a title share the call in flight; at

@@ -28,7 +28,7 @@ export class StaleCache<T> {
     this.entries.delete(key);
     this.entries.set(key, hit);
     if (this.now() - hit.at >= this.ttlMs && !this.inFlight.has(key)) {
-      // log: n/a — onRefreshError is the caller's logger (discover.providers.refresh_failed)
+      // log: n/a — onRefreshError is the caller's logger (`discover.list.refresh_failed`, `discover.providers.refresh_failed`)
       this.load(key, load).catch(onRefreshError);
     }
     return hit.value;
