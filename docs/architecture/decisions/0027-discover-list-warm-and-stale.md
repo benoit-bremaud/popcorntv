@@ -58,9 +58,9 @@ C, in `apps/server/src/discover/routes.ts`:
 ## Consequences
 
 - The first Discover visit after a start (past the warm-up, a few seconds) and every later
-  visit answer from memory. While TMDB answers, a stale list is at most one visit old (during an outage it keeps its
-age); "Available" and the
-  wishlist state are joined per request, so they stay exact.
+  visit answer from memory. While TMDB answers, a stale list is at most one visit old
+  (during an outage it keeps its age); "Available" and the wishlist state are joined per
+  request, so they stay exact.
 - TMDB is called four more times per start; otherwise the call rate is ADR-0020's.
 - The home-page delay seen before the Pi container restart stays unexplained; QA check
   "Deploy parity and data checks" step 2 records the slowest `/api` call on every deploy.

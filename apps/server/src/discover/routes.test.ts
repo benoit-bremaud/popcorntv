@@ -234,7 +234,7 @@ describe('discover routes', () => {
     });
     let calls = 0;
     // A plain function: `setup` clears mocked `list` calls once the warm-up has run.
-    const db = await setup(
+    const { app, tmdbFailures, listFailures } = await setup(
       makeClient({
         list: async (name, of) => {
           calls += 1;
@@ -243,16 +243,16 @@ describe('discover routes', () => {
       }),
     );
 
-    const visit = db.app.inject({ url: '/discover?list=trending&kind=movie' });
+    const visit = app.inject({ url: '/discover?list=trending&kind=movie' });
     await settle();
     fail(new TmdbRequestError('/x', 500));
     const response = await visit;
 
     expect(calls).toBe(4);
     expect(response.json()).toEqual({ error: 'tmdb_unavailable' });
-    expect(db.tmdbFailures).toHaveLength(1);
-    expect(db.listFailures).toHaveLength(1);
-    expect(db.listFailures[0]).toContain('"list":"trending","kind":"movie"');
+    expect(tmdbFailures).toHaveLength(1);
+    expect(listFailures).toHaveLength(1);
+    expect(listFailures[0]).toContain('"list":"trending","kind":"movie"');
   });
 
   it('waits for TMDB on the first visit when the warm-up failed, and logs the failure', async () => {
