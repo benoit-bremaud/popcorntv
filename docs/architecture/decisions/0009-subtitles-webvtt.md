@@ -1,6 +1,6 @@
 # ADR-0009 — Subtitles: embedded text tracks, extracted on demand and cached, shifted by the server
 
-- Status: accepted (owner validated the weights, #24 chat, 2026-11-03)
+- Status: accepted (owner validated the weights, #24 chat, 2026-11-03); input options per ADR-0028 (#118)
 - Date: 2026-11-03
 - Deciders: owner
 - Related: UC10 ([spec](../specs/subtitles.md)), ADR-0005, ADR-0006, ADR-0007, issue #24

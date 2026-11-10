@@ -42,3 +42,6 @@ Dependabot bumps).
 - Secrets (TMDB key) come from environment variables only; `.env*` files are gitignored.
 - Media paths are resolved under `MEDIA_ROOT` and validated against path traversal before
   any file is served or handed to FFmpeg.
+- Every FFmpeg and ffprobe input is confined to the `file` protocol and the
+  `matroska,mov,avi,mpegts` demuxers, so a crafted file cannot open URLs, sibling files or
+  a rarely used parser (ADR-0028).

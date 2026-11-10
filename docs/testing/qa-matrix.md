@@ -283,6 +283,18 @@ Replay with a screen reader (Orca on Firefox, then NVDA or VoiceOver when availa
 A stale list kept while its refresh fails needs TMDB to go away on a running server, which
 the proxy trick cannot do: the route tests cover it (`routes.test.ts`, ADR-0027).
 
+## Confined FFmpeg input checks (#118, ADR-0028)
+
+1. Next to a real `ok.mkv`, put a text file `trap.mkv` holding `ffconcat version 1.0` and
+   `file 'ok.mkv'` (relative), then scan: the log has `library.scan.skipped` with
+   `reason: probe_failed` for `trap.mkv` and it is not in the catalog (before #118 it was
+   added, probed as `concat`).
+2. No-regression: a DASH manifest (`<MPD …>` whose `BaseURL` points at a host you watch)
+   named `trap2.mkv` is skipped the same way and the watched host gets no request.
+3. Play one real file of each kept container (mkv, webm, mp4, m4v, mov, avi), one direct
+   play and one HLS transcode with a resume and a subtitle track: all work as before.
+4. Opt-in automated check: `FFMPEG_IT=1 pnpm --filter server exec vitest run src/ffmpeg-input`.
+
 ## Replay of #165–#169 and #172–#177 on the Pi (2026-11-10)
 
 Source: [pass of 2026-11-10](../architecture/qa/2026-11-10-full-pass-pi.md).

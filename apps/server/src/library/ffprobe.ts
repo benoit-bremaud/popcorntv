@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import type { StreamInfo } from '@popcorntv/shared';
+import { localInputArgs } from '../ffmpeg-input.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -40,13 +41,28 @@ const PROBE_MAX_OUTPUT_BYTES = 4 * 1024 * 1024;
  */
 export function createFfprobe(ffprobePath: string): Prober {
   return async (filePath) => {
-    const { stdout } = await execFileAsync(
-      ffprobePath,
-      ['-v', 'error', '-print_format', 'json', '-show_format', '-show_streams', '-i', filePath],
-      { timeout: PROBE_TIMEOUT_MS, killSignal: 'SIGKILL', maxBuffer: PROBE_MAX_OUTPUT_BYTES },
-    );
+    const { stdout } = await execFileAsync(ffprobePath, ffprobeArgs(filePath), {
+      timeout: PROBE_TIMEOUT_MS,
+      killSignal: 'SIGKILL',
+      maxBuffer: PROBE_MAX_OUTPUT_BYTES,
+    });
     return parseFfprobeOutput(JSON.parse(stdout) as FfprobeOutput);
   };
+}
+
+/** ffprobe arguments for `filePath`, its input confined to a local container (ADR-0028). */
+export function ffprobeArgs(filePath: string): string[] {
+  return [
+    '-v',
+    'error',
+    '-print_format',
+    'json',
+    '-show_format',
+    '-show_streams',
+    ...localInputArgs(),
+    '-i',
+    filePath,
+  ];
 }
 
 /** Pure mapping from ffprobe's JSON to the domain shape; exported for its own tests. */
