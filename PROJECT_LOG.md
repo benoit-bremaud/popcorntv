@@ -10,7 +10,7 @@ context: merged PRs, decisions, tags, infra events. Not a release changelog — 
   gitignored `.env.staging`; local staging reaches TMDB. QA runs on local staging only — the
   2026-11-08 plan to QA Discover on the Pi is withdrawn (the Pi keeps its post-deploy smoke).
 - Level pass replaying the cases blocked on 2026-11-11, report
-  `docs/architecture/qa/2026-11-12-tmdb-pass-staging.md`, 12 cases: Pass 8, Fail 3, Not tested 1;
+  `docs/architecture/qa/2026-11-12-tmdb-pass-staging.md`, 15 cases: Pass 8, Fail 3, Not tested 4 (outbound-link checks of #184 and #278, no-key half of #277 case 6, #277 case 8);
   Must 0, Should 1 (#302 dotted show folders parsed as "Season 01"), Nice 2 (#303 title-link
   focus and field attributes, #304 "could not be reached" shown when TMDB is not configured).
 - Verified: #166 live search, #257 warm lists, #184 where to watch, #277 cases 1–4 and 7,
