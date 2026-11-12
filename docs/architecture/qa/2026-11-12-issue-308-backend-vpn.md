@@ -149,7 +149,8 @@ Machine-readable observations: [backend](2026-11-12-issue-308-backend.json) and
 
 The subsequent [player experiment](2026-11-12-issue-308-player.md) validated the actual HLS/player
 with a controlled verified writer, including normal end and cancellation. Keep #308 open.
-The combined real-backend/browser path, seeks outside coverage, variable bitrate,
+The later [combined experiment](2026-11-12-issue-308-combined.md) also validates the real backend
+and browser together for one early-caption fixture. Seeks outside coverage, variable bitrate,
 mid-transfer cancellation/restart, unexpected tunnel failure and Pi limits remain unverified.
 Passing these bounded experiments does not make a wishlist title ready to watch.
 

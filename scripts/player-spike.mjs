@@ -147,6 +147,8 @@ export function verifiedPipeArgs(args, expectedPath) {
  * Run real FFmpeg at the application's existing injected process boundary. Feed only bounded
  * ranges whose disk bytes independently match the fixture; kill/abort/await all child work on
  * close. The adapter intentionally has no direct-file or resume fallback.
+ * Optional `subtitleSource` is an immutable verified prefix with its own read-only handle/reference;
+ * its extraction shares the same tracked child lifecycle and never borrows the complete control.
  */
 export function verifiedTranscoder({
   path,
@@ -253,6 +255,10 @@ export function verifiedTranscoder({
  * synthetic-only observations; remove the private workspace and all owned processes in finally.
  * `cancelAfterFirstFrame` exercises actual session cancellation while recovery is incomplete;
  * otherwise watch the full synthetic clip, then check subtitles and close normally.
+ * Optional `source` borrows the backend's existing cache without writing/truncation. Known control
+ * metadata is explicit, while caption bytes come only from the verified target snapshot. Resume
+ * and real caption readiness must succeed before segment release. All cleanup steps are attempted;
+ * an AggregateError marked cleanupIncomplete tells the owner not to delete the borrowed workspace.
  */
 export async function runPlayerSpike({ cancelAfterFirstFrame = false, source = null } = {}) {
   const base = await mkdtemp(join(tmpdir(), 'popcorntv-player-spike-'));

@@ -113,7 +113,11 @@ function command(binary, args, { env = process.env, input = '', timeout = 120_00
   });
 }
 
-/** Advance only independently readable reference-matching coverage; regression invalidates the run. */
+/**
+ * Advance only independently readable reference-matching coverage; regression invalidates the run.
+ * The expected bytes are a known synthetic experiment oracle, not a production download guarantee.
+ * Return the new prefix only after all new bytes match; reject short/corrupt/invalid ranges.
+ */
 export async function verifyCachePrefix(handle, bytes, previous, reported) {
   assert(Number.isSafeInteger(previous) && Number.isSafeInteger(reported));
   assert(previous >= 0 && reported >= previous && reported <= bytes.length);
@@ -214,7 +218,14 @@ async function initialize(root, service) {
   return password;
 }
 
-/** Real local-peer transfer only; all temporary services/configs belong to this single run. */
+/**
+ * Real local-peer transfer only; all temporary services/configs belong to this single run.
+ * Optional `consume` runs outside the poll loop with the borrowed read-only source, immutable
+ * caption prefix, known control metadata/reference and bounded resume operation, never credentials.
+ * It must close its readers before settling, or reject with cleanupIncomplete to retain the cache.
+ * Results distinguish standalone reference decode from browser evidence (null means not compared).
+ * Original and cleanup failures are preserved; no workspace is removed after unsafe consumer cleanup.
+ */
 export async function runBackendSpike({ consume = null } = {}) {
   assert(consume === null || typeof consume === 'function');
   const root = await mkdtemp(join(tmpdir(), 'popcorntv-qbit-'));

@@ -2,6 +2,10 @@
 
 One row per screen or flow. Cell format: `date · SHA · environment · OK | KO #N | — (reason)`. Source: [full pass of 2026-11-08](../architecture/qa/2026-11-08-full-pass-pi.md), [pass of 2026-11-10](../architecture/qa/2026-11-10-full-pass-pi.md). Responsive cells: only 619 px and 1728 px were reachable. Offline cells: no probe possible with the tool in use. A row is complete when every cell carries a date or a reason.
 
+The #308 experimental rows at the end record local recovery/player evidence separately from
+deployed-product QA. They do not supersede the historical Pi/staging results or certify the
+wishlist-to-ready workflow.
+
 | Flow | Nominal | Error | Offline | Back | Accessibility | Responsive |
 |---|---|---|---|---|---|---|
 | Sign-in / setup | — (owner session in use, no sign-out) | — (needs sign-out or a new account, forbidden by the rules of this pass) | — (BLOCKED: Claude in Chrome cannot cut the network, ROB-01) | — (not reachable) | — (A11Y-08 not reachable) | — (window floor 619 px, 320/390 not reachable) |
@@ -430,3 +434,36 @@ Replay on every Pi deploy:
    host; the log has `title_link.set` / `title_link.removed` without the URL.
 7. Keyboard: the button, the field and Save / Remove / Cancel are reachable by Tab; the error
    is announced (`role="alert"`).
+
+## Progressive recovery experiments (#308, 2026-11-12)
+
+Sources: [backend/VPN](../architecture/qa/2026-11-12-issue-308-backend-vpn.md),
+[controlled-writer player](../architecture/qa/2026-11-12-issue-308-player.md),
+[combined backend/player](../architecture/qa/2026-11-12-issue-308-combined.md).
+Tier: **local**, isolated synthetic content; built web bundle and real application routes via a
+loopback experiment transport. This is neither a Pi deployment nor the full staging release pass.
+Code baseline for the combined replay: `3433352`; final replay/review results are recorded
+in the linked combined report. Status is scoped to the exact observation, not the whole design case.
+
+| Case | Required observation | Result / remaining scope |
+|---|---|---|
+| E308-01 / T-13 | Contiguous cache bytes independently match the reference; short reads, corruption and regression refuse advancement | 2026-11-12 · 3433352 · local unit · OK; actual qBittorrent bytes also checked in extended replay |
+| E308-02 / T-18 | Player opens actual backend target read-only and does not copy/truncate it; paused setup preserves inode/size/mtime | 2026-11-12 · 3433352 · local combined experiment · OK in extended replay (31 tests passed) |
+| E308-03 / T-24 | Caption input is an immutable snapshot of verified target bytes, not the complete control; real API VTT equals the complete-reference oracle | 2026-11-12 · 3433352 · local combined experiment · OK for one complete early cue only |
+| E308-04 / T-24 | Derived subtitle cache is cleared; browser parses the real track before segment release and cue is active at the first frame | 2026-11-12 · 3433352 · local Chromium experiment · OK in extended replay; no general embedded-track readiness claim |
+| E308-05 / T-18 | Independent disk evidence proves incomplete cache at first frame; recovery and playback advance, video reaches normal end | 2026-11-12 · 3433352 · local real backend + Chromium · OK in extended replay (31 tests passed) |
+| E308-06 / T-19 | Close during real recovery gets DELETE 204 with no browser/transport failure; readers/processes close | 2026-11-12 · 3433352 · local real backend + Chromium · OK (DELETE 204, incomplete cache, clean shutdown) |
+| E308-07 | Rejected backend resume never opens the caption barrier or reports a frame, and resources are cleaned | 2026-11-12 · 3433352 · local negative browser experiment · OK (no barrier release/frame event, cleanup completed) |
+| E308-08 / T-NFR-7 | Missing caption readiness times out closed; abort wakes blocked segment requests before server shutdown | 2026-11-12 · 3433352 · local unit · OK for gate timeout/abort; rejected-resume shutdown also passed in extended replay |
+| E308-09 / T-NFR-7 | EPIPE and failed coverage abort readers promptly; one failed close does not skip subsequent cleanup | 2026-11-12 · 3433352 · local unit · OK |
+| E308-10 / T-NFR-7 | Consumer cleanup failure plus backend FD failure preserves original error and unsafe-cleanup marker | 2026-11-12 · 3433352 · local unit · OK; actual FD-close failure not injected into Docker run |
+| E308-11 | Missing/malformed consumer evidence cannot set browser/HLS verification flags | 2026-11-12 · 3433352 · local unit · OK |
+| E308-12 | Missing/wrong cue or HTTP 200 with incomplete VTT cannot declare ready | PARTIAL (wrong/absent active cue tested in units; whole-VTT equality asserted; negative extractor/API replay still required) |
+| E308-13 | Arbitrary-film VO/VF/French-subtitle readiness, default-audio progressive direct play and progressive resume/seek | — (not implemented/validated; current proof is the synthetic French HLS path) |
+| E308-14 | NordVPN connection, controlled stop blocks IPv4/direct DNS, recovery; IPv6 disabled | 2026-11-12 · 0d6fab3 · local VPN namespace experiment · OK; separate from internal-peer combined run; crash/packet loss/Pi not validated |
+| E308-15 | Wishlist automatic acquisition, daily reconciliation, per-episode bell notices and child-account enforcement | — (planned implementation bricks; no positive product QA claim) |
+| E308-16 | Progressive Back/reload, screen-reader controls, mobile/responsive and other browser engines | — (not replayed in these recovery experiments; existing product QA rows remain unchanged) |
+
+Overall #308 status remains **PARTIAL**. Full-file fallback is required if complete mandatory
+caption readiness cannot be established. Do not publish a ready notification from a partial
+experimental result, and do not interpret existing skipped application tests as executed QA.

@@ -1,6 +1,6 @@
 # Architecture traceability matrix
 
-Incremental adaptive-wishlist design index; no historical coverage claim. IDs REQ-1–8, NFR-1–4 and UC31 are reserved by the separate #128 local design branch. Integration must retain both sets of rows. Every case below is planned, not implemented or executed.
+Incremental adaptive-wishlist design index; no historical coverage claim. IDs REQ-1–8, NFR-1–4 and UC31 are reserved by the separate #128 local design branch. Integration must retain both sets of rows. The complete business cases below remain planned; bounded #308 experimental evidence is tracked separately and does not mark them implemented.
 
 | UC or NFR | Source | Requirements | Realizations | Components | Classes | States | Data flow | Tests | Status |
 |---|---|---|---|---|---|---|---|---|---|
@@ -60,3 +60,11 @@ Realizations: [UC32 sequence](diagrams/adaptive-wishlist/02-sequence-follow-wish
 | #307 owner clarification → REQ-27 | UC32/UC33 sequences with account-policy guards, child enforcement interaction to be specified | Account policy, Wishlist, coordinator and playback | T-27: restricted/unknown rating, shared adult preparation, direct ID, notifications and policy edits across sessions | requirement captured; design pending |
 
 The child prerequisite must add its concrete sequence/API/data model and tests before implementation. These rows do not claim the child feature is fully designed.
+
+## Bounded experimental evidence (#308)
+
+The [QA ledger E308-01–16](../testing/qa-matrix.md#progressive-recovery-experiments-308-2026-11-12)
+and [combined experiment report](qa/2026-11-12-issue-308-combined.md) track observations for
+T-13/T-18/T-19/T-24 and resource/secret boundaries. They establish limited media mechanics,
+not implementation of UC32/UC33 or the readiness/notification state machine. T-9–12, T-14–17,
+T-20–23, T-25–27 and full NFR coverage remain pending their implementation bricks.
