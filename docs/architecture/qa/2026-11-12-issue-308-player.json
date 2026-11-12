@@ -1,0 +1,45 @@
+{
+  "player.measured_result": {
+    "verdict": "PARTIAL",
+    "stage": "built PopcornTV player with verified pipe adapter",
+    "firstBrowserFrame": {
+      "afterMs": 3424,
+      "verifiedBytes": 442368,
+      "complete": false,
+      "allReferenceBytesPresent": false
+    },
+    "fixtureBytes": 1572516,
+    "frenchAudioMapped": true,
+    "frenchSubtitleCueLoaded": true,
+    "subtitleCheckedAfterCompletion": true,
+    "normalPlaybackEndObserved": true,
+    "transportEscapeDenied": true,
+    "resourceObservation": {
+      "cacheBytes": 1572516,
+      "parentMaxRssKiB": 468184,
+      "parentCpuMicroseconds": {
+        "user": 1013512,
+        "system": 95172
+      },
+      "includesBrowserAndFfmpeg": false
+    },
+    "pageErrors": [],
+    "limits": [
+      "Controlled writer, not a combined qBittorrent/browser run",
+      "Experiment-only pipe adapter; production still accepts complete local files",
+      "No progressive direct play, resume, stalled seek, import/rename, Pi or unexpected VPN-failure validation"
+    ]
+  },
+  "player.cancel_result": {
+    "verdict": "PARTIAL",
+    "stage": "incomplete player cancellation",
+    "firstBrowserFrame": {
+      "afterMs": 3639,
+      "verifiedBytes": 458752,
+      "complete": false,
+      "allReferenceBytesPresent": false
+    },
+    "cancelledWhileIncomplete": true,
+    "sessionDeleteConfirmed": true
+  }
+}

@@ -1,13 +1,13 @@
 # Adaptive wishlist — progressive recovery feasibility
 
-Initial study and proposed experiment for #308, following the lifecycle dossier merged in PR #317.
+Study and bounded experiments for #308, following the lifecycle dossier merged in PR #317.
 
 ## Status and evidence
 
-This is a research/experiment plan, not proof of progressive playback or adoption of a backend.
+This records bounded research experiments, not production adoption of a backend.
 The owner authorized moving to #308 after merging #317. The owner accepted option A and the concrete stage-1 harness plan on 2026-11-12.
-Stage-1 implementation and its targeted execution are authorized; backend installation remains
-subject to a separately reviewed isolated setup.
+Stage-1 implementation was authorized first. The owner subsequently approved the isolated backend,
+VPN and existing-player experiments; their execution evidence and remaining limits are linked below.
 
 Observed locally on 2026-11-12: FFmpeg and ffprobe 8.0.1-3ubuntu2 are available. Neither
 `qbittorrent` nor `qbittorrent-nox` resolves on PATH. This does not inventory Docker containers
@@ -102,6 +102,18 @@ Only after explicit approval of backend setup and experiment details:
 
 ### Stage 3 — existing player and import boundaries
 
+The owner authorized this stage on 2026-11-12 after the backend/VPN experiment. The concrete
+next experiment uses the existing production web bundle, real Fastify routes/repositories
+with an ephemeral SQLite database, a synthetic scanned library and Chromium. An experiment-only
+adapter replaces the FFmpeg input boundary with a pipe of independently verified cache ranges;
+it preserves the production HLS/audio arguments and confines the input to the synthetic fixture.
+No production route, library, environment secret or deployed service is changed. This controlled
+writer is not qBittorrent: the backend transfer evidence remains the separate stage-2 run.
+The browser must decode real video before cache completion, select French audio through the
+existing UI, receive real subtitle extraction, and release its session/processes on close.
+Per-stage logs and measured limitations belong in a separate stage-3 report. Unsupported
+resume/direct-file behavior must remain explicit rather than being silently enabled.
+
 Feed verified local media into the same direct/HLS invariants as the application without
 modifying a production library. Test delayed ranges, seeks, source failure and final completion.
 A passing standalone decode does not prove browser playback: validate selected audio/subtitles
@@ -135,4 +147,9 @@ but backend/player integration is not proven. BLOCKED means a needed tool/setup/
 is absent. NO-GO means the candidate violates a required invariant. None permits pretending
 that full-file-only playback has fulfilled progressive playback.
 
-Stage 1 is now implemented and executed: see the [measured report](../qa/2026-11-12-issue-308-feasibility.md). Twelve targeted tests and the synthetic FFmpeg experiment passed. Overall verdict remains PARTIAL until a real backend and actual player path are verified. The #307 local CI remains separate baseline evidence.
+Stages 1–3 now have bounded execution evidence: the [media mechanics report](../qa/2026-11-12-issue-308-feasibility.md),
+[real backend/VPN report](../qa/2026-11-12-issue-308-backend-vpn.md) and
+[existing-player report](../qa/2026-11-12-issue-308-player.md). The player decodes incomplete verified
+input and reaches normal end in the controlled-writer experiment. Overall verdict remains PARTIAL:
+real-backend/browser combination and startup subtitle readiness are not yet proven, along with the
+remaining cases listed in the measured reports. The #307 local CI remains separate baseline evidence.

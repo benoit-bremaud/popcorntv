@@ -147,7 +147,9 @@ Machine-readable observations: [backend](2026-11-12-issue-308-backend.json) and
 
 ## Remaining gate
 
-Keep #308 open. The actual PopcornTV browser/HLS path, seeks outside coverage, variable bitrate,
+The subsequent [player experiment](2026-11-12-issue-308-player.md) validated the actual HLS/player
+with a controlled verified writer, including normal end and cancellation. Keep #308 open.
+The combined real-backend/browser path, seeks outside coverage, variable bitrate,
 mid-transfer cancellation/restart, unexpected tunnel failure and Pi limits remain unverified.
 Passing these bounded experiments does not make a wishlist title ready to watch.
 
