@@ -3,7 +3,12 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath, URL } from 'node:url';
 import { test } from 'node:test';
-import { bencode, fixtureTorrent, validateTopology } from './qbittorrent-spike.mjs';
+import {
+  bencode,
+  fixtureTorrent,
+  validateTopology,
+  parseApiResponse,
+} from './qbittorrent-spike.mjs';
 
 const composeFile = fileURLToPath(new URL('../deploy/recovery-spike/compose.yml', import.meta.url));
 function topology() {
@@ -72,4 +77,20 @@ test('topology gate refuses public/host networking, root, missing pin or widened
     mutate(changed);
     assert.throws(() => validateTopology(changed));
   }
+});
+
+test('API confirmation accepts 200 or 204 and extracts a session without accepting auth failures', () => {
+  const legacy = parseApiResponse(
+    'HTTP/1.1 200 OK\r\nSet-Cookie: SID=synthetic-session; path=/\r\n\r\nOk.',
+  );
+  assert.equal(legacy.body, 'Ok.');
+  assert.equal(legacy.sessionCookie, 'SID=synthetic-session');
+  const modern = parseApiResponse(
+    'HTTP/1.1 204 No Content\r\nSet-Cookie: QBT_SID_8080=synthetic-session; HttpOnly; path=/\r\n\r\n',
+  );
+  assert.equal(modern.sessionCookie, 'QBT_SID_8080=synthetic-session');
+  assert.equal(parseApiResponse('HTTP/1.1 204 No Content\r\n\r\n').body, '');
+  for (const status of [401, 403, 500])
+    assert.throws(() => parseApiResponse(`HTTP/1.1 ${status} Failure\r\n\r\n`), /qbit_api_status/);
+  assert.throws(() => parseApiResponse('not HTTP'), /Invalid API response/);
 });

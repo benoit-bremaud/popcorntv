@@ -56,6 +56,20 @@ export function fixtureTorrent(bytes) {
   return { bytes: bencode({ info }), hash: createHash('sha1').update(bencode(info)).digest('hex') };
 }
 
+/** qBittorrent 5.3 can confirm actions with 204, while older versions use 200 with a body. */
+export function parseApiResponse(raw) {
+  const separator = raw.indexOf('\r\n\r\n');
+  assert(separator >= 0, 'Invalid API response');
+  const headers = raw.slice(0, separator);
+  const status = Number(/^HTTP\/\S+ (\d+)/.exec(headers)?.[1]);
+  if (![200, 204].includes(status)) throw new Error(`qbit_api_status:${status}`);
+  return {
+    status,
+    body: raw.slice(separator + 4),
+    sessionCookie: /set-cookie:\s*((?:SID|QBT_SID_\d+)=[^;\r\n]+)/i.exec(headers)?.[1],
+  };
+}
+
 /** Refuse a weaker Compose topology before any container is started. */
 export function validateTopology(config) {
   assert.equal(Object.keys(config.services).sort().join(','), 'seed,target');
@@ -171,14 +185,9 @@ export async function runBackendSpike() {
       ['compose', '-f', COMPOSE, 'exec', '-T', service, 'curl', '--config', '-'],
       { env, input: lines.join('\n') + '\n' },
     );
-    const separator = raw.indexOf('\r\n\r\n');
-    assert(separator >= 0, 'Invalid API response');
-    const headers = raw.slice(0, separator);
-    const status = Number(/^HTTP\/\S+ (\d+)/.exec(headers)?.[1]);
-    if (status !== 200) throw new Error(`qbit_api_status:${path}:${status}`);
-    const sid = /set-cookie:\s*(SID=[^;\r\n]+)/i.exec(headers)?.[1];
-    if (sid) cookies.set(service, sid);
-    return raw.slice(separator + 4);
+    const response = parseApiResponse(raw);
+    if (response.sessionCookie) cookies.set(service, response.sessionCookie);
+    return response.body;
   };
   const json = async (...args) => JSON.parse(await api(...args));
   try {
@@ -198,11 +207,14 @@ export async function runBackendSpike() {
     started = true;
     await compose('up', '-d', '--wait', '--wait-timeout', '90');
     for (const service of ['seed', 'target']) {
-      assert.equal(
-        (
-          await api(service, 'auth/login', { username: 'spike', password: passwords.get(service) })
-        ).trim(),
-        'Ok.',
+      await assert.rejects(api(service, 'app/preferences'), /qbit_api_status:(401|403)/);
+      const login = await api(service, 'auth/login', {
+        username: 'spike',
+        password: passwords.get(service),
+      });
+      assert(
+        ['', 'Ok.'].includes(login.trim()) && cookies.has(service),
+        'Login did not establish an authenticated session',
       );
       const prefs = await json(service, 'app/preferences');
       assert.equal(prefs.dht, false);
@@ -239,6 +251,7 @@ export async function runBackendSpike() {
     const began = performance.now();
     let prefix = 0;
     let firstFrame = null;
+    let firstFrameCacheEvidence;
     let observations = 0;
     let stopped = false;
     let observationFailure = null;
@@ -294,6 +307,15 @@ export async function runBackendSpike() {
             verifiedBytes: prefix,
             complete: prefix === fixture.bytes.length,
           };
+          // Independent byte evidence: a stale API observation alone cannot prove incompleteness.
+          firstFrameCacheEvidence = readFile(join(root, 'target-data', 'front.mp4')).then(
+            (bytes) => ({
+              allReferenceBytesPresent: bytes.equals(fixture.bytes),
+              observedAfterMs: Math.round(performance.now() - began),
+            }),
+          );
+          // Observe errors immediately, even while FFmpeg continues decoding.
+          firstFrameCacheEvidence.catch(() => undefined);
         },
       });
       assert.equal(result.frames, reference.frames);
@@ -302,6 +324,13 @@ export async function runBackendSpike() {
         firstFrame && !firstFrame.complete,
         'Transfer completed before any progressive frame was observed',
       );
+      const cacheEvidence = await firstFrameCacheEvidence;
+      assert.equal(
+        cacheEvidence.allReferenceBytesPresent,
+        false,
+        'Stale API state cannot prove progressive decode',
+      );
+      firstFrame.cacheEvidence = cacheEvidence;
     } finally {
       stopped = true;
       await poll;
@@ -311,11 +340,13 @@ export async function runBackendSpike() {
     await compose('restart', 'target');
     await compose('up', '-d', '--wait', '--wait-timeout', '90');
     cookies.delete('target');
-    assert.equal(
-      (
-        await api('target', 'auth/login', { username: 'spike', password: passwords.get('target') })
-      ).trim(),
-      'Ok.',
+    const login = await api('target', 'auth/login', {
+      username: 'spike',
+      password: passwords.get('target'),
+    });
+    assert(
+      ['', 'Ok.'].includes(login.trim()) && cookies.has('target'),
+      'Restart login did not establish a session',
     );
     const restored = await json('target', `torrents/pieceStates?hash=${torrent.hash}`);
     assert.equal(
