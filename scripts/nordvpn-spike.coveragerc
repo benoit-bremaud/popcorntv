@@ -1,0 +1,10 @@
+# Opt-in experiment only; application coverage remains owned by the Vitest workspaces.
+[run]
+branch = True
+include = scripts/nordvpn-spike.py
+data_file = coverage/nordvpn/.coverage
+
+[report]
+fail_under = 100
+precision = 2
+show_missing = True

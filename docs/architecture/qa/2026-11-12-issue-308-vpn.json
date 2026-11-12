@@ -1,0 +1,18 @@
+{
+  "stage": "NordVPN namespace probe",
+  "vpnImage": "qmcgaw/gluetun@sha256:cbafe0945d0fe5a3c55ca64d43a85c5db270458f4c645ee65797b527f6f57a64",
+  "connected": true,
+  "downloadClientRunning": true,
+  "clientDiscoveryDisabled": true,
+  "egressDiffersFromHost": true,
+  "dnsWorked": true,
+  "stoppedIpv4Blocked": true,
+  "stoppedIpv6Blocked": true,
+  "stoppedDirectDnsBlocked": true,
+  "reconnected": true,
+  "limits": [
+    "No torrent or application playback",
+    "Controlled tunnel stop, not packet loss or container restart",
+    "IPv6 disabled, not tunneled"
+  ]
+}

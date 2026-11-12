@@ -195,7 +195,9 @@ async function decode({ inputPath, feed, onVideoFrame = () => undefined, timeout
   }
 }
 
-async function fixture(directory) {
+async function fixture(directory, durationSec = 6) {
+  if (!Number.isInteger(durationSec) || durationSec < 1 || durationSec > 30)
+    throw new RangeError('Invalid fixture duration');
   const subtitle = join(directory, 'captions.srt');
   await writeFile(subtitle, '1\n00:00:00,000 --> 00:00:02,000\nSous-titre synthetique de test.\n');
   const front = join(directory, 'front.mp4');
@@ -219,7 +221,7 @@ async function fixture(directory) {
     '-i',
     subtitle,
     '-t',
-    '6',
+    String(durationSec),
     '-map',
     '0:v',
     '-map',

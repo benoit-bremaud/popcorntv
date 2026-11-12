@@ -29,8 +29,11 @@ in that experiment to protect with a commercial exit tunnel.
 
 Published stable Gluetun manifest inspected on 2026-11-12:
 `qmcgaw/gluetun:v3.41.3@sha256:fa19cc76b2af13d57a8d3dc3066f2ada061b1c761b8aecf989b3877c0486e027`.
-The manifest includes amd64 and arm64, but this image has not been pulled, scanned or executed.
-Do not treat this pin as a security approval or use `latest` as a substitute.
+The manifest includes amd64 and arm64. Subsequent local qualification pulled this image and
+rejected it because its HIGH/CRITICAL scan gate failed; it was not executed with credentials.
+The bounded VPN experiment instead used a scanned upstream development digest. See the
+[backend/VPN evidence](../qa/2026-11-12-issue-308-backend-vpn.md) for the exact pin, measured
+permissions, comparison and limits. This is not production approval of that development build.
 
 NordVPN's manual setup documentation now includes WireGuard. Credentials/configuration must
 be supplied through local secret files, never the chat or repository. Actual secret presence,

@@ -199,7 +199,7 @@ export async function runBackendSpike() {
     for (const service of ['seed', 'target'])
       passwords.set(service, await initialize(root, service));
     validateTopology(JSON.parse(await compose('config', '--format', 'json')));
-    const fixture = await createSyntheticFixture(join(root, 'seed-data'));
+    const fixture = await createSyntheticFixture(join(root, 'seed-data'), 30);
     const torrent = fixtureTorrent(fixture.bytes);
     for (const service of ['seed', 'target'])
       await writeFile(join(root, `${service}-config`, 'fixture.torrent'), torrent.bytes);
@@ -246,7 +246,7 @@ export async function runBackendSpike() {
     assert.match(seedIp, /^\d+\.\d+\.\d+\.\d+$/);
     await api('seed', 'torrents/add', null, true);
     await api('target', 'torrents/add', null, true);
-    await api('target', 'torrents/setDownloadLimit', { hashes: torrent.hash, limit: '65536' });
+    await api('target', 'torrents/setDownloadLimit', { hashes: torrent.hash, limit: '131072' });
     await api('target', 'torrents/addPeers', { hashes: torrent.hash, peers: `${seedIp}:6881` });
     const began = performance.now();
     let prefix = 0;
@@ -258,7 +258,7 @@ export async function runBackendSpike() {
     const poll = (async () => {
       try {
         while (!stopped && prefix < fixture.bytes.length) {
-          if (performance.now() - began > 45_000) throw new Error('backend_transfer_timeout');
+          if (performance.now() - began > 90_000) throw new Error('backend_transfer_timeout');
           const states = await json('target', `torrents/pieceStates?hash=${torrent.hash}`);
           prefix = verifiedPrefix({
             states,
@@ -281,7 +281,7 @@ export async function runBackendSpike() {
       }
       handle = await open(join(root, 'target-data', 'front.mp4'), 'r');
       const result = await decodeSyntheticMedia({
-        timeoutMs: 50_000,
+        timeoutMs: 90_000,
         feed: async (stdin, signal) => {
           for (let offset = 0; offset < fixture.bytes.length; offset += PIECE) {
             const end = Math.min(fixture.bytes.length, offset + PIECE);
@@ -363,6 +363,7 @@ export async function runBackendSpike() {
       stage: 'real isolated qBittorrent transfer',
       versions,
       fixtureBytes: fixture.bytes.length,
+      fixtureDurationSec: fixture.durationSec,
       observations,
       firstFrame,
       byteAndDecodeMatch: true,

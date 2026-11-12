@@ -7,9 +7,15 @@ import {
   readVerifiedRange,
   traceMode,
   verifiedPrefix,
+  createSyntheticFixture,
 } from './progressive-playback-spike.mjs';
 
 const layout = { states: [2, 2, 0, 2], pieceSize: 10, fileOffset: 0, fileSize: 40 };
+
+test('fixture duration is bounded before any directory access or process launch', async () => {
+  for (const duration of [0, 31, -1, 1.5, NaN])
+    await assert.rejects(createSyntheticFixture('/missing-directory', duration), RangeError);
+});
 
 test('scattered completion cannot fill a missing piece in the playable prefix', () => {
   assert.equal(verifiedPrefix(layout), 20);

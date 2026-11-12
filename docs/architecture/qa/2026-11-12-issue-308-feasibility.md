@@ -71,10 +71,12 @@ A full workspace CI rerun was not performed for this isolated harness stage.
 
 ## Next gate
 
-Stage 2 must use a real isolated qBittorrent instance and controlled local content to validate
-piece-to-file mapping, disk visibility, completion, cancellation and restart. No matching local
-image was available; installation/container setup has not been authorized or performed.
-Stage 3 must exercise the actual player/HLS path. Keep #308 open: **PARTIAL**, not GO.
+Subsequent owner-authorized stage-2 execution validated a real isolated qBittorrent transfer,
+disk visibility, completion and restart after completion. A separate NordVPN namespace
+experiment also passed bounded connection/stop/recovery checks. See the
+[backend/VPN report](2026-11-12-issue-308-backend-vpn.md) for measurements and remaining gaps.
+Cancellation and mid-transfer restart still need evidence; stage 3 must exercise the actual
+player/HLS path. Keep #308 open: **PARTIAL**, not GO.
 
 ## VPN requirement raised during the experiment
 
