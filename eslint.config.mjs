@@ -4,6 +4,8 @@ import tseslint from 'typescript-eslint';
 export default tseslint.config(
   {
     ignores: [
+      // Agent worktrees are separate checkouts, not inputs to this repository's checks.
+      '.claude/**',
       '**/dist/**',
       '**/build/**',
       '**/coverage/**',

@@ -16,6 +16,13 @@ describe('formatDateTime', () => {
     expect(formatDateTime('2026-01-01T00:00:00.000Z', 'UTC')).toBe('2026-01-01 00:00 Z');
   });
 
+  it('writes a regional zero offset as Z in winter and preserves daylight saving time', () => {
+    expect(formatDateTime('2026-01-01T12:00:00.000Z', 'Europe/London')).toBe('2026-01-01 12:00 Z');
+    expect(formatDateTime('2026-07-01T12:00:00.000Z', 'Europe/London')).toBe(
+      '2026-07-01 13:00 +01:00',
+    );
+  });
+
   it('writes a half-hour offset in full', () => {
     expect(formatDateTime('2026-11-08T12:00:00.000Z', 'Asia/Kolkata')).toBe(
       '2026-11-08 17:30 +05:30',
