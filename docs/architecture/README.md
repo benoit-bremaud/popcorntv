@@ -3,6 +3,20 @@
 Docs-as-code, organised by zoom level (C4) with UML 2.5 diagrams in Mermaid and MADR
 decision records. The conception is the source of truth; code conforms to it.
 
+## Adaptive wishlist study (#307)
+
+Draft, not accepted or implemented: [specification](specs/adaptive-wishlist-lifecycle.md),
+[analysis use cases](diagrams/adaptive-wishlist/01-use-case.md),
+[lifecycle](diagrams/adaptive-wishlist/05-state-preparation.md),
+[traceability](traceability-matrix.md), [glossary](glossary.md).
+The proposed method is risk-first UP elaboration ([ADR-0033](decisions/0033-elaborate-adaptive-playback-risks-before-construction.md)),
+with backend feasibility #308 before detailed construction. Audience: owner, household viewers
+and implementer. Goals: private persistent wishes, daily discovery, bounded preparation and
+honest ready-to-watch notices. API/schema/classes and deployment decisions await the spike.
+Existing context below describes current main behavior, not the proposed recovery service.
+The Seerr #128 design/runtime commits remain on a separate local branch; integration must
+preserve its ADR-0032, UC31 and requirement IDs.
+
 ## Context (C4 level 1)
 
 ```mermaid
@@ -38,6 +52,7 @@ docs/architecture/
 
 | Feature    | Diagrams                                | Status  |
 | ---------- | --------------------------------------- | ------- |
+| `adaptive-wishlist` | [spec](specs/adaptive-wishlist-lifecycle.md), [diagrams](diagrams/adaptive-wishlist) | draft — owner review and #308 evidence pending |
 | `playback` | [diagrams/playback](diagrams/playback)  | design  |
 
 ## Decisions
@@ -46,6 +61,7 @@ docs/architecture/
 | ------------------------------------------ | ------------------------------ | -------- |
 | [0001](decisions/0001-all-typescript-stack.md) | All-TypeScript pnpm monorepo | accepted |
 | [0002](decisions/0002-file-naming-parser.md) | File-naming parser: own regex parser | accepted |
+| [0033](decisions/0033-elaborate-adaptive-playback-risks-before-construction.md) | Elaborate adaptive playback risks before construction | proposed |
 
 ## Specifications and QA
 
