@@ -61,16 +61,19 @@ function group(name: string): HTMLElement {
 
 describe('CatalogPage', () => {
   it('opens the title Discover asked for once the catalog is loaded (UC26)', async () => {
-    render(
-      <CatalogPage
-        profileId="default"
-        load={async () => catalogOf(CATALOG)}
-        progress={async () => []}
-        openMediaId="heat"
-      />,
-    );
+    // Flush the resolved load and the dialog's showModal effect before querying accessibility.
+    await act(async () => {
+      render(
+        <CatalogPage
+          profileId="default"
+          load={async () => catalogOf(CATALOG)}
+          progress={async () => []}
+          openMediaId="heat"
+        />,
+      );
+    });
 
-    expect(await screen.findByRole('dialog', { name: 'Heat' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Heat' })).toBeInTheDocument();
   });
 
   it('shows the home view: hero, top rated, type rows and genre rows', async () => {
