@@ -1,0 +1,53 @@
+{
+  "verdict": "PARTIAL",
+  "stage": "deterministic local media mechanics",
+  "tools": {
+    "node": "v22.23.4",
+    "platform": "linux",
+    "arch": "x64",
+    "ffmpeg": "ffmpeg version 8.0.1-3ubuntu2 Copyright (c) 2000-2025 the FFmpeg developers",
+    "ffprobe": "ffprobe version 8.0.1-3ubuntu2 Copyright (c) 2007-2025 the FFmpeg developers"
+  },
+  "backendVerified": false,
+  "browserVerified": false,
+  "hlsVerified": false,
+  "piVerified": false,
+  "fixture": {
+    "bytes": 312655,
+    "durationSec": 6,
+    "audioTags": ["eng", "fra"],
+    "subtitleTag": "fra",
+    "synthetic": true
+  },
+  "fast": {
+    "mode": "progressive",
+    "inputBytesPerSec": 156328,
+    "elapsedMs": 2131,
+    "firstFrame": {
+      "afterMs": 753,
+      "verifiedBytes": 114688,
+      "complete": false
+    },
+    "decodedMatchesReference": true
+  },
+  "slow": {
+    "mode": "full-file",
+    "inputBytesPerSec": 26055,
+    "elapsedMs": 12777,
+    "firstFrame": {
+      "afterMs": 12712,
+      "verifiedBytes": 312655,
+      "complete": true
+    },
+    "decodedMatchesReference": true
+  },
+  "missingRangeTimesOut": true,
+  "stalledDecoderTerminated": true,
+  "endMetadataRequiresFallback": true,
+  "limits": [
+    "Illustrative trace thresholds, not production readiness policy",
+    "No real qBittorrent or other backend",
+    "No player/HLS/seek/import/restart integration proof",
+    "Audio language labels are synthetic, not linguistic validation"
+  ]
+}

@@ -5,8 +5,9 @@ Initial study and proposed experiment for #308, following the lifecycle dossier 
 ## Status and evidence
 
 This is a research/experiment plan, not proof of progressive playback or adoption of a backend.
-The owner authorized moving to #308 after merging #317. Runtime/harness implementation and
-backend installation remain subject to the concrete plan and protocol choice below.
+The owner authorized moving to #308 after merging #317. The owner accepted option A and the concrete stage-1 harness plan on 2026-11-12.
+Stage-1 implementation and its targeted execution are authorized; backend installation remains
+subject to a separately reviewed isolated setup.
 
 Observed locally on 2026-11-12: FFmpeg and ffprobe 8.0.1-3ubuntu2 are available. Neither
 `qbittorrent` nor `qbittorrent-nox` resolves on PATH. This does not inventory Docker containers
@@ -38,7 +39,7 @@ shared first/last piece. The spike must obtain validated torrent layout metadata
 first protocol experiment explicitly to single-file torrents. It must never infer offsets from
 rounded piece ranges or mix global torrent speed with one selected file's useful recovery rate.
 
-## Proposed prototype decision
+## Accepted investigation direction
 
 Scores are engineering judgments based on reviewed capabilities, not benchmark results.
 Weights total 100. This decision selects what to investigate first, not what to deploy.
@@ -61,7 +62,7 @@ correctness. Sensitivity: lowering A's coverage score from 4 to 2 drops A to 365
 380. Therefore A is the proposed experiment, with a no-go if the read guarantee fails.
 B is the design fallback, requiring a revised native/service boundary rather than a config
 switch. C is a full-download safety path, not satisfaction of the progressive requirement.
-Weights, choice and concrete implementation plan await owner validation.
+The owner accepted the recommendation and stage-1 plan on 2026-11-12. This does not approve deployment or establish backend feasibility.
 
 ## Experiment stages and proposed files
 
@@ -134,5 +135,4 @@ but backend/player integration is not proven. BLOCKED means a needed tool/setup/
 is absent. NO-GO means the candidate violates a required invariant. None permits pretending
 that full-file-only playback has fulfilled progressive playback.
 
-No runtime prototype, backend experiment or test has been executed for #308 in this study.
-The #307 local CI and production-build smoke are baseline validation, not evidence for #308.
+Stage 1 is now implemented and executed: see the [measured report](../qa/2026-11-12-issue-308-feasibility.md). Twelve targeted tests and the synthetic FFmpeg experiment passed. Overall verdict remains PARTIAL until a real backend and actual player path are verified. The #307 local CI remains separate baseline evidence.
