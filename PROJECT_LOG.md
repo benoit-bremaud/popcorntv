@@ -4,6 +4,24 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-12 — Adaptive wishlist design baseline (PR #317, `82f3fee`)
+
+- Squash-merged PR #317 from `docs/307-adaptive-wishlist-lifecycle` after the owner's explicit
+  authorization. Added the #307 lifecycle dossier and recorded per-episode notices, original
+  and French audio with French subtitles, automatic user requests and child invitation scope
+  (#316). Backend feasibility and parental defaults remain explicit future work.
+- Local checks passed: typing, lint/log coverage, formatting, production builds, 1,356 tests
+  (7 skipped), coverage thresholds, redacted full-history Gitleaks and SonarQube. The two
+  Chromium smoke cases also passed against the production build before merge, supplementing
+  the development-server run recorded in the original report.
+- Independent review found two documentation Should items (MCDA arithmetic/table continuity),
+  fixed in `54950da` and verified with push gate open. Targeted worktree-ignore and UTC-offset
+  fixes unblocked local checks. No hosted review/CI was requested and no deployment occurred.
+- Merge mechanism: repository has no signed attestation script; the explicit owner-approved
+  local-CI merge used `MERGE_GATE_WAIVER` referencing #307, not an admin override or red-check bypass.
+- Started #308 on `test/308-adaptive-wishlist-feasibility`: primary-source capability study and
+  proposed isolated experiment only; no backend adoption, installation or real acquisition.
+
 ## 2026-11-12 — TMDB QA pass on local staging (`8c1ea1f`), #300 closed
 
 - #300: the shared TMDB Read Access Token (the one in the Pi's `popcorntv.env`) is now in the
