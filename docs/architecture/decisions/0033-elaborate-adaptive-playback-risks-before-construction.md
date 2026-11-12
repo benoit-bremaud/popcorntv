@@ -18,7 +18,7 @@ Judgment scores 0–5, not measurements. Weights total 100. A: risk-first UP ela
 | Retire unknown media/backend risks first | 45 | 5 — explicit elaboration spike before construction | 4 — supports elaboration but detailed use-case allocation can precede evidence | 2 — short path to design assumes more stable behavior |
 | Proportionate artifact effort | 30 | 4 — bounded spec and selected views | 4 — same views plus interaction allocation | 5 — shortest understood-use-case path |
 | Traceability into later implementation | 25 | 4 — requirements/state and planned cases, class detail deferred | 5 — explicit interaction-to-responsibility allocation | 4 — strong use-case traceability, risk experiment separate |
-| Total | 100 | **445/500** | **425/500** | **345/500** |
+| Total | 100 | **445/500** | **425/500** | **340/500** |
 
 A versus B: the unknown is whether partial bytes can be played safely; delaying detailed class/API allocation until the spike avoids treating guessed protocol capabilities as facts. B is the design fallback once evidence stabilizes. Sensitivity: transferring ten weight points from risk retirement to traceability gives A 435 and B 435; rankings depend on prioritizing the unresolved media risk. Scores and weights await owner validation with this dossier.
 
@@ -30,4 +30,4 @@ Fallback B costs an interaction/operation allocation pass after the spike; it do
 
 ## Consequences
 
-Episode notices, original/French audio with French subtitles and automatic signed-in-user acquisition are now owner-confirmed. Remaining quality/size, resource and backend decisions stay explicit. No backend installation, runtime privilege change, real source request or deployment has been performed; runtime changes must implement the newly confirmed user-triggered acquisition policy through the accepted technical boundary. No tests or diagram rendering have run. Acceptance of this methodology does not establish technical feasibility.
+Episode notices, original/French audio with French subtitles and automatic signed-in-user acquisition are now owner-confirmed. Remaining quality/size, resource and backend decisions stay explicit. No backend installation, runtime privilege change, real source request or deployment has been performed; runtime changes must implement the newly confirmed user-triggered acquisition policy through the accepted technical boundary. Existing application tests and local CI passed as recorded in the #307 QA report; future recovery tests are not implemented. Diagram rendering was not run. Acceptance of this methodology does not establish technical feasibility.

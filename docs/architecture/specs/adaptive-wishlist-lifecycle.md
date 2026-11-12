@@ -2,7 +2,7 @@
 
 Design draft for [#307](https://github.com/benoit-bremaud/popcorntv/issues/307), first brick of epic [#306](https://github.com/benoit-bremaud/popcorntv/issues/306).
 
-**Status:** owner goals confirmed in conversation; this design and its open decisions await owner review. No runtime implementation, test execution, deployment or backend feasibility is claimed.
+**Status:** owner goals confirmed in conversation; this design and its open decisions await owner review. No recovery runtime implementation, deployment or backend feasibility is claimed. Existing application tests and local CI have now passed; see the #307 QA report.
 
 ## 1. Evidence and scope
 
@@ -166,4 +166,4 @@ Four-pass self-review on 2026-11-12:
 3. Simplicity: reuse bell, auth and serial-timer conventions, add persisted due dates only where restart semantics require them; no framework or irreversible cleanup.
 4. Pattern fit/risks: only external IO seams justify ports. Unverified partial-media support is the first technical gate; no source or throughput forecast is treated as guaranteed.
 
-No independent review, diagram renderer run or runtime check has been performed. Tests are to be written with the subsequent bricks and run during final local validation per the owner workflow. The #308 targeted feasibility experiment must be explicitly authorized before downstream runtime assumptions are accepted.
+An independent read-only adversarial review covered `main...1011f04`: no blocking functional/code defects, with two documentation findings corrected (MCDA arithmetic and table continuity). Verification of the fix commit is recorded in the QA report. Existing application tests, browser smoke, build, lint, typing, secret scan and local SonarQube passed. The future recovery/child-account tests remain to be written in their implementation bricks; no diagram renderer or real recovery-backend validation ran. The #308 targeted feasibility experiment must be explicitly authorized before downstream runtime assumptions are accepted.

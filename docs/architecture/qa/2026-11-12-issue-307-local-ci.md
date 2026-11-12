@@ -49,8 +49,15 @@ configuration and API mocks, not a deployed service or a production-preview conf
 
 No recovery backend, source availability, partial-file playback, language-track acquisition or
 child-account enforcement was tested: those are specified future work, not implemented here.
-The dossier received a manual self-review, not an independent adversarial review. Mermaid source
+An independent read-only adversarial review covered `main...1011f04`. It found no blocking
+functional/code defect and two documentation corrections: option C totals 340/500 and T-24/T-25
+must remain in the traceability table. Both are corrected; verification of the fix commit is pending.
+This review does not constitute owner acceptance of the draft design. Mermaid source
 was inspected but not rendered. Docker/image scans and live staging QA were not run for this
 scope. No signed gate attestation was produced, and results do not authorize deployment or merge.
 The local scan logs are in `/tmp/popcorntv-local-ci/` and may be ephemeral; this report preserves
 summaries only and contains no credentials.
+
+
+Relative Markdown file links were also checked locally: 25 targets, no missing files.
+The final redacted Gitleaks scan at `1011f04` covered 228 commits and reported no leaks.

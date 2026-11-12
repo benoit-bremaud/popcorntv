@@ -32,7 +32,6 @@ Incremental adaptive-wishlist design index; no historical coverage claim. IDs RE
 | T-21 | Reopen loads unread notice and exact-target Play rechecks stale generation/access. | #308–#314 as mapped by REQ-21; consolidated #315 |
 | T-22 | Removing one interest preserves shared work and leases, last-interest cancellation never deletes files. | #308–#314 as mapped by REQ-22; consolidated #315 |
 | T-23 | Restart reconciles unfinished writes/cache before readiness without duplicate submissions. | #308–#314 as mapped by REQ-23; consolidated #315 |
-
 | T-24 | Missing original/French audio or usable French subtitles prevents readiness, including per-episode checks and original French audio satisfying both roles. | #308, #311–#314 |
 | T-25 | Each authenticated own-profile wish triggers automatic preparation without per-wish owner approval when account parental policy permits; anonymous/cross-profile intent and forged upstream-user overrides are refused. | #309 |
 
