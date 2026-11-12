@@ -1,4 +1,4 @@
-/* global Buffer, process, structuredClone */
+/* global Buffer, process, structuredClone, console */
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath, URL } from 'node:url';
@@ -8,7 +8,112 @@ import {
   fixtureTorrent,
   validateTopology,
   parseApiResponse,
+  verifyCachePrefix,
+  closeTransfer,
+  validateBrowserEvidence,
+  runBackendSpike,
 } from './qbittorrent-spike.mjs';
+
+if (process.env['RUN_BACKEND_SPIKE'] === '1') {
+  test(
+    'standalone backend still decodes matching frames and restores completed restart',
+    { timeout: 150_000 },
+    async () => {
+      const result = await runBackendSpike();
+      assert.equal(result.byteAndDecodeMatch, true);
+      assert.equal(result.completedTransferRestartRestored, true);
+      assert.equal(result.browserVerified, false);
+    },
+  );
+}
+
+test('browser evidence rejects absent, complete, captionless or unverified callback results', () => {
+  const valid = {
+    firstBrowserFrame: { verifiedBytes: 10, complete: false, allReferenceBytesPresent: false },
+    externalCacheReadOnly: true,
+    subtitleReadyBeforeVideo: true,
+    hlsSessionStarted: true,
+    frenchAudioMapped: true,
+    activeCueAtFirstFrame: { currentTime: 0.5, activeFrenchCue: true },
+    normalPlaybackEndObserved: true,
+  };
+  validateBrowserEvidence(valid, 100);
+  validateBrowserEvidence(
+    {
+      ...valid,
+      normalPlaybackEndObserved: false,
+      cancelledWhileIncomplete: true,
+      sessionDeleteConfirmed: true,
+    },
+    100,
+  );
+  for (const value of [
+    null,
+    {},
+    { ...valid, subtitleReadyBeforeVideo: false },
+    { ...valid, firstBrowserFrame: { ...valid.firstBrowserFrame, allReferenceBytesPresent: true } },
+    { ...valid, normalPlaybackEndObserved: false },
+    { ...valid, activeCueAtFirstFrame: { currentTime: 4, activeFrenchCue: true } },
+  ])
+    assert.throws(() => validateBrowserEvidence(value, 100));
+});
+
+test('consumer cleanup failure survives an additional backend FD failure and later closes still run', async (t) => {
+  t.mock.method(console, 'error', () => undefined);
+  const primary = Object.assign(new Error('consumer failure'), { cleanupIncomplete: true });
+  const fdFailure = new Error('FD failure');
+  const closed = [];
+  const combined = await closeTransfer(primary, [
+    [
+      'first',
+      async () => {
+        closed.push('first');
+        throw fdFailure;
+      },
+    ],
+    ['second', async () => closed.push('second')],
+  ]);
+  assert.equal(combined.cleanupIncomplete, true);
+  assert.deepEqual(combined.errors, [primary, fdFailure]);
+  assert.deepEqual(closed, ['first', 'second']);
+  assert.equal(await closeTransfer(primary, []), primary);
+  const isolated = await closeTransfer(undefined, [
+    [
+      'fd',
+      async () => {
+        throw fdFailure;
+      },
+    ],
+  ]);
+  assert.equal(isolated.cleanupIncomplete, true);
+});
+
+test('coverage advances only after independently matching every readable cache range', async () => {
+  const bytes = Buffer.alloc(40_000, 17);
+  const handle = {
+    read: async (target, offset, length, position) => {
+      target.set(bytes.subarray(position, position + length), offset);
+      return { bytesRead: length };
+    },
+  };
+  assert.equal(await verifyCachePrefix(undefined, bytes, 0, 0), 0);
+  assert.equal(await verifyCachePrefix(handle, bytes, 0, bytes.length), bytes.length);
+  for (const [previous, reported] of [
+    [1, 0],
+    [-1, 0],
+    [0, bytes.length + 1],
+    [0.5, 1],
+  ])
+    await assert.rejects(verifyCachePrefix(handle, bytes, previous, reported));
+  await assert.rejects(
+    verifyCachePrefix({ read: async () => ({ bytesRead: 0 }) }, bytes, 0, 1),
+    /not readable/,
+  );
+  await assert.rejects(
+    verifyCachePrefix({ read: async () => ({ bytesRead: 1 }) }, bytes, 0, 1),
+    /differs from reference/,
+  );
+});
 
 const composeFile = fileURLToPath(new URL('../deploy/recovery-spike/compose.yml', import.meta.url));
 function topology() {

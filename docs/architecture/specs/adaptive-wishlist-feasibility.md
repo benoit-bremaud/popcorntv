@@ -139,6 +139,55 @@ configured-service test if those services are not available in the isolated envi
 | Completion/import | Existing reader keeps consistent bytes and identity |
 | Resource use | Record actual cache/CPU/memory and concurrency, do not extrapolate laptop results to Pi |
 
+## Combined backend/player experiment
+
+The owner approved combining the real backend and player and requested early adversarial review.
+The review identified telemetry-only coverage, destructive reuse of the controlled-writer setup,
+subtitle cache invalidation by mtime, short-circuiting cleanup and swallowed pipe errors as blockers.
+The combined experiment must address those before any positive claim.
+
+The bounded-prefix probe was executed on the synthetic control: 64/128/256/384 KiB prefixes
+all produced WebVTT equal to the complete control (exit 0 with partial-file stderr). This proves
+only the fixture's complete single early cue, not arbitrary embedded subtitle completeness.
+
+The independently reviewed comparison is:
+
+| Criterion | Weight | A: immutable verified prefix + segment barrier | B: API warm-up without barrier |
+|---|---:|---|---|
+| Subtitle-before-frame evidence | 40 | 5: deterministic ordering | 2: autoplay race remains |
+| Cleanup simplicity | 20 | 3: explicit cancellation needed | 4: fewer suspended responses |
+| Real-code reuse | 25 | 5: existing routes and player | 4: API availability only |
+| Bounded effort | 15 | 3: small additional mechanism | 4: simpler |
+| Total /500 | 100 | **430** | **320** |
+
+A is the investigation direction. Sensitivity: reducing its first score to 3 still gives 350,
+above B's 320. Further analysis remains available. No production source mode is enabled.
+
+Implementation sequence:
+
+1. Advance backend verified coverage only after reading actual cache bytes against the known
+   synthetic reference. Expose only a read-only source and bounded resume operation to a consumer
+   outside the polling loop; propagate failures. The backend owns its containers and workspace.
+2. Stop the real client at an incomplete prefix, await stopped state and read a private immutable
+   caption snapshot from actual target bytes. The complete control is an assertion/metadata oracle,
+   never the subtitle input. Resume only through the real client's API.
+3. In external-source player mode, never copy, truncate or write the target. Check its inode/size/mtime
+   across paused setup, scan using explicitly known control metadata and open the cache read-only.
+4. Feed subtitle extraction from the bounded immutable snapshot through the same tracked process
+   boundary. Compare the real subtitle API's entire VTT to the full-reference oracle before Play.
+   Clear only the experiment-owned derived subtitle cache to prove subsequent loading does not
+   depend on preserving mtime or reusing a stale cached response.
+5. The experiment-only loopback transport holds HLS segments with a bounded abortable barrier until
+   the browser has parsed the expected real text track. Release it only then, and observe the cue
+   in activeCues at the first decoded video time within its 0–2 second window.
+6. Observe both backend coverage and video-clock advancement while the target is still incomplete;
+   retain independent disk evidence, normal-end checks, structured diagnostics and source ownership.
+7. Attempt every cleanup; abort the barrier before server shutdown and retain private workspaces if
+   reader/process closure cannot be confirmed. Add fault tests, then request adversarial rereview.
+
+The full-file fallback remains mandatory whenever complete required captions cannot be established.
+This controlled-fixture experiment cannot justify arbitrary-film subtitle readiness or deployment.
+
 ## Exit conditions
 
 The #308 verdict is GO only for a measured backend/format/version combination that passes the

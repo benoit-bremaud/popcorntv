@@ -11,7 +11,64 @@ import {
   hasFrenchCue,
   hasEnded,
   runPlayerCli,
+  readinessGate,
+  cleanupAll,
+  activeFrenchFrame,
 } from './player-spike.mjs';
+
+test('caption readiness gate releases only explicitly and stays closed on abort or timeout', async () => {
+  const ready = readinessGate();
+  const waiting = ready.wait();
+  ready.release();
+  await waiting;
+  ready.abort();
+  await ready.wait();
+  const aborted = readinessGate();
+  const rejected = assert.rejects(aborted.wait(), /readiness_cancelled/);
+  aborted.abort();
+  await rejected;
+  assert.throws(() => aborted.release());
+  await assert.rejects(aborted.wait(), /readiness_cancelled/);
+  const timeout = readinessGate(10);
+  await assert.rejects(timeout.wait(), /readiness_timeout/);
+  assert.throws(() => timeout.release());
+  await assert.rejects(timeout.wait(), /readiness_timeout/);
+});
+
+test('one failed cleanup never prevents later resource closure or echoes its payload', async (t) => {
+  const logs = [];
+  t.mock.method(console, 'error', (line) => logs.push(line));
+  const closed = [];
+  const error = new Error('fixture-sensitive-cleanup-value');
+  const failures = await cleanupAll([
+    [
+      'first',
+      async () => {
+        closed.push('first');
+        throw error;
+      },
+    ],
+    ['second', async () => closed.push('second')],
+  ]);
+  assert.deepEqual(closed, ['first', 'second']);
+  assert.deepEqual(failures, [error]);
+  assert.equal(logs.join('').includes(error.message), false);
+});
+
+test('early-frame proof requires a decoded frame and the actual active cue in its time window', () => {
+  assert.equal(activeFrenchFrame(null), false);
+  for (const currentTime of [0, 2, 3]) assert.equal(activeFrenchFrame({ currentTime }), false);
+  const video = {
+    currentTime: 0.5,
+    getVideoPlaybackQuality: () => ({ totalVideoFrames: 1 }),
+    textTracks: [],
+  };
+  assert.equal(activeFrenchFrame(video), false);
+  video.textTracks = [{ activeCues: [{ text: 'Wrong cue' }] }];
+  assert.equal(activeFrenchFrame(video), false);
+  video.textTracks = [{ activeCues: [{ text: 'Sous-titre synthetique de test.' }] }];
+  assert.deepEqual(activeFrenchFrame(video), { currentTime: 0.5, activeFrenchCue: true });
+});
 
 test('CLI refuses implicit execution and reports results/errors without leaking exception values', async (t) => {
   const output = [],
@@ -217,8 +274,30 @@ test('spawn error plus exit notifies once and stderr retention is bounded', asyn
   assert.equal(state.exits[0].stderr.length, 2048);
 });
 
+test('broken stdin and failed backend coverage abort immediately rather than waiting for watchdog', async () => {
+  const broken = boundary({ bytes: Buffer.from('fixture'), prefix: () => 0 });
+  broken.child.stdin.emit(
+    'error',
+    Object.assign(new Error('synthetic pipe failure'), { code: 'EPIPE' }),
+  );
+  await broken.adapter.close();
+  assert.equal(broken.exits.length, 1);
+  assert.equal(broken.output.length, 0);
+  let reads = 0;
+  const failedPoll = boundary({
+    bytes: Buffer.from('fixture'),
+    prefix: () => {
+      if (reads++ > 0) throw new Error('synthetic coverage failure');
+      return 0;
+    },
+  });
+  await once(failedPoll.child, 'close');
+  await failedPoll.adapter.close();
+  assert.equal(failedPoll.output.length, 0);
+});
+
 // Explicit opt-in: the default file has only fast tests, with no browser or real FFmpeg.
-if (process.argv.includes('--browser')) {
+if (process.argv.includes('--browser') || process.env['RUN_PLAYER_SPIKE'] === '1') {
   test(
     'production player decodes a verified incomplete source and releases its session',
     { timeout: 90_000 },

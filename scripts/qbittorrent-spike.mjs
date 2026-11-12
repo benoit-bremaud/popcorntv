@@ -101,16 +101,83 @@ function command(binary, args, { env = process.env, input = '', timeout = 120_00
       binary,
       args,
       { env, timeout, maxBuffer: 2 * 1024 * 1024 },
-      (error, stdout, stderr) => {
+      (error, stdout) => {
         if (error) {
           // No raw command, response headers, input, configuration or credential-bearing cause.
-          reject(new Error(`${binary}_failed:${error.code ?? 'unknown'}:${stderr.slice(-1000)}`));
+          reject(new Error(`${binary}_failed:${error.code ?? 'unknown'}`));
         } else resolveResult(stdout);
       },
     );
     child.stdin.on('error', () => undefined);
     child.stdin.end(input);
   });
+}
+
+/** Advance only independently readable reference-matching coverage; regression invalidates the run. */
+export async function verifyCachePrefix(handle, bytes, previous, reported) {
+  assert(Number.isSafeInteger(previous) && Number.isSafeInteger(reported));
+  assert(previous >= 0 && reported >= previous && reported <= bytes.length);
+  for (let start = previous; start < reported; start += PIECE) {
+    const length = Math.min(PIECE, reported - start);
+    const part = Buffer.alloc(length);
+    const { bytesRead } = await handle.read(part, 0, length, start);
+    assert.equal(bytesRead, length, 'Reported range is not readable');
+    assert(
+      part.equals(bytes.subarray(start, start + length)),
+      'Reported range differs from reference',
+    );
+  }
+  return reported;
+}
+
+/** Preserve the consumer failure while attempting every backend close; unsafe cleanup retains the cache. */
+export async function closeTransfer(primaryFailure, resources) {
+  const failures = [];
+  for (const [resource, close] of resources) {
+    try {
+      await close();
+    } catch (error) {
+      failures.push(error);
+      console.error(
+        JSON.stringify({ event: 'qbit.cleanup_failed', resource, code: error.code ?? error.name }),
+      );
+    }
+  }
+  if (!failures.length) return primaryFailure;
+  const combined = new AggregateError(
+    primaryFailure ? [primaryFailure, ...failures] : failures,
+    'backend_cleanup_incomplete',
+  );
+  combined.cleanupIncomplete = true;
+  return combined;
+}
+
+/** Refuse accidental consumer success without the measured incomplete HLS/caption/read-only proof. */
+export function validateBrowserEvidence(result, fileSize) {
+  const frame = result?.firstBrowserFrame;
+  assert(
+    frame &&
+      Number.isSafeInteger(frame.verifiedBytes) &&
+      frame.verifiedBytes > 0 &&
+      frame.verifiedBytes < fileSize,
+  );
+  assert.equal(frame.complete, false);
+  assert.equal(frame.allReferenceBytesPresent, false);
+  for (const field of [
+    'externalCacheReadOnly',
+    'subtitleReadyBeforeVideo',
+    'hlsSessionStarted',
+    'frenchAudioMapped',
+  ])
+    assert.equal(result[field], true);
+  assert.equal(result.activeCueAtFirstFrame?.activeFrenchCue, true);
+  assert(
+    result.activeCueAtFirstFrame.currentTime > 0.2 && result.activeCueAtFirstFrame.currentTime < 2,
+  );
+  assert(
+    result.normalPlaybackEndObserved === true ||
+      (result.cancelledWhileIncomplete === true && result.sessionDeleteConfirmed === true),
+  );
 }
 
 async function initialize(root, service) {
@@ -148,16 +215,19 @@ async function initialize(root, service) {
 }
 
 /** Real local-peer transfer only; all temporary services/configs belong to this single run. */
-export async function runBackendSpike() {
+export async function runBackendSpike({ consume = null } = {}) {
+  assert(consume === null || typeof consume === 'function');
   const root = await mkdtemp(join(tmpdir(), 'popcorntv-qbit-'));
   const env = {
     ...process.env,
     SPIKE_ROOT: root,
     SPIKE_UID: String(process.getuid()),
     SPIKE_GID: String(process.getgid()),
+    COMPOSE_PROJECT_NAME: `popcorntv-recovery-spike-${randomBytes(6).toString('hex')}`,
   };
   const compose = (...args) => command('docker', ['compose', '-f', COMPOSE, ...args], { env });
   let started = false;
+  let retainWorkspace = false;
   const cookies = new Map();
   const passwords = new Map();
   const api = async (service, path, data, form = false) => {
@@ -255,87 +325,155 @@ export async function runBackendSpike() {
     let observations = 0;
     let stopped = false;
     let observationFailure = null;
+    let cacheHandle;
+    let browserResult = null;
+    const targetPath = join(root, 'target-data', 'front.mp4');
     const poll = (async () => {
       try {
         while (!stopped && prefix < fixture.bytes.length) {
           if (performance.now() - began > 90_000) throw new Error('backend_transfer_timeout');
           const states = await json('target', `torrents/pieceStates?hash=${torrent.hash}`);
-          prefix = verifiedPrefix({
+          const reported = verifiedPrefix({
             states,
             pieceSize: PIECE,
             fileOffset: 0,
             fileSize: fixture.bytes.length,
           });
+          if (reported > 0) cacheHandle ??= await open(targetPath, 'r');
+          prefix = await verifyCachePrefix(cacheHandle, fixture.bytes, prefix, reported);
           observations++;
           await delay(100);
         }
       } catch (error) {
         observationFailure = error;
+        console.error(
+          JSON.stringify({
+            event: 'qbit.coverage_failed',
+            code: error.code ?? error.name,
+            verifiedBytes: prefix,
+          }),
+        );
       }
     })();
     let handle;
+    let transferFailure;
     try {
-      while (prefix < PIECE * 4) {
+      while (prefix < PIECE * (consume ? 24 : 4)) {
         if (observationFailure) throw observationFailure;
         await delay(20);
       }
-      handle = await open(join(root, 'target-data', 'front.mp4'), 'r');
-      const result = await decodeSyntheticMedia({
-        timeoutMs: 90_000,
-        feed: async (stdin, signal) => {
-          for (let offset = 0; offset < fixture.bytes.length; offset += PIECE) {
-            const end = Math.min(fixture.bytes.length, offset + PIECE);
-            while (prefix < end) {
-              signal.throwIfAborted();
-              if (observationFailure) throw observationFailure;
-              await delay(20, undefined, { signal });
-            }
-            const bytes = Buffer.alloc(end - offset);
-            const { bytesRead } = await handle.read(bytes, 0, bytes.length, offset);
-            assert.equal(bytesRead, bytes.length, 'Reported pieces are not readable');
-            assert.deepEqual(
-              bytes,
-              fixture.bytes.subarray(offset, end),
-              'Reported piece bytes differ from reference',
-            );
-            if (!stdin.write(bytes)) await once(stdin, 'drain', { signal });
-          }
-        },
-        onVideoFrame: () => {
-          firstFrame = {
-            afterMs: Math.round(performance.now() - began),
+      if (consume) {
+        await api('target', 'torrents/stop', { hashes: torrent.hash });
+        const deadline = performance.now() + 10_000;
+        while (true) {
+          if (observationFailure) throw observationFailure;
+          const [info] = await json('target', `torrents/info?hashes=${torrent.hash}`);
+          if (['stoppedDL', 'stoppedUP'].includes(info?.state)) break;
+          assert(performance.now() < deadline, 'Client stop did not settle');
+          await delay(100);
+        }
+        const snapshot = Buffer.alloc(PIECE * 4);
+        const { bytesRead } = await cacheHandle.read(snapshot, 0, snapshot.length, 0);
+        assert.equal(bytesRead, snapshot.length);
+        assert(snapshot.equals(fixture.bytes.subarray(0, snapshot.length)));
+        assert(prefix < fixture.bytes.length, 'Preparation already completed the movie');
+        console.error(
+          JSON.stringify({
+            event: 'qbit.subtitle_snapshot_ready',
+            snapshotBytes: snapshot.length,
             verifiedBytes: prefix,
-            complete: prefix === fixture.bytes.length,
-          };
-          // Independent byte evidence: a stale API observation alone cannot prove incompleteness.
-          firstFrameCacheEvidence = readFile(join(root, 'target-data', 'front.mp4')).then(
-            (bytes) => ({
-              allReferenceBytesPresent: bytes.equals(fixture.bytes),
-              observedAfterMs: Math.round(performance.now() - began),
-            }),
-          );
-          // Observe errors immediately, even while FFmpeg continues decoding.
-          firstFrameCacheEvidence.catch(() => undefined);
-        },
-      });
-      assert.equal(result.frames, reference.frames);
-      assert.equal(result.subtitles, reference.subtitles);
-      assert(
-        firstFrame && !firstFrame.complete,
-        'Transfer completed before any progressive frame was observed',
-      );
-      const cacheEvidence = await firstFrameCacheEvidence;
-      assert.equal(
-        cacheEvidence.allReferenceBytesPresent,
-        false,
-        'Stale API state cannot prove progressive decode',
-      );
-      firstFrame.cacheEvidence = cacheEvidence;
+          }),
+        );
+        // The consumer runs outside the poll loop and never receives API credentials/environment.
+        browserResult = await consume({
+          fixture,
+          path: targetPath,
+          subtitleSnapshot: snapshot,
+          subtitleReference: reference.subtitles,
+          prefix: () => {
+            if (observationFailure) throw observationFailure;
+            return prefix;
+          },
+          resume: async () => {
+            await api('target', 'torrents/start', { hashes: torrent.hash });
+            await api('target', 'torrents/addPeers', {
+              hashes: torrent.hash,
+              peers: `${seedIp}:6881`,
+            });
+            console.error(JSON.stringify({ event: 'qbit.resumed' }));
+          },
+        });
+        validateBrowserEvidence(browserResult, fixture.bytes.length);
+        firstFrame = browserResult.firstBrowserFrame;
+        while (prefix < fixture.bytes.length) {
+          if (observationFailure) throw observationFailure;
+          await delay(20);
+        }
+      } else {
+        handle = await open(targetPath, 'r');
+        const result = await decodeSyntheticMedia({
+          timeoutMs: 90_000,
+          feed: async (stdin, signal) => {
+            for (let offset = 0; offset < fixture.bytes.length; offset += PIECE) {
+              const end = Math.min(fixture.bytes.length, offset + PIECE);
+              while (prefix < end) {
+                signal.throwIfAborted();
+                if (observationFailure) throw observationFailure;
+                await delay(20, undefined, { signal });
+              }
+              const bytes = Buffer.alloc(end - offset);
+              const { bytesRead } = await handle.read(bytes, 0, bytes.length, offset);
+              assert.equal(bytesRead, bytes.length, 'Reported pieces are not readable');
+              assert.deepEqual(
+                bytes,
+                fixture.bytes.subarray(offset, end),
+                'Reported piece bytes differ from reference',
+              );
+              if (!stdin.write(bytes)) await once(stdin, 'drain', { signal });
+            }
+          },
+          onVideoFrame: () => {
+            firstFrame = {
+              afterMs: Math.round(performance.now() - began),
+              verifiedBytes: prefix,
+              complete: prefix === fixture.bytes.length,
+            };
+            // Independent byte evidence: a stale API observation alone cannot prove incompleteness.
+            firstFrameCacheEvidence = readFile(join(root, 'target-data', 'front.mp4')).then(
+              (bytes) => ({
+                allReferenceBytesPresent: bytes.equals(fixture.bytes),
+                observedAfterMs: Math.round(performance.now() - began),
+              }),
+            );
+            // Observe errors immediately, even while FFmpeg continues decoding.
+            firstFrameCacheEvidence.catch(() => undefined);
+          },
+        });
+        assert.equal(result.frames, reference.frames);
+        assert.equal(result.subtitles, reference.subtitles);
+        assert(
+          firstFrame && !firstFrame.complete,
+          'Transfer completed before any progressive frame was observed',
+        );
+        const cacheEvidence = await firstFrameCacheEvidence;
+        assert.equal(
+          cacheEvidence.allReferenceBytesPresent,
+          false,
+          'Stale API state cannot prove progressive decode',
+        );
+        firstFrame.cacheEvidence = cacheEvidence;
+      }
+    } catch (error) {
+      transferFailure = error;
     } finally {
       stopped = true;
-      await poll;
-      await handle?.close();
+      transferFailure = await closeTransfer(transferFailure, [
+        ['poll', () => poll],
+        ['decoder-file', () => handle?.close()],
+        ['verified-cache', () => cacheHandle?.close()],
+      ]);
     }
+    if (transferFailure) throw transferFailure;
     assert.deepEqual(await readFile(join(root, 'target-data', 'front.mp4')), fixture.bytes);
     await compose('restart', 'target');
     await compose('up', '-d', '--wait', '--wait-timeout', '90');
@@ -366,33 +504,44 @@ export async function runBackendSpike() {
       fixtureDurationSec: fixture.durationSec,
       observations,
       firstFrame,
-      byteAndDecodeMatch: true,
+      byteAndDecodeMatch: consume === null ? true : null,
+      firstFrameTimingOrigin: consume ? 'player_resume' : 'backend_transfer_start',
+      completeFileBytesMatch: true,
+      browserResult,
       completedTransferRestartRestored: true,
       internetNetworkAbsent: true,
       vpnVerified: false,
-      browserVerified: false,
-      hlsVerified: false,
+      browserVerified: browserResult !== null,
+      hlsVerified: browserResult !== null,
       limits: [
         'Single-file v1 synthetic torrent only',
         'Completed-transfer restart, not mid-transfer restart',
-        'No Internet, VPN, real-time player, HLS or Pi verification',
+        consume
+          ? 'Private peer experiment; VPN tested separately; no Pi verification'
+          : 'No Internet, VPN, real-time player, HLS or Pi verification',
       ],
     };
   } catch (error) {
+    retainWorkspace = error.cleanupIncomplete === true;
     if (started && cookies.size === 0) {
       const logs = await compose('logs', '--no-color', '--tail', '60').catch(() => '');
-      const diagnostic = logs
-        .split('\n')
-        .filter((line) => /permission|fatal|error|s6|read-only|cannot|failed|non-root/i.test(line))
-        .filter((line) => !/password|token|secret|cookie|credential/i.test(line))
-        .slice(-12)
-        .join('\n');
-      throw new Error(`${error.message}\n${diagnostic}`);
+      console.error(
+        JSON.stringify({
+          event: 'qbit.bootstrap_failed',
+          permission: /permission/i.test(logs),
+          readOnly: /read-only/i.test(logs),
+          init: /s6/i.test(logs),
+        }),
+      );
     }
     throw error;
   } finally {
     if (started) await compose('down', '--timeout', '20');
-    await rm(root, { recursive: true, force: true });
+    if (!retainWorkspace) await rm(root, { recursive: true, force: true });
+    else
+      console.error(
+        JSON.stringify({ event: 'qbit.workspace_retained', reason: 'consumer_cleanup_incomplete' }),
+      );
   }
 }
 
@@ -404,7 +553,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
     runBackendSpike().then(
       (result) => console.log(JSON.stringify(result, null, 2)),
       (error) => {
-        console.error(error.message);
+        console.error(
+          JSON.stringify({ event: 'qbit.experiment_failed', code: error.code ?? error.name }),
+        );
         process.exitCode = 1;
       },
     );
