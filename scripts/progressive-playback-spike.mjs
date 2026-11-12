@@ -475,3 +475,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     );
   }
 }
+
+// Reused by the real-backend experiment; these remain opt-in test utilities, not application APIs.
+export { fixture as createSyntheticFixture, decode as decodeSyntheticMedia };
