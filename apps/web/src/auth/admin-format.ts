@@ -22,8 +22,10 @@ export function formatDateTime(iso: string | null, timeZone?: string): string {
   }).formatToParts(date);
   const part = (type: Intl.DateTimeFormatPartTypes) =>
     parts.find((candidate) => candidate.type === type)?.value ?? '';
-  // `GMT+01:00` → `+01:00`, `GMT` → `Z`: an ISO 8601 offset, never an ambiguous name like IST.
-  const offset = part('timeZoneName').replace(/^GMT$/, 'Z').replace(/^GMT/, '');
+  // ICU versions render zero as either GMT or GMT+00:00; both represent UTC.
+  const offset = part('timeZoneName')
+    .replace(/^GMT/, '')
+    .replace(/^(?:[+-]00:00)?$/, 'Z');
   return `${part('year')}-${part('month')}-${part('day')} ${pad(Number(part('hour')))}:${part('minute')} ${offset}`;
 }
 
