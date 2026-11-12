@@ -4,6 +4,21 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-12 — TMDB QA pass on local staging (`8c1ea1f`), #300 closed
+
+- #300: the shared TMDB Read Access Token (the one in the Pi's `popcorntv.env`) is now in the
+  gitignored `.env.staging`; local staging reaches TMDB. QA runs on local staging only — the
+  2026-11-08 plan to QA Discover on the Pi is withdrawn (the Pi keeps its post-deploy smoke).
+- Level pass replaying the cases blocked on 2026-11-11, report
+  `docs/architecture/qa/2026-11-12-tmdb-pass-staging.md`, 12 cases: Pass 8, Fail 3, Not tested 1;
+  Must 0, Should 1 (#302 dotted show folders parsed as "Season 01"), Nice 2 (#303 title-link
+  focus and field attributes, #304 "could not be reached" shown when TMDB is not configured).
+- Verified: #166 live search, #257 warm lists, #184 where to watch, #277 cases 1–4 and 7,
+  #278 UI 1 and 2, #172 cast line, #179 TMDB unreachable. Root cause of #258 (TMDB year 2024
+  against 2021 in the file name) and a reproduction of #259 added to those issues.
+- Not tested: #277 case 8 (no pre-0009 database), screen reader; provider changes simulated in
+  the database. Generated test clips kept in `./media` (gitignored) for later passes.
+
 ## 2026-11-11 — Full QA pass on local staging (`1088e1a`)
 
 - Level full on `make staging-up` (production image of `1088e1a`), report

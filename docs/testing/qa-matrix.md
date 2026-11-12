@@ -346,6 +346,23 @@ Source: [full pass of 2026-11-11](../architecture/qa/2026-11-11-full-pass-stagin
 | Profile name control characters | 2026-11-11 · 1088e1a · local staging · KO #293 |
 | Mark watched with the backend down | 2026-11-11 · 1088e1a · local staging · KO #294 |
 
+## Replay with a real TMDB key on local staging (2026-11-12)
+
+Source: [TMDB pass of 2026-11-12](../architecture/qa/2026-11-12-tmdb-pass-staging.md), production image of `8c1ea1f` on the local staging tier, valid TMDB key (temporary `.env.staging` lines removed afterwards). Closes the BLOCKED rows of the section above.
+
+| Checks | Result |
+|---|---|
+| #166 Discover live search 1, 3, 4, 7, 8, 10 | 2026-11-12 · 8c1ea1f · local staging · OK · [shot](../architecture/qa/2026-11-12-tmdb-pass-staging/03-live-search-dune.jpg), [cut network](../architecture/qa/2026-11-12-tmdb-pass-staging/04-search-network-cut.jpg) (9 screen reader not run) |
+| #257 Discover list freshness | 2026-11-12 · 8c1ea1f · local staging · OK · [shot](../architecture/qa/2026-11-12-tmdb-pass-staging/02-discover-rows.jpg) |
+| #184 where to watch | 2026-11-12 · 8c1ea1f · local staging · OK · [offers](../architecture/qa/2026-11-12-tmdb-pass-staging/06-where-to-watch-offers.jpg), [none](../architecture/qa/2026-11-12-tmdb-pass-staging/05-where-to-watch-no-offer.jpg), [load error](../architecture/qa/2026-11-12-tmdb-pass-staging/13-offers-could-not-be-loaded.jpg) (offer links not opened: third party) |
+| #277 wishlist notifications 1–4, 6, 7 | 2026-11-12 · 8c1ea1f · local staging · OK · [bell](../architecture/qa/2026-11-12-tmdb-pass-staging/09-bell-badge.jpg), [library line](../architecture/qa/2026-11-12-tmdb-pass-staging/10-bell-library-line.jpg), [provider line](../architecture/qa/2026-11-12-tmdb-pass-staging/19-bell-provider-line.jpg); 6 shows "TMDB could not be reached." for a missing key, KO #304 (wording) |
+| #277 case 8 (database without migration 0009) | 2026-11-12 · — (no pre-0009 database available) |
+| #278 title link UI 1, 2 | 2026-11-12 · 8c1ea1f · local staging · OK · [form](../architecture/qa/2026-11-12-tmdb-pass-staging/14-link-form.jpg), [refused](../architecture/qa/2026-11-12-tmdb-pass-staging/15-link-refused.jpg), [saved](../architecture/qa/2026-11-12-tmdb-pass-staging/16-link-saved.jpg), [viewer](../architecture/qa/2026-11-12-tmdb-pass-staging/18-viewer-link-no-edit.jpg) |
+| #278 title link UI 7 (focus, attributes) | 2026-11-12 · 8c1ea1f · local staging · KO #303 · [shot](../architecture/qa/2026-11-12-tmdb-pass-staging/17-link-edit-remove.jpg) |
+| #172 case 3 (Cast line) | 2026-11-12 · 8c1ea1f · local staging · OK · [shot](../architecture/qa/2026-11-12-tmdb-pass-staging/20-series-dialog-cast.jpg) |
+| Metadata coverage (OBS-01) | 2026-11-12 · 8c1ea1f · local staging · KO #258 (root cause: TMDB year 2024 vs file 2021, `[tmdbid-891761]` recovers it), KO #259 (overview null), KO #302 (`Show/Season.01/` layout unparsed) |
+| Discover with TMDB unreachable | 2026-11-12 · 8c1ea1f · local staging · OK · [shot](../architecture/qa/2026-11-12-tmdb-pass-staging/21-discover-tmdb-down.jpg) |
+
 ## Deploy parity and data checks (added 2026-11-10)
 
 Replay on every Pi deploy:
