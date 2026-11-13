@@ -11,6 +11,8 @@ import {
   verifyCachePrefix,
   closeTransfer,
   stopBackend,
+  commandBudget,
+  parseResourceSample,
   validateBrowserEvidence,
   runBackendSpike,
 } from './qbittorrent-spike.mjs';
@@ -27,6 +29,62 @@ if (process.env['RUN_BACKEND_SPIKE'] === '1') {
     },
   );
 }
+
+if (process.env['RUN_BACKEND_RECOVERY_SPIKE'] === '1') {
+  for (const scenario of ['slow', 'interrupted']) {
+    test(
+      `real backend ${scenario} recovery preserves verified playback`,
+      { timeout: 600_000 },
+      async () => {
+        const result = await runBackendSpike({ scenario });
+        assert.equal(result.byteAndDecodeMatch, true);
+        assert.equal(result.completeFileBytesMatch, true);
+        assert.equal(result.completedTransferRestartRestored, true);
+        if (scenario === 'slow') {
+          assert.equal(result.playbackWaitedForComplete, true);
+          assert.equal(result.firstFrame.complete, true);
+          assert(result.completionAfterMs > result.fixtureDurationSec * 1000);
+          assert(
+            result.measuredAverageBytesPerSec < result.fixtureBytes / result.fixtureDurationSec,
+          );
+          assert(result.firstFrame.afterMs >= result.completionAfterMs);
+        } else {
+          assert(result.interruptedRecovery.incomplete);
+          assert(
+            result.interruptedRecovery.restoredPrefix >= result.interruptedRecovery.beforeRestart,
+          );
+          assert.equal(result.firstFrame.complete, false);
+        }
+        console.log(JSON.stringify({ event: 'qbit.recovery_result', result }));
+      },
+    );
+  }
+}
+
+test('resource snapshots accept actual Docker units and reject nonnumeric output', () => {
+  const sample = { CPUPerc: '0.50%', MemUsage: '12.4MiB / 384MiB', PIDs: '12' };
+  assert.deepEqual(parseResourceSample(sample), {
+    cpuPercent: 0.5,
+    memory: sample.MemUsage,
+    pids: 12,
+  });
+  assert.equal(parseResourceSample({ ...sample, MemUsage: '12.4 MiB / 384 MiB' }).pids, 12);
+  for (const field of ['CPUPerc', 'MemUsage', 'PIDs'])
+    assert.throws(() => parseResourceSample({ ...sample, [field]: 'untrusted-output' }));
+});
+
+test('command budget caps commands and refuses launch at or after deadline', () => {
+  assert.equal(commandBudget(500_000, 0), 120_000);
+  assert.equal(commandBudget(10, 9), 1);
+  for (const now of [10, 11]) assert.throws(() => commandBudget(10, now), /backend_run_deadline/);
+  assert.throws(() => commandBudget(Infinity, 0));
+  assert.throws(() => commandBudget(10, NaN));
+});
+
+test('scenario validation refuses unknown modes and incompatible consumers before resource creation', async () => {
+  await assert.rejects(runBackendSpike({ scenario: 'unknown' }));
+  await assert.rejects(runBackendSpike({ scenario: 'slow', consume: async () => ({}) }));
+});
 
 test('backend shutdown preserves failures and marks uncertain cleanup', async () => {
   let stopped = false;

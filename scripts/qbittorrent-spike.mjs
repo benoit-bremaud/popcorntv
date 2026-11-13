@@ -218,6 +218,26 @@ async function initialize(root, service) {
   return password;
 }
 
+/** Keep only validated numeric resource fields from Docker's human-readable stats response. */
+export function parseResourceSample(sample) {
+  assert.match(sample.CPUPerc, /^\d+(?:\.\d+)?%$/);
+  assert.match(sample.MemUsage, /^[\d.]+ ?[KMGT]?i?B \/ [\d.]+ ?[KMGT]?i?B$/);
+  assert.match(sample.PIDs, /^\d+$/);
+  return {
+    cpuPercent: Number(sample.CPUPerc.slice(0, -1)),
+    memory: sample.MemUsage,
+    pids: Number(sample.PIDs),
+  };
+}
+
+/** Bound each Docker command by the remaining run budget; cleanup has a separate timeout. */
+export function commandBudget(deadline, now) {
+  assert(Number.isFinite(deadline) && Number.isFinite(now));
+  const remaining = Math.floor(deadline - now);
+  assert(remaining > 0, 'backend_run_deadline');
+  return Math.min(120_000, remaining);
+}
+
 /** Confirm backend shutdown, preserving the primary failure and unsafe-workspace marker. */
 export async function stopBackend(stop, primaryFailure) {
   try {
@@ -237,10 +257,17 @@ export async function stopBackend(stop, primaryFailure) {
  * Optional `consume` runs outside the poll loop with the borrowed read-only source, immutable
  * caption prefix, known control metadata/reference and bounded resume operation, never credentials.
  * It must close its readers before settling, or reject with cleanupIncomplete to retain the cache.
+ * `slow` waits for a complete file at a rate below the fixture average; `interrupted` stops and
+ * restarts the actual client before completion, revalidating persisted bytes before resume.
  * Results distinguish standalone reference decode from browser evidence (null means not compared).
  * Original and cleanup failures are preserved; no workspace is removed after unsafe consumer cleanup.
  */
-export async function runBackendSpike({ consume = null } = {}) {
+export async function runBackendSpike({ consume = null, scenario = 'progressive' } = {}) {
+  assert(['progressive', 'slow', 'interrupted'].includes(scenario));
+  assert(
+    consume === null || scenario === 'progressive',
+    'Browser consumer requires progressive scenario',
+  );
   assert(consume === null || typeof consume === 'function');
   const root = await mkdtemp(join(tmpdir(), 'popcorntv-qbit-'));
   const env = {
@@ -250,7 +277,11 @@ export async function runBackendSpike({ consume = null } = {}) {
     SPIKE_GID: String(process.getgid()),
     COMPOSE_PROJECT_NAME: `popcorntv-recovery-spike-${randomBytes(6).toString('hex')}`,
   };
-  const compose = (...args) => command('docker', ['compose', '-f', COMPOSE, ...args], { env });
+  const runDeadline = performance.now() + 300_000;
+  const boundedCommand = (binary, args, options = {}) =>
+    command(binary, args, { ...options, timeout: commandBudget(runDeadline, performance.now()) });
+  const compose = (...args) =>
+    boundedCommand('docker', ['compose', '-f', COMPOSE, ...args], { env });
   let started = false;
   let retainWorkspace = false;
   let primaryFailure;
@@ -276,7 +307,7 @@ export async function runBackendSpike({ consume = null } = {}) {
         'form = "firstLastPiecePrio=true"',
       );
     } else if (data) lines.push(`data = "${new URLSearchParams(data).toString()}"`);
-    const raw = await command(
+    const raw = await boundedCommand(
       'docker',
       ['compose', '-f', COMPOSE, 'exec', '-T', service, 'curl', '--config', '-'],
       { env, input: lines.join('\n') + '\n' },
@@ -326,26 +357,52 @@ export async function runBackendSpike({ consume = null } = {}) {
     const seedId = (await compose('ps', '--quiet', 'seed')).trim();
     const targetId = (await compose('ps', '--quiet', 'target')).trim();
     for (const id of [seedId, targetId]) {
-      const [info] = JSON.parse(await command('docker', ['inspect', id]));
+      const [info] = JSON.parse(await boundedCommand('docker', ['inspect', id]));
       assert.notEqual(info.Config.User.split(':')[0], '0');
       assert.equal(info.HostConfig.ReadonlyRootfs, true);
       assert(info.HostConfig.CapDrop.includes('ALL'));
       const networks = Object.values(info.NetworkSettings.Networks);
       assert.equal(networks.length, 1);
       const [network] = JSON.parse(
-        await command('docker', ['network', 'inspect', networks[0].NetworkID]),
+        await boundedCommand('docker', ['network', 'inspect', networks[0].NetworkID]),
       );
       assert.equal(network.Internal, true);
     }
-    const [seedInspect] = JSON.parse(await command('docker', ['inspect', seedId]));
+    const [seedInspect] = JSON.parse(await boundedCommand('docker', ['inspect', seedId]));
     const seedIp = Object.values(seedInspect.NetworkSettings.Networks)[0].IPAddress;
     assert.match(seedIp, /^\d+\.\d+\.\d+\.\d+$/);
     await api('seed', 'torrents/add', null, true);
     await api('target', 'torrents/add', null, true);
-    await api('target', 'torrents/setDownloadLimit', { hashes: torrent.hash, limit: '131072' });
+    await api('target', 'torrents/setDownloadLimit', {
+      hashes: torrent.hash,
+      limit: scenario === 'slow' ? '32768' : '131072',
+    });
     await api('target', 'torrents/addPeers', { hashes: torrent.hash, peers: `${seedIp}:6881` });
     const began = performance.now();
     let prefix = 0;
+    let interruptedRecovery = null;
+    let completionAfterMs = null;
+    const resourceSamples = [];
+    const sampleResources = async (phase) => {
+      const lines = await boundedCommand('docker', [
+        'stats',
+        '--no-stream',
+        '--format',
+        '{{json .}}',
+        seedId,
+        targetId,
+      ]);
+      resourceSamples.push({
+        phase,
+        afterMs: Math.round(performance.now() - began),
+        clients: lines
+          .trim()
+          .split('\n')
+          .map((line) => {
+            return parseResourceSample(JSON.parse(line));
+          }),
+      });
+    };
     let firstFrame = null;
     let firstFrameCacheEvidence;
     let observations = 0;
@@ -357,7 +414,7 @@ export async function runBackendSpike({ consume = null } = {}) {
     const poll = (async () => {
       try {
         while (!stopped && prefix < fixture.bytes.length) {
-          if (performance.now() - began > 90_000) throw new Error('backend_transfer_timeout');
+          if (performance.now() - began > 180_000) throw new Error('backend_transfer_timeout');
           const states = await json('target', `torrents/pieceStates?hash=${torrent.hash}`);
           const reported = verifiedPrefix({
             states,
@@ -368,6 +425,54 @@ export async function runBackendSpike({ consume = null } = {}) {
           if (reported > 0) cacheHandle ??= await open(targetPath, 'r');
           prefix = await verifyCachePrefix(cacheHandle, fixture.bytes, prefix, reported);
           observations++;
+          if (scenario !== 'progressive' && prefix > 0 && resourceSamples.length === 0)
+            await sampleResources('partial-transfer');
+          if (scenario === 'interrupted' && !interruptedRecovery && prefix >= PIECE * 8) {
+            assert(prefix < fixture.bytes.length, 'Interruption requires an incomplete transfer');
+            await api('target', 'torrents/stop', { hashes: torrent.hash });
+            const deadline = performance.now() + 10_000;
+            while (true) {
+              const [info] = await json('target', `torrents/info?hashes=${torrent.hash}`);
+              if (['stoppedDL', 'stoppedUP'].includes(info?.state)) break;
+              assert(performance.now() < deadline, 'Interrupted client stop did not settle');
+              await delay(100);
+            }
+            const beforeRestart = prefix;
+            await cacheHandle.close();
+            cacheHandle = undefined;
+            await compose('restart', 'target');
+            await compose('up', '-d', '--wait', '--wait-timeout', '90');
+            cookies.delete('target');
+            await api('target', 'auth/login', {
+              username: 'spike',
+              password: passwords.get('target'),
+            });
+            assert(cookies.has('target'), 'Interrupted restart login did not establish a session');
+            const restored = await json('target', `torrents/pieceStates?hash=${torrent.hash}`);
+            const restoredPrefix = verifiedPrefix({
+              states: restored,
+              pieceSize: PIECE,
+              fileOffset: 0,
+              fileSize: fixture.bytes.length,
+            });
+            cacheHandle = await open(targetPath, 'r');
+            prefix = await verifyCachePrefix(cacheHandle, fixture.bytes, 0, restoredPrefix);
+            assert(prefix >= beforeRestart, 'Restart lost previously verified bytes');
+            assert(prefix < fixture.bytes.length, 'Restart must occur before completion');
+            interruptedRecovery = { beforeRestart, restoredPrefix: prefix, incomplete: true };
+            console.error(
+              JSON.stringify({ event: 'qbit.partial_restart_verified', ...interruptedRecovery }),
+            );
+            await api('target', 'torrents/start', { hashes: torrent.hash });
+            await api('target', 'torrents/addPeers', {
+              hashes: torrent.hash,
+              peers: `${seedIp}:6881`,
+            });
+          }
+          if (prefix === fixture.bytes.length) {
+            completionAfterMs = Math.round(performance.now() - began);
+            if (scenario !== 'progressive') await sampleResources('complete');
+          }
           await delay(100);
         }
       } catch (error) {
@@ -384,7 +489,10 @@ export async function runBackendSpike({ consume = null } = {}) {
     let handle;
     let transferFailure;
     try {
-      while (prefix < PIECE * (consume ? 24 : 4)) {
+      while (
+        prefix < (scenario === 'slow' ? fixture.bytes.length : PIECE * (consume ? 24 : 4)) ||
+        (scenario === 'interrupted' && !interruptedRecovery)
+      ) {
         if (observationFailure) throw observationFailure;
         await delay(20);
       }
@@ -478,14 +586,14 @@ export async function runBackendSpike({ consume = null } = {}) {
         assert.equal(result.frames, reference.frames);
         assert.equal(result.subtitles, reference.subtitles);
         assert(
-          firstFrame && !firstFrame.complete,
-          'Transfer completed before any progressive frame was observed',
+          firstFrame && (scenario === 'slow' ? firstFrame.complete : !firstFrame.complete),
+          'First frame violated the scenario full-file/progressive boundary',
         );
         const cacheEvidence = await firstFrameCacheEvidence;
         assert.equal(
           cacheEvidence.allReferenceBytesPresent,
-          false,
-          'Stale API state cannot prove progressive decode',
+          scenario === 'slow',
+          'Independent cache bytes violate the scenario playback boundary',
         );
         firstFrame.cacheEvidence = cacheEvidence;
       }
@@ -525,6 +633,13 @@ export async function runBackendSpike({ consume = null } = {}) {
     return {
       verdict: 'PARTIAL',
       stage: 'real isolated qBittorrent transfer',
+      scenario,
+      interruptedRecovery,
+      completionAfterMs,
+      resourceSamples,
+      hostArchitecture: process.arch,
+      measuredAverageBytesPerSec: Math.round(fixture.bytes.length / (completionAfterMs / 1000)),
+      playbackWaitedForComplete: scenario === 'slow',
       versions,
       fixtureBytes: fixture.bytes.length,
       fixtureDurationSec: fixture.durationSec,
@@ -541,7 +656,13 @@ export async function runBackendSpike({ consume = null } = {}) {
       hlsVerified: browserResult !== null,
       limits: [
         'Single-file v1 synthetic torrent only',
-        'Completed-transfer restart, not mid-transfer restart',
+        scenario === 'interrupted'
+          ? 'Controlled stop and graceful partial-transfer restart; not crash or packet loss'
+          : 'Completed-transfer restart only',
+        scenario === 'slow'
+          ? 'Explicit experimental full-file gate; no product adaptive estimator'
+          : 'No production readiness policy',
+        'Docker command budget 300s; decoder 90s; cleanup separately bounded at 120s',
         consume
           ? 'Private peer experiment; VPN tested separately; no Pi verification'
           : 'No Internet, VPN, real-time player, HLS or Pi verification',
@@ -563,7 +684,15 @@ export async function runBackendSpike({ consume = null } = {}) {
     }
     throw error;
   } finally {
-    if (started) await stopBackend(() => compose('down', '--timeout', '20'), primaryFailure);
+    if (started)
+      await stopBackend(
+        () =>
+          command('docker', ['compose', '-f', COMPOSE, 'down', '--timeout', '20'], {
+            env,
+            timeout: 120_000,
+          }),
+        primaryFailure,
+      );
     if (!retainWorkspace) await rm(root, { recursive: true, force: true });
     else
       console.error(
