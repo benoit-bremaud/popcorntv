@@ -317,3 +317,58 @@ This publication changes only this review report after the checked source head; 
 not claim signed attestation. Push gate: open for this report-only publication, subject
 to independent report verification. Merge still requires the explicit owner waiver for
 the absent signed gate/hosted statuses; no local check failure is waived.
+
+## Issue #309 — durable wishlist requests
+
+Checked clean source/test/design head: `57941127c78be30c39fe8c1e032830757b292bda`.
+The owner validated the concrete request contract before implementation. The ordered
+first-real-test milestone is recorded in #306; child-account implementation is deferred.
+
+All local gate commands finished with exit 0 on that head:
+
+| Check | Result and exact scope |
+|---|---|
+| Full application coverage with `FFMPEG_IT=1` | **1,401 passed, zero skipped**: shared57/server859/web485; 83 test files |
+| New request repository coverage | **100% lines/functions/branches**: 72/72 lines, 14/14 functions, 93/93 branches in LCOV; no exclusions |
+| Application line coverage | Shared100%, server98.64%, web98.96%; server branches93.32%, web branches93.87% |
+| Typecheck, lint/log audit, formatting, production build | Passed |
+| Chromium on production web bundle | Two catalog/detail/back/reload smoke journeys passed in5.3s; API responses stubbed |
+| Local SonarQube | Gate PASSED on5794112; initial two new style findings corrected before this run |
+| Semgrep | Digest-pinned1.181.0; 74rules/219targets; zero remaining findings after seven individually justified existing false positives |
+| Redacted full-history Gitleaks | 261commits scanned, no leaks |
+
+Node22.23.4 and pnpm10.30.3 were used; the pnpm executable's embedded Node20 warning does not
+describe the project's child Node22 runtime. Initial sandbox EPERM results are failed historical
+attempts, superseded by the successful unsandboxed FFmpeg/local-listener run. No lint or Sonar
+rule was disabled for the new behavior. The scoped Semgrep annotation decisions are in
+`qa/2026-11-13-issue-309-implementation.md`; registry rules are fetched, not content-pinned.
+Docker security workflow path filters do not match this diff. Hosted-only CodeQL/dependency
+review/Scorecard are not executed under the owner's local-only policy. No signed gate mechanism
+exists; do not claim an attested head or waive an actual failing local check.
+
+Independent design review: Must2/Should2 corrected and verified; independent runtime review:
+Must1/Should1 corrected and verified, then the tiny Sonar fixes reviewed with Must0/Should0.
+The important runtime fix atomically invalidates local evidence on attempt retirement; the
+regression proves renewed claims wait for fresh resolution and failed invalidation rolls back.
+Every new exported type/class/table and public repository operation has a contract docstring;
+this presence/quality audit is scoped to the new API, not whole-project documentation coverage.
+Happy/sad/edge mapping is in `qa/cases/adaptive-wishlist-requests.md` and `docs/testing/qa-matrix.md`.
+Earlier pending markers in the source snapshot are superseded by these measured final results.
+
+This publication changes only this review report after the checked head. Source, tests and
+design remain fixed. Push gate: open, subject to independent final report verification.
+
+### Authorized read-only service inventory
+
+The owner requested an installation audit and chose a film for the first real trial.
+Local Docker and `benoit@bb-homelab` Docker inventories show no Prowlarr/Sonarr/Radarr,
+qBittorrent/SABnzbd or Gluetun containers, including stopped containers. Systemd service-file
+inventories show Tailscale units but no matching recovery/arr/NordVPN units on either host.
+No named native recovery executables were found on the local PATH. This is not an exhaustive
+disk/package/configuration audit and does not prove no dormant installation exists elsewhere.
+PopcornTV is healthy locally on staging8c1ea1f and on the Pi at11b2edd; these live versions are
+older than this branch. Local homelab compose-file inventory contains no arr/recovery stack.
+No credentials, application databases, container environments or service configuration contents
+were read. No service was restarted, configured or deployed; no download was triggered.
+Tailscale presence does not establish a download VPN path. #310 must plan and validate a
+dedicated retrieval/VPN stack before claiming the first real film flow is available.
