@@ -311,9 +311,19 @@ export async function stopBackend(stop, primaryFailure) {
  * `slow` waits for a complete file at a rate below the fixture average; `interrupted` stops and
  * restarts the actual client before completion, revalidating persisted bytes before resume.
  * Results distinguish standalone reference decode from browser evidence (null means not compared).
+ * `failCompletionSample` injects a measurement failure after full coverage for the negative replay.
  * Original and cleanup failures are preserved; no workspace is removed after unsafe consumer cleanup.
  */
-export async function runBackendSpike({ consume = null, scenario = 'progressive' } = {}) {
+export async function runBackendSpike({
+  consume = null,
+  scenario = 'progressive',
+  failCompletionSample = false,
+} = {}) {
+  assert.equal(typeof failCompletionSample, 'boolean');
+  assert(
+    !failCompletionSample || scenario !== 'progressive',
+    'Completion fault requires resource samples',
+  );
   assert(['progressive', 'slow', 'interrupted'].includes(scenario));
   assert(
     consume === null || scenario === 'progressive',
@@ -447,8 +457,13 @@ export async function runBackendSpike({ consume = null, scenario = 'progressive'
     let prefix = 0;
     let interruptedRecovery = null;
     let completionAfterMs = null;
+    let observationPhase = 'piece-state';
     const resourceSamples = [];
     const sampleResources = async (phase) => {
+      observationPhase = phase === 'complete' ? 'completion-resources' : 'partial-resources';
+      // Opt-in fault injection at the external resource-measurement boundary.
+      if (failCompletionSample && phase === 'complete')
+        throw new Error('injected_complete_resource_failure');
       const lines = await boundedCommand('docker', [
         'stats',
         '--no-stream',
@@ -479,6 +494,7 @@ export async function runBackendSpike({ consume = null, scenario = 'progressive'
     const poll = (async () => {
       try {
         while (!stopped && prefix < fixture.bytes.length) {
+          observationPhase = 'piece-state';
           if (performance.now() - began > 180_000) throw new Error('backend_transfer_timeout');
           const states = await json('target', `torrents/pieceStates?hash=${torrent.hash}`);
           const reported = verifiedPrefix({
@@ -487,12 +503,14 @@ export async function runBackendSpike({ consume = null, scenario = 'progressive'
             fileOffset: 0,
             fileSize: fixture.bytes.length,
           });
+          observationPhase = 'cache-verification';
           if (reported > 0) cacheHandle ??= await open(targetPath, 'r');
           prefix = await verifyCachePrefix(cacheHandle, fixture.bytes, prefix, reported);
           observations++;
           if (scenario !== 'progressive' && prefix > 0 && resourceSamples.length === 0)
             await sampleResources('partial-transfer');
           if (scenario === 'interrupted' && !interruptedRecovery && prefix >= PIECE * 8) {
+            observationPhase = 'controlled-restart';
             assert(prefix < fixture.bytes.length, 'Interruption requires an incomplete transfer');
             await api('target', 'torrents/stop', { hashes: torrent.hash });
             const deadline = performance.now() + 10_000;
@@ -545,6 +563,8 @@ export async function runBackendSpike({ consume = null, scenario = 'progressive'
         console.error(
           JSON.stringify({
             event: 'qbit.coverage_failed',
+            phase: observationPhase,
+            complete: prefix === fixture.bytes.length,
             code: error.code ?? error.name,
             verifiedBytes: prefix,
           }),
@@ -674,6 +694,8 @@ export async function runBackendSpike({ consume = null, scenario = 'progressive'
       ]);
     }
     if (transferFailure) throw transferFailure;
+    // Poll errors may arrive after prefix completion; a resolved poll alone is not success.
+    if (observationFailure) throw observationFailure;
     assert.deepEqual(await readFile(join(root, 'target-data', 'front.mp4')), fixture.bytes);
     await compose('restart', 'target');
     await compose('up', '-d', '--wait', '--wait-timeout', '90');

@@ -67,6 +67,29 @@ if (process.env['RUN_BACKEND_RECOVERY_SPIKE'] === '1') {
   }
 }
 
+if (process.env['RUN_BACKEND_FAILURE_SPIKE'] === '1') {
+  test(
+    'a resource observation failure after full coverage rejects the real backend experiment',
+    { timeout: 600_000 },
+    async (t) => {
+      const events = [];
+      t.mock.method(console, 'error', (line) => events.push(JSON.parse(line)));
+      await assert.rejects(
+        runBackendSpike({ scenario: 'interrupted', failCompletionSample: true }),
+        /injected_complete_resource_failure/,
+      );
+      assert(
+        events.some(
+          (event) =>
+            event.event === 'qbit.coverage_failed' &&
+            event.phase === 'completion-resources' &&
+            event.complete === true,
+        ),
+      );
+    },
+  );
+}
+
 test('piece manifests reject unsafe bounds, sparse hashes and caller mutation', () => {
   const base = {
     torrentHash: 'a'.repeat(40),
@@ -241,6 +264,8 @@ test('command budget caps commands and refuses launch at or after deadline', () 
 
 test('scenario validation refuses unknown modes and incompatible consumers before resource creation', async () => {
   await assert.rejects(runBackendSpike({ scenario: 'unknown' }));
+  await assert.rejects(runBackendSpike({ failCompletionSample: 'yes' }));
+  await assert.rejects(runBackendSpike({ failCompletionSample: true }));
   await assert.rejects(runBackendSpike({ scenario: 'slow', consume: async () => ({}) }));
 });
 

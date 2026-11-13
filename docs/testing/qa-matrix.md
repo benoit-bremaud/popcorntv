@@ -526,3 +526,11 @@ behavior from future source/client and household runtime cases.
 | E308-28 | Valid minimum/exact maximum piece/count admission; one-byte and exact-multiple final reads | Two new unit tests; existing invalid-side checks retained; no real download needed |
 | E308-29 | New tests detect their intended off-by-one defects | Four seeded boundary/partition defects in temporary copies are detected; baseline passes; no whole-module mutation score |
 | E308-30 | Invalid admission/index/state does not touch the cache; later source mutation does not change returned verified bytes | Read counter and returned-buffer snapshot assertions; corruption, short read, missing state and read error remain covered |
+
+
+### Late completion-observer sad path — 2026-11-13
+
+| Case | Verification | Evidence and limits |
+|---|---|---|
+| E308-31 / TC-17 | A failed final resource observation cannot become success merely because byte coverage is complete | Real private-driver regression, injected only at the measurement boundary; pre-fix temporary copy returns false success and fails the rejection assertion; latest green replay recorded in review-local |
+| E308-32 | Failed poll diagnostics identify the safe operation phase and complete-prefix state | Assert completion-resources and complete=true; no raw command, credentials or upstream output logged |

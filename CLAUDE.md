@@ -33,6 +33,7 @@ spacing / typography, tests with every feature (Vitest unit, Playwright e2e late
 
 - Chat in French; code, comments, commits, PR bodies, docs in English.
 - Conventional Commits; dedicated branch off `main` per issue; PR closes the issue.
+- After every merged PR, report estimated overall project progress and current-epic progress to the owner before starting the next brick. State the basis and distinguish delivered features from test coverage.
 - Every chat is named `#N Issue title` and works on that single issue.
 - Log every merged PR and decision in `PROJECT_LOG.md` (skill `project-log-discipline`).
 - Containers follow skill `docker-hardening` (non-root, HEALTHCHECK, pinned bases, Hadolint,

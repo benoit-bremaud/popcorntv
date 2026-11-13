@@ -36,5 +36,6 @@
       "expectedOutcomeObserved": true,
       "testSummary": ["# tests 4", "# pass 3", "# fail 1"]
     }
-  ]
+  ],
+  "sourceSnapshotCommit": "026c8911be5ab8c604f29a16067679365508a0cc"
 }

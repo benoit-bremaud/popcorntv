@@ -249,3 +249,47 @@ hashes. The two changed files are reports; this is not claimed to satisfy a mech
 limited literally to one report file, nor to supply missing signed attestation. Final owner
 merge-exception permission remains required. PR reviews/threads/Conversation comments were empty
 at the final inspection; no reply was needed and no hosted reviewer was requested.
+
+
+## PR review finding — late completion observer
+
+Automatic Codex review on `0a75504` identified P2 comment `4561346990`: `sampleResources('complete')`
+can fail after prefix reaches file size. The poll records the error and resolves; previous consumer
+loops then no longer enter their incomplete-prefix guards, allowing a successful result.
+The claim was verified in code and reproduced in a temporary source copy with a real private fixture:
+the new regression reports missing expected rejection before the fix. No repository source was mutated
+by the red replay. This review does not waive the finding or substitute a byte-complete result for it.
+
+Resolution options (0–5 engineering scores, weights total 100): A checks the captured error after
+poll/FD settlement, keeping prior failures first; B makes the poll reject with an immediate observer
+and revises cleanup/error classification; C treats missing completion metrics as nonfatal.
+
+| Criterion | Weight | A | B | C |
+|---|---:|---|---|---|
+| Failure contract: incomplete evidence cannot report success — required | 40 | 5 — explicit final error check | 5 — rejection can propagate | 0 — weakens the required evidence; excluded |
+| Cleanup and diagnostics | 25 | 4 — existing closes/primary error retained; poll phase logged | 5 — can aggregate every cause after extra classification | 4 — closes retained but failed evidence tolerated |
+| Change/maintenance cost | 20 | 5 — one final guard, no new abstraction | 2 — rejection lifecycle and resource classification change | 4 — small reporting change |
+| Regression observability | 10 | 5 — actual private-driver rejection assertion | 4 — test plus immediate-rejection behavior | 3 — changes expected success contract |
+| Compatibility | 5 | 5 — healthy runs unchanged | 3 — poll promise contract changes | 2 — success semantics change |
+| Total /500 | 100 | **475** | **420** | **220 — excluded** |
+
+A wins by 55 points. Sensitivity: failure weight40→60, others×40/60: A 483.33 / B 446.67 / C 146.67;
+failure weight40→20, others×80/60: A 466.67 / B 393.33 / C 293.33 (C remains excluded). The bounded bug-fix
+uses A under the already authorized review/fix task; this does not change the owner's backend A.
+
+The implementation checks `observationFailure` after `closeTransfer` has awaited the poll and closed
+readers, before any successful result. Existing transfer/cleanup errors keep priority and unsafe
+cleanup markers. A new opt-in `failCompletionSample` fault reaches only measured nonprogressive
+scenarios and is validated before resource allocation. TC-17 requires real failure propagation and
+categorical completion-resources/complete=true evidence. Additional phase diagnostics are static
+enums, not raw IO. Fresh checks on the fix commit supersede the earlier 60-test head for merge.
+
+
+Focused late-observer verification: the pre-fix temporary-copy replay fails with missing expected
+rejection. The corrected actual private-driver case passes (one test, zero failures/skips,
+52.58 seconds), including completion-resources/complete=true diagnostic assertions. An independent
+code review found no Must/Should; its diagnostic Nice was applied by setting phases before cache
+open and deadline checks. The final accepted source/tests require a fresh consolidated pass including
+`RUN_BACKEND_FAILURE_SPIKE=1`; prior 60-case results remain historical for their checked head.
+The owner also requires progress reporting after each merged PR before the next brick; this is
+recorded in CLAUDE.md and the handoff. No percentage is claimed as updated before an actual merge.

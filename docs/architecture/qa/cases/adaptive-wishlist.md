@@ -39,6 +39,8 @@ values, not just failures beyond them. The other cases already exist and are aud
 | TC-14 | Real player / happy | #308 browser criterion | Backend proof mistaken for browser readiness | French HLS audio, parsed complete known caption and active startup cue | Frame before completion, active French cue and actual normal end | Browser integration, opt-in | `combined-player-spike.test.mjs`: real backend and player start |
 | TC-15 | Real player / sad and cancel | #308 cancellation/readiness criterion | False ready or leaked session | Cancel incomplete player; reject backend resume; omit readiness evidence | Session deletion/cleanup; rejected preparation cannot release frame gate | Unit + browser integration, opt-in | `combined-player-spike.test.mjs`: real combined cancellation / rejected resume; `player-spike.test.mjs`: caption gate/failure tests |
 | TC-16 | Timeout / edge | Bounded-work contract | Infinite wait or missing data treated as EOF | Deadline reached/passed, absent range, abort, sparse preallocated file | Bounded error/cancel; no hole/false EOF served | Unit | `progressive-playback-spike.test.mjs`: verified waits / cancellation / preallocated file; `qbittorrent-spike.test.mjs`: command budget |
+| TC-17 | Late asynchronous sad path | #308 resource evidence / NFR-7 / PR #324 review | Completed coverage masks a failed final measurement | Real private interrupted transfer reaches full prefix; inject completion sampling failure | Experiment rejects after poll/reader settlement; structured phase is completion-resources and complete=true; no successful result | Integration, opt-in | `qbittorrent-spike.test.mjs`: a resource observation failure after full coverage rejects the real backend experiment |
+
 
 ## Reader decision table
 
@@ -84,5 +86,18 @@ file, repository source, Docker service or credential was changed. Each variant 
 
 All four seeded defects were detected; no whole-module mutation score is claimed.
 The fractional values deliberately retain the valid two-hash count so another guard cannot mask
-an absent integer check. [Machine-readable evidence](../2026-11-13-issue-308-edge-mutation.json) records source hashes and outcomes. The returned-buffer
+an absent integer check. [Machine-readable evidence](../2026-11-13-issue-308-edge-mutation.json) records source hashes and outcomes for snapshot `026c891`; later observer-failure changes have separate replay evidence. The returned-buffer
 snapshot and no-read-on-rejection assertions also pass in the targeted four-test reader audit.
+
+
+## Late completion-observer regression
+
+An independent PR review found that a resource-measurement error after full prefix coverage could
+be recorded by the poll but not propagated by the main operation. The new TC-17 exercises the
+actual driver, not just an error helper. Its pre-fix temporary-copy replay fails with missing
+expected rejection, reproducing the false-success defect. The corrected driver checks observation
+failure after the poll and reader closes settle, preserving earlier transfer/unsafe-cleanup failures.
+The failure log identifies only categorical phase and completion status, not credentials or raw IO.
+
+Run this extra private integration case with `RUN_BACKEND_FAILURE_SPIKE=1`; it is not part of
+ordinary application coverage. Its final green result is recorded in the current review ledger.

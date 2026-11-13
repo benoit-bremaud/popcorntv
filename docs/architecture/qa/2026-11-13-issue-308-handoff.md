@@ -67,3 +67,16 @@ identities independent of client names; #325 tracks the later second backend. Do
 indexer/provider diversity with installing a second client. No blind duplicate submission or
 cross-generation playback splice is permitted during fallback. The initial qBittorrent choice
 is accepted; a secondary client is not installed or selected by this backlog update.
+
+
+The final private replay also enables `RUN_BACKEND_FAILURE_SPIKE=1` for TC-17, a negative test for
+resource-observation failure after complete coverage. PR #324's P2 propagation finding must be
+fixed, verified and answered inline before merge; consult the latest review ledger for its status.
+
+
+## Owner delivery reporting
+
+After every merged PR, report estimated overall project progress and current-epic progress before
+starting the next brick. Explain the basis and uncertainty; a closed-brick count is not a weighted
+effort estimate, and test coverage is not product completion. This owner instruction is also in
+CLAUDE.md so the next session retains it.
