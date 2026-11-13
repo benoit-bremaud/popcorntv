@@ -56,7 +56,7 @@ const EPISODE_CODE_X = /\b(\d{1,2})x(\d{2,3})\b/i;
 /** True for Plex / Jellyfin extras (spec extension 5b): folders and file suffixes. */
 export function isExtra(relativePath: string): boolean {
   const segments = splitPath(relativePath);
-  const stem = stripExtension(segments[segments.length - 1] ?? '');
+  const stem = stripExtension(segments.at(-1) ?? '');
   const subFolders = segments.slice(1, -1);
   return (
     subFolders.some((folder) => EXTRA_FOLDERS.has(folder.toLowerCase())) ||
@@ -68,7 +68,7 @@ export function isExtra(relativePath: string): boolean {
 /** Parses a relative path according to the library kind; never throws. */
 export function parseMediaName(relativePath: string, kind: LibraryKind): ParsedName {
   const segments = splitPath(relativePath);
-  const stem = stripExtension(segments[segments.length - 1] ?? '');
+  const stem = stripExtension(segments.at(-1) ?? '');
   const folders = segments.slice(0, -1);
   return kind === 'films' ? parseFilm(stem, folders) : parseEpisode(stem, folders);
 }
@@ -77,7 +77,7 @@ function parseFilm(stem: string, folders: readonly string[]): ParsedName {
   const providerIds = { ...collectProviderIds(stem), ...collectProviderIds(folders.join('/')) };
   const tags = extractTags(stem);
   const fromStem = TITLE_YEAR.exec(tags.rest);
-  const parent = folders[folders.length - 1];
+  const parent = folders.at(-1);
   const fromFolder = parent === undefined ? null : TITLE_YEAR.exec(stripTags(parent));
   const match = fromStem ?? fromFolder;
   const title = clean(match?.[1] ?? tags.rest);
@@ -98,10 +98,10 @@ function parseFilm(stem: string, folders: readonly string[]): ParsedName {
 
 function parseEpisode(stem: string, folders: readonly string[]): ParsedName {
   const tags = extractTags(stem);
-  const parent = folders[folders.length - 1];
+  const parent = folders.at(-1);
   const seasonFolder = parent === undefined ? null : SEASON_FOLDER.exec(parent);
   const isSpecials = parent !== undefined && SPECIALS_FOLDER.test(parent);
-  const showFolder = seasonFolder || isSpecials ? folders[folders.length - 2] : parent;
+  const showFolder = seasonFolder || isSpecials ? folders.at(-2) : parent;
   const show = showFolder === undefined ? null : TITLE_YEAR.exec(stripTags(showFolder));
   const showTitle = clean(show?.[1] ?? (showFolder === undefined ? '' : stripTags(showFolder)));
   const providerIds = collectProviderIds(showFolder ?? '');
@@ -207,7 +207,8 @@ function collectProviderIds(text: string): ProviderIds {
 
 function partNumber(raw: string): number {
   const letter = raw.toLowerCase();
-  return /^[a-d]$/.test(letter) ? letter.charCodeAt(0) - 96 : Number(raw);
+  // The accepted letter branch is exactly one ASCII code point.
+  return /^[a-d]$/.test(letter) ? letter.codePointAt(0)! - 96 : Number(raw);
 }
 
 function stripTags(text: string): string {

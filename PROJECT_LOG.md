@@ -4,6 +4,17 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-13 — Legacy server maintainability (#331)
+
+- Replaced five final-element array accesses with `at`, used code-point lookup in the
+  ASCII-only part-letter branch, and removed the unnecessary promise wrapper from library
+  listing. The synchronous Fastify return contract was verified against the installed runtime.
+- Added meaningful empty-path and part-letter boundary cases; the existing parser/listing
+  regression suites remain authoritative. Independent review found Must 0 / Should 0.
+  Final checked-head measurements are recorded in `docs/architecture/review-local.md`.
+- Kept the separate parser-complexity investigation #330 out of this maintenance change.
+  This PR also publishes the prepared #326 merge log, preserving the per-merge audit trail.
+
 ## 2026-11-13 — Durable wishlist requests (PR #326, `84ad5b9`)
 
 - The owner accepted the concrete request contract before coding. Added transactional shared
