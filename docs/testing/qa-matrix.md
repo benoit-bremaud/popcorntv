@@ -550,3 +550,12 @@ Final checked SHA and measured gate results are in [review-local](../architectur
 | E309-04 / TC-17 | Sanitized errors and categorical transition logs | Persistence failure returns 500 without SQL/title parameters; upstream reference absent from logs |
 | E309-05 / TC-16/19 | Actual local-playability resolution and external dispatcher/provider finality | Partial: repository guards covered; adapters and real-service proofs remain #310/#311 |
 | E309-06 | Local quality/security/browser gate on a clean recorded head | Results pending final run; no deployment, child-policy or real-acquisition acceptance claimed |
+
+### Legacy Sonar maintainability — #331
+
+| Case | Verification | Evidence and limits |
+|---|---|---|
+| E331-01 | Last-element and parent-folder lookups preserve empty/shallow-path behavior | Existing movie/episode cases plus empty and separator-only path cases; no filesystem IO in parser |
+| E331-02 | Supported a–d multi-part letters retain their numeric meaning | Added a/D boundaries and rejected e case; existing numeric and b cases retained |
+| E331-03 | Synchronous library listing preserves HTTP responses | Existing authenticated API tests cover populated and empty arrays; installed Fastify auto-sends synchronous return values |
+| E331-04 | Seven specified old Sonar findings disappear without suppressing rules | Final source SHA, full CI and issue inventory are recorded in review-local after execution; regex performance finding stays #330 |

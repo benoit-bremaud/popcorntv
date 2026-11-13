@@ -103,7 +103,7 @@ export function registerLibraryRoutes(app: FastifyInstance, deps: LibraryRoutesD
     return reply.code(201).send(library);
   });
 
-  app.get('/libraries', async (): Promise<Library[]> => deps.repository.listLibraries());
+  app.get('/libraries', (): Library[] => deps.repository.listLibraries());
 
   app.get('/libraries/folders', OWNER, async (): Promise<MediaFolderList> => {
     const libraries = deps.repository.listLibraries();

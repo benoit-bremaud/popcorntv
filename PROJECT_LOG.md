@@ -4,18 +4,46 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
-## 2026-11-13 — Durable wishlist implementation (#309, not yet merged)
+## 2026-11-13 — Legacy server maintainability (#331)
+
+- Replaced five final-element array accesses with `at`, used code-point lookup in the
+  ASCII-only part-letter branch, and removed the unnecessary promise wrapper from library
+  listing. The synchronous Fastify return contract was verified against the installed runtime.
+- Added meaningful empty-path and part-letter boundary cases; the existing parser/listing
+  regression suites remain authoritative. Independent review found Must 0 / Should 0.
+  Final checked-head measurements are recorded in `docs/architecture/review-local.md`.
+- Kept the separate parser-complexity investigation #330 out of this maintenance change.
+  This PR also publishes the prepared #326 merge log, preserving the per-merge audit trail.
+
+## 2026-11-13 — Durable wishlist requests (PR #326, `84ad5b9`)
 
 - The owner accepted the concrete request contract before coding. Added transactional shared
   demand/private interests, migration backfill and guarded uncertain-attempt persistence.
   Provider IO remains #310; no acquisition or deployment was performed.
 - Adversarial review corrected stale local evidence after retirement; both retirement and
   resolution invalidation now commit together. Design and runtime fix verification ended
-  with Must 0 / Should 0. Consolidated local checks are pending final execution.
+  with Must 0 / Should 0. Squash-merged PR #326 from `feat/309-automatic-preparation`
+  under the owner's authorization after green local CI; #309 is complete.
+- Final checked source `5794112`, report-only publication `3c7b27b`: 1,401 application
+  tests passed with real FFmpeg enabled and zero skips; the request repository has 100%
+  line/function/branch coverage. Typecheck, lint/log audit, formatting, production build,
+  two Chromium smoke journeys, SonarQube, Semgrep and redacted secrets scans passed.
+  Browser API responses were stubbed; actual provider proofs remain #310/#311.
 - First local Semgrep baseline: seven pre-existing audit matches, all verified false positives
   (six Fastify JSON replies, one digest-basename artwork route). Added only exact-rule inline
   annotations with reasons. Engine is digest-pinned; named registry rules are fetched at run
   time. Triage and decision are in `docs/architecture/qa/2026-11-13-issue-309-implementation.md`.
+- Authorized local/Pi inventory found no matching acquisition containers or systemd units;
+  no service was installed/restarted and no credential-bearing configuration was read.
+  First real trial is a film. #327/#328 track local discovery and VPN-isolated retrieval
+  provisioning. The live local/Pi versions remain older because no deployment occurred.
+- Missing signed-gate/hosted statuses used the existing owner-approved local-green merge
+  exception; no failing local check was waived. #329 must remove that workflow debt before
+  #315 A. Historical parser complexity #330 has the same exit milestone; minor server debt
+  #331 is next. Lessons are tracked in agents-skills #450/#451, not left only in chat.
+- Reported progress before the next brick: approximately 60% overall (uncertain estimate),
+  three of ten initial wishlist bricks complete (30% by count, not weighted effort).
+  Newly discovered infrastructure prerequisites and bounded debt are tracked additionally.
 
 ## 2026-11-13 — Progressive recovery feasibility (PR #324, `2b60b1c`)
 

@@ -372,3 +372,37 @@ No credentials, application databases, container environments or service configu
 were read. No service was restarted, configured or deployed; no download was triggered.
 Tailscale presence does not establish a download VPN path. #310 must plan and validate a
 dedicated retrieval/VPN stack before claiming the first real film flow is available.
+
+## Issue #331 — legacy Sonar maintainability
+
+Checked clean source/test/design head: `05ba727ba73637c95f624e60e841064a5d1a86fa`.
+The narrow refactor replaces five final-element lookups with `at`, uses code-point lookup
+only after the existing single-ASCII-letter guard, and returns the synchronous library array
+without an unnecessary promise wrapper. Installed Fastify source confirms automatic sending
+of synchronous return values and exception handling. No parser semantics, API shape, rule
+suppression or regex-complexity fix is included; the latter remains #330.
+
+- Full application coverage with real `FFMPEG_IT=1`: **1,408 tests passed, zero skipped**,
+  shared57/server866/web485 across83files. The98-test parser/library targeted suite also passed
+  before the final source commit; these are overlapping totals, not additive counts.
+- Parser LCOV: **79/79 lines and15/15 functions**,89/92 branches (96.74%). No exclusions or
+  number-only tests added. New cases cover part letters a/D, rejected e and empty/separator-only
+  paths; existing API cases cover empty/populated library lists and existing series fallbacks.
+- Application lines: shared100%, server98.64%, web98.89%; server branches93.57%, web93.78%.
+  The unchanged web suite's measured coverage is reported as observed, not rounded to100%.
+- Typecheck, lint/log auditing, formatting and production build passed. Both Chromium smoke
+  journeys on the built web bundle passed in5.2s with stubbed API responses.
+- Local SonarQube gate PASSED on05ba727. A subsequent read-only issue inventory returned only
+  S8786, the existing parser-complexity issue tracked in #330: all seven #331 findings resolved.
+  Gate conditions: new coverage95.4%≥80%, new duplication0%≤3%, new violations0.
+- Semgrep:74rules/219targets, zero findings. Redacted Gitleaks:257commits, no leaks. The engine,
+  named rules and exclusion policy match the preceding #309 local security pass.
+- Independent adversarial review: Must0/Should0. It verified array-edge equivalence, the ASCII
+  invariant, synchronous Fastify behavior and meaningful test boundaries. `git diff --check`
+  passes. No network service, credential, migration, dependency or deployment was changed.
+
+The source snapshot also publishes the prepared #326 post-merge journal. The QA matrix now
+contains E331-01–04. Hosted-only checks and absent signed attestation retain the explicitly
+documented local-only merge exception; no actual failing local check is waived. Docker security
+workflow path filters do not match this diff. This final publication changes only this review
+report after the checked head. Push gate: open subject to independent report verification.

@@ -72,6 +72,8 @@ describe('parseMediaName — films (Plex / Jellyfin conventions)', () => {
     ['Lawrence (1962)-cd1.mkv', 1],
     ['Lawrence (1962) part2.mkv', 2],
     ['Lawrence (1962).disc b.mkv', 2],
+    ['Lawrence (1962).disc a.mkv', 1],
+    ['Lawrence (1962).disc D.mkv', 4],
   ])('reads the multi-part suffix of %s', (name, part) => {
     expect(parseMediaName(name, 'films')).toMatchObject({ part });
   });
@@ -87,6 +89,26 @@ describe('parseMediaName — films (Plex / Jellyfin conventions)', () => {
       part: null,
     });
   });
+
+  it('keeps a letter outside the supported a–d part range in the title', () => {
+    expect(parseMediaName('Film.disc.e.mkv', 'films')).toMatchObject({
+      title: 'Film disc e',
+      part: null,
+    });
+  });
+
+  it.each(['', '/', '\\', '/\\/'])(
+    'handles empty path segments without inventing a title: %s',
+    (path) => {
+      expect(parseMediaName(path, 'films')).toMatchObject({ kind: 'film', title: '', year: null });
+      expect(parseMediaName(path, 'series')).toMatchObject({
+        kind: 'unknown',
+        title: '',
+        season: null,
+      });
+      expect(isExtra(path)).toBe(false);
+    },
+  );
 
   it('keeps an unknown name as a film with the stem and no year (spec 5a)', () => {
     expect(parseMediaName('Home Video.mp4', 'films')).toMatchObject({
