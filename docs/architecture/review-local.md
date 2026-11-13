@@ -107,3 +107,18 @@ The timing origin was corrected to precede the peer request after metadata admis
 Local preview was opened in Chrome at https://localhost:8443; the existing staging service answers
 HTTP 200 and displays sign-in. It was not rebuilt or redeployed by this preview action and does not
 show production progressive recovery. No credentials were read or entered to open the preview.
+
+
+## Refreshed application checks — 2026-11-13
+
+Checked clean code HEAD `08156c1`. The [final local report](qa/2026-11-13-issue-308-final-local-ci.md)
+records **1,363 application tests passed, zero skipped**, with `FFMPEG_IT=1`; all seven formerly
+unexecuted opt-in cases now pass. Server line coverage is 98.63%, web 98.96%, shared 100%.
+Typecheck/build passed, two Chromium smoke journeys passed on the production web build with a
+stubbed network API, and the local Sonar quality gate passed with fresh coverage. Full-history
+Gitleaks: 250 commits, no leaks. VPN boundary coverage remains 100% (211 statements/62 branches).
+The experiment exports have 18/18 JSDoc presence; no repository-wide documentation percentage claimed.
+
+This supersedes the earlier unexecuted-seven-test concern for this checked head. It does not
+supersede ADR proposed status, unknown-file browser limits, absent merge attestation or deployment
+validation. PR #324 remains draft, and #308 stays open pending owner decision and final gate.

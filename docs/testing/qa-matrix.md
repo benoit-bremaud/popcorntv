@@ -493,3 +493,14 @@ Evidence: [proposed conclusion](../architecture/qa/2026-11-13-issue-308-conclusi
 | E308-22 / T-13 / T-NFR-9 | Authenticated API piece metadata feeds a bounded manifest; exact read buffers pass protocol hashes before standalone decode | OK: 96 pieces / 1,572,516 bytes, first frame incomplete; reader has no full-reference argument, but poll/browser still use the fixture oracle |
 | E308-23 / T-NFR-7 | Malformed/sparse/oversized/mutable metadata, wrong indices/states and short/corrupt/failed reads cannot expose unchecked bytes | OK: two new boundary tests with real hashing and doubled filesystem reads; no production cache admission/lease claim |
 | E308-24 | First-frame chronology includes the private peer request after metadata admission | OK: named backend_peer_request origin; 19,343 ms first frame / 29,236 ms completion in latest standalone replay; not a UI startup latency benchmark |
+
+
+### Refreshed local application validation — 2026-11-13
+
+[Execution evidence](../architecture/qa/2026-11-13-issue-308-final-local-ci.md), checked `08156c1`.
+
+| Case | Verification | Result and limits |
+|---|---|---|
+| E308-25 | Existing application suites with real FFmpeg integration enabled | 1,363 passed, zero skipped; shared/server/web line coverage 100%/98.63%/98.96%; supersedes the earlier seven opt-in skips for this head |
+| E308-26 | Production web bundle catalog/detail/back/reload smoke | Two Chromium journeys passed; API network responses stubbed, no whole deployed-system or progressive-product claim |
+| E308-27 | Fresh local Sonar, typecheck, build, offline full-history secret scan | Passed; Sonar apps/packages only, Gitleaks 250 commits clean; no signed merge/release attestation or Pi QA claimed |
