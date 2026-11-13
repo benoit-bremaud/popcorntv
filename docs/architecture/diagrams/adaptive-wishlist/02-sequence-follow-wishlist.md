@@ -32,3 +32,11 @@ sequenceDiagram
 ```
 
 No-source results retain a daily due date, not an active-transfer poll. Transient failure uses persisted backoff. Unknown upstream write outcomes are reconciled before another write. Atomicity requires readiness and notification persistence in the same local transaction or an equivalently proven durable reconciliation contract, to be detailed in #309/#314.
+
+The #309 refinement in [durable requests](../../specs/adaptive-wishlist-requests.md) puts the
+first two local writes in one SQLite transaction. The HTTP response follows that commit;
+no network operation runs inside it. The optional due block starts in #310, with a committed
+attempt token before external submission and token-guarded reconciliation afterwards. A TV
+wish is monitoring demand; individual episode targets are discovered separately. The first
+delivery milestone prepares complete files before the progressive observation/readiness loop
+is enabled. These refinements are proposed for owner validation before #309 coding.

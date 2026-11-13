@@ -4,6 +4,31 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-13 — Progressive recovery feasibility (PR #324, `2b60b1c`)
+
+- Squash-merged PR #324 from `test/308-adaptive-wishlist-feasibility`; #308 is complete.
+  Accepted ADR-0034 option A for bounded qBittorrent/hash-reader construction, preserving
+  multiple-indexer requirements (#310) and a later secondary backend (#325).
+- Validated isolated synthetic recovery, verified piece reads, slow full-file gating,
+  controlled restart, immutable file rename and browser playback with French tracks.
+  These are feasibility experiments; automatic product preparation, real arr import and
+  Pi capacity validation remain future work.
+- Final local checks on `2b6d99e`: 1,363 application tests, 61 experimental tests and two
+  Chromium smoke journeys passed without skips; typecheck, lint, formatting, build,
+  SonarQube and secrets scans passed. Report-only publication: `8a50461`.
+- Independent adversarial review and correction verification found no remaining Must/Should
+  findings. A PR review exposed a late completion-observer false success; the fix has a
+  failing-before/passing-after regression and an inline response.
+- The owner explicitly authorized merge after green local CI. `MERGE_GATE_WAIVER` references
+  #308 for the absent signed gate/hosted statuses; no failing local check was waived.
+  No deployment occurred. Epic #306 now records two of ten initial bricks complete;
+  child-account policy #316 is the next prerequisite.
+
+- Subsequent owner decision: prioritize a real complete-file trial before progressive playback.
+  #306 now orders #309/#310/#311, complete-file #314 and first #315, then #312/#313,
+  progressive #314, deferred child policy #316 and final #315. Proposed #309 persistence
+  contract and 21 planned cases await owner conception validation; no runtime code changed.
+
 ## 2026-11-12 — Adaptive wishlist design baseline (PR #317, `82f3fee`)
 
 - Squash-merged PR #317 from `docs/307-adaptive-wishlist-lifecycle` after the owner's explicit

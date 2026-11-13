@@ -93,7 +93,7 @@ Required product capabilities:
 
 | ID | Contract | Delivery |
 |---|---|---|
-| REQ-26 | Owner-configured child invitation policy survives single-use redemption atomically and cannot be changed by the recipient or bypassed through profiles/role/reset flows. | #316 child-account prerequisite, before #309 |
+| REQ-26 | Owner-configured child invitation policy survives single-use redemption atomically and cannot be changed by the recipient or bypassed through profiles/role/reset flows. | #316 deferred to the end of implementation, before child rollout |
 | REQ-27 | Parental rules govern discovery, wishlist acquisition, notifications and playback on the server, including unknown classifications, policy changes and shared content. | #316, #309, #313, #314 |
 
 Child policy design is not yet accepted. Retain automatic acquisition for eligible adult accounts, but do not roll out unrestricted child auto-acquisition while parental controls are absent.
@@ -179,3 +179,16 @@ indexer or content source. REQ-28 places multi-indexer behavior in #310; REQ-29 
 future client/protocol diversity. Do not splice a changed publication into an active generation or
 blindly resubmit an uncertain job elsewhere. Native libtorrent fallback and secondary-client
 integration are separate concerns. No second client is installed by this acceptance.
+
+## Revised delivery milestones — owner accepted
+
+The owner approved a first real complete-file trial: #309 durable requests, #310 daily and
+manually triggered bounded search, #311 bounded cache, #314 complete-file notification and
+existing-player handoff, then #315 first local/configured-service validation. Progressive
+readiness #312, playback #313 and the progressive #314 extension follow. #316 child accounts
+is deferred until the end of implementation, before final #315 validation and child rollout.
+It no longer blocks #309. The current account model has no child marker; adult-only first
+trial is an operational constraint, not implemented parental enforcement. #325 remains later.
+
+The proposed [#309 request contract](adaptive-wishlist-requests.md) refines local persistence
+and uncertain-write reconciliation. Its concrete design awaits owner validation before code.
