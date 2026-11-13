@@ -10,7 +10,7 @@ Draft, not accepted or implemented: [specification](specs/adaptive-wishlist-life
 [lifecycle](diagrams/adaptive-wishlist/05-state-preparation.md),
 [traceability](traceability-matrix.md), [glossary](glossary.md).
 The proposed method is risk-first UP elaboration ([ADR-0033](decisions/0033-elaborate-adaptive-playback-risks-before-construction.md)),
-with backend feasibility #308 before detailed construction. Audience: owner, household viewers
+with backend feasibility #308 before detailed construction. The [#308 experiment study](specs/adaptive-wishlist-feasibility.md) compares candidates and defines evidence required before adoption. Audience: owner, household viewers
 and implementer. Goals: private persistent wishes, daily discovery, bounded preparation and
 honest ready-to-watch notices. API/schema/classes and deployment decisions await the spike.
 Existing context below describes current main behavior, not the proposed recovery service.
@@ -52,7 +52,7 @@ docs/architecture/
 
 | Feature    | Diagrams                                | Status  |
 | ---------- | --------------------------------------- | ------- |
-| `adaptive-wishlist` | [spec](specs/adaptive-wishlist-lifecycle.md), [diagrams](diagrams/adaptive-wishlist) | draft — owner review and #308 evidence pending |
+| `adaptive-wishlist` | [spec](specs/adaptive-wishlist-lifecycle.md), [diagrams](diagrams/adaptive-wishlist) | lifecycle documented; recovery contract accepted; runtime implementation pending |
 | `playback` | [diagrams/playback](diagrams/playback)  | design  |
 
 ## Decisions
@@ -62,8 +62,14 @@ docs/architecture/
 | [0001](decisions/0001-all-typescript-stack.md) | All-TypeScript pnpm monorepo | accepted |
 | [0002](decisions/0002-file-naming-parser.md) | File-naming parser: own regex parser | accepted |
 | [0033](decisions/0033-elaborate-adaptive-playback-risks-before-construction.md) | Elaborate adaptive playback risks before construction | proposed |
+| [0034](decisions/0034-verify-pieces-before-progressive-playback.md) | Verify pieces before progressive playback | accepted — bounded construction, source diversity retained |
 
 ## Specifications and QA
 
 - `specs/<feature>.md` — textual Cockburn use-case specs ([library-scan](specs/library-scan.md)).
 - `qa/<date>-issue-<n>-<slug>/` — QA pass outputs kept as merge evidence.
+
+- [Issue 308 recovery and generation evidence](qa/2026-11-13-issue-308-recovery.md) — slow/full-file
+  fallback, controlled partial restart, simulated POSIX rename; bounded construction accepted; production integration pending.
+
+- [Issue 308 accepted research conclusion](qa/2026-11-13-issue-308-conclusion.md) — accepted decision, runtime boundaries and standalone hash-reader evidence.
