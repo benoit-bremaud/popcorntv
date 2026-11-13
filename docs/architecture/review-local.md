@@ -406,3 +406,52 @@ contains E331-01–04. Hosted-only checks and absent signed attestation retain t
 documented local-only merge exception; no actual failing local check is waived. Docker security
 workflow path filters do not match this diff. This final publication changes only this review
 report after the checked head. Push gate: open subject to independent report verification.
+
+Any pending-final-gate markers in the frozen #330 planning/evidence documents are superseded
+by the measured #330 results below; they are not unresolved test executions.
+
+## Issue #330 — bounded parser suffix cleanup
+
+Checked clean source/test/evidence head: `9ea9164b1e5920882849ff4e6584abeecf9a6db9`.
+The artifact in `qa/2026-11-13-issue-330-benchmark.json` was measured on core0c46123;
+parser/harness hashes match the final head. Its JSON formatting preserves all measured values.
+Adversarial code/artifact review and independent test-pertinence review ended Must0/Should0.
+The latter resolved two Should findings and removed a redundant sweep before final execution.
+
+| Check | Final result and scope |
+|---|---|
+| Application coverage | **1,446 passed, zero skipped**, shared57/server904/web485 across83files; real FFmpeg enabled |
+| Explicit final test command | `FFMPEG_IT=1 pnpm coverage --maxWorkers=4`, unchanged globs/assertions/timeouts |
+| Deterministic frozen-parser equivalence | **22,236 complete-object comparisons passed** again with --verify-only on9ea9164; not additional Vitest tests |
+| Scoped parser LCOV | **82/82 lines,15/15 functions**,92/95 branches (96.84%); no exclusions |
+| Whole-application lines | Shared100%, server98.64%, web98.89%; server branches93.58%, web93.87% |
+| Typecheck, lint/log audit, formatting, production build | Passed |
+| Chromium production-bundle smoke | Two journeys passed in10.1s; API responses stubbed |
+| Local SonarQube | Gate PASSED on9ea9164; read-only unresolved-issue inventory returned **total0**; S8786 resolved |
+| Semgrep | Pinned1.181.0,74rules/220targets, zero findings |
+| Redacted full-history Gitleaks | 260commits, no leaks; staged report scanned separately before publication |
+
+The first full default-worker run failed an existing keyframe fixture's10s beforeAll hook,
+leaving four FFmpeg tests unexecuted. This was not counted as green or silently discarded.
+Those four tests passed in isolation (7.74s total), then the entire suite passed with the
+explicit four-worker budget. No test was disabled, no timeout increased and no retry flag
+used. Resource contention is a plausible explanation, not a proved universal diagnosis.
+Formalize a measured bounded/resource-aware gate runner in #329 before #315 A; the default
+unconstrained command is not claimed to have passed. The failed log remains locally in
+`/tmp/popcorntv-local-ci/330-coverage-parallel.log`; successful bounded run in330-coverage.log.
+
+Measured nonmatching16,384-hyphen stress fixture: baseline328.2824ms/current0.1363ms median,
+with5samples and observable checksum505212. Matching fixtures do not improve systematically;
+no universal speedup, production latency, whole-parser linearity or remote DoS claim is made.
+Source reachability, filesystem-bound limits, decision and all rows are in
+`qa/2026-11-13-issue-330-parser-complexity.md`. The new suffix pass visits each removable
+position once after unchanged normalization. Literal tests cover all25ECMAScript whitespace
+characters plus nonmatching Unicode, raw fallback and metadata; there are no domain mocks or
+elapsed-time assertions. Parser hot-path logging is unchanged; synthetic benchmark data is safe.
+
+Node22.23.4/pnpm10.30.3 and the existing local toolchain were used. No dependency, service,
+deployment, credential or public API changed. This source snapshot publishes the prepared
+#332 merge journal and QA E330-01–04. Docker workflow path filters do not match. Hosted-only
+checks remain unexecuted under the local-only policy; missing signed attestation stays #329,
+not an actual local-check failure waiver. This final publication changes only this review
+report after the checked head. Push gate: open subject to independent report verification.

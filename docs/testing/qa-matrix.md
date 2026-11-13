@@ -559,3 +559,16 @@ Final checked SHA and measured gate results are in [review-local](../architectur
 | E331-02 | Supported a–d multi-part letters retain their numeric meaning | Added a/D boundaries and rejected e case; existing numeric and b cases retained |
 | E331-03 | Synchronous library listing preserves HTTP responses | Existing authenticated API tests cover populated and empty arrays; installed Fastify auto-sends synchronous return values |
 | E331-04 | Seven specified old Sonar findings disappear without suppressing rules | Final source SHA, full CI and issue inventory are recorded in review-local after execution; regex performance finding stays #330 |
+
+### Parser suffix complexity — #330
+
+[Case design](../architecture/qa/cases/330-parser-separator-scan.md) and
+[preservation/measurement protocol](../architecture/qa/2026-11-13-issue-330-parser-complexity.md).
+Final measured results and checked SHA follow in review-local.
+
+| Case | Verification | Evidence and limits |
+|---|---|---|
+| E330-01 / TC-01–06 | Literal expected cleanup, Unicode membership, raw fallback and metadata facts | 38 added unit cases; no domain mocks, IO or timing threshold |
+| E330-02 / TC-07 | Actual frozen baseline/current complete parser outputs agree | Deterministic exhaustive short corpus plus explicit metadata/Unicode fixtures; final execution pending |
+| E330-03 / TC-08 | Matching/nonmatching suffix scaling measured separately from unit assertions | Bounded real-parser benchmark, five medians, observable checksum and source hashes; oversized inputs do not prove production exploitability |
+| E330-04 | Final local gate and resolution of S8786 | Exact checked SHA/results recorded after execution; no suppression or artificial filename limit |

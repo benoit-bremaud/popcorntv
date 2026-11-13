@@ -216,11 +216,11 @@ function stripTags(text: string): string {
 }
 
 function clean(text: string): string {
-  return text
-    .replace(/[._]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .replace(/[\s-]+$/, '')
-    .trim();
+  const normalized = text.replace(/[._]+/g, ' ').replace(/\s+/g, ' ');
+  let end = normalized.length;
+  // Whitespace is now ASCII space. Walk the suffix once instead of retrying a regex at every start.
+  while (end > 0 && (normalized[end - 1] === ' ' || normalized[end - 1] === '-')) end -= 1;
+  return normalized.slice(0, end).trim();
 }
 
 function splitPath(relativePath: string): string[] {

@@ -1,0 +1,86 @@
+{
+  "baselineCommit": "5bfeffb187dff309a56b37487748396627feaddf",
+  "sourceCommit": "0c46123167284ebf7a885f689e0c6e24b5a4443d",
+  "node": "v22.23.4",
+  "platform": "linux",
+  "arch": "x64",
+  "baselineSourceSha256": "3063a463b17a6d915d8c6dab40743b56a6c2edc9f23d35ae71cd10f087e94d9a",
+  "currentSourceSha256": "31f9c6bd98eb7f1a9875dc55c4389148e992fbbd42f2bc3f051c11680ace877d",
+  "benchmarkSourceSha256": "2601a2b12aa8352aae2c0786172ee55e2469cecfe7191b87bc1c284fbd09a214",
+  "equivalenceCases": 22236,
+  "verifyOnly": false,
+  "samplesPerMeasurement": 5,
+  "measurements": [
+    {
+      "workload": "matching_suffix",
+      "hyphens": 128,
+      "filenameBytes": 143,
+      "baselineMedianMs": 0.006145999999716878,
+      "currentMedianMs": 0.005687999999736348
+    },
+    {
+      "workload": "nonmatching_suffix",
+      "hyphens": 128,
+      "filenameBytes": 144,
+      "baselineMedianMs": 0.031815000000278815,
+      "currentMedianMs": 0.005453999999645021
+    },
+    {
+      "workload": "matching_suffix",
+      "hyphens": 224,
+      "filenameBytes": 239,
+      "baselineMedianMs": 0.006970999999794003,
+      "currentMedianMs": 0.007364000000052329
+    },
+    {
+      "workload": "nonmatching_suffix",
+      "hyphens": 224,
+      "filenameBytes": 240,
+      "baselineMedianMs": 0.07633399999986068,
+      "currentMedianMs": 0.005979999999908614
+    },
+    {
+      "workload": "matching_suffix",
+      "hyphens": 1024,
+      "filenameBytes": 1039,
+      "baselineMedianMs": 0.015381000000161293,
+      "currentMedianMs": 0.018122999999832246
+    },
+    {
+      "workload": "nonmatching_suffix",
+      "hyphens": 1024,
+      "filenameBytes": 1040,
+      "baselineMedianMs": 3.418054000000211,
+      "currentMedianMs": 0.013051000000359636
+    },
+    {
+      "workload": "matching_suffix",
+      "hyphens": 4096,
+      "filenameBytes": 4111,
+      "baselineMedianMs": 0.044584999999642605,
+      "currentMedianMs": 0.04313700000011522
+    },
+    {
+      "workload": "nonmatching_suffix",
+      "hyphens": 4096,
+      "filenameBytes": 4112,
+      "baselineMedianMs": 19.255829000000176,
+      "currentMedianMs": 0.037964000000101805
+    },
+    {
+      "workload": "matching_suffix",
+      "hyphens": 16384,
+      "filenameBytes": 16399,
+      "baselineMedianMs": 0.16092600000001767,
+      "currentMedianMs": 0.1870850000000246
+    },
+    {
+      "workload": "nonmatching_suffix",
+      "hyphens": 16384,
+      "filenameBytes": 16400,
+      "baselineMedianMs": 328.28243099999963,
+      "currentMedianMs": 0.13626699999986158
+    }
+  ],
+  "resultChecksum": 505212
+}
