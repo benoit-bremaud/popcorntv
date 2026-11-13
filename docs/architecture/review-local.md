@@ -293,3 +293,27 @@ open and deadline checks. The final accepted source/tests require a fresh consol
 `RUN_BACKEND_FAILURE_SPIKE=1`; prior 60-case results remain historical for their checked head.
 The owner also requires progress reporting after each merged PR before the next brick; this is
 recorded in CLAUDE.md and the handoff. No percentage is claimed as updated before an actual merge.
+
+## Final validation after the late-observer fix
+
+Checked clean source/test/design head: `2b6d99ec58b18e6429957d3c880ab23ba1142e64`.
+The consolidated run including `RUN_BACKEND_FAILURE_SPIKE=1` passed all 61 tests, with zero
+failures, cancellations or skips (490.21 seconds). Experiment coverage is 97.56% lines,
+94.32% branches and 92.92% functions. Generation coverage remains 100% lines/functions
+and 97.73% branches. These measured results supersede the earlier 60-case publication.
+
+All 1,363 application tests passed with FFmpeg integration enabled and zero skips.
+Application line coverage is shared 100%, server 98.63% and web 98.96%. Typecheck,
+lint including catch-log auditing, formatting and production build passed. Both Chromium
+smoke journeys passed against the built web bundle with stubbed API responses. Local
+SonarQube quality gate passed; redacted Gitleaks scanned 255 commits without leaks.
+No owned recovery-spike containers remained after completion.
+
+Independent code review and fix verification found Must 0 / Should 0. The P2 finding
+received an inline explanation of the fix, decision and failing-before/passing-after
+regression. The final remote inspection found one answered, resolved thread and no
+additional review-body findings. No further conversation resolution is performed here.
+This publication changes only this review report after the checked source head; it does
+not claim signed attestation. Push gate: open for this report-only publication, subject
+to independent report verification. Merge still requires the explicit owner waiver for
+the absent signed gate/hosted statuses; no local check failure is waived.
