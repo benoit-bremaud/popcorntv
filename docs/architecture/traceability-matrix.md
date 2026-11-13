@@ -68,3 +68,9 @@ and [combined experiment report](qa/2026-11-12-issue-308-combined.md) track obse
 T-13/T-18/T-19/T-24 and resource/secret boundaries. They establish limited media mechanics,
 not implementation of UC32/UC33 or the readiness/notification state machine. T-9–12, T-14–17,
 T-20–23, T-25–27 and full NFR coverage remain pending their implementation bricks.
+
+The [2026-11-13 recovery report](qa/2026-11-13-issue-308-recovery.md) adds E308-17–21:
+real slow/full-file behavior, controlled partial restart and immutable-inode rename. T-23 gains
+backend persistence evidence only; preparation-state reconciliation remains unimplemented.
+T-14 readiness and full NFR coverage remain pending, as do the final unknown-file range contract
+and adoption decision. No additional business use case is marked implemented.

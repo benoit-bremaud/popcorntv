@@ -1,6 +1,7 @@
 # Local review — issue 308 feasibility experiments
 
 The branch may be published as a draft; acceptance, merge and release gates remain incomplete.
+The latest follow-up below supersedes the earlier list of unmeasured research cases.
 
 ## Scope and verdict
 
@@ -51,6 +52,30 @@ scans and isolated live trials retain their dated scope; no VPN replay was perfo
 
 ## Continuation
 
-Keep #308 open. The [handoff](qa/2026-11-13-issue-308-handoff.md) lists slow real recovery,
-mid-transfer restart, rename/generation identity, final restricted adoption decision and target
-resource observations. Wishlist activation and general progressive playback remain unimplemented.
+Keep #308 open. The [handoff](qa/2026-11-13-issue-308-handoff.md) lists the current final adoption/range contract work and deferred target validation.
+The follow-up report below supersedes the earlier missing slow/restart/rename evidence. Wishlist activation and general progressive playback remain unimplemented.
+
+
+## Recovery and generation follow-up — 2026-11-13
+
+Code commit `e7174ab` adds slow-transfer fallback, controlled partial restart and immutable-inode
+rename experiments. Independent adversarial review plus correction verification: Must 0 / Should 0.
+The reviewer verified cleanup-marker propagation across open validation, negative proof assertions
+and concurrent late mutation/decoder errors. No Docker/network/secret access by the reviewer.
+
+- Consolidated opt-in experiment run: 55 passed, zero failed/skipped, 406 seconds. Its generation
+  module preceded the final concurrent-error merge; latest focused replay covers that correction:
+  six passed, 100% lines/functions and 97.73% branches. No coverage exclusions.
+- Latest five-file quick suite: 46 passed, zero failed/skipped.
+- Current lint and repository formatting passed; `git diff --check` passed.
+- Gitleaks 8.30.1 existing full history: 248 commits, no leaks. New documentation/staged changes
+  are scanned separately before publication. No environment or credentials are staged.
+- Application typecheck, coverage, build and local Sonar remain the preceding baseline evidence;
+  no apps/packages source or application tests changed in this follow-up. The experiments exercised
+  the existing built player. Seven existing application test skips remain unresolved for release.
+
+The [measured report](qa/2026-11-13-issue-308-recovery.md) and JSON distinguish point resource
+samples from peaks, graceful restart from crash, and controlled generation identity from arr import.
+Documentation consistency review found no blocking discrepancy; the final adoption/unknown-file
+contract still needs its research conclusion. **Push gate: open — draft-only.** No merge or release
+attestation, issue closure, service installation or deployment is authorized by this record.

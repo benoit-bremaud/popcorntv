@@ -467,3 +467,17 @@ in the linked combined report. Status is scoped to the exact observation, not th
 Overall #308 status remains **PARTIAL**. Full-file fallback is required if complete mandatory
 caption readiness cannot be established. Do not publish a ready notification from a partial
 experimental result, and do not interpret existing skipped application tests as executed QA.
+
+
+### Recovery and generation follow-up — 2026-11-13
+
+Evidence: [measured report](../architecture/qa/2026-11-13-issue-308-recovery.md), code `e7174ab`.
+The original dated rows remain historical observations; these rows add limited experiments.
+
+| Case | Verification | Evidence and limits |
+|---|---|---|
+| E308-17 / T-13 | Real slow transfer waits for complete verified file before decode | OK: 65,873 ms completion, 65,932 ms first frame; explicit experiment gate, not product adaptive policy |
+| E308-18 / T-23 | Controlled stop and graceful client restart before completion restores coherent bytes | OK: 327,680 observed bytes before stop, 606,208 restored; reference-matching decode after resume; no crash or product state-machine claim |
+| E308-19 / T-18 / T-24 | Active descriptor survives rename while stale new open rejects replacement | OK for immutable POSIX synthetic inode; original decode matches, renamed identity revalidated; actual arr import/in-place mutation not tested |
+| E308-20 / T-NFR-7 | Close failures and concurrent decoder/mutation failures preserve unsafe cleanup and attempt later closes | OK: mocked FS close boundary plus real directories, negative mutation experiment; six latest generation tests pass |
+| E308-21 / T-NFR-7 | Bounded run/command budgets and sanitized resource snapshots | OK for helper boundaries and point samples of two private clients; no Pi or whole-application peak/capacity claim |

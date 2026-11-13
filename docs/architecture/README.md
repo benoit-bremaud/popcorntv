@@ -67,3 +67,6 @@ docs/architecture/
 
 - `specs/<feature>.md` — textual Cockburn use-case specs ([library-scan](specs/library-scan.md)).
 - `qa/<date>-issue-<n>-<slug>/` — QA pass outputs kept as merge evidence.
+
+- [Issue 308 recovery and generation evidence](qa/2026-11-13-issue-308-recovery.md) — slow/full-file
+  fallback, controlled partial restart, simulated POSIX rename; final adoption still pending.
