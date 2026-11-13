@@ -4,7 +4,7 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
-## 2026-11-13 — Legacy server maintainability (#331)
+## 2026-11-13 — Legacy server maintainability (PR #332, `5bfeffb`)
 
 - Replaced five final-element array accesses with `at`, used code-point lookup in the
   ASCII-only part-letter branch, and removed the unnecessary promise wrapper from library
@@ -12,6 +12,16 @@ context: merged PRs, decisions, tags, infra events. Not a release changelog — 
 - Added meaningful empty-path and part-letter boundary cases; the existing parser/listing
   regression suites remain authoritative. Independent review found Must 0 / Should 0.
   Final checked-head measurements are recorded in `docs/architecture/review-local.md`.
+- Squash-merged PR #332 from `refactor/331-legacy-sonar-findings` after the owner-authorized
+  green local gate: 1,408 tests passed with zero skips, two Chromium smoke journeys,
+  typecheck/lint/format/build, SonarQube, Semgrep and secrets scan all passed. Checked source
+  `05ba727`; report-only publication `37746ef`. The configured optional automatic review
+  completed without findings. Missing signed attestation remains bounded by #329; no failing
+  local check was waived and no deployment occurred.
+- Sonar's unresolved issue inventory now contains only S8786 (#330); all seven #331 findings
+  are resolved. #331 is closed and #330 is next. Reported progress before the next brick stays
+  approximately 60% overall and three of ten initial functional bricks (30%); maintenance
+  completion is not counted as a new product feature.
 - Kept the separate parser-complexity investigation #330 out of this maintenance change.
   This PR also publishes the prepared #326 merge log, preserving the per-merge audit trail.
 
