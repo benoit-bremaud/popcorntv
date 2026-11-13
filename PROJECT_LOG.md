@@ -4,6 +4,19 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-13 — Durable wishlist implementation (#309, not yet merged)
+
+- The owner accepted the concrete request contract before coding. Added transactional shared
+  demand/private interests, migration backfill and guarded uncertain-attempt persistence.
+  Provider IO remains #310; no acquisition or deployment was performed.
+- Adversarial review corrected stale local evidence after retirement; both retirement and
+  resolution invalidation now commit together. Design and runtime fix verification ended
+  with Must 0 / Should 0. Consolidated local checks are pending final execution.
+- First local Semgrep baseline: seven pre-existing audit matches, all verified false positives
+  (six Fastify JSON replies, one digest-basename artwork route). Added only exact-rule inline
+  annotations with reasons. Engine is digest-pinned; named registry rules are fetched at run
+  time. Triage and decision are in `docs/architecture/qa/2026-11-13-issue-309-implementation.md`.
+
 ## 2026-11-13 — Progressive recovery feasibility (PR #324, `2b60b1c`)
 
 - Squash-merged PR #324 from `test/308-adaptive-wishlist-feasibility`; #308 is complete.

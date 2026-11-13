@@ -330,6 +330,8 @@ export function registerDiscoverRoutes(app: FastifyInstance, deps: DiscoverRoute
     if (!deps.profiles.exists(callerOf(request).userId, params.data.profileId)) {
       return reply.code(404).send(apiError('profile_not_found'));
     }
+    // Fastify serializes this object/array as application/json; no HTML response is written.
+    // nosemgrep: javascript.express.security.audit.xss.direct-response-write.direct-response-write
     return reply.send(issue(deps.wishlist.list(params.data.profileId)));
   });
 

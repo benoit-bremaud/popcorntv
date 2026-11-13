@@ -64,6 +64,8 @@ export function registerUserRoutes(app: FastifyInstance, deps: UserRoutesDeps): 
     if (result === 'not_found') return notFound(reply);
     if (result === 'last_owner') return reply.code(409).send(apiError('last_owner'));
     events.record('role_changed', { userId: id, ip: request.ip }, now);
+    // Fastify serializes this object/array as application/json; no HTML response is written.
+    // nosemgrep: javascript.express.security.audit.xss.direct-response-write.direct-response-write
     return reply.send(users.find(id));
   });
 
@@ -91,6 +93,8 @@ export function registerUserRoutes(app: FastifyInstance, deps: UserRoutesDeps): 
     const params = userParams.safeParse(request.params);
     if (!params.success) return reply.code(400).send(invalid(params.error.issues));
     if (!users.exists(params.data.id)) return notFound(reply);
+    // Fastify serializes this object/array as application/json; no HTML response is written.
+    // nosemgrep: javascript.express.security.audit.xss.direct-response-write.direct-response-write
     return reply.send(sessions.listLive(params.data.id, new Date()));
   });
 

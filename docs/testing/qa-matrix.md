@@ -534,3 +534,19 @@ behavior from future source/client and household runtime cases.
 |---|---|---|
 | E308-31 / TC-17 | A failed final resource observation cannot become success merely because byte coverage is complete | Real private-driver regression, injected only at the measurement boundary; pre-fix temporary copy returns false success and fails the rejection assertion; latest green replay recorded in review-local |
 | E308-32 | Failed poll diagnostics identify the safe operation phase and complete-prefix state | Assert completion-resources and complete=true; no raw command, credentials or upstream output logged |
+
+### Durable automatic wishlist requests — #309
+
+[Contract](../architecture/specs/adaptive-wishlist-requests.md),
+[case mapping](../architecture/qa/cases/adaptive-wishlist-requests.md),
+[review scope](../architecture/qa/2026-11-13-issue-309-implementation.md).
+Final checked SHA and measured gate results are in [review-local](../architecture/review-local.md).
+
+| Case | Verification | Evidence and limits |
+|---|---|---|
+| E309-01 / TC-01–04 | Atomic owned wishlist/interest writes, duplicate HTTP additions and rollback | Real SQLite + authenticated route injection; final consolidated gate pending |
+| E309-02 / TC-05–10/18 | Namespace boundaries, private subscription lifetimes, account deletion, migration and restart | Movie/TV collision, season zero, invalid boundaries, two-user backfill and disk reopen |
+| E309-03 / TC-11–15/20/21 | One unresolved attempt, fresh tri-state resolution, stale token refusal and guarded retirement | Real DB uniqueness/CAS; retirement invalidates evidence atomically, injected failure rolls back |
+| E309-04 / TC-17 | Sanitized errors and categorical transition logs | Persistence failure returns 500 without SQL/title parameters; upstream reference absent from logs |
+| E309-05 / TC-16/19 | Actual local-playability resolution and external dispatcher/provider finality | Partial: repository guards covered; adapters and real-service proofs remain #310/#311 |
+| E309-06 | Local quality/security/browser gate on a clean recorded head | Results pending final run; no deployment, child-policy or real-acquisition acceptance claimed |

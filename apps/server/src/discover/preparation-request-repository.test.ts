@@ -363,7 +363,7 @@ describe('write-ahead attempt protocol', () => {
     expect(h.db.select().from(attempts).all()).toEqual([]);
   });
 
-  it.each(['', 'a'.repeat(257), 'secret\nbody'])(
+  it.each(['', 'a'.repeat(257), 'secret\nbody', 'secret\u007fbody'])(
     'rejects invalid references without changing the attempt',
     (reference) => {
       const h = setup();

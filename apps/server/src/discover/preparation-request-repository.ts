@@ -224,7 +224,10 @@ export class PreparationRequestRepository {
     if (
       upstreamReference.length < 1 ||
       upstreamReference.length > 256 ||
-      /[\u0000-\u001f\u007f]/.test(upstreamReference)
+      [...upstreamReference].some((character) => {
+        const code = character.charCodeAt(0);
+        return code < 32 || code === 127;
+      })
     )
       throw new Error('invalid preparation upstream reference');
     const result = this.db.transaction(
