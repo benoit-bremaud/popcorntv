@@ -190,5 +190,5 @@ is deferred until the end of implementation, before final #315 validation and ch
 It no longer blocks #309. The current account model has no child marker; adult-only first
 trial is an operational constraint, not implemented parental enforcement. #325 remains later.
 
-The proposed [#309 request contract](adaptive-wishlist-requests.md) refines local persistence
-and uncertain-write reconciliation. Its concrete design awaits owner validation before code.
+The accepted [#309 request contract](adaptive-wishlist-requests.md) refines local persistence
+and uncertain-write reconciliation. The owner validated its concrete design before code.

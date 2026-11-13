@@ -39,4 +39,4 @@ no network operation runs inside it. The optional due block starts in #310, with
 attempt token before external submission and token-guarded reconciliation afterwards. A TV
 wish is monitoring demand; individual episode targets are discovered separately. The first
 delivery milestone prepares complete files before the progressive observation/readiness loop
-is enabled. These refinements are proposed for owner validation before #309 coding.
+is enabled. The owner validated these refinements before #309 coding.

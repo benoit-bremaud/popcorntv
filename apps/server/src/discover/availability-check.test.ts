@@ -111,7 +111,7 @@ function setup() {
       .values({ id: randomUUID(), libraryId, kind: 'film', title: 'Dune', tmdbId })
       .run();
   };
-  const wish = (tmdbId: number, profileId = profile.id): void =>
+  const wish = (tmdbId: number, profileId = profile.id): void => {
     wishlist.add(profileId, {
       kind: 'movie',
       tmdbId,
@@ -121,6 +121,7 @@ function setup() {
       voteAverage: 7,
       posterPath: null,
     });
+  };
   const logger = { info: vi.fn(), warn: vi.fn() };
   return {
     db,

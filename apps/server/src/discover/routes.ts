@@ -345,15 +345,33 @@ export function registerDiscoverRoutes(app: FastifyInstance, deps: DiscoverRoute
     // The server reads the facts itself: the client sends no title data (spec R5).
     const sheet = await viaTmdb(reply, () => details(tmdb, of, id));
     if (sheet === SENT) return reply;
-    deps.wishlist.add(profileId, {
-      kind: sheet.kind,
-      tmdbId: sheet.tmdbId,
-      title: sheet.title,
-      year: sheet.year,
-      overview: sheet.overview,
-      voteAverage: sheet.voteAverage,
-      posterPath: sheet.posterPath,
-    });
+    let preparation: ReturnType<WishlistRepository['add']>;
+    try {
+      preparation = deps.wishlist.add(profileId, {
+        kind: sheet.kind,
+        tmdbId: sheet.tmdbId,
+        title: sheet.title,
+        year: sheet.year,
+        overview: sheet.overview,
+        voteAverage: sheet.voteAverage,
+        posterPath: sheet.posterPath,
+      });
+    } catch {
+      // Drizzle errors can carry SQL parameters, including private title facts.
+      request.log.error(
+        { event: 'preparation.interest.failed', reason: 'persistence_failed' },
+        'Wishlist preparation interest failed',
+      );
+      throw new Error('wishlist preparation persistence failed');
+    }
+    request.log.info(
+      {
+        event: 'preparation.interest.saved',
+        demandId: preparation.demandId,
+        outcome: preparation.created ? 'created' : 'reused',
+      },
+      'Wishlist preparation interest saved',
+    );
     return reply.code(204).send();
   });
 
@@ -364,6 +382,10 @@ export function registerDiscoverRoutes(app: FastifyInstance, deps: DiscoverRoute
       return reply.code(404).send(apiError('profile_not_found'));
     }
     deps.wishlist.remove(params.data.profileId, params.data.kind, params.data.tmdbId);
+    request.log.info(
+      { event: 'preparation.interest.detached' },
+      'Wishlist preparation interest detached',
+    );
     return reply.code(204).send();
   });
 }

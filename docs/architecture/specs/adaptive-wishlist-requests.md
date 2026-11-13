@@ -1,10 +1,10 @@
 # Adaptive wishlist — durable preparation requests
 
-This proposed implementation contract for #309 turns an owned wishlist entry into durable shared demand without a network write inside the HTTP transaction.
+This accepted implementation contract for #309 turns an owned wishlist entry into durable shared demand without a network write inside the HTTP transaction.
 
 ## Status and delivery
 
-Proposed for owner validation before runtime implementation. The owner accepted the revised
+Accepted by the owner in conversation before runtime implementation. The owner accepted the revised
 delivery order in #306: #309, #310, #311, complete-file #314, first real-test #315, then
 #312/#313, progressive #314, #316 and final #315. Child restrictions no longer block #309.
 No real acquisition, deployment or claim of child suitability follows from this document.
@@ -57,13 +57,13 @@ the whole unvalidated branch or claim it is already deployed.
 
 ## Persistence and boundaries
 
-`preparation_demands` stores a UUID, title kind/TMDB key, creation time and durable scheduling
-handoff. `preparation_interests` has its own UUID and profile/title linkage, uniquely constrained
+`preparation_demands` stores an opaque ID, title kind/TMDB key, creation time and durable scheduling
+handoff. `preparation_interests` has its own opaque ID and profile/title linkage, uniquely constrained
 per wishlist row and deleted with that row. `preparation_targets` stores movie/episode identity
 under a demand, unique by canonical target key. A TV demand has no fabricated episode target;
 episode expansion belongs to #310 after trusted metadata discovery.
 
-`preparation_attempts` stores a UUID token, target, adapter namespace, state, nullable upstream
+`preparation_attempts` stores an opaque ID token, target, adapter namespace, state, nullable upstream
 reference and timestamps. At most one unresolved/accepted active attempt exists per target;
 historical failures do not permit parallel submissions. Database constraints back the invariants.
 State transitions use compare-and-set by token and current state. Generation/cache state stays
@@ -87,10 +87,12 @@ The internal attempt states and allowed transitions are deliberately small:
 references, old tokens and every unlisted transition are refused. Claim and acceptance remain
 blocked after restart when proof is absent. Retirement of an accepted generation is wired only
 with #311's guarded lifecycle; #309 does not retire accepted jobs merely because a wish vanished
-or a cache file looks missing. A later fresh claim creates a different token, retaining history.
+or a cache file looks missing. Retirement atomically invalidates local resolution; a later claim requires a new trusted probe
+and creates a different token, retaining history. This prevents reuse of a pre-completion
+missing-file result after the completed job has changed local availability.
 
-Use the existing SQLite/Drizzle migration mechanism. Migration/backfill is deterministic and
-idempotent through uniqueness constraints; it does not backfill readiness or notifications.
+Use the existing SQLite/Drizzle migration mechanism. Migration groups existing title keys and assigns random opaque IDs once; persisted identities
+remain stable on subsequent opens through the migration journal and uniqueness constraints; it does not backfill readiness or notifications.
 Cascade profile/wishlist deletion only into private interests, never shared work. Migration
 tests start from an actual prior database containing multiple users and wishes.
 
@@ -148,5 +150,20 @@ No test execution or coverage percentage is claimed by this specification.
 
 Independent adversarial design review found two Must and two Should items, corrected and
 reverified with Must 0 / Should 0: dispatcher fencing, unknown local-resolution handling,
-explicit attempt transitions and authoritative #309/#310 scope. Owner validation of this
-concrete contract is pending; this document does not authorize deployment or service writes.
+explicit attempt transitions and authoritative #309/#310 scope. The owner validated this
+concrete contract before coding; this document does not authorize deployment or service writes.
+
+## Implementation scope and verification
+
+Migration 0011 creates demand, interest, exact target and attempt tables and backfills existing
+wishes without service IO. Runtime additions use UUIDs; migration backfill uses random 128-bit
+hex IDs. IDs are opaque, never parsed or tied to backend names. The current HTTP surface stays
+unchanged; an owned PUT commits wish plus interest atomically and returns 204 only on success.
+SQL errors are replaced with categorical logging before reaching the HTTP error handler, to
+avoid logging private title facts carried in Drizzle query parameters.
+
+`PreparationRequestRepository` implements only local trusted-boundary transitions. Its boolean
+retirement evidence is an internal assertion from a future verified adapter, not proof that a
+real provider is idempotent. No public route accepts it. Actual dispatch/fencing/provider-finality
+and local-playability adapters remain #310/#311, with their integration tests still pending.
+Two-connection tests prove persisted sequential arbitration, not simultaneous process contention.
