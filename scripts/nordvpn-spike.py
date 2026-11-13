@@ -13,6 +13,7 @@ import os
 import re
 from pathlib import Path
 import secrets
+import shutil
 import socket
 import subprocess
 import sys
@@ -175,8 +176,8 @@ def run(path):
     prefix = "popcorntv-vpn-spike-" + secrets.token_hex(5)
     vpn, probe = prefix + "-vpn", prefix + "-probe"
     created = []
-    with tempfile.TemporaryDirectory(prefix="popcorntv-vpn-secret-") as root:
-        root = Path(root)
+    root = Path(tempfile.mkdtemp(prefix="popcorntv-vpn-secret-"))
+    try:
         config = root / "wg0.conf"
         config.write_text(prepare_config(path))
         config.chmod(0o600)
@@ -212,6 +213,7 @@ def run(path):
         try:
             # Network appliance needs NET_ADMIN; DAC_OVERRIDE reads UID-owned 0600 bind files.
             # The unprivileged probe receives neither capability nor any credential mount.
+            created.append(vpn)  # Track even uncertain daemon-side creation.
             command(
                 [
                     "docker",
@@ -260,8 +262,8 @@ def run(path):
                     VPN_IMAGE,
                 ]
             )
-            created.append(vpn)
             command(["docker", "start", vpn])
+            created.append(probe)
             command(
                 [
                     "docker",
@@ -298,7 +300,6 @@ def run(path):
                     PROBE_IMAGE,
                 ]
             )
-            created.append(probe)
             command(["docker", "start", probe])
             log_event("vpn.containers_started")
 
@@ -458,6 +459,8 @@ def run(path):
             log_event("vpn.stopped_traffic_blocked")
             control("running")
             recovered = wait_connected()
+            if ipaddress.ip_address(recovered) == host_ip:
+                raise RuntimeError("vpn_recovered_egress_matches_host")
             log_event(
                 "vpn.reconnected", elapsedMs=round((time.monotonic() - began) * 1000)
             )
@@ -483,21 +486,6 @@ def run(path):
             log_event("vpn.experiment_failed", code=str(error))
             logs = command(["docker", "logs", vpn], required=False)
             diagnostic = logs.stdout + logs.stderr
-            permission_lines = []
-            for line in diagnostic.splitlines():
-                if any(
-                    marker in line.lower()
-                    for marker in [
-                        "permitted",
-                        "permission denied",
-                        "read-only file system",
-                        "error",
-                    ]
-                ):
-                    line = line.replace(key, "[redacted]")
-                    line = re.sub(r"[A-Za-z0-9+/=_-]{24,}", "[redacted]", line)
-                    line = re.sub(r"(?:\d{1,3}\.){3}\d{1,3}", "[ip]", line)
-                    permission_lines.append(line[:300])
             print(
                 json.dumps(
                     {
@@ -528,26 +516,33 @@ def run(path):
                                 ]
                                 if word in diagnostic.lower()
                             ],
-                            "permissionErrors": permission_lines,
                         },
                     }
                 )
             )
             raise
-        finally:
-            cleanup_failed = False
-            for name in reversed(created):
-                cleanup_failed |= (
-                    command(["docker", "rm", "-f", name], required=False).returncode
-                    != 0
-                )
-            if cleanup_failed:
-                log_event("vpn.cleanup_failed")
-                raise RuntimeError("experiment_cleanup_failed")
-            log_event(
-                "vpn.cleanup_completed",
-                elapsedMs=round((time.monotonic() - began) * 1000),
+    finally:
+        primary = sys.exception()
+        cleanup_errors = []
+        for name in reversed(created):
+            try:
+                result = command(["docker", "rm", "-f", name], required=False)
+                if result.returncode != 0:
+                    cleanup_errors.append(RuntimeError("container_removal_failed"))
+            except (OSError, subprocess.TimeoutExpired):
+                cleanup_errors.append(RuntimeError("container_removal_unconfirmed"))
+        if cleanup_errors:
+            log_event("vpn.cleanup_failed", workspaceRetained=True)
+            failure = RuntimeError("experiment_cleanup_failed")
+            raise failure from ExceptionGroup(
+                "experiment_and_cleanup_failures",
+                ([primary] if isinstance(primary, Exception) else []) + cleanup_errors,
             )
+        shutil.rmtree(root)
+        log_event(
+            "vpn.cleanup_completed",
+            elapsedMs=round((time.monotonic() - began) * 1000),
+        )
 
 
 if __name__ == "__main__":

@@ -191,8 +191,8 @@ This controlled-fixture experiment cannot justify arbitrary-film subtitle readin
 ## Exit conditions
 
 The #308 verdict is GO only for a measured backend/format/version combination that passes the
-real-backend verified-range and playback scenarios. PARTIAL means stage-1 mechanics passed
-but backend/player integration is not proven. BLOCKED means a needed tool/setup/permission
+real-backend verified-range and playback scenarios. PARTIAL means bounded experimental evidence exists
+but the required acceptance scenarios are not all proven. BLOCKED means a needed tool/setup/permission
 is absent. NO-GO means the candidate violates a required invariant. None permits pretending
 that full-file-only playback has fulfilled progressive playback.
 
@@ -200,5 +200,7 @@ Stages 1–3 now have bounded execution evidence: the [media mechanics report](.
 [real backend/VPN report](../qa/2026-11-12-issue-308-backend-vpn.md) and
 [existing-player report](../qa/2026-11-12-issue-308-player.md). The player decodes incomplete verified
 input and reaches normal end in the controlled-writer experiment. Overall verdict remains PARTIAL:
-real-backend/browser combination and startup subtitle readiness are not yet proven, along with the
-remaining cases listed in the measured reports. The #307 local CI remains separate baseline evidence.
+the [combined report](../qa/2026-11-12-issue-308-combined.md) proves real-backend/browser playback
+and an active French startup cue for the controlled fixture only. Real slow recovery, interruption
+and restart during transfer, final rename/import identity, arbitrary-title caption readiness and
+Pi performance remain unproven. These remaining cases prevent closing #308. The #307 local CI remains separate baseline evidence.

@@ -159,6 +159,7 @@ class WorkflowTests(unittest.TestCase):
 
     def exercise(self, fault=None):
         calls = []
+        workspaces = []
         state = {"stopped": False, "traces": 0, "logins": 0, "clients": 0}
         output, logs = io.StringIO(), io.StringIO()
 
@@ -169,6 +170,13 @@ class WorkflowTests(unittest.TestCase):
                 text = "fixture-container-id"
                 if fault == "create":
                     code = 1
+                if fault == "create-uncertain":
+                    raise OSError("uncertain_create")
+                if (
+                    fault == "probe-create-uncertain"
+                    and sum(args[1] == "create" for args in calls) == 2
+                ):
+                    raise spike.subprocess.TimeoutExpired("fixture", 1)
             elif args[1] == "inspect":
                 text = "false" if fault == "exited" else "true"
             elif args[1] == "logs":
@@ -176,7 +184,15 @@ class WorkflowTests(unittest.TestCase):
                     "Normal startup\nERROR permission denied /dev/net/tun 2.2.2.2 "
                     + "Z" * 44
                 )
-            elif args[1] == "rm" and fault == "cleanup":
+            elif args[1] == "rm" and fault in {
+                "cleanup",
+                "cleanup-timeout",
+                "cleanup-os",
+            }:
+                if fault == "cleanup-timeout":
+                    raise spike.subprocess.TimeoutExpired("fixture", 1)
+                if fault == "cleanup-os":
+                    raise OSError("fixture transport failure")
                 code = 1
             elif "pgrep" in args:
                 state["clients"] += 1
@@ -213,7 +229,15 @@ class WorkflowTests(unittest.TestCase):
                         and fault != "ipv4-leak"
                     )
                     text = (
-                        "ip=" + ("1.0.0.1" if fault == "egress" else "2.2.2.2") + "\n"
+                        "ip="
+                        + (
+                            "1.0.0.1"
+                            if fault == "egress"
+                            or fault == "recovered-egress"
+                            and state["traces"] > 5
+                            else "2.2.2.2"
+                        )
+                        + "\n"
                     )
             return spike.subprocess.CompletedProcess(args, code, text, "")
 
@@ -239,15 +263,34 @@ class WorkflowTests(unittest.TestCase):
                         return_value=io.BytesIO(b"ip=1.0.0.1\n"),
                     )
                 )
+                original_mkdtemp = spike.tempfile.mkdtemp
+
+                def workspace(**kwargs):
+                    created = original_mkdtemp(**kwargs)
+                    workspaces.append(Path(created))
+                    return created
+
+                stack.enter_context(
+                    patch.object(spike.tempfile, "mkdtemp", side_effect=workspace)
+                )
                 stack.enter_context(patch.object(spike.time, "sleep"))
                 stack.enter_context(contextlib.redirect_stdout(output))
                 stack.enter_context(contextlib.redirect_stderr(logs))
                 if fault:
-                    with self.assertRaises(RuntimeError) as failure:
+                    with self.assertRaises(
+                        (RuntimeError, OSError, spike.subprocess.TimeoutExpired)
+                    ) as failure:
                         spike.run(path)
                     result = str(failure.exception)
                 else:
                     result = spike.run(path)
+        for workspace in workspaces:
+            if fault in {"cleanup", "cleanup-timeout", "cleanup-os"}:
+                self.assertTrue(workspace.exists())
+                self.assertEqual((workspace / "wg0.conf").stat().st_mode & 0o777, 0o600)
+                spike.shutil.rmtree(workspace)
+            else:
+                self.assertFalse(workspace.exists())
         return result, calls, output.getvalue(), logs.getvalue()
 
     def test_connected_stopped_recovered_and_reverse_cleanup(self):
@@ -278,14 +321,21 @@ class WorkflowTests(unittest.TestCase):
             "ipv6-leak": "tunnel_stop_did_not_block_all_probes",
             "dns-leak": "tunnel_stop_did_not_block_all_probes",
             "create": "experiment_command_failed",
+            "create-uncertain": "uncertain_create",
+            "probe-create-uncertain": "Command 'fixture' timed out after 1 seconds",
             "cleanup": "experiment_cleanup_failed",
+            "cleanup-timeout": "experiment_cleanup_failed",
+            "cleanup-os": "experiment_cleanup_failed",
+            "recovered-egress": "vpn_recovered_egress_matches_host",
         }
         for fault, error in expected.items():
             with self.subTest(fault=fault):
                 result, calls, output, logs = self.exercise(fault)
                 self.assertEqual(result, error)
                 removed = [args for args in calls if args[1] == "rm"]
-                self.assertEqual(len(removed), 0 if fault == "create" else 2)
+                self.assertEqual(
+                    len(removed), 1 if fault in {"create", "create-uncertain"} else 2
+                )
                 self.assertNotIn("Z" * 44, output + logs)
                 self.assertNotIn("2.2.2.2", output + logs)
 

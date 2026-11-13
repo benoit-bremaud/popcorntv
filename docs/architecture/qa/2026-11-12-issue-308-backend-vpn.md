@@ -106,7 +106,7 @@ Structured UTC lifecycle logs go to stderr; the result JSON goes to stdout. Even
 configuration, container startup, verified egress, authenticated client settings, tunnel stop,
 blocked probes, recovery, command failures and cleanup. Expected connection polling failures
 are not logged individually. Credential-bearing commands, stdin, raw stderr, passwords,
-cookies and IP values are excluded. Selected bootstrap errors are expurgated before display.
+cookies and IP values are excluded. Bootstrap diagnostics report categorical flags only; arbitrary upstream log lines are not displayed.
 
 Focused verification: 13 media-reader tests, 5 qBittorrent tests and 10 VPN test methods pass
 (including parameterized failure scenarios).
@@ -157,3 +157,16 @@ Passing these bounded experiments does not make a wishlist title ready to watch.
 Sources: [Gluetun WireGuard config](https://github.com/qdm12/gluetun-wiki/blob/main/setup/options/wireguard.md),
 [control server](https://github.com/qdm12/gluetun-wiki/blob/main/setup/advanced/control-server.md),
 [upstream commit](https://github.com/qdm12/gluetun/commit/450ce09f4843febfdb67c589f652997e68153180).
+
+
+## Pre-push correction on 2026-11-13
+
+Fresh adversarial review found that the historical reconnect observation established restored HTTPS,
+not independently revalidated non-host egress. Treat `reconnected` in the original JSON as that
+narrower observation. The corrected harness parses the recovered address and rejects host egress;
+this correction was tested with mocked boundaries, without repeating the live VPN experiment.
+Removal timeout, OS-error and nonzero-exit cases now attempt all container removals and retain the
+private workspace if removal remains unconfirmed, preserving original and cleanup failures together.
+The corrected harness requires Python 3.11 or newer (`sys.exception` and `ExceptionGroup`).
+Updated coverage: 211 statements and 62 branches, 100%, no exclusions. Historical measurements above
+remain tied to their earlier code version. See the current pre-push review for publication status.

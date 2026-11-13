@@ -218,6 +218,20 @@ async function initialize(root, service) {
   return password;
 }
 
+/** Confirm backend shutdown, preserving the primary failure and unsafe-workspace marker. */
+export async function stopBackend(stop, primaryFailure) {
+  try {
+    await stop();
+  } catch (error) {
+    const failure = new AggregateError(
+      primaryFailure ? [primaryFailure, error] : [error],
+      'Backend shutdown unconfirmed; workspace retained',
+    );
+    failure.cleanupIncomplete = true;
+    throw failure;
+  }
+}
+
 /**
  * Real local-peer transfer only; all temporary services/configs belong to this single run.
  * Optional `consume` runs outside the poll loop with the borrowed read-only source, immutable
@@ -239,6 +253,7 @@ export async function runBackendSpike({ consume = null } = {}) {
   const compose = (...args) => command('docker', ['compose', '-f', COMPOSE, ...args], { env });
   let started = false;
   let retainWorkspace = false;
+  let primaryFailure;
   const cookies = new Map();
   const passwords = new Map();
   const api = async (service, path, data, form = false) => {
@@ -533,6 +548,7 @@ export async function runBackendSpike({ consume = null } = {}) {
       ],
     };
   } catch (error) {
+    primaryFailure = error;
     retainWorkspace = error.cleanupIncomplete === true;
     if (started && cookies.size === 0) {
       const logs = await compose('logs', '--no-color', '--tail', '60').catch(() => '');
@@ -547,7 +563,7 @@ export async function runBackendSpike({ consume = null } = {}) {
     }
     throw error;
   } finally {
-    if (started) await compose('down', '--timeout', '20');
+    if (started) await stopBackend(() => compose('down', '--timeout', '20'), primaryFailure);
     if (!retainWorkspace) await rm(root, { recursive: true, force: true });
     else
       console.error(

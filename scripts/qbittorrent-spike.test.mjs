@@ -10,6 +10,7 @@ import {
   parseApiResponse,
   verifyCachePrefix,
   closeTransfer,
+  stopBackend,
   validateBrowserEvidence,
   runBackendSpike,
 } from './qbittorrent-spike.mjs';
@@ -26,6 +27,29 @@ if (process.env['RUN_BACKEND_SPIKE'] === '1') {
     },
   );
 }
+
+test('backend shutdown preserves failures and marks uncertain cleanup', async () => {
+  let stopped = false;
+  await stopBackend(async () => {
+    stopped = true;
+  });
+  assert.equal(stopped, true);
+  const primary = Object.assign(new Error('consumer failed'), { cleanupIncomplete: true });
+  const shutdown = new Error('shutdown failed');
+  for (const original of [undefined, primary]) {
+    await assert.rejects(
+      stopBackend(async () => {
+        throw shutdown;
+      }, original),
+      (error) => {
+        assert.ok(error instanceof AggregateError);
+        assert.equal(error.cleanupIncomplete, true);
+        assert.deepEqual(error.errors, original ? [original, shutdown] : [shutdown]);
+        return true;
+      },
+    );
+  }
+});
 
 test('browser evidence rejects absent, complete, captionless or unverified callback results', () => {
   const valid = {
