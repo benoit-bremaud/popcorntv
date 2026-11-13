@@ -25,8 +25,10 @@ or household automation is enabled by this branch.
 1. Read the [new recovery/generation report](2026-11-13-issue-308-recovery.md): real slow fallback,
    controlled partial-transfer restart and active-decode rename are now measured. These are
    bounded fixtures, not general unknown-title or crash resilience guarantees.
-2. Record one final adoption decision, with weighted options, supported format/track restrictions,
-   the production verified-range contract and explicit full-file fallback conditions.
+2. Review [ADR-0034](../decisions/0034-verify-pieces-before-progressive-playback.md) and the
+   [proposed conclusion](2026-11-13-issue-308-conclusion.md). The concrete weighted choice,
+   format/track restrictions, verified-read contract and fallback now exist; owner validation
+   remains pending. Keep #308 open until the decision and final research gate are accepted.
 3. Review the resource snapshots and keep Pi performance validation explicitly pending; they are
    point observations of the clients, not whole-application peak measurements.
 4. Update acceptance traceability and perform the final independent review/local gate, then decide

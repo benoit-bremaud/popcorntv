@@ -74,3 +74,8 @@ real slow/full-file behavior, controlled partial restart and immutable-inode ren
 backend persistence evidence only; preparation-state reconciliation remains unimplemented.
 T-14 readiness and full NFR coverage remain pending, as do the final unknown-file range contract
 and adoption decision. No additional business use case is marked implemented.
+
+The [proposed conclusion](qa/2026-11-13-issue-308-conclusion.md) and ADR-0034 map E308-22–24
+to standalone piece-hash validation and admission boundaries. They specify the future #311–#313
+contract; they do not implement UC32/UC33, unknown-file browser scheduling or readiness notifications.
+Owner validation of weights and contract remains pending before research closure/adoption.

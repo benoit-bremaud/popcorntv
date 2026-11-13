@@ -62,6 +62,7 @@ docs/architecture/
 | [0001](decisions/0001-all-typescript-stack.md) | All-TypeScript pnpm monorepo | accepted |
 | [0002](decisions/0002-file-naming-parser.md) | File-naming parser: own regex parser | accepted |
 | [0033](decisions/0033-elaborate-adaptive-playback-risks-before-construction.md) | Elaborate adaptive playback risks before construction | proposed |
+| [0034](decisions/0034-verify-pieces-before-progressive-playback.md) | Verify pieces before progressive playback | proposed — owner weights/contract pending |
 
 ## Specifications and QA
 
@@ -70,3 +71,5 @@ docs/architecture/
 
 - [Issue 308 recovery and generation evidence](qa/2026-11-13-issue-308-recovery.md) — slow/full-file
   fallback, controlled partial restart, simulated POSIX rename; final adoption still pending.
+
+- [Issue 308 proposed conclusion](qa/2026-11-13-issue-308-conclusion.md) — acceptance disposition and standalone hash-reader evidence.

@@ -218,6 +218,57 @@ async function initialize(root, service) {
   return password;
 }
 
+const admittedManifests = new WeakSet();
+
+/** Freeze bounded single-file v1 piece metadata from the authenticated backend.
+ * SHA-1 is BitTorrent v1 integrity metadata, not publisher authentication or a media safety claim.
+ * The backend identity and cache generation must be bound by the caller; no remote path is accepted.
+ */
+export function pieceManifest({ torrentHash, fileSize, pieceSize, hashes }) {
+  assert.match(torrentHash, /^[a-f0-9]{40}$/i);
+  assert(Number.isSafeInteger(fileSize) && fileSize > 0);
+  assert(Number.isSafeInteger(pieceSize) && pieceSize > 0 && pieceSize <= 4 * 1024 * 1024);
+  assert(
+    Array.isArray(hashes) &&
+      hashes.length <= 65_536 &&
+      hashes.length === Math.ceil(fileSize / pieceSize),
+  );
+  const copy = [];
+  for (const hash of hashes) {
+    assert.equal(typeof hash, 'string');
+    assert.match(hash, /^[a-f0-9]{40}$/i);
+    copy.push(hash.toLowerCase());
+  }
+  const manifest = Object.freeze({
+    torrentHash: torrentHash.toLowerCase(),
+    fileSize,
+    pieceSize,
+    hashes: Object.freeze(copy),
+  });
+  admittedManifests.add(manifest);
+  return manifest;
+}
+
+/** Read and hash one complete downloaded piece, returning that exact verified buffer.
+ * No known full-file reference is accepted. Short/not-flushed/corrupt bytes never reach the decoder.
+ * A returned Buffer is owned by the caller; feed it directly rather than reopening the source.
+ */
+export async function readHashVerifiedPiece(handle, manifest, index, state) {
+  assert(admittedManifests.has(manifest), 'Unvalidated piece manifest');
+  assert(Number.isSafeInteger(index) && index >= 0 && index < manifest.hashes.length);
+  assert.equal(state, 2, 'Piece is not downloaded');
+  const offset = index * manifest.pieceSize;
+  const bytes = Buffer.alloc(Math.min(manifest.pieceSize, manifest.fileSize - offset));
+  const { bytesRead } = await handle.read(bytes, 0, bytes.length, offset);
+  assert.equal(bytesRead, bytes.length, 'piece_read_short');
+  assert.equal(
+    createHash('sha1').update(bytes).digest('hex'),
+    manifest.hashes[index],
+    'piece_hash_mismatch',
+  );
+  return bytes;
+}
+
 /** Keep only validated numeric resource fields from Docker's human-readable stats response. */
 export function parseResourceSample(sample) {
   assert.match(sample.CPUPerc, /^\d+(?:\.\d+)?%$/);
@@ -377,8 +428,22 @@ export async function runBackendSpike({ consume = null, scenario = 'progressive'
       hashes: torrent.hash,
       limit: scenario === 'slow' ? '32768' : '131072',
     });
-    await api('target', 'torrents/addPeers', { hashes: torrent.hash, peers: `${seedIp}:6881` });
+    const properties = await json('target', `torrents/properties?hash=${torrent.hash}`);
+    const files = await json('target', `torrents/files?hash=${torrent.hash}`);
+    assert.equal(files.length, 1, 'Only a single-file torrent is admitted');
+    assert.equal(files[0].index, 0);
+    assert.equal(files[0].size, fixture.bytes.length);
+    assert.equal(properties.total_size, files[0].size);
+    const manifest = pieceManifest({
+      torrentHash: torrent.hash,
+      fileSize: files[0].size,
+      pieceSize: properties.piece_size,
+      hashes: await json('target', `torrents/pieceHashes?hash=${torrent.hash}`),
+    });
+    assert.equal(manifest.pieceSize, PIECE);
+    let hashVerifiedBytesFed = 0;
     const began = performance.now();
+    await api('target', 'torrents/addPeers', { hashes: torrent.hash, peers: `${seedIp}:6881` });
     let prefix = 0;
     let interruptedRecovery = null;
     let completionAfterMs = null;
@@ -555,14 +620,15 @@ export async function runBackendSpike({ consume = null, scenario = 'progressive'
                 if (observationFailure) throw observationFailure;
                 await delay(20, undefined, { signal });
               }
-              const bytes = Buffer.alloc(end - offset);
-              const { bytesRead } = await handle.read(bytes, 0, bytes.length, offset);
-              assert.equal(bytesRead, bytes.length, 'Reported pieces are not readable');
-              assert.deepEqual(
-                bytes,
-                fixture.bytes.subarray(offset, end),
-                'Reported piece bytes differ from reference',
+              // Read the current state from the same identified backend; hash and feed the same bytes.
+              const states = await json('target', `torrents/pieceStates?hash=${torrent.hash}`);
+              const bytes = await readHashVerifiedPiece(
+                handle,
+                manifest,
+                offset / PIECE,
+                states[offset / PIECE],
               );
+              hashVerifiedBytesFed += bytes.length;
               if (!stdin.write(bytes)) await once(stdin, 'drain', { signal });
             }
           },
@@ -646,8 +712,16 @@ export async function runBackendSpike({ consume = null, scenario = 'progressive'
       observations,
       firstFrame,
       byteAndDecodeMatch: consume === null ? true : null,
-      firstFrameTimingOrigin: consume ? 'player_resume' : 'backend_transfer_start',
+      firstFrameTimingOrigin: consume ? 'player_resume' : 'backend_peer_request',
       completeFileBytesMatch: true,
+      hashReader: consume
+        ? null
+        : {
+            bytesFed: hashVerifiedBytesFed,
+            pieceCount: manifest.hashes.length,
+            metadataSource: 'authenticated qBittorrent pieceHashes/properties/files',
+            fullReferenceRequiredByReader: false,
+          },
       browserResult,
       completedTransferRestartRestored: true,
       internetNetworkAbsent: true,

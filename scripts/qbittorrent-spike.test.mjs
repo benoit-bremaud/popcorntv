@@ -1,10 +1,13 @@
 /* global Buffer, process, structuredClone, console */
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath, URL } from 'node:url';
 import { test } from 'node:test';
 import {
   bencode,
+  pieceManifest,
+  readHashVerifiedPiece,
   fixtureTorrent,
   validateTopology,
   parseApiResponse,
@@ -24,6 +27,9 @@ if (process.env['RUN_BACKEND_SPIKE'] === '1') {
     async () => {
       const result = await runBackendSpike();
       assert.equal(result.byteAndDecodeMatch, true);
+      assert.equal(result.hashReader.bytesFed, result.fixtureBytes);
+      assert.equal(result.hashReader.fullReferenceRequiredByReader, false);
+      console.log(JSON.stringify({ event: 'qbit.hash_reader_result', result }));
       assert.equal(result.completedTransferRestartRestored, true);
       assert.equal(result.browserVerified, false);
     },
@@ -60,6 +66,90 @@ if (process.env['RUN_BACKEND_RECOVERY_SPIKE'] === '1') {
     );
   }
 }
+
+test('piece manifests reject unsafe bounds, sparse hashes and caller mutation', () => {
+  const base = {
+    torrentHash: 'a'.repeat(40),
+    fileSize: 5,
+    pieceSize: 3,
+    hashes: ['b'.repeat(40), 'c'.repeat(40)],
+  };
+  const manifest = pieceManifest(base);
+  base.hashes[0] = 'd'.repeat(40);
+  assert.equal(manifest.hashes[0], 'b'.repeat(40));
+  assert(Object.isFrozen(manifest));
+  assert(Object.isFrozen(manifest.hashes));
+  assert.equal(
+    pieceManifest({
+      ...base,
+      torrentHash: 'A'.repeat(40),
+      hashes: ['B'.repeat(40), 'C'.repeat(40)],
+    }).torrentHash,
+    'a'.repeat(40),
+  );
+  for (const change of [
+    { torrentHash: 'wrong' },
+    { fileSize: 0 },
+    { fileSize: NaN },
+    { fileSize: 1.5 },
+    { pieceSize: 0 },
+    { pieceSize: 4 * 1024 * 1024 + 1 },
+    { pieceSize: 1.5 },
+    { hashes: null },
+    { hashes: [] },
+    { hashes: [null, 'c'.repeat(40)] },
+    { hashes: ['invalid', 'c'.repeat(40)] },
+    { hashes: new Array(2) },
+    { fileSize: 65_537, pieceSize: 1, hashes: new Array(65_537).fill('a'.repeat(40)) },
+  ])
+    assert.throws(() => pieceManifest({ ...base, ...change }));
+});
+
+test('piece reader returns exact hash-verified bytes including short final piece without full reference', async () => {
+  const bytes = Buffer.from('abcde');
+  const manifest = pieceManifest({
+    torrentHash: 'a'.repeat(40),
+    fileSize: 5,
+    pieceSize: 3,
+    hashes: [bytes.subarray(0, 3), bytes.subarray(3)].map((part) =>
+      createHash('sha1').update(part).digest('hex'),
+    ),
+  });
+  // This doubles only the filesystem read; the actual validation and hashing remain real.
+  const handle = {
+    read: async (buffer, start, length, offset) => {
+      bytes.copy(buffer, start, offset, offset + length);
+      return { bytesRead: length };
+    },
+  };
+  assert.deepEqual(await readHashVerifiedPiece(handle, manifest, 0, 2), Buffer.from('abc'));
+  assert.deepEqual(await readHashVerifiedPiece(handle, manifest, 1, 2), Buffer.from('de'));
+  await assert.rejects(readHashVerifiedPiece(handle, { ...manifest }, 0, 2), /Unvalidated/);
+  for (const index of [-1, 2, 0.5, NaN])
+    await assert.rejects(readHashVerifiedPiece(handle, manifest, index, 2));
+  for (const state of [0, 1, 3, undefined])
+    await assert.rejects(readHashVerifiedPiece(handle, manifest, 0, state), /not downloaded/);
+  await assert.rejects(
+    readHashVerifiedPiece({ read: async () => ({ bytesRead: 0 }) }, manifest, 0, 2),
+    /piece_read_short/,
+  );
+  bytes[0] ^= 1;
+  await assert.rejects(readHashVerifiedPiece(handle, manifest, 0, 2), /piece_hash_mismatch/);
+  const error = new Error('read failed');
+  await assert.rejects(
+    readHashVerifiedPiece(
+      {
+        read: async () => {
+          throw error;
+        },
+      },
+      manifest,
+      0,
+      2,
+    ),
+    error,
+  );
+});
 
 test('resource snapshots accept actual Docker units and reject nonnumeric output', () => {
   const sample = { CPUPerc: '0.50%', MemUsage: '12.4MiB / 384MiB', PIDs: '12' };

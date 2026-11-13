@@ -79,3 +79,31 @@ samples from peaks, graceful restart from crash, and controlled generation ident
 Documentation consistency review found no blocking discrepancy; the final adoption/unknown-file
 contract still needs its research conclusion. **Push gate: open — draft-only.** No merge or release
 attestation, issue closure, service installation or deployment is authorized by this record.
+
+
+## Proposed backend decision — 2026-11-13
+
+ADR-0034 and the [conclusion](qa/2026-11-13-issue-308-conclusion.md) are proposed, not accepted.
+Independent final review: Must 0 / Should 0; **Push gate: open — draft-only**. The reviewer verified
+source/JSON hashes, measurements, matrix arithmetic/sensitivity, oracle boundaries and the
+acceptance disposition, without Docker/network/credential access. Owner weights and contract
+validation remain pending; no issue closure, merge, product activation or deployment approval.
+
+The bounded piece reader now accepts authenticated piece metadata, hashes an entire read and
+feeds that same buffer to standalone FFmpeg without reference-file bytes. The real prefix poll
+and browser adapter still use the fixture oracle. Admission rejects unsupported/malformed metadata;
+the first proposal restricts progressive playback to validated single-file v1 and known tracks.
+The timing origin was corrected to precede the peer request after metadata admission.
+
+- Real standalone backend replay: 15 passed, zero failed/skipped; 96 pieces and all 1,572,516 bytes
+  hash-fed; first frame 19,343 ms, incomplete, completion 29,236 ms.
+- Latest real combined browser nominal regression: one passed, zero failed/skipped, after the new
+  metadata admission. This still uses the reference-based browser adapter, not the new hash reader.
+- Latest fast five-file experiment suite: 48 passed, zero failed/skipped. Current lint/format passed.
+- Gitleaks full history: 249 commits, no leaks; new staged diff scanned separately before commit.
+- Apps/packages sources are unchanged, so preceding typecheck/build/coverage/Sonar baseline evidence
+  is reused. Existing seven application skips and missing full merge attestation remain explicit.
+
+Local preview was opened in Chrome at https://localhost:8443; the existing staging service answers
+HTTP 200 and displays sign-in. It was not rebuilt or redeployed by this preview action and does not
+show production progressive recovery. No credentials were read or entered to open the preview.

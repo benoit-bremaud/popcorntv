@@ -206,3 +206,14 @@ fallback, controlled partial-transfer restart and a simulated POSIX rename durin
 arr import, unknown-title verified-read/caption contracts, final adoption and Pi performance remain
 unproven or undecided. The final adoption decision and unknown-file range/track contract still prevent closing #308.
 Actual arr integration and Pi measurements remain explicitly deferred runtime/target validation. The #307 local CI remains separate baseline evidence.
+
+
+## Proposed conclusion — 2026-11-13
+
+The [research conclusion](../qa/2026-11-13-issue-308-conclusion.md) and
+[ADR-0034](../decisions/0034-verify-pieces-before-progressive-playback.md) now provide a concrete
+backend recommendation, candidate format/track profile, verified-buffer contract and complete-file
+fallback. A standalone reader has measured authenticated piece metadata → exact-buffer hashing →
+decode without a complete-file reference argument. Prefix scheduling and browser experiments still
+use the fixture oracle. The recommendation remains proposed pending owner weight/contract validation;
+this does not enable production partial-file reads or close #308 automatically.
