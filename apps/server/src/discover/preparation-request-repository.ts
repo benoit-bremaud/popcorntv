@@ -170,8 +170,7 @@ export class PreparationRequestRepository {
         const now = this.now();
         const time = now.getTime();
         if (
-          !target ||
-          target.resolution !== 'needs_preparation' ||
+          target?.resolution !== 'needs_preparation' ||
           target.observedAtMs === null ||
           target.validUntilMs === null ||
           time < target.observedAtMs ||
@@ -225,7 +224,8 @@ export class PreparationRequestRepository {
       upstreamReference.length < 1 ||
       upstreamReference.length > 256 ||
       [...upstreamReference].some((character) => {
-        const code = character.charCodeAt(0);
+        // String iteration yields nonempty code points, so this index always exists.
+        const code = character.codePointAt(0)!;
         return code < 32 || code === 127;
       })
     )

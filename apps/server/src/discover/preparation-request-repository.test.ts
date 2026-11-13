@@ -175,6 +175,7 @@ describe('write-ahead attempt protocol', () => {
   it.each([
     ['a', 'j'],
     ['a'.repeat(64), 'j'.repeat(256)],
+    ['fixture', 'référence-🎬'],
   ])('admits exact valid namespace/reference boundaries', (backend, reference) => {
     const h = setup();
     h.resolve();
