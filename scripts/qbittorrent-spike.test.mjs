@@ -91,10 +91,11 @@ test('piece manifests reject unsafe bounds, sparse hashes and caller mutation', 
     { torrentHash: 'wrong' },
     { fileSize: 0 },
     { fileSize: NaN },
-    { fileSize: 1.5 },
+    { fileSize: Number.MAX_SAFE_INTEGER + 1 },
+    { fileSize: 5.5 },
     { pieceSize: 0 },
     { pieceSize: 4 * 1024 * 1024 + 1 },
-    { pieceSize: 1.5 },
+    { pieceSize: 3.5 },
     { hashes: null },
     { hashes: [] },
     { hashes: [null, 'c'.repeat(40)] },
@@ -103,6 +104,70 @@ test('piece manifests reject unsafe bounds, sparse hashes and caller mutation', 
     { fileSize: 65_537, pieceSize: 1, hashes: new Array(65_537).fill('a'.repeat(40)) },
   ])
     assert.throws(() => pieceManifest({ ...base, ...change }));
+});
+
+test('piece manifests admit minimum and exact maximum bounds without off-by-one rejection', () => {
+  const digest = createHash('sha1').update('x').digest('hex');
+  for (const pieceSize of [1, 2, 4 * 1024 * 1024 - 1, 4 * 1024 * 1024]) {
+    const manifest = pieceManifest({
+      torrentHash: 'a'.repeat(40),
+      fileSize: pieceSize,
+      pieceSize,
+      hashes: [digest],
+    });
+    assert.equal(manifest.pieceSize, pieceSize);
+    assert.equal(manifest.hashes.length, 1);
+  }
+  for (const count of [65_535, 65_536]) {
+    const manifest = pieceManifest({
+      torrentHash: 'a'.repeat(40),
+      fileSize: count,
+      pieceSize: 1,
+      hashes: new Array(count).fill(digest),
+    });
+    assert.equal(manifest.hashes.length, count);
+  }
+});
+
+test('verified piece reads handle one-byte and exact-multiple files including the largest admitted piece', async () => {
+  for (const [source, pieceSize] of [
+    [Buffer.from('x'), 1],
+    [Buffer.from('abcdef'), 3],
+    [Buffer.alloc(4 * 1024 * 1024, 0x5a), 4 * 1024 * 1024],
+  ]) {
+    const reference = Buffer.from(source);
+    const hashes = [];
+    for (let offset = 0; offset < source.length; offset += pieceSize)
+      hashes.push(
+        createHash('sha1')
+          .update(source.subarray(offset, offset + pieceSize))
+          .digest('hex'),
+      );
+    const manifest = pieceManifest({
+      torrentHash: 'a'.repeat(40),
+      fileSize: source.length,
+      pieceSize,
+      hashes,
+    });
+    const reads = [];
+    const handle = {
+      read: async (buffer, start, length, offset) => {
+        reads.push({ offset, length });
+        source.copy(buffer, start, offset, offset + length);
+        return { bytesRead: length };
+      },
+    };
+    const verified = [];
+    for (let index = 0; index < hashes.length; index++)
+      verified.push(await readHashVerifiedPiece(handle, manifest, index, 2));
+    assert.deepEqual(Buffer.concat(verified), reference);
+    assert.equal(reads.length, hashes.length);
+    assert.deepEqual(reads.at(-1), { offset: source.length - pieceSize, length: pieceSize });
+    // A later cache write must not change the already hashed bytes borrowed by the decoder.
+    source[0] ^= 1;
+    assert.deepEqual(Buffer.concat(verified), reference);
+    await assert.rejects(readHashVerifiedPiece(handle, manifest, 0, 2), /piece_hash_mismatch/);
+  }
 });
 
 test('piece reader returns exact hash-verified bytes including short final piece without full reference', async () => {
@@ -116,8 +181,10 @@ test('piece reader returns exact hash-verified bytes including short final piece
     ),
   });
   // This doubles only the filesystem read; the actual validation and hashing remain real.
+  let readCalls = 0;
   const handle = {
     read: async (buffer, start, length, offset) => {
+      readCalls++;
       bytes.copy(buffer, start, offset, offset + length);
       return { bytesRead: length };
     },
@@ -129,6 +196,7 @@ test('piece reader returns exact hash-verified bytes including short final piece
     await assert.rejects(readHashVerifiedPiece(handle, manifest, index, 2));
   for (const state of [0, 1, 3, undefined])
     await assert.rejects(readHashVerifiedPiece(handle, manifest, 0, state), /not downloaded/);
+  assert.equal(readCalls, 2, 'Rejected manifests, indices and states must not read the cache');
   await assert.rejects(
     readHashVerifiedPiece({ read: async () => ({ bytesRead: 0 }) }, manifest, 0, 2),
     /piece_read_short/,

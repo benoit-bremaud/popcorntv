@@ -513,3 +513,16 @@ proposed-status records remain historical. REQ-28/T-28 covers multi-indexer disc
 REQ-29/T-29 covers client-independent identities and the deferred second backend #325. These are
 planned runtime cases; no second client, automatic failover or source independence is claimed
 as implemented. Final publication/merge checks still govern #308 closure.
+
+
+### Happy, sad and boundary audit — 2026-11-13
+
+The [case table](../architecture/qa/cases/adaptive-wishlist.md) maps TC-01–16 to source requirements,
+qualitative risks, cheapest test levels and actual test names. It distinguishes implemented research
+behavior from future source/client and household runtime cases.
+
+| Case | Verification | Evidence and limits |
+|---|---|---|
+| E308-28 | Valid minimum/exact maximum piece/count admission; one-byte and exact-multiple final reads | Two new unit tests; existing invalid-side checks retained; no real download needed |
+| E308-29 | New tests detect their intended off-by-one defects | Four seeded boundary/partition defects in temporary copies are detected; baseline passes; no whole-module mutation score |
+| E308-30 | Invalid admission/index/state does not touch the cache; later source mutation does not change returned verified bytes | Read counter and returned-buffer snapshot assertions; corruption, short read, missing state and read error remain covered |

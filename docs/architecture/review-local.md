@@ -144,3 +144,64 @@ Fresh independent documentation review and correction verification for the accep
 Must 0 / Should 0; **Push gate: open** for publication. The reviewer checked source/client diversity,
 new stable REQ/T identifiers, no speculative registry, current test-status wording and unchanged
 component drawing. This is not a merge attestation. Final clean-head checks follow this commit.
+
+
+## Final clean-head publication and merge review — 2026-11-13
+
+Checked clean, pushed HEAD: `d9a14ec4691608fbee0ada27549413368a3d737d` (accepted A and source diversity).
+This historical run checked the clean accepted-decision head before the later user-requested
+boundary-test audit. Its measurements remain valid for that head; a fresh run follows the added
+tests. Do not use this older record as a report-only merge exception for later test changes.
+
+| Check | Actual result |
+|---|---|
+| Application with `FFMPEG_IT=1` | 1,363 passed, zero skipped: 57 shared, 821 server, 485 web |
+| Application line coverage | Shared 100%, server 98.63%, web 98.96%; no new exclusions |
+| Full five-file opt-in experiment run | **58 passed, zero failed/skipped**, 418.75 seconds; real private backend, built player, combined normal/cancel/rejected-resume, slow/partial restart, hash reader and generation cases |
+| Experiment coverage | 96.98% lines / 93.91% branches / 92.92% functions over four instrumented modules; generation 100% lines/functions / 97.73% branches; no exclusions |
+| Typecheck, lint, formatting, production build | Passed |
+| Built-web Chromium smoke | Two passed, 4.7 seconds; API network responses stubbed, no full-system claim |
+| Local SonarQube | Quality gate PASSED, scanner explicitly identifies the checked `d9a14ec` |
+| Offline redacted Gitleaks | 252 commits, no leaks; report-only staged diff checked separately |
+| Private experiment cleanup | No remaining containers with the experiment project-name prefix after the suite; browser/app/FD cleanup assertions passed |
+| Documentation | Existing scoped 18/18 export JSDoc presence; accepted ADR/REQ/traceability/QA consistency independently reviewed; three current conclusion/decision/handoff documents have no broken local links |
+
+Application and experiment counts describe separate suites; the real cases are included in the
+58, not extra tests to add. Python VPN source is unchanged; its separately recorded ten boundary
+methods and 100% (211 statements/62 branches) coverage remain applicable. No live VPN replay,
+public tracker/indexer, real acquisition request, service installation or Pi deployment occurred.
+
+Independent accepted-decision review and correction verification ended Must 0 / Should 0 and
+Push gate open. New requirements T-28/T-29 are planned, not reported as executable functionality.
+Source diversity preserves the initial qBittorrent choice, multi-indexer #310 and future #325.
+
+### CI mapping and remaining merge exception
+
+The existing application verification job is represented by the local workspace checks above;
+secret scanning uses the local redacted full-history tool. No dependency manifests/lockfiles or
+production Dockerfile/build inputs change in this branch. Existing CodeQL, dependency-review and
+Scorecard jobs are GitHub-only and were not requested under the owner's local-only policy.
+No full additional security-tool migration is claimed. The controlled Compose topology has its
+separate structural tests and dated image evidence; this report does not invent a new image scan.
+
+All scoped local checks listed above pass. **The merge gate is not attested:** this repository has
+no `scripts/attest.sh`/signed gate note and no hosted check statuses were present at the last query.
+The PR review/comment lists were empty; recheck them immediately before requesting/performing merge.
+Per `pr-review-procedure`, request explicit owner permission for `MERGE_GATE_WAIVER` only after
+this concrete review result. Do not infer that exception from acceptance of option A. Until then,
+keep #308 open and do not merge or deploy. The only proposed waiver concerns absent mechanical
+attestation/hosted statuses, not a failed test, unresolved review, or a production readiness claim.
+
+
+## Happy/sad/edge audit follow-up — 2026-11-13
+
+The owner requested explicit happy, sad and edge-path assurance. The
+[case table](qa/cases/adaptive-wishlist.md) maps TC-01–16. Two missing positive boundary cases were
+added to the existing backend test file: exact min/max manifest admission and one-byte/exact-multiple
+terminal reads, including the maximum piece. Unsafe integer rejection and no-cache-read-on-invalid
+input assertions were strengthened. No production source or protocol behavior changed.
+
+Four targeted reader tests pass. In temporary source copies, changing max `<=` to `<` fails both
+new tests, and returning an empty exact final piece fails the reader test. Removing integer checks is also detected by fractional inputs that preserve the correct hash count.
+All four detected seeded defects show assertion relevance, not a whole-module mutation score. Final
+clean-head checks will be refreshed after this test/documentation commit.
