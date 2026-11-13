@@ -39,6 +39,12 @@ Incremental adaptive-wishlist design index; no historical coverage claim. IDs RE
 
 T-10 covers automatic pending intent creation and initial private interest. T-25 covers signed-in-user access and rejection of anonymous/cross-profile requests without an approval state. T-11 covers pending → searching and rejected early/admission events. T-12 covers searching → pending/preparing/failed and uncertain writes. T-14–17 cover preparing → ready, healthy ready observations, full-file latch and ready → preparing/failed. T-22 covers guarded cancellation from every state and cancelled → pending on a new authorized follow. T-23 covers failed → pending for due transient/explicit resolved retry and restart reconciliation. Each case must be expanded per state/guard in the implementation test design; unknown events and stale generations are rejected/ignored as specified. These grouped design cases do not claim executable transition coverage.
 
+The accepted #309 refinement is [durable preparation requests](specs/adaptive-wishlist-requests.md).
+Its [case table](qa/cases/adaptive-wishlist-requests.md) expands T-10/T-12/T-22/T-23/T-25
+and REQ-29 into TC-01–21 for transactional demand, profile privacy, restart and attempt
+reconciliation. Repository/API cases are implemented; external-provider and local-playability adapter cases remain deferred to #310/#311. The revised #306 sequence validates the
+complete-file path first; #316 follows progressive implementation and precedes final validation.
+
 ## Planned non-functional cases
 
 | Case | Required verification |

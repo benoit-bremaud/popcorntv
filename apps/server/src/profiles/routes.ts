@@ -39,6 +39,8 @@ export function registerProfileRoutes(
       const status = result.reason === 'profile_not_found' ? 404 : 409;
       return reply.code(status).send(apiError(result.reason));
     }
+    // Fastify serializes this object/array as application/json; no HTML response is written.
+    // nosemgrep: javascript.express.security.audit.xss.direct-response-write.direct-response-write
     return reply.send(result.profile);
   });
 

@@ -1,5 +1,7 @@
 import { sql } from 'drizzle-orm';
 import {
+  check,
+  foreignKey,
   index,
   integer,
   primaryKey,
@@ -229,6 +231,113 @@ export const wishlist = sqliteTable(
     seenProviderIds: text('seen_provider_ids', { mode: 'json' }).$type<number[]>(),
   },
   (table) => [primaryKey({ columns: [table.profileId, table.kind, table.tmdbId] })],
+);
+
+/** Shared durable title demand; it never implies a playable movie or episode (#309). */
+export const preparationDemands = sqliteTable(
+  'preparation_demands',
+  {
+    id: text('id').primaryKey(),
+    kind: text('kind', { enum: DISCOVER_KINDS }).notNull(),
+    tmdbId: integer('tmdb_id').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('preparation_demands_title_idx').on(t.kind, t.tmdbId),
+    uniqueIndex('preparation_demands_identity_idx').on(t.id, t.kind, t.tmdbId),
+    check(
+      'preparation_demands_title_check',
+      sql`${t.kind} IN ('movie', 'tv') AND ${t.tmdbId} BETWEEN 1 AND 2147483647 AND typeof(${t.tmdbId}) = 'integer'`,
+    ),
+  ],
+);
+
+/** Private subscription lifetime; deleting a wish cannot delete shared work. */
+export const preparationInterests = sqliteTable(
+  'preparation_interests',
+  {
+    id: text('id').primaryKey(),
+    demandId: text('demand_id').notNull(),
+    profileId: text('profile_id').notNull(),
+    kind: text('kind', { enum: DISCOVER_KINDS }).notNull(),
+    tmdbId: integer('tmdb_id').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('preparation_interests_wish_idx').on(t.profileId, t.kind, t.tmdbId),
+    index('preparation_interests_demand_idx').on(t.demandId),
+    foreignKey({
+      columns: [t.profileId, t.kind, t.tmdbId],
+      foreignColumns: [wishlist.profileId, wishlist.kind, wishlist.tmdbId],
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [t.demandId, t.kind, t.tmdbId],
+      foreignColumns: [preparationDemands.id, preparationDemands.kind, preparationDemands.tmdbId],
+    }),
+  ],
+);
+
+/** Exact movie/episode identity and trusted local resolution, independent of clients. */
+export const preparationTargets = sqliteTable(
+  'preparation_targets',
+  {
+    id: text('id').primaryKey(),
+    demandId: text('demand_id').notNull(),
+    kind: text('kind', { enum: DISCOVER_KINDS }).notNull(),
+    tmdbId: integer('tmdb_id').notNull(),
+    /** -1/-1 is the movie sentinel; TV targets always identify a real episode. */
+    season: integer('season').notNull(),
+    episode: integer('episode').notNull(),
+    resolution: text('resolution', {
+      enum: ['unresolved', 'needs_preparation', 'already_playable'],
+    })
+      .notNull()
+      .default('unresolved'),
+    observedAtMs: integer('observed_at_ms'),
+    validUntilMs: integer('valid_until_ms'),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('preparation_targets_identity_idx').on(t.demandId, t.season, t.episode),
+    foreignKey({
+      columns: [t.demandId, t.kind, t.tmdbId],
+      foreignColumns: [preparationDemands.id, preparationDemands.kind, preparationDemands.tmdbId],
+    }),
+    check(
+      'preparation_targets_episode_check',
+      sql`(${t.kind} = 'movie' AND ${t.season} = -1 AND ${t.episode} = -1) OR (${t.kind} = 'tv' AND typeof(${t.season}) = 'integer' AND typeof(${t.episode}) = 'integer' AND ${t.season} BETWEEN 0 AND 2147483647 AND ${t.episode} BETWEEN 1 AND 2147483647)`,
+    ),
+    check(
+      'preparation_targets_resolution_check',
+      sql`${t.resolution} IN ('unresolved', 'needs_preparation', 'already_playable') AND ((${t.resolution} = 'unresolved' AND ${t.observedAtMs} IS NULL AND ${t.validUntilMs} IS NULL) OR (${t.resolution} != 'unresolved' AND ${t.observedAtMs} IS NOT NULL AND ${t.validUntilMs} IS NOT NULL AND ${t.validUntilMs} > ${t.observedAtMs}))`,
+    ),
+  ],
+);
+
+/** Durable write-ahead attempt; uncertain outcomes block all subsequent submissions. */
+export const preparationAttempts = sqliteTable(
+  'preparation_attempts',
+  {
+    id: text('id').primaryKey(),
+    targetId: text('target_id')
+      .notNull()
+      .references(() => preparationTargets.id),
+    backend: text('backend').notNull(),
+    state: text('state', { enum: ['uncertain', 'accepted', 'retired'] }).notNull(),
+    upstreamReference: text('upstream_reference'),
+    retirementReason: text('retirement_reason', { enum: ['not_accepted', 'finished'] }),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('preparation_attempts_active_idx')
+      .on(t.targetId)
+      .where(sql`${t.state} != 'retired'`),
+    check(
+      'preparation_attempts_state_check',
+      sql`(${t.state} = 'uncertain' AND ${t.upstreamReference} IS NULL AND ${t.retirementReason} IS NULL) OR (${t.state} = 'accepted' AND ${t.upstreamReference} IS NOT NULL AND ${t.retirementReason} IS NULL) OR (${t.state} = 'retired' AND ${t.retirementReason} IS NOT NULL AND ((${t.retirementReason} = 'not_accepted' AND ${t.upstreamReference} IS NULL) OR (${t.retirementReason} = 'finished' AND ${t.upstreamReference} IS NOT NULL)))`,
+    ),
+  ],
 );
 
 /** The streaming providers a profile subscribes to (UC29, spec wishlist-notifications R1). */

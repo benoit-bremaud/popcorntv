@@ -2,6 +2,7 @@ import { and, desc, eq, inArray, isNotNull } from 'drizzle-orm';
 import type { DiscoverKind, DiscoverTitle, WishlistEntry } from '@popcorntv/shared';
 import type { AppDatabase } from '../db/index.js';
 import { media, wishlist } from '../db/schema.js';
+import { PreparationRequestRepository } from './preparation-request-repository.js';
 
 /** A Discover title before its local match is known. */
 export type TitleFacts = Omit<DiscoverTitle, 'mediaId'>;
@@ -87,7 +88,7 @@ export class WishlistRepository {
    * row starts from its current local match, its providers not looked at yet (spec
    * wishlist-notifications R4).
    */
-  add(profileId: string, title: TitleFacts, now: Date = new Date()): void {
+  add(profileId: string, title: TitleFacts, now: Date = new Date()) {
     const [match] = this.withMediaIds([title]);
     const row = {
       ...title,
@@ -95,20 +96,31 @@ export class WishlistRepository {
       addedAt: now.toISOString(),
       seenInLibrary: (match?.mediaId ?? null) !== null,
     };
-    this.db
-      .insert(wishlist)
-      .values(row)
-      .onConflictDoUpdate({
-        target: [wishlist.profileId, wishlist.kind, wishlist.tmdbId],
-        set: {
-          title: row.title,
-          year: row.year,
-          overview: row.overview,
-          voteAverage: row.voteAverage,
-          posterPath: row.posterPath,
-        },
-      })
-      .run();
+    return this.db.transaction(
+      () => {
+        this.db
+          .insert(wishlist)
+          .values(row)
+          .onConflictDoUpdate({
+            target: [wishlist.profileId, wishlist.kind, wishlist.tmdbId],
+            set: {
+              title: row.title,
+              year: row.year,
+              overview: row.overview,
+              voteAverage: row.voteAverage,
+              posterPath: row.posterPath,
+            },
+          })
+          .run();
+        return new PreparationRequestRepository(this.db).linkInterest(
+          profileId,
+          title.kind,
+          title.tmdbId,
+          row.addedAt,
+        );
+      },
+      { behavior: 'immediate' },
+    );
   }
 
   /** Forgets a title; removing an absent one is not an error (idempotent DELETE). */

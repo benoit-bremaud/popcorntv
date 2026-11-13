@@ -4,6 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import Fastify from 'fastify';
+import { eq, sql } from 'drizzle-orm';
+import { buildApp } from '../app.js';
 import type {
   DiscoverDetails,
   DiscoverTitle,
@@ -11,12 +13,20 @@ import type {
   WishlistEntry,
 } from '@popcorntv/shared';
 import { openDatabase } from '../db/index.js';
-import { libraries, media } from '../db/schema.js';
+import {
+  libraries,
+  media,
+  preparationDemands,
+  preparationInterests,
+  preparationAttempts,
+  profiles,
+  sessions,
+} from '../db/schema.js';
 import { ArtworkCache } from '../metadata/artwork-cache.js';
 import { createTmdbClient, TmdbRequestError } from '../metadata/tmdb-client.js';
 import type { TmdbClient, TmdbSummary } from '../metadata/tmdb-client.js';
 import { ProfileRepository } from '../profiles/repository.js';
-import { actAs, createAccount } from '../test-fixtures.js';
+import { actAs, createAccount, testAuthOptions } from '../test-fixtures.js';
 import {
   freshWatchProvidersOf,
   LIST_TTL_MS,
@@ -381,6 +391,108 @@ describe('discover routes', () => {
 });
 
 describe('wishlist routes', () => {
+  it('atomically deduplicates concurrent HTTP additions and preserves the subscription on retry', async () => {
+    const { app, db } = await setup();
+    const url = '/profiles/default/wishlist/movie/1';
+    const answers = await Promise.all(
+      Array.from({ length: 4 }, () => app.inject({ method: 'PUT', url })),
+    );
+    expect(answers.map((a) => a.statusCode)).toEqual([204, 204, 204, 204]);
+    const before = db.select().from(preparationInterests).all();
+    expect(before).toHaveLength(1);
+    expect(db.select().from(preparationDemands).all()).toHaveLength(1);
+    await app.inject({ method: 'PUT', url });
+    expect(db.select().from(preparationInterests).all()).toEqual(before);
+    expect(db.select().from(preparationAttempts).all()).toEqual([]);
+  });
+
+  it('returns a failure and redacts SQL parameters when interest storage aborts', async () => {
+    const { app, db, failures } = await setup();
+    db.run(
+      sql.raw(
+        "CREATE TRIGGER reject_interest BEFORE INSERT ON preparation_interests BEGIN SELECT RAISE(ABORT, 'private-sentinel-fixture'); END",
+      ),
+    );
+    const answer = await app.inject({ method: 'PUT', url: '/profiles/default/wishlist/movie/1' });
+    expect(answer.statusCode).toBe(500);
+    expect(db.select().from(preparationDemands).all()).toEqual([]);
+    expect(db.select().from(preparationInterests).all()).toEqual([]);
+    expect((await app.inject({ url: '/profiles/default/wishlist' })).json()).toEqual([]);
+    expect(failures.join('\n')).toContain('preparation.interest.failed');
+    expect(failures.join('\n')).not.toContain('private-sentinel-fixture');
+    expect(failures.join('\n')).not.toContain('Spice.');
+  });
+
+  it('applies real session, CSRF and profile ownership checks before recording preparation', async () => {
+    const db = openDatabase(':memory:');
+    const owner = createAccount(db);
+    const viewer = createAccount(db, 'viewer', 'viewer');
+    const ownProfile = db.select().from(profiles).where(eq(profiles.userId, viewer.userId)).get()!;
+    const app = await buildApp({
+      ...testAuthOptions,
+      db,
+      version: 'test',
+      tmdb: makeClient(),
+      mediaRoot: tmpdir(),
+      artworkDir: tmpdir(),
+      transcodeDir: tmpdir(),
+      probe: async () => ({ durationSec: null, streams: [] }),
+      transcoder: () => {
+        throw new Error('No FFmpeg in request persistence tests');
+      },
+    });
+    try {
+      const url = `/profiles/${ownProfile.id}/wishlist/movie/1`;
+      expect((await app.inject({ method: 'PUT', url })).statusCode).toBe(401);
+      expect(
+        (
+          await app.inject({
+            method: 'PUT',
+            url,
+            headers: { cookie: viewer.cookie, origin: 'https://other.invalid' },
+          })
+        ).statusCode,
+      ).toBe(403);
+      expect(
+        (
+          await app.inject({
+            method: 'PUT',
+            url: '/profiles/default/wishlist/movie/1',
+            headers: { cookie: viewer.cookie },
+          })
+        ).statusCode,
+      ).toBe(404);
+      expect(db.select().from(preparationInterests).all()).toEqual([]);
+      expect(
+        (await app.inject({ method: 'PUT', url, headers: { cookie: viewer.cookie } })).statusCode,
+      ).toBe(204);
+      expect(
+        db
+          .select()
+          .from(preparationInterests)
+          .all()
+          .map((i) => i.profileId),
+      ).toEqual([ownProfile.id]);
+      db.update(sessions)
+        .set({ expiresAt: '2000-01-01T00:00:00.000Z' })
+        .where(eq(sessions.id, owner.sessionId))
+        .run();
+      expect(
+        (
+          await app.inject({
+            method: 'PUT',
+            url: '/profiles/default/wishlist/movie/2',
+            headers: { cookie: owner.cookie },
+          })
+        ).statusCode,
+      ).toBe(401);
+      expect(db.select().from(preparationInterests).all()).toHaveLength(1);
+    } finally {
+      await app.close();
+      db.$client.close();
+    }
+  });
+
   it('adds a title from TMDB facts, lists it, then shows it available once scanned', async () => {
     const { app, addFilm } = await setup();
 

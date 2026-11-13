@@ -33,6 +33,8 @@ export function registerTitleLinkRoutes(
   app.get('/title-links/:kind/:tmdbId', (request, reply) => {
     const params = titleParams.safeParse(request.params);
     if (!params.success) return reply.code(400).send(invalid(params.error.issues));
+    // Fastify serializes this object/array as application/json; no HTML response is written.
+    // nosemgrep: javascript.express.security.audit.xss.direct-response-write.direct-response-write
     return reply.send({
       url: deps.links.get(params.data.kind, params.data.tmdbId),
       editable: callerOf(request).role === 'owner',

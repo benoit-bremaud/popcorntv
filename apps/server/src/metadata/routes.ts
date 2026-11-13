@@ -68,6 +68,7 @@ export function registerMetadataRoutes(app: FastifyInstance, deps: MetadataRoute
         const params = artworkParams.safeParse(request.params);
         if (!params.success) return reply.code(400).send(invalid(params.error.issues));
         // The regex only admits `<64 hex>.jpg|png`, so the name cannot leave the folder.
+        // nosemgrep: javascript.express.security.audit.express-res-sendfile.express-res-sendfile
         return reply.sendFile(params.data.file);
       });
     },
