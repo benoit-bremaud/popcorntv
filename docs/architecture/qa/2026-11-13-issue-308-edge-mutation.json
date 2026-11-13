@@ -10,51 +10,31 @@
       "variant": "baseline",
       "exitCode": 0,
       "expectedOutcomeObserved": true,
-      "testSummary": [
-        "# tests 4",
-        "# pass 4",
-        "# fail 0"
-      ]
+      "testSummary": ["# tests 4", "# pass 4", "# fail 0"]
     },
     {
       "variant": "reject_exact_maximum",
       "exitCode": 1,
       "expectedOutcomeObserved": true,
-      "testSummary": [
-        "# tests 4",
-        "# pass 2",
-        "# fail 2"
-      ]
+      "testSummary": ["# tests 4", "# pass 2", "# fail 2"]
     },
     {
       "variant": "empty_exact_last_piece",
       "exitCode": 1,
       "expectedOutcomeObserved": true,
-      "testSummary": [
-        "# tests 4",
-        "# pass 3",
-        "# fail 1"
-      ]
+      "testSummary": ["# tests 4", "# pass 3", "# fail 1"]
     },
     {
       "variant": "accept_fractional_file_size",
       "exitCode": 1,
       "expectedOutcomeObserved": true,
-      "testSummary": [
-        "# tests 4",
-        "# pass 3",
-        "# fail 1"
-      ]
+      "testSummary": ["# tests 4", "# pass 3", "# fail 1"]
     },
     {
       "variant": "accept_fractional_piece_size",
       "exitCode": 1,
       "expectedOutcomeObserved": true,
-      "testSummary": [
-        "# tests 4",
-        "# pass 3",
-        "# fail 1"
-      ]
+      "testSummary": ["# tests 4", "# pass 3", "# fail 1"]
     }
   ]
 }

@@ -205,3 +205,47 @@ Four targeted reader tests pass. In temporary source copies, changing max `<=` t
 new tests, and returning an empty exact final piece fails the reader test. Removing integer checks is also detected by fractional inputs that preserve the correct hash count.
 All four detected seeded defects show assertion relevance, not a whole-module mutation score. Final
 clean-head checks will be refreshed after this test/documentation commit.
+
+
+## Final happy/sad/boundary replay — 2026-11-13
+
+Checked clean, pushed source/test/design HEAD: `026c8911be5ab8c604f29a16067679365508a0cc`.
+The user-requested audit added two boundary tests and strengthened fractional/read-side-effect
+assertions; no production source changed. Independent review/correction verification ended
+Must 0 / Should 0 / Nice 0. The [case table](qa/cases/adaptive-wishlist.md) distinguishes happy,
+sad and edge cases and explicitly limits the synchronous concurrent-error-helper evidence.
+
+| Check | Result |
+|---|---|
+| Full five-file opt-in experiment run | **60 passed, zero failed/skipped**, 418.32 seconds |
+| Fast five-file subset | 50 passed, zero failed/skipped; included in the 60, not extra cases |
+| Application with real FFmpeg cases enabled | **1,363 passed, zero skipped**, 57 shared / 821 server / 485 web |
+| Application line coverage | Shared 100%, server 98.63%, web 98.96%; unchanged exclusions |
+| Experiment coverage | 96.98% lines / 93.91% branches / 92.92% functions; generation 100% lines/functions, 97.73% branches |
+| New reader audit | Four targeted tests pass; four temporary seeded defects detected; not a whole-module mutation score |
+| Typecheck, lint and production build | Passed |
+| Production-web Chromium smoke | Two passed, 4.8 seconds; network API responses stubbed |
+| Local SonarQube | Quality gate PASSED; scanner explicitly identifies `026c891` |
+| Offline redacted full-history Gitleaks | 253 commits, no leaks; final report-only staged diff scanned separately |
+| Public experiment documentation | Existing scoped 18/18 JSDoc presence; case table/QA audit independently reviewed |
+
+The first format check correctly refused the generated mutation-report JSON. After all functional
+runs finished, Prettier reformatted only that machine-readable report; a parsed-JSON equality
+assertion passed, and repository `format:check` then passed. This final publication change contains
+only this review record and formatting of that proof report: no source, test, design or measured
+value changed after the checked head. Preserve the checked SHA instead of claiming a new signed
+attestation. Earlier 58-test and 55-test records remain historical, not the current totals.
+
+The source/test/design tree remained fixed throughout the final run. Node/FFmpeg/private peer and
+browser experiments are isolated fixtures, not public acquisition or product acceptance. The only
+remaining merge exception is absent mechanical signed attestation/hosted statuses in this repo;
+owner permission for `MERGE_GATE_WAIVER` is still required by the merge procedure. No merge or
+deployment is performed by publishing this record. Recheck remote reviews and cleanup before merge.
+
+
+Independent final report verification: Must 0 / Should 0; Push gate open for report publication
+and PR readiness. The reviewer checked the logs, JSON semantic equality and current source/test
+hashes. The two changed files are reports; this is not claimed to satisfy a mechanical exception
+limited literally to one report file, nor to supply missing signed attestation. Final owner
+merge-exception permission remains required. PR reviews/threads/Conversation comments were empty
+at the final inspection; no reply was needed and no hosted reviewer was requested.
