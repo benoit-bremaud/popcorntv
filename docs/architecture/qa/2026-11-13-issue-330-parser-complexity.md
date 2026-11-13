@@ -85,3 +85,29 @@ results and distinguish U+0085 from ECMAScript U+FEFF. A redundant extra-classif
 was removed. Final test pertinence and code reviews follow the implementation. No production
 logging is added to a pure parser hot path; benchmark diagnostics contain synthetic lengths
 and measurements, never private filenames or credentials.
+
+## Measured replay
+
+[Machine-readable evidence](2026-11-13-issue-330-benchmark.json), measured clean source
+`0c46123167284ebf7a885f689e0c6e24b5a4443d`, Node22.23.4 on Linuxx64. Baseline/current parser
+and harness SHA-256 fingerprints are embedded; later evidence-only commits do not change
+those sources. All22,236 complete-parser comparisons and all ten timed-fixture comparisons
+passed. Observable warm-up/measurement checksum:505212. Five samples per median.
+
+| Hyphens | Nonmatching filename bytes | Baseline median ms | Corrected median ms | Matching baseline/corrected ms |
+|---|---:|---:|---:|---:|
+|128|144|0.0318|0.0055|0.0061 /0.0057|
+|224|240|0.0763|0.0060|0.0070 /0.0074|
+|1024|1040|3.4181|0.0131|0.0154 /0.0181|
+|4096|4112|19.2558|0.0380|0.0446 /0.0431|
+|16384|16400|328.2824|0.1363|0.1609 /0.1871|
+
+The nonmatching stress case exhibits the expected retry-growth removal. Matching inputs do
+not improve systematically and can be slightly slower: no universal speedup is claimed.
+The two small filenames fit the checkout's observed255-byte component bound; the larger ones
+are diagnostic synthetic strings, not evidence of actual filesystem exposure. These samples
+include all parser work and noise, so they support the algorithmic argument without proving
+a general parser complexity bound or a release SLA. No elapsed-time threshold was added.
+
+Independent test pertinence and adversarial code/report reviews both ended Must0/Should0.
+The final consolidated gate is still pending on the evidence-publication head.
