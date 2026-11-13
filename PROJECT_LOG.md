@@ -4,6 +4,19 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-13 — Parser suffix complexity (#330)
+
+- Characterized the actual legacy parser against fixed commit `5bfeffb` on controlled
+  matching/nonmatching suffix inputs. Current callers are filesystem-derived scanner paths;
+  no arbitrary-text HTTP parser endpoint or demonstrated remote exploit was identified.
+- Replaced repeated suffix retries with one backward scan after unchanged normalization.
+  Added literal Unicode/boundary/metadata cases and a frozen-parser equivalence/benchmark
+  harness with source fingerprints, observable results and no flaky timing thresholds.
+- Independent test pertinence review resolved two Should items and removed a redundant
+  sweep; final test review found Must 0 / Should 0. Final measurements and gate results are
+  recorded separately in `docs/architecture/review-local.md` after source freeze.
+- The change also publishes the prepared #332 merge log. No deployment or service write.
+
 ## 2026-11-13 — Legacy server maintainability (PR #332, `5bfeffb`)
 
 - Replaced five final-element array accesses with `at`, used code-point lookup in the

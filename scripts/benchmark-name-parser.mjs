@@ -45,7 +45,6 @@ function verify(baseline, current) {
   let cases = 0;
   const compare = (path, kind) => {
     assert.deepEqual(current.parseMediaName(path, kind), baseline.parseMediaName(path, kind));
-    assert.equal(current.isExtra(path), baseline.isExtra(path));
     cases += 1;
   };
   const alphabet = ['A', '-', ' ', '.', '_', '\u00a0', '\t', '\n', '🎬', '\u200b'];
@@ -64,6 +63,8 @@ function verify(baseline, current) {
     'Film (2020) - Cut --.mkv',
     'Film (2020) [tmdbid-1]/Film.mkv',
     'Show/Specials/Clip.mkv',
+    'Film\ufeff--.mkv',
+    'Film--\u0085.mkv',
   ]) {
     compare(path, 'films');
     compare(path, 'series');
@@ -71,13 +72,17 @@ function verify(baseline, current) {
   return cases;
 }
 
+let resultChecksum = 0;
 function medianMs(run, path) {
-  run(path, 'films');
+  const warmup = run(path, 'films');
+  resultChecksum += warmup.title.length + (warmup.year ?? 0);
   const samples = [];
   for (let sample = 0; sample < 5; sample += 1) {
     const start = performance.now();
-    run(path, 'films');
-    samples.push(performance.now() - start);
+    const result = run(path, 'films');
+    const elapsed = performance.now() - start;
+    resultChecksum += result.title.length + (result.year ?? 0);
+    samples.push(elapsed);
   }
   samples.sort((a, b) => a - b);
   return samples[2];
@@ -129,6 +134,7 @@ try {
       }
     }
   }
+  report.resultChecksum = resultChecksum;
   console.log(JSON.stringify(report, null, 2));
 } finally {
   // Only the private directory created above is owned by this process.

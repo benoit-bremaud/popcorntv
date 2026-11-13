@@ -2,6 +2,83 @@ import { describe, expect, it } from 'vitest';
 import { isExtra, parseMediaName } from './name-parser.js';
 
 describe('parseMediaName — films (Plex / Jellyfin conventions)', () => {
+  it.each([
+    ['Film.mkv', 'Film'],
+    ['Film-.mkv', 'Film'],
+    ['Film-- -._.mkv', 'Film'],
+    ['-- Film-Part --.mkv', '-- Film-Part'],
+    ['Film__Part...One--.mkv', 'Film Part One'],
+    ['Film—.mkv', 'Film—'],
+    ['Film–.mkv', 'Film–'],
+    ['Film--\u200b.mkv', 'Film--\u200b'],
+    ['Film--\u0085.mkv', 'Film--\u0085'],
+    ['Film--\ud800.mkv', 'Film--\ud800'],
+    ['---___ .mkv', '---___ '],
+  ])('preserves cleanup and raw-stem fallback for %j', (path, title) => {
+    expect(parseMediaName(path, 'films')).toMatchObject({ kind: 'film', title, year: null });
+  });
+
+  it.each([
+    '\u0009',
+    '\u000a',
+    '\u000b',
+    '\u000c',
+    '\u000d',
+    '\u0020',
+    '\u00a0',
+    '\u1680',
+    '\u2000',
+    '\u2001',
+    '\u2002',
+    '\u2003',
+    '\u2004',
+    '\u2005',
+    '\u2006',
+    '\u2007',
+    '\u2008',
+    '\u2009',
+    '\u200a',
+    '\u2028',
+    '\u2029',
+    '\u202f',
+    '\u205f',
+    '\u3000',
+    '\ufeff',
+  ])('keeps ECMAScript whitespace normalization for %j', (space) => {
+    expect(parseMediaName(`Film${space}Part--.mkv`, 'films').title).toBe('Film Part');
+    expect(parseMediaName(`Film--${space}.mkv`, 'films').title).toBe('Film');
+  });
+
+  it('preserves metadata when cleanup is applied to titles, editions and series folders', () => {
+    expect(parseMediaName('Film-- (2020) {edition-Cut --} [tmdbid-1].mkv', 'films')).toMatchObject({
+      title: 'Film',
+      year: 2020,
+      edition: 'Cut --',
+      providerIds: { tmdb: '1' },
+    });
+    expect(parseMediaName('Film (2020) - Cut --.mkv', 'films')).toMatchObject({
+      title: 'Film',
+      edition: 'Cut',
+    });
+    expect(parseMediaName('Show--/Season 01/S01E02.mkv', 'series')).toMatchObject({
+      title: 'Show',
+      season: 1,
+      episode: 2,
+    });
+  });
+
+  it('preserves long matching and nonmatching suffix results without a timing threshold', () => {
+    const run = '-'.repeat(16_384);
+    expect(parseMediaName(`Film${run} (2020).mkv`, 'films')).toMatchObject({
+      title: 'Film',
+      year: 2020,
+    });
+    expect(parseMediaName(`Film${run}X (2020).mkv`, 'films')).toMatchObject({
+      title: `Film${run}X`,
+      year: 2020,
+    });
+  });
+
   it('reads title and year from the file name', () => {
     expect(parseMediaName('Interstellar (2014).mkv', 'films')).toMatchObject({
       kind: 'film',

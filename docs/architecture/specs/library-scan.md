@@ -175,3 +175,13 @@ The owner calls `POST /libraries/:id/scan`.
 ## Log events
 
 See the event catalog of the [logging spec](logging.md#3-event-catalog) (ADR-0021).
+
+## Parser cleanup complexity (#330)
+
+Title/edition cleanup retains the existing dot/underscore and ECMAScript-whitespace
+normalization, suffix-only ASCII-hyphen removal and final trim. Removing that suffix must
+not repeatedly retry a failing match at successive start positions. A single backward pass
+preserves the parser's existing raw-stem fallback and Unicode/metadata behavior without
+adding an input-length policy. This is a bound on the cleanup operation, not on every parser
+expression or an assertion of remote exploitability. See the [preservation and benchmark
+protocol](../qa/2026-11-13-issue-330-parser-complexity.md) and its planned/executed case mapping.

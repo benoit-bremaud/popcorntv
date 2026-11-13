@@ -12,10 +12,10 @@ pure functions with literal expected outputs; no filesystem, clock or domain moc
 | TC-01 | Happy / EP | #330, library-scan naming contract | Changed title | Ordinary title, mixed dots/underscores and trailing ASCII hyphens | Same normalized title, year and metadata | Unit | Planned |
 | TC-02 | BVA | #330 | Off-by-one trim | Zero/one/many trailing spaces/hyphens, leading and interior hyphens | Remove only the suffix; preserve prefix/interior punctuation | Unit | Planned |
 | TC-03 | EP / Unicode | #330 | Overbroad Unicode cleanup | Every ECMAScript whitespace character around trailing separators | Normalize whitespace and preserve original results | Unit | Planned |
-| TC-04 | Sad / EP | #330 | Accidental character loss | En/em dash, zero-width space and unpaired surrogate | Preserve nonmatching characters; no throw | Unit | Planned |
+| TC-04 | Sad / EP | #330 | Accidental character loss | En/em dash, zero-width space, U+0085 and unpaired surrogate; contrast U+FEFF | Preserve nonmatching characters; no throw; keep legacy ECMAScript whitespace semantics | Unit | Planned |
 | TC-05 | Edge / fallback | #330 | Empty name changes | Empty path and separator-only stems | Existing raw-stem fallback and unknown/film kind unchanged | Unit | Existing plus planned |
 | TC-06 | Integration within parser | #330 | Metadata loss | Edition label, provider tags and series folder | Title cleanup leaves edition/provider/episode facts unchanged | Unit | Existing plus planned |
-| TC-07 | Equivalence | #330 | Missed combinations | Exhaustive short alphabet across real baseline/current public parser APIs | Every parse object and extra classification identical | Deterministic standalone harness | benchmark-name-parser.mjs --verify-only |
+| TC-07 | Equivalence | #330 | Missed combinations | Exhaustive short alphabet across real baseline/current public parser APIs | Every complete parse object identical; dedicated existing extra-classification tests retained | Deterministic standalone harness | benchmark-name-parser.mjs --verify-only |
 | TC-08 | Stress / measurement | #330 | Quadratic suffix retries | Matching and nonmatching hyphen runs at fixed bounded sizes | Equal parse output; reproducible separate timing evidence, no flaky unit timing limit | Benchmark | benchmark-name-parser.mjs |
 
 ## Scope and open limits
