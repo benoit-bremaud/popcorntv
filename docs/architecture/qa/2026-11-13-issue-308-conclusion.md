@@ -1,20 +1,20 @@
-# Issue 308 — proposed feasibility conclusion
+# Issue 308 — accepted bounded feasibility conclusion
 
-The evidence supports conditional construction of a qBittorrent verified-reader adapter, pending owner decision validation.
+The owner accepted construction of a bounded qBittorrent verified-reader adapter with source diversity preserved.
 
 ## Decision and current status
 
-[ADR-0034](../decisions/0034-verify-pieces-before-progressive-playback.md) is the proposed decision:
+[ADR-0034](../decisions/0034-verify-pieces-before-progressive-playback.md) is the owner-accepted construction decision:
 qBittorrent plus a bounded hash-verified buffer reader scores 410/500; native libtorrent scores
 335/500 and remains the design fallback. SABnzbd and completed-file-only playback do not satisfy
 the progressive capability requirement. Weight sensitivity is explicit: doubling the verified-read
-weight makes libtorrent lead. Owner validation concerns the weights and contract, not a hidden
-request to deploy, buy a service or install the entire arr suite.
+weight makes libtorrent lead. The owner validated A and the weights/contract on 2026-11-13, with an explicit source-diversity
+requirement: multiple indexers in #310 and a future second download backend in #325.
 
-**Current status remains PARTIAL / decision proposed.** Conditional GO means construction may
-proceed after the decision is accepted and final research review passes. It is not proof of
-arbitrary-title playback and is not product, merge or deployment approval. Keep #308 open and
-PR #324 draft until that disposition is confirmed.
+**Research outcome: GO for the accepted bounded construction contract.** This does not establish
+arbitrary-title playback or production readiness. Decision acceptance is complete; final publication
+and merge gates still govern #308 closure. No runtime feature, deployment, subscription or source
+acquisition is activated by this research conclusion.
 
 ## Hash-verified reader evidence
 
@@ -46,17 +46,17 @@ claim an already implemented unknown-file browser reader.
 
 ## Acceptance disposition
 
-This table retains the original issue's criteria and distinguishes evidence from proposed decisions
+This table retains the original issue's criteria and distinguishes evidence from accepted design decisions
 and later runtime work. It does not silently replace an unmet research criterion with a promise.
 
 | Original #308 criterion | Evidence or disposition | Status |
 |---|---|---|
-| Compare backend telemetry/layout/read/priority/restart APIs, versions, weighted decision and fallback | Capability comparison in the specification, official API docs, measured qBittorrent versions, proposed ADR-0034 with native fallback and sensitivity | Comparison recorded; owner weight/contract validation pending before adoption |
+| Compare backend telemetry/layout/read/priority/restart APIs, versions, weighted decision and fallback | Capability comparison in the specification, official API docs, measured qBittorrent versions, accepted ADR-0034 with native fallback and sensitivity | Comparison and bounded construction contract accepted by owner |
 | Controlled fixture with contiguous start, metadata, audio and supported captions; no percentage/sparse-file proof | Media mechanics, backend, player and combined reports; incomplete disk/reference check and active French startup cue | Proven for the named synthetic profile only |
 | Slow/fast/interrupted recovery, existing playback boundary, cancellation and resource limits | Real slow/full-file gating; graceful partial restart; real HLS browser normal/cancel; bounded waits and resource point samples | Bounded research observations pass; crash/Pi/capacity remain explicit limitations |
 | Access before arr import and stable final handoff | Separate owned cache contract; active descriptor survives simulated POSIX rename/path replacement; stale opens fail | Simulated boundary proven; real configured arr import belongs to runtime integration |
-| Supported first-release formats and safe complete-file fallback | ADR-0034 candidate MP4/H.264/AAC/HLS profile, required languages and complete French caption admission, explicit unsupported cases | Concrete proposal; requires acceptance and later implementation before activation |
-| Opt-in harness and go/no-go report without relabelling full-file fallback as progressive proof | Existing opt-in fixtures plus hash reader; progressive and full-file results are separately reported | Report exists; proposed conditional construction GO, closure pending review/owner validation |
+| Supported first-release formats and safe complete-file fallback | ADR-0034 accepted candidate MP4/H.264/AAC/HLS profile, required languages and complete French caption admission, explicit unsupported cases | Design accepted; runtime implementation/tests required before activation |
+| Opt-in harness and go/no-go report without relabelling full-file fallback as progressive proof | Existing opt-in fixtures plus hash reader; progressive and full-file results are separately reported | Report exists; accepted bounded construction GO; final merge gate pending |
 | Authorized isolated execution, no unauthorized source/service/VPN activity | Private trackerless peers, generated media, bounded local containers; historical VPN experiment separately authorized and documented | Scope respected; no public source, real Seerr write, service install or VPN change in this step |
 
 ## Required downstream work, not yet implemented
@@ -81,8 +81,8 @@ The earlier consolidated experiment pass has 55 tests and is dated to its exact 
 The subsequent generation replay has six tests and 100% line/function, 97.73% branch coverage.
 The hash-reader replay is a further distinct 15-test run; do not add those counts as unique tests.
 Latest code, documentation review and publication checks are recorded in [review-local](../review-local.md).
-App sources have not changed; existing application baseline checks and seven skipped tests remain
-explicit. No signed merge/release gate is claimed by this research conclusion.
+App sources have not changed. The [fresh local pass](2026-11-13-issue-308-final-local-ci.md)
+executes the seven opt-in FFmpeg cases: 1,363 passed, zero skipped with `FFMPEG_IT=1`. No signed merge/release gate is claimed by this research conclusion.
 
 Primary references, consulted 2026-11-13:
 [qBittorrent API](https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-%28qBittorrent-5.0%29),

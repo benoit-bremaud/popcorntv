@@ -504,3 +504,12 @@ Evidence: [proposed conclusion](../architecture/qa/2026-11-13-issue-308-conclusi
 | E308-25 | Existing application suites with real FFmpeg integration enabled | 1,363 passed, zero skipped; shared/server/web line coverage 100%/98.63%/98.96%; supersedes the earlier seven opt-in skips for this head |
 | E308-26 | Production web bundle catalog/detail/back/reload smoke | Two Chromium journeys passed; API network responses stubbed, no whole deployed-system or progressive-product claim |
 | E308-27 | Fresh local Sonar, typecheck, build, offline full-history secret scan | Passed; Sonar apps/packages only, Gitleaks 250 commits clean; no signed merge/release attestation or Pi QA claimed |
+
+
+### Accepted research decision and source diversity — 2026-11-13
+
+The owner accepted A and ADR-0034's weights/contract, requiring future source diversity. Earlier
+proposed-status records remain historical. REQ-28/T-28 covers multi-indexer discovery in #310;
+REQ-29/T-29 covers client-independent identities and the deferred second backend #325. These are
+planned runtime cases; no second client, automatic failover or source independence is claimed
+as implemented. Final publication/merge checks still govern #308 closure.

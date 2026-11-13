@@ -1,8 +1,8 @@
 # ADR-0034 — Verify pieces before progressive playback
 
-Recommend a bounded qBittorrent adapter for construction, with verified-buffer delivery and complete-file fallback.
+Use a bounded qBittorrent adapter for initial construction, preserving multiple indexers and future retrieval engines.
 
-- Status: proposed; owner validation of the decision weights and contract is pending.
+- Status: accepted by the owner on 2026-11-13; option A, proposed weights and bounded contract validated.
 - Date: 2026-11-13.
 - Scope: #308 research conclusion and constraints for #311–#313; no production activation.
 - Evidence: [combined player](../qa/2026-11-12-issue-308-combined.md),
@@ -25,7 +25,7 @@ accepting reference-file bytes; that is a bounded additional proof, not a finish
 
 ## Options and weighted comparison
 
-Weights are proposed engineering priorities, not measured probabilities. Scores 0–5: 0 blocks,
+Weights are owner-accepted engineering priorities, not measured probabilities. Scores 0–5: 0 blocks,
 5 is ideal. V identifies directly verified documentation/experiment facts; E identifies estimates.
 A zero on the progressive-capability requirement excludes an option from satisfying that goal,
 even when it remains useful as a fallback.
@@ -60,15 +60,15 @@ B exposes stronger native read primitives but adds an untested integration bound
 raise verified-read weight 30→60, scale every other weight by 40/70: A 362.86, B 405.71, C 228.57,
 D 385.71 (C/D still excluded). Halve it 30→15, scale others by 85/70: A 433.57, B 299.64,
 C 260.71, D 257.14. The recommendation is sensitive to how strongly the owner prioritizes native
-read guarantees over ecosystem reuse; validate these weights explicitly before accepting this ADR.
+read guarantees over ecosystem reuse; the owner accepted the current weights and A on 2026-11-13. Revisit the matrix if those priorities change.
 
 B is the design fallback: activating it requires its own controlled spike, native/service interface,
 packaging and recovery tests; it is not a configuration switch. C remains a separate completed-file
 Usenet option, not a replacement for the progressive requirement.
 
-## Proposed outcome and verified-read contract
+## Accepted construction outcome and verified-read contract
 
-Recommend A for construction, subject to this contract. Nothing enables partial-file production
+Use A for initial construction, subject to this contract. Nothing enables partial-file production
 playback or claims that current experiments implement the following entire runtime boundary:
 
 1. Admit an authorized preparation bound to one authenticated fixed-destination backend identity,
@@ -101,7 +101,7 @@ Production readers will need bounded telemetry batching, cancellation, generatio
 error classification. The experiment's per-piece HTTP requests are diagnostic overhead, not an
 approved production polling policy. Indexer searches remain daily as specified in #310.
 
-## Proposed first progressive media profile
+## Accepted candidate progressive media profile
 
 | Boundary | Allowed for an initial candidate | Otherwise |
 |---|---|---|
@@ -112,7 +112,7 @@ approved production polling policy. Indexer searches remain daily as specified i
 | Partial direct play, seek, resume | Disabled unless the exact operation gains range/generation tests | Explicit bounded waiting/full-file path; do not serve holes |
 | Unsupported torrent layout or verifier capability | No progressive admission | Complete verified file, or fail if integrity/readiness cannot be established |
 
-This is a future allowlist contract, not a claim that arbitrary H.264 MP4 files currently work.
+This is an accepted design for a future allowlist, not a claim that arbitrary H.264 MP4 files currently work.
 The only browser-caption proof remains the known early-caption fixture. Runtime caption admission
 must be implemented before it can mark unknown titles ready. Full download is a prerequisite in
 fallback cases, **not sufficient**: final media identity, required tracks/subtitles, authorization
@@ -120,15 +120,37 @@ and health checks still determine readiness. No fixed one-third threshold is ado
 
 ## Consequences and acceptance boundary
 
-Research recommendation: **conditional GO to construct A under this contract**, not production GO.
+Accepted research outcome: **GO to construct A under this contract**, not production GO.
 No new generic provider framework, hosted CI/review request, public tracker query, service install,
 VPN change or Pi deployment is part of this decision.
 
-Owner weight/contract validation and final research review remain required before #308 closure.
+Owner weight/contract validation is complete. Final publication/merge checks remain required before #308 closure.
 Then #316 policy and #309 intent work can proceed in their dependency order; #311–#313 must implement
 and test this contract before progressive activation. Actual arr import, arbitrary-title subtitle
 admission, crash/blackhole resilience, full application capacity and Pi QA remain explicit runtime
 or deployment work, not retroactive claims about these experiments.
+
+## Source diversity and future backends
+
+The owner explicitly requires avoiding dependence on one download source. Indexer, publication,
+content provider/peer set and download client are separate identities. Choosing qBittorrent does
+not select an exclusive indexer, tracker or publication source.
+
+- #310 must support multiple configured indexers through Prowlarr, with bounded queries, candidate
+  deduplication, compatible source selection and no blanket failure when one indexer is unavailable.
+  Reuse the chosen Sonarr/Radarr discovery owner instead of adding a second indexer poller.
+  Indexers can share upstream content; configuration/testing must not claim independence from count alone.
+- Future #325 adds a second retrieval engine/protocol after the initial feature; SABnzbd/Usenet is
+  a candidate, not already adopted or progressively validated. Full-file-only adapters stay usable
+  through their declared capabilities, after repair/extraction and normal readiness checks.
+- Wishlist, preparation and notification identities stay independent of vendor names. Persist a
+  namespaced backend job reference and the selected source/content/generation. Add a small second
+  adapter when needed; do not build an unused generic provider registry in the initial release.
+- On an outage, reconcile any uncertain old submission before resubmitting elsewhere. A changed
+  source/content creates a validated generation; active readers keep their bytes. No seamless splice,
+  duplicate retrieval or notification is implied by future failover.
+- Native libtorrent B is a read-architecture fallback. A secondary acquisition backend is a separate
+  diversity feature, not an implicit switch to B or a claim of extra indexers by installing a client.
 
 ## Primary references
 

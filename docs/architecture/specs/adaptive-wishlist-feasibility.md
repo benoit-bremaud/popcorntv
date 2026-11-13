@@ -199,21 +199,22 @@ that full-file-only playback has fulfilled progressive playback.
 Stages 1–3 now have bounded execution evidence: the [media mechanics report](../qa/2026-11-12-issue-308-feasibility.md),
 [real backend/VPN report](../qa/2026-11-12-issue-308-backend-vpn.md) and
 [existing-player report](../qa/2026-11-12-issue-308-player.md). The player decodes incomplete verified
-input and reaches normal end in the controlled-writer experiment. Overall verdict remains PARTIAL:
+input and reaches normal end in the controlled-writer experiment. The bounded research decision is
+accepted GO for construction; production readiness remains unimplemented:
 the [combined report](../qa/2026-11-12-issue-308-combined.md) proves real-backend/browser playback
 and an active French startup cue for the controlled fixture only. The [recovery/generation report](../qa/2026-11-13-issue-308-recovery.md) adds real slow full-file
 fallback, controlled partial-transfer restart and a simulated POSIX rename during decode. Actual
-arr import, unknown-title verified-read/caption contracts, final adoption and Pi performance remain
-unproven or undecided. The final adoption decision and unknown-file range/track contract still prevent closing #308.
-Actual arr integration and Pi measurements remain explicitly deferred runtime/target validation. The #307 local CI remains separate baseline evidence.
+arr import, unknown-title verified-read/caption implementation, production activation and Pi performance remain
+unproven or deferred runtime work. The owner accepted the bounded construction decision in
+ADR-0034 on 2026-11-13. Actual arr integration and Pi measurements remain explicitly deferred
+runtime/target validation. The #307 local CI remains separate baseline evidence.
 
-
-## Proposed conclusion — 2026-11-13
+## Accepted construction conclusion — 2026-11-13
 
 The [research conclusion](../qa/2026-11-13-issue-308-conclusion.md) and
 [ADR-0034](../decisions/0034-verify-pieces-before-progressive-playback.md) now provide a concrete
-backend recommendation, candidate format/track profile, verified-buffer contract and complete-file
+accepted backend choice, candidate format/track profile, verified-buffer contract and complete-file
 fallback. A standalone reader has measured authenticated piece metadata → exact-buffer hashing →
 decode without a complete-file reference argument. Prefix scheduling and browser experiments still
-use the fixture oracle. The recommendation remains proposed pending owner weight/contract validation;
+use the fixture oracle. The owner accepted A and the weights/contract, preserving multiple indexers and future clients;
 this does not enable production partial-file reads or close #308 automatically.

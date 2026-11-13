@@ -60,8 +60,9 @@ they are transient diagnostics, not dependencies needed to understand the commit
 
 ## Remaining decisions and gates
 
-- ADR-0034 remains proposed: owner validation of weights and the bounded construction contract
-  is required before accepting the research decision. No runtime feature is enabled by tests.
+- At this checked run ADR-0034 was proposed. The owner subsequently accepted A and the bounded
+  weights/contract, explicitly preserving multiple sources; current decision status is in ADR-0034.
+  No runtime feature is enabled by either the tests or decision acceptance.
 - This repository has no `scripts/attest.sh`/signed gate note; these green checks do not create an
   attested merge gate. No full security-tool baseline, staging feature acceptance or Pi QA is claimed.
 - Actual unknown-file browser integration, full required-caption admission, owned runtime generations,

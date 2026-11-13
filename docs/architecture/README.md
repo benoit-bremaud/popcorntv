@@ -52,7 +52,7 @@ docs/architecture/
 
 | Feature    | Diagrams                                | Status  |
 | ---------- | --------------------------------------- | ------- |
-| `adaptive-wishlist` | [spec](specs/adaptive-wishlist-lifecycle.md), [diagrams](diagrams/adaptive-wishlist) | draft — owner review and #308 evidence pending |
+| `adaptive-wishlist` | [spec](specs/adaptive-wishlist-lifecycle.md), [diagrams](diagrams/adaptive-wishlist) | lifecycle documented; recovery contract accepted; runtime implementation pending |
 | `playback` | [diagrams/playback](diagrams/playback)  | design  |
 
 ## Decisions
@@ -62,7 +62,7 @@ docs/architecture/
 | [0001](decisions/0001-all-typescript-stack.md) | All-TypeScript pnpm monorepo | accepted |
 | [0002](decisions/0002-file-naming-parser.md) | File-naming parser: own regex parser | accepted |
 | [0033](decisions/0033-elaborate-adaptive-playback-risks-before-construction.md) | Elaborate adaptive playback risks before construction | proposed |
-| [0034](decisions/0034-verify-pieces-before-progressive-playback.md) | Verify pieces before progressive playback | proposed — owner weights/contract pending |
+| [0034](decisions/0034-verify-pieces-before-progressive-playback.md) | Verify pieces before progressive playback | accepted — bounded construction, source diversity retained |
 
 ## Specifications and QA
 
@@ -70,6 +70,6 @@ docs/architecture/
 - `qa/<date>-issue-<n>-<slug>/` — QA pass outputs kept as merge evidence.
 
 - [Issue 308 recovery and generation evidence](qa/2026-11-13-issue-308-recovery.md) — slow/full-file
-  fallback, controlled partial restart, simulated POSIX rename; final adoption still pending.
+  fallback, controlled partial restart, simulated POSIX rename; bounded construction accepted; production integration pending.
 
-- [Issue 308 proposed conclusion](qa/2026-11-13-issue-308-conclusion.md) — acceptance disposition and standalone hash-reader evidence.
+- [Issue 308 accepted research conclusion](qa/2026-11-13-issue-308-conclusion.md) — accepted decision, runtime boundaries and standalone hash-reader evidence.

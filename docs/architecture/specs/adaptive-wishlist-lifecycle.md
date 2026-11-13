@@ -64,6 +64,8 @@ Analysis model (not a database schema): **Wishlist interest** belongs to a profi
 | REQ-21 | Load unread persistent notices at next profile opening. An exact-target Play action must recheck readiness; a historical unread notice may show preparing if conditions changed. | #314 |
 | REQ-22 | Removing a wish detaches its subscription only. Pending work with no interest may be paused, but another subscriber or active playback lease prevents cancellation/eviction. No automatic file deletion is authorized here. | #309, #311 |
 | REQ-23 | On restart, reconcile persisted state with the backend and actual bytes before restoring readiness; suppress external submissions until their previous outcome is known. | #309–#314 |
+| REQ-28 | Support multiple configured indexers through Prowlarr. An indexer outage does not discard the wish or abort all healthy searches; deduplicate results, respect the daily/bounded schedule and enforce the same source policy. | #310 |
+| REQ-29 | Keep preparation, wishlist and notification identities independent of a particular download client. Permit a future secondary backend with declared capabilities, reconciled submissions and protected content generations; selecting qBittorrent initially does not impose an exclusive source. | #309–#311, future #325 |
 
 ### Owner clarifications recorded during #307
 
@@ -167,3 +169,13 @@ Four-pass self-review on 2026-11-12:
 4. Pattern fit/risks: only external IO seams justify ports. Unverified partial-media support is the first technical gate; no source or throughput forecast is treated as guaranteed.
 
 An independent read-only adversarial review covered `main...1011f04`: no blocking functional/code defects, with two documentation findings corrected (MCDA arithmetic and table continuity). Verification of the fix commit is recorded in the QA report. Existing application tests, browser smoke, build, lint, typing, secret scan and local SonarQube passed. The future recovery/child-account tests remain to be written in their implementation bricks; no diagram renderer or real recovery-backend validation ran. The #308 targeted feasibility experiment must be explicitly authorized before downstream runtime assumptions are accepted.
+
+
+## Owner acceptance and source diversity — 2026-11-13
+
+[ADR-0034](../decisions/0034-verify-pieces-before-progressive-playback.md) accepts qBittorrent as the
+first retrieval engine under a bounded verified-buffer contract. This does not pick a single
+indexer or content source. REQ-28 places multi-indexer behavior in #310; REQ-29 and #325 preserve
+future client/protocol diversity. Do not splice a changed publication into an active generation or
+blindly resubmit an uncertain job elsewhere. Native libtorrent fallback and secondary-client
+integration are separate concerns. No second client is installed by this acceptance.

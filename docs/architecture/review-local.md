@@ -122,3 +122,25 @@ The experiment exports have 18/18 JSDoc presence; no repository-wide documentati
 This supersedes the earlier unexecuted-seven-test concern for this checked head. It does not
 supersede ADR proposed status, unknown-file browser limits, absent merge attestation or deployment
 validation. PR #324 remains draft, and #308 stays open pending owner decision and final gate.
+
+
+## Owner acceptance and source diversity — 2026-11-13
+
+The owner accepted A and ADR-0034's proposed weights/contract after the refreshed checks, explicitly
+requiring future download-source diversity. Research decision: bounded construction GO; production
+activation is not claimed. This section supersedes pending-owner-decision statements in earlier
+records; their code/test measurements remain unchanged.
+
+REQ-28/#310 covers multiple indexers through Prowlarr and the existing chosen discovery owner.
+REQ-29 keeps identities independent of client names; #325 tracks a later second retrieval adapter.
+Indexer diversity does not guarantee upstream independence, and native-reader fallback is distinct
+from adding another acquisition protocol. No blind resubmission after an uncertain job or mixing
+of content generations is accepted. No new runtime code or service installation is part of this
+acceptance update. Final publication/merge checks remain necessary; missing attestation still blocks
+an ask-free merge in this repository.
+
+
+Fresh independent documentation review and correction verification for the accepted decision:
+Must 0 / Should 0; **Push gate: open** for publication. The reviewer checked source/client diversity,
+new stable REQ/T identifiers, no speculative registry, current test-status wording and unchanged
+component drawing. This is not a merge attestation. Final clean-head checks follow this commit.
