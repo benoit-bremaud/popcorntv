@@ -1,10 +1,17 @@
 import { writeFileSync } from 'node:fs';
 import { mkdir, mkdtemp, readdir, rm, stat, utimes, writeFile } from 'node:fs/promises';
+import type * as FsPromises from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SubtitleExtractor, subtitleArgs } from './subtitle-extractor.js';
 import type { ExitListener, Transcoder } from './transcoder.js';
+
+// Observe real filesystem admission without replacing IO or depending on request order.
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof FsPromises>();
+  return { ...actual, mkdir: vi.fn(actual.mkdir) };
+});
 
 const VTT = 'WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nHi\n';
 
@@ -92,26 +99,63 @@ describe('SubtitleExtractor', () => {
     expect(transcoder).not.toHaveBeenCalled();
   });
 
-  it('runs at most maxRuns extractions at once, the others wait', async () => {
+  it.each([false, true])('limits extractions with reversed admission=%s', async (reverse) => {
+    vi.mocked(mkdir).mockClear();
+    const realMkdir = vi.mocked(mkdir).getMockImplementation();
+    if (realMkdir === undefined) throw new Error('real mkdir observer is missing');
+    let releaseFirst: () => void = () => undefined;
+    let reachedFirst: () => void = () => undefined;
+    const firstReached = new Promise<void>((resolve) => (reachedFirst = resolve));
+    const firstAllowed = new Promise<void>((resolve) => (releaseFirst = resolve));
+    if (reverse) {
+      vi.mocked(mkdir).mockImplementationOnce(async (path, options) => {
+        const result = await realMkdir(path, options);
+        reachedFirst();
+        await firstAllowed;
+        return result;
+      });
+    }
     const exits: (() => void)[] = [];
+    let cleaning = false;
     const transcoder = vi.fn<Transcoder>((args, onExit) => {
-      exits.push(() => {
+      let finished = false;
+      const finish = () => {
+        if (finished) return;
+        finished = true;
         writeFileSync(args.at(-1) ?? '', VTT);
         onExit(0, '');
-      });
+      };
+      exits.push(finish);
+      if (cleaning) queueMicrotask(finish);
       return { kill: vi.fn() };
     });
     const extractor = new SubtitleExtractor({ transcoder, dir, maxRuns: 1 });
 
     const first = extractor.get('m1', 0, film);
-    const second = extractor.get('m1', 1, film);
-    await vi.waitFor(() => expect(transcoder).toHaveBeenCalledTimes(1));
-    exits[0]?.();
-    await first;
-    await vi.waitFor(() => expect(transcoder).toHaveBeenCalledTimes(2));
-    exits[1]?.();
-
-    await expect(second).resolves.toBe(VTT);
+    let second: Promise<string> | undefined;
+    try {
+      if (reverse) await firstReached;
+      second = extractor.get('m1', 1, film);
+      if (reverse) {
+        await vi.waitFor(() => expect(transcoder).toHaveBeenCalledTimes(1));
+        expect(transcoder.mock.calls[0]?.[0]).toContain('0:s:1');
+        releaseFirst();
+      }
+      await vi.waitFor(() => expect(mkdir).toHaveBeenCalledTimes(2));
+      // Both real mkdir operations completed before this limit assertion.
+      await Promise.all(vi.mocked(mkdir).mock.results.map((result) => result.value));
+      expect(transcoder).toHaveBeenCalledTimes(1);
+      exits[0]?.();
+      await vi.waitFor(() => expect(transcoder).toHaveBeenCalledTimes(2));
+      exits[1]?.();
+      await expect(Promise.all([first, second])).resolves.toEqual([VTT, VTT]);
+    } finally {
+      cleaning = true;
+      releaseFirst();
+      for (const finish of exits) finish();
+      await Promise.allSettled(second === undefined ? [first] : [first, second]);
+      vi.mocked(mkdir).mockImplementation(realMkdir);
+    }
   });
 
   it('kills FFmpeg past the timeout and rejects once it exited', async () => {

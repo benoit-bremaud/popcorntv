@@ -589,3 +589,8 @@ These are local infrastructure results, not deployed-product or real-acquisition
 | E329-05 | Required Python and browser tests cannot succeed through incomplete execution | Real Python/Vitest boundary fixtures plus checked Playwright reports; browser API remains stubbed |
 | E329-06 | Real signed gate on the final clean pushed head | Pending publication; final SHA/status and review acceptance recorded on the implementation PR |
 | E335-01 | OSV findings removed without exclusions; tooling compatibility preserved | Two parent-qualified overrides, frozen install, real disposable Drizzle generation; no real DB migration |
+| E339-01 | Subtitle concurrency test remains correct when filesystem admission reverses request order | Real IO with an explicit reversed-boundary fixture; nine targeted tests pass, no production change |
+| E339-02 | Regression detects the old fixture deadlock and broken admission limit | Disposable mutations reproduce the 5-second timeout and exact two-versus-one invocation failure; not full-suite green evidence |
+
+The [#329 validation chronology](../architecture/qa/2026-11-14-issue-329-local-gate.md)
+preserves the failed first gate separately from pre-push successes and corrected-head results.

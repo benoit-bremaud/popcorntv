@@ -1,7 +1,9 @@
-# Local review — issue 308 feasibility experiments
+# Local review
 
-The branch may be published as a draft; acceptance, merge and release gates remain incomplete.
-The latest follow-up below supersedes the earlier list of unmeasured research cases.
+Historical records retain their original scope and verdict. The latest #329 verification
+chronology is in [signed local gate validation](qa/2026-11-14-issue-329-local-gate.md);
+its implementation PR carries the final exact-head signed result. Earlier draft-only
+statements below apply to their dated #308 research stages, not later completed merges.
 
 ## Scope and verdict
 
