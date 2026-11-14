@@ -194,3 +194,41 @@ recreation and then an owned stop if withdrawal fails; cleanup failures remain
 visible without hiding the original error. SIGKILL and power loss cannot execute
 cleanup: operators must reconcile the owned installation after either event.
 A completed installation with changed managed settings is refused without writes.
+
+### Initial build blocker (resolved)
+
+The isolated candidate build restored the dependency graph and compiled
+`Radarr.Common` with the SDK above. Publishing requires `-f net10.0` and
+`-p:SolutionDir=/src/src/` so that the upstream StyleCop configuration is loaded.
+The next step fails in `SixLabors.ImageSharp.targets`: ImageSharp 3.2.0 requires
+`SixLaborsLicenseKey`, `SixLaborsLicenseFile` or `sixlabors.lic`. No check was
+suppressed. The publisher offers an application-based Community license at
+<https://licensing.sixlabors.com/>. The owner received a Community license on
+2026-11-14, expiring on 2028-02-12. It is consumed through a required BuildKit
+secret mount, never a build argument, committed file, image layer or diagnostic
+value. The full-source build and private real-container journey subsequently
+passed; see the dated QA evidence below for the precise acceptance scope.
+
+
+### Runtime contract corrections — 2026-11-15
+
+The initial console-only publish failed actual startup because Linux services
+load `Radarr.Mono.dll` through reflection. The final build publishes Console and
+Mono from the same patched source. It omits the disabled updater, matching the
+LinuxServer packaging boundary, and stamps assembly version `7.0.3.10912` with
+configuration `popcorntv-local` and deterministic compilation.
+
+Actual services require an API key for protected API routes; forms cookies
+instead authorize the administrative UI. The controller verifies both policies
+independently and parses all `Set-Cookie` fields without forwarding cookie
+attributes. It rejects missing/wrong API credentials and anonymous UI access
+before publication. Private acceptance does not reserve operator host ports.
+
+The local L2 gate now rebuilds the image from its pinned inputs using an existing
+private `SIXLABORS_LICENSE_FILE`, lints both Dockerfiles and executes the actual
+private-container acceptance journey. Unit/component Python tests enforce a
+90% combined branch/statement coverage ratchet and refuse empty/skipped/xfail or
+deselected suites. The Python lockfile is scanned alongside the pnpm lockfile.
+The gate still requires all existing application and security checks; a private
+startup journey does not certify the pending synthetic-source or public-loopback
+acceptance cases.

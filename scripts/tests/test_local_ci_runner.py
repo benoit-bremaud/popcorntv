@@ -30,7 +30,7 @@ class RunnerTest(unittest.TestCase):
         (self.repo / '.nvmrc').write_text('22.23.4\n')
         self.log = fixture.root / 'commands.jsonl'
         self.env['CI_TEST_COMMAND_LOG'] = str(self.log)
-        for name in ('node', 'pnpm', 'lefthook', 'shellcheck', 'gitleaks', 'osv-scanner', 'docker', 'make', 'sonar-scanner', 'ffmpeg'):
+        for name in ('node', 'pnpm', 'uv', 'just', 'lefthook', 'shellcheck', 'gitleaks', 'osv-scanner', 'docker', 'make', 'sonar-scanner', 'ffmpeg'):
             path = fixture.bin / name
             path.write_text('''#!/usr/bin/env python3
 import json,os,sys
@@ -61,6 +61,10 @@ sys.exit(1 if os.environ.get('CI_TEST_FAIL_TOOL')==name else 0)
         fixture.git('commit', '-m', 'ci(test): add runner fixture')
         fixture.git('push', 'origin', 'main')
         self.env['SONAR_TOKEN'] = 'fixture-only-not-a-real-secret'
+        license_file = fixture.root / 'sixlabors.lic'
+        license_file.write_text('fixture-only-no-real-license')
+        license_file.chmod(0o600)
+        self.env['SIXLABORS_LICENSE_FILE'] = str(license_file)
 
     def run_recipe(self, *args, good=True, **env):
         result = self.fixture.command('python3', str(self.runner), *args, good=good, env=dict(self.env, **env))
@@ -77,6 +81,17 @@ sys.exit(1 if os.environ.get('CI_TEST_FAIL_TOOL')==name else 0)
         self.assertIn('--maxWorkers=4', tests)
         self.assertIn('--allowOnly=false', tests)
         self.assertEqual(len([c for c in commands if '--coverage' in c]), 3)
+        self.assertTrue(any(c[:3] == ['uv', 'sync', '--frozen'] for c in commands))
+        python_tests = next(c for c in commands if 'python' in c and 'scripts/check_python_tests.py' in c)
+        for required in ('scripts/tests/test_discovery.py', 'scripts/tests/test_python_completeness.py',
+                         '--cov=local_discovery', '--cov=check_python_tests', '--cov-branch',
+                         '--cov-fail-under=90'):
+            self.assertIn(required, python_tests)
+        self.assertTrue(any('discovery-build' in c for c in commands))
+        self.assertTrue(any('scripts/tests/test_discovery_runtime.py' in c for c in commands))
+        dependency_scan = next(c for c in commands if c[0] == 'osv-scanner')
+        self.assertIn('--lockfile=uv.lock', dependency_scan)
+        self.assertIn('--lockfile=pnpm-lock.yaml', dependency_scan)
         reports = list((self.repo / '.git/local-ci-runs').glob('*/result'))
         self.assertEqual(len(reports), 1)
         self.assertEqual(reports[0].read_text(), 'success\n')
@@ -88,6 +103,12 @@ sys.exit(1 if os.environ.get('CI_TEST_FAIL_TOOL')==name else 0)
         self.run_recipe('gate', good=False, CI_TEST_FAIL_TOOL='osv-scanner')
         self.assertEqual(self.fixture.latest(), 'failure')
         self.assertIn('docker', self.log.read_text())
+        self.assertNotIn('sonar.qualitygate.wait', self.log.read_text())
+
+    def test_failed_python_tool_never_attests(self):
+        self.run_recipe('gate', good=False, CI_TEST_FAIL_TOOL='uv')
+        self.assertEqual(self.fixture.latest(), 'failure')
+        self.assertIn('scripts/check_python_tests.py', self.log.read_text())
         self.assertNotIn('sonar.qualitygate.wait', self.log.read_text())
 
     def test_failed_pending_starts_no_checks(self):

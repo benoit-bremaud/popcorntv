@@ -29,7 +29,7 @@ x-service: &service
 services:
   prowlarr:
     <<: *service
-    image: lscr.io/linuxserver/prowlarr:2.7.0.5723-ls168@sha256:6660787a99b2e58203539583663c973b48979fc00ff2cb78dc0ea17429e1f6ef
+    image: lscr.io/linuxserver/prowlarr:nightly-3.0.2.5775-ls29@sha256:8548e568b1a16456fd72e1374ad8aae69690af146ddf6255696f287455436704
     mem_limit: 256m
     volumes:
       - type: bind
@@ -46,7 +46,8 @@ services:
       start_period: 20s
   radarr:
     <<: *service
-    image: lscr.io/linuxserver/radarr:6.4.4.10685-ls326@sha256:51a9ac2a9eb47afc833541e5fd6c11b86eb9f810694c22fa2429e3078e9194b2
+    image: ${DISCOVERY_RADARR_IMAGE:?build the corrected local image first}
+    pull_policy: never
     mem_limit: 512m
     volumes:
       - type: bind

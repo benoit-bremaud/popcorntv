@@ -14,6 +14,9 @@ ROOT = Path(__file__).resolve().parent.parent
 ATTEST = ['sh', str(ROOT / 'scripts/attest.sh')]
 SEMGREP = 'semgrep/semgrep:1.181.0@sha256:81474464c1f07483ba0682a44787fd93c91397419762a04abe2bafaae396304b'
 REPORT = None
+PYTHON_SOURCES = ('scripts/local_discovery.py', 'scripts/check_python_tests.py',
+                  'scripts/tests/test_discovery.py', 'scripts/tests/test_python_completeness.py',
+                  'scripts/tests/test_discovery_runtime.py')
 
 
 def output(*cmd):
@@ -66,19 +69,32 @@ def fast():
     source = [f for f in files if Path(f).suffix in ('.ts', '.tsx', '.js', '.mjs', '.cjs')]
     if source:
         good = invoke(['pnpm', 'exec', 'eslint', '--', *source]) and good
+    python_source = [name for name in files if name in PYTHON_SOURCES]
+    if python_source:
+        prefix = ['uv', 'run', '--frozen', '--group', 'ci', 'ruff']
+        good = invoke([*prefix, 'format', '--check', *python_source]) and good
+        good = invoke([*prefix, 'check', *python_source]) and good
     return good
 
 
 def check():
     runtime()
-    env = dict(os.environ, FFMPEG_IT='1', PYTHONDONTWRITEBYTECODE='1')
+    env = dict(os.environ, FFMPEG_IT='1', PYTHONDONTWRITEBYTECODE='1', PYTEST_ADDOPTS='')
     commands = [
         ['pnpm', 'install', '--frozen-lockfile'],
         ['pnpm', 'typecheck'], ['pnpm', 'lint'], ['pnpm', 'format:check'],
         ['python3', 'scripts/test-local-ci.py'],
+        ['uv', 'sync', '--frozen', '--group', 'ci'],
+        ['uv', 'run', '--frozen', '--group', 'ci', 'ruff', 'check', *PYTHON_SOURCES],
+        ['uv', 'run', '--frozen', '--group', 'ci', 'ruff', 'format', '--check', *PYTHON_SOURCES],
+        ['uv', 'run', '--frozen', '--group', 'ci', 'mypy', *PYTHON_SOURCES],
+        ['uv', 'run', '--frozen', '--group', 'ci', 'python', 'scripts/check_python_tests.py',
+         '-q', 'scripts/tests/test_discovery.py', 'scripts/tests/test_python_completeness.py',
+         '--cov=local_discovery', '--cov=check_python_tests', '--cov-branch',
+         '--cov-fail-under=90', '--cov-report=term', '--cov-report=json:coverage/python.json'],
         ['lefthook', 'validate'], ['shellcheck', 'scripts/attest.sh', 'scripts/check-commit-msg.sh'],
         ['gitleaks', 'git', '--redact', '--no-banner'],
-        ['osv-scanner', 'scan', 'source', '--lockfile=pnpm-lock.yaml'],
+        ['osv-scanner', 'scan', 'source', '--lockfile=pnpm-lock.yaml', '--lockfile=uv.lock'],
         ['docker', 'run', '--rm', '--user', str(os.getuid()) + ':' + str(os.getgid()),
          '-e', 'SEMGREP_SEND_METRICS=off', '-e', 'SEMGREP_ENABLE_VERSION_CHECK=0',
          '-e', 'EIO_BACKEND=posix', '-v', str(ROOT) + ':/src:ro', '-w', '/src', SEMGREP,
@@ -173,7 +189,14 @@ def gate(base):
             (REPORT / 'versions.json').write_text(json.dumps(versions, indent=2) + '\n')
             if not check():
                 raise RuntimeError('required check failed')
+            license_file = Path(os.environ.get('SIXLABORS_LICENSE_FILE', ''))
+            if not license_file.is_absolute() or not license_file.is_file() or license_file.stat().st_mode & 0o077:
+                raise RuntimeError('SIXLABORS_LICENSE_FILE must name an existing private license file')
             for command in (
+                ['just', 'discovery-build', str(license_file)],
+                ['make', 'lint-docker', 'HADOLINT_FILES=Dockerfile deploy/local-discovery/radarr.Dockerfile'],
+                ['uv', 'run', '--frozen', '--group', 'ci', 'python', 'scripts/check_python_tests.py',
+                 '-q', 'scripts/tests/test_discovery_runtime.py'],
                 ['pnpm', 'build'],
                 ['sonar-scanner', '-Dsonar.qualitygate.wait=true', '-Dsonar.qualitygate.timeout=180'],
                 ['pnpm', '--filter', '@popcorntv/web', 'exec', 'playwright', 'test', '--config=playwright.local-ci.config.ts'],

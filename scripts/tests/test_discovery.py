@@ -6,12 +6,14 @@ import contextlib
 import ipaddress
 import json
 import logging
+import os
 import socket
 import stat
 import subprocess
 import sys
 import threading
 from collections.abc import Iterator
+from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs
@@ -189,8 +191,15 @@ class FakeArr:
 
             def do_GET(self) -> None:
                 valid_key = self.headers.get("X-Api-Key") == model.credential.api_key
-                valid_cookie = self.headers.get("Cookie") == "fixture=authorized"
-                if not valid_key and not valid_cookie:
+                cookies = SimpleCookie()
+                cookies.load(self.headers.get("Cookie", ""))
+                valid_cookie = (
+                    "fixture" in cookies and cookies["fixture"].value == "authorized"
+                )
+                if self.path == "/":
+                    self.respond(200 if valid_cookie else 401, {})
+                    return
+                if not valid_key:
                     self.respond(401, {})
                 elif self.path.endswith("/config/host"):
                     self.respond(200, model.host)
@@ -230,6 +239,7 @@ class FakeArr:
                 else:
                     self.send_response(302)
                     self.send_header("Location", "/")
+                    self.send_header("Set-Cookie", "nonce=fixture; HttpOnly")
                     self.send_header("Set-Cookie", "fixture=authorized; HttpOnly")
                     self.end_headers()
 
@@ -448,9 +458,25 @@ def controller(
         def docker_boundary(arguments: list[str], **_kwargs: object) -> str:
             calls.append(arguments)
             if "--images" in arguments:
-                return "\n".join(
-                    "lscr.io/linuxserver/" + s.name + ":1.0@sha256:" + "a" * 64
-                    for s in discovery.SERVICES
+                return (
+                    "lscr.io/linuxserver/prowlarr:1.0@sha256:"
+                    + "a" * 64
+                    + "\n"
+                    + discovery.RADARR_TAG
+                )
+            if arguments[:3] == ["docker", "image", "inspect"]:
+                return json.dumps(
+                    [
+                        {
+                            "Id": "sha256:" + "b" * 64,
+                            "Config": {
+                                "Labels": {
+                                    "org.opencontainers.image.revision": discovery.RADARR_REVISION,
+                                    "io.popcorntv.radarr.imagesharp": "3.2.0",
+                                }
+                            },
+                        }
+                    ]
                 )
             return ""
 
@@ -738,3 +764,173 @@ def test_api_does_not_send_credentials_to_environment_proxy(
         proxy.shutdown()
         thread.join(timeout=2)
         proxy.server_close()
+
+
+def test_network_inventory_accounts_for_docker_and_nondefault_host_routes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def inventory(arguments: list[str], *, env: dict[str, str] | None = None) -> str:
+        if arguments == ["docker", "network", "ls", "-q"]:
+            return "fixture-network"
+        if arguments[:3] == ["docker", "network", "inspect"]:
+            return json.dumps(
+                [
+                    {
+                        "IPAM": {
+                            "Config": [
+                                {"Subnet": "10.203.206.0/29"},
+                                {"Subnet": "fd00::/64"},
+                                {},
+                            ]
+                        }
+                    },
+                    {"IPAM": {"Config": None}},
+                ]
+            )
+        assert arguments == ["ip", "-j", "route"]
+        return json.dumps(
+            [{"dst": "default"}, {}, {"dst": "10.203.206.8/29"}, {"dst": "fd00::/64"}]
+        )
+
+    monkeypatch.setattr(discovery, "command", inventory)
+    assert discovery.occupied_networks() == [
+        ipaddress.IPv4Network("10.203.206.0/29"),
+        ipaddress.IPv4Network("10.203.206.8/29"),
+    ]
+    assert discovery.choose_subnet(
+        discovery.occupied_networks()
+    ) == ipaddress.IPv4Network("10.203.206.16/29")
+
+
+def test_root_operator_is_refused_before_any_state_write(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(os, "getuid", lambda: 0)
+    with pytest.raises(discovery.DiscoveryError, match="non-root"):
+        discovery.initialize(tmp_path / "state")
+    assert not (tmp_path / "state").exists()
+
+
+def test_administration_port_conflict_is_refused_and_owned_port_is_allowed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with socket.socket() as listener:
+        listener.bind(("127.0.0.1", 0))
+        port = listener.getsockname()[1]
+        service = discovery.Service("fixture", 1, "v1", port)
+        monkeypatch.setattr(discovery, "SERVICES", (service,))
+        with pytest.raises(discovery.DiscoveryError, match="unavailable"):
+            discovery.check_ports()
+        discovery.check_ports({port})
+    discovery.check_ports()
+
+
+@pytest.mark.parametrize("value", [[], None, 42, {1: "invalid key"}])
+def test_decoded_json_must_be_a_string_keyed_object(value: object) -> None:
+    with pytest.raises(discovery.DiscoveryError, match="invalid JSON object"):
+        discovery.object_map(value)
+
+
+@pytest.mark.parametrize(
+    "images", ["", "radarr:latest", "lscr.io/linuxserver/radarr:tag@sha256:" + "a" * 64]
+)
+def test_missing_or_unpinned_image_inventory_refuses_start(
+    installation: discovery.Installation,
+    monkeypatch: pytest.MonkeyPatch,
+    images: str,
+) -> None:
+    calls: list[list[str]] = []
+
+    def inventory(arguments: list[str], *, env: dict[str, str] | None = None) -> str:
+        calls.append(arguments)
+        return images if "--images" in arguments else ""
+
+    monkeypatch.setattr(discovery, "command", inventory)
+    with pytest.raises(discovery.DiscoveryError):
+        discovery.start(installation)
+    assert not any("up" in arguments for arguments in calls)
+
+
+def test_cli_status_checks_actual_http_config_without_writes(
+    installation: discovery.Installation,
+    controller: tuple[dict[str, FakeArr], list[list[str]]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    models, _calls = controller
+    discovery.start(installation)
+    writes = {name: list(model.writes) for name, model in models.items()}
+    monkeypatch.setattr(
+        sys, "argv", ["local_discovery.py", "status", "--state", str(installation.root)]
+    )
+    discovery.main()
+    assert {name: model.writes for name, model in models.items()} == writes
+
+
+@pytest.mark.parametrize(
+    "record",
+    [
+        [],
+        [{}],
+        [{"Id": "radarr:latest", "Config": {"Labels": {}}}],
+        [{"Id": "sha256:" + "b" * 64, "Config": {"Labels": {}}}],
+    ],
+)
+def test_unverified_rebuild_provenance_never_starts(
+    installation: discovery.Installation,
+    controller: tuple[dict[str, FakeArr], list[list[str]]],
+    monkeypatch: pytest.MonkeyPatch,
+    record: object,
+) -> None:
+    _models, calls = controller
+    original = discovery.command
+
+    def altered_inventory(
+        arguments: list[str], *, env: dict[str, str] | None = None
+    ) -> str:
+        if arguments[:3] == ["docker", "image", "inspect"]:
+            return json.dumps(record)
+        return original(arguments, env=env)
+
+    monkeypatch.setattr(discovery, "command", altered_inventory)
+    with pytest.raises(discovery.DiscoveryError):
+        discovery.start(installation)
+    assert not any("up" in call for call in calls)
+
+
+def test_every_start_uses_the_exact_image_identity_that_passed_scan(
+    installation: discovery.Installation,
+    controller: tuple[dict[str, FakeArr], list[list[str]]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _models, calls = controller
+    original = discovery.command
+    deployed: list[str] = []
+
+    def record_identity(
+        arguments: list[str], *, env: dict[str, str] | None = None
+    ) -> str:
+        if arguments[:2] == ["docker", "compose"] and "up" in arguments:
+            assert env is not None
+            deployed.append(env["DISCOVERY_RADARR_IMAGE"])
+        return original(arguments, env=env)
+
+    monkeypatch.setattr(discovery, "command", record_identity)
+    discovery.start(installation)
+    identity = "sha256:" + "b" * 64
+    assert deployed == [identity, identity]
+    assert any("IMAGE=" + identity in call for call in calls)
+
+
+def test_private_acceptance_does_not_reserve_operator_admin_ports(
+    installation: discovery.Installation,
+    controller: tuple[dict[str, FakeArr], list[list[str]]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _models, calls = controller
+
+    def forbidden_port_check(_owned: set[int] | None = None) -> None:
+        raise AssertionError("private acceptance must not reserve operator ports")
+
+    monkeypatch.setattr(discovery, "check_ports", forbidden_port_check)
+    discovery.start(installation, publish=False)
+    assert not any(str(discovery.PUBLISH) in call for call in calls)

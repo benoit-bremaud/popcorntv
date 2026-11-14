@@ -6,6 +6,7 @@ coverage/
 *.tsbuildinfo
 __pycache__/
 .venv/
+**/sixlabors.lic
 .pytest_cache/
 .coverage*
 

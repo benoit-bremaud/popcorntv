@@ -28,6 +28,8 @@ import xml.etree.ElementTree as ET
 from collections.abc import Iterator
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
+from email.message import Message
+from http.cookies import CookieError, SimpleCookie
 from pathlib import Path
 from types import FrameType
 from typing import NoReturn, cast
@@ -39,6 +41,8 @@ DEFAULT_STATE = ROOT / "data/local-discovery"
 MAX_RESPONSE = 512 * 1024
 LOGGER = logging.getLogger("popcorntv.discovery")
 COMMAND_TIMEOUT = 180
+RADARR_TAG = "popcorntv-radarr:af772b0-imagesharp3.2.0"
+RADARR_REVISION = "af772b051ac27a0615c7f8b7f78622b6dc183be0"
 
 
 class DiscoveryError(RuntimeError):
@@ -123,6 +127,7 @@ class Installation:
                 "DISCOVERY_SUBNET": str(self.subnet),
                 "DISCOVERY_UID": str(self.uid),
                 "DISCOVERY_GID": str(self.gid),
+                "DISCOVERY_RADARR_IMAGE": RADARR_TAG,
             }
         )
         for service in SERVICES:
@@ -428,6 +433,17 @@ class ApiResponse:
     cookie: str = field(repr=False, default="")
 
 
+def session_cookies(headers: Message) -> str:
+    """Convert every Set-Cookie field into a request cookie without logging values."""
+    cookies = SimpleCookie()
+    try:
+        for header in headers.get_all("Set-Cookie", []):
+            cookies.load(header)
+    except CookieError as error:
+        raise DiscoveryError("invalid administrative session cookie") from error
+    return "; ".join(f"{name}={item.coded_value}" for name, item in cookies.items())
+
+
 class Api:
     """Fixed private service destination with proxy/redirect credential containment."""
 
@@ -480,10 +496,10 @@ class Api:
                 if len(content) > MAX_RESPONSE:
                     raise DiscoveryError("service response exceeds size budget")
                 return ApiResponse(
-                    response.status, content, response.headers.get("Set-Cookie", "")
+                    response.status, content, session_cookies(response.headers)
                 )
         except urllib.error.HTTPError as error:
-            cookie_header = error.headers.get("Set-Cookie", "")
+            cookie_header = session_cookies(error.headers)
             error.close()
             return ApiResponse(error.code, cookie=cookie_header)
         except (urllib.error.URLError, TimeoutError, OSError) as error:
@@ -510,7 +526,11 @@ class Api:
 
 
 def compose(
-    installation: Installation, arguments: list[str], *, published: bool = False
+    installation: Installation,
+    arguments: list[str],
+    *,
+    published: bool = False,
+    radarr_image: str | None = None,
 ) -> str:
     """Run only this install's explicit Compose files and environment."""
     if arguments and arguments[0] in ("up", "stop", "down"):
@@ -527,7 +547,10 @@ def compose(
     ]
     if published:
         prefix += ["-f", str(PUBLISH)]
-    return command([*prefix, *arguments], env=installation.environment())
+    environment = installation.environment()
+    if radarr_image is not None:
+        environment["DISCOVERY_RADARR_IMAGE"] = radarr_image
+    return command([*prefix, *arguments], env=environment)
 
 
 def owned_containers(installation: Installation) -> list[dict[str, object]]:
@@ -631,8 +654,12 @@ def verify_auth(api: Api) -> None:
     )
     if login.status not in (200, 302) or not login.cookie:
         raise DiscoveryError(f"{api.service.name} administrative login not verified")
-    cookie = login.cookie.split(";", 1)[0]
-    if api.request(path, authenticated=False, cookie=cookie).status != 200:
+    # Vendor API policy requires an API key; forms cookies authorize the UI instead.
+    if api.request("/", authenticated=False).status not in (302, 401, 403):
+        raise DiscoveryError(
+            f"{api.service.name} administrative UI authentication not enforced"
+        )
+    if api.request("/", authenticated=False, cookie=login.cookie).status != 200:
         raise DiscoveryError(f"{api.service.name} login session not authorized")
 
 
@@ -717,19 +744,38 @@ def check_ports(owned: set[int] | None = None) -> None:
                 ) from error
 
 
-def verify_images(installation: Installation) -> None:
-    """Refuse startup if either exact image is unpinned or fails the security policy."""
+def verify_images(installation: Installation) -> str:
+    """Scan the immutable local Radarr identity and pinned upstream Prowlarr before up."""
     images = compose(installation, ["config", "--images"]).splitlines()
     names: set[str] = set()
+    radarr_id = ""
     for image in images:
-        match = re.fullmatch(
-            r"lscr\.io/linuxserver/(prowlarr|radarr):[\w.-]+@sha256:([a-f0-9]{64})",
-            image,
-        )
-        if match is None or match[1] in names:
-            raise DiscoveryError("unexpected or unpinned discovery image")
-        names.add(match[1])
-        report = f"discovery-{match[1]}-{match[2][:12]}.json"
+        if image == RADARR_TAG and "radarr" not in names:
+            rows = json.loads(command(["docker", "image", "inspect", image]))
+            if not isinstance(rows, list) or len(rows) != 1:
+                raise DiscoveryError("rebuilt Radarr image inventory invalid")
+            row = object_map(rows[0])
+            labels = object_map(object_map(row.get("Config")).get("Labels"))
+            identity = row.get("Id")
+            if (
+                not isinstance(identity, str)
+                or not re.fullmatch(r"sha256:[a-f0-9]{64}", identity)
+                or labels.get("org.opencontainers.image.revision") != RADARR_REVISION
+                or labels.get("io.popcorntv.radarr.imagesharp") != "3.2.0"
+            ):
+                raise DiscoveryError("rebuilt Radarr provenance not verified")
+            name, digest, radarr_id = "radarr", identity[7:], identity
+            image = identity
+        else:
+            match = re.fullmatch(
+                r"lscr\.io/linuxserver/(prowlarr):[\w.-]+@sha256:([a-f0-9]{64})",
+                image,
+            )
+            if match is None or match[1] in names:
+                raise DiscoveryError("unexpected or unpinned discovery image")
+            name, digest = match[1], match[2]
+        names.add(name)
+        report = f"discovery-{name}-{digest[:12]}.json"
         try:
             command(
                 [
@@ -745,13 +791,12 @@ def verify_images(installation: Installation) -> None:
             )
         except DiscoveryError:
             LOGGER.error(
-                "%s image scan failed; startup refused; report=.trivy/%s",
-                match[1],
-                report,
+                "%s image scan failed; startup refused; report=.trivy/%s", name, report
             )
             raise
-    if names != {service.name for service in SERVICES}:
+    if names != {service.name for service in SERVICES} or not radarr_id:
         raise DiscoveryError("required discovery image missing")
+    return radarr_id
 
 
 def bootstrap_completed(installation: Installation) -> bool:
@@ -771,10 +816,15 @@ def bootstrap_completed(installation: Installation) -> bool:
 def start(installation: Installation, *, publish: bool = True) -> None:
     """Authenticate privately before publication; keep state and withdraw ports on failure."""
     with installation_lock(installation):
-        verify_images(installation)
-        check_ports(owned_host_ports(owned_containers(installation)))
+        radarr_image = verify_images(installation)
+        if publish:
+            check_ports(owned_host_ports(owned_containers(installation)))
         try:
-            compose(installation, ["up", "-d", "--wait", "--wait-timeout", "120"])
+            compose(
+                installation,
+                ["up", "-d", "--wait", "--wait-timeout", "120"],
+                radarr_image=radarr_image,
+            )
             completed = bootstrap_completed(installation)
             for service in SERVICES:
                 api = Api(installation, service)
@@ -798,6 +848,7 @@ def start(installation: Installation, *, publish: bool = True) -> None:
                     installation,
                     ["up", "-d", "--wait", "--wait-timeout", "120"],
                     published=True,
+                    radarr_image=radarr_image,
                 )
             LOGGER.info(
                 "local discovery ready; published=%s; no sources configured", publish
@@ -812,6 +863,7 @@ def start(installation: Installation, *, publish: bool = True) -> None:
                 compose(
                     installation,
                     ["up", "-d", "--force-recreate", "--wait", "--wait-timeout", "120"],
+                    radarr_image=radarr_image,
                 )
                 rolled_back = True
             if not rolled_back:
