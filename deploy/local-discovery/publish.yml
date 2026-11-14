@@ -1,0 +1,6 @@
+# Applied only after private authentication and empty-state verification succeeds.
+services:
+  prowlarr:
+    ports: ['127.0.0.1:${DISCOVERY_PROWLARR_HOST_PORT:-19696}:9696']
+  radarr:
+    ports: ['127.0.0.1:${DISCOVERY_RADARR_HOST_PORT:-17878}:7878']

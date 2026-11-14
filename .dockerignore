@@ -4,6 +4,8 @@
 .codex
 .agents
 .mise
+.venv
+.pytest_cache
 **/.env*
 !.env.example
 **/node_modules

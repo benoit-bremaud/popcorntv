@@ -2,8 +2,9 @@
 
 Issue #327 prepares an empty, isolated Prowlarr/Radarr installation before real movie discovery and retrieval.
 
-Status: proposed; owner approved an empty configuration on 2026-11-14, but the detailed
-topology and responsibility choice below still require conception validation before coding.
+Status: accepted by the owner on 2026-11-14, including option A and its weights, after
+independent design review and correction verification (Must 0 / Should 0). Empty configuration
+is required; implementation and real-container acceptance remain in progress.
 
 ## Need and boundaries
 
@@ -140,3 +141,56 @@ PopcornTV scheduler, a VPN-protected download path or a Pi deployment.
 - [LinuxServer Radarr](https://docs.linuxserver.io/images/docker-radarr/) and
   [Prowlarr](https://docs.linuxserver.io/images/docker-prowlarr/): documented non-root/read-only
   support must be checked against the pinned images.
+
+## Security rebuild decision (#343)
+
+The owner approved option A on 2026-11-14. The original stable images remain
+blocked by the image security gate and must not be started. A clean scan of the
+pinned Prowlarr nightly snapshot does not establish runtime acceptance or stable
+release status.
+
+| Criterion | Weight | A: rebuild Radarr | B: wait upstream | C: direct Prowlarr |
+| --- | ---: | --- | --- | --- |
+| Verifiable security | 30 | 4: inspect and scan the corrected build | 5: upstream correction | 5: scanned Prowlarr snapshot |
+| Approved architecture | 25 | 5: retain Radarr executor | 5: retain Radarr executor | 2: change search ownership |
+| Time to first trial | 30 | 3: compilation work remains | 0: unknown release date | 3: integration changes remain |
+| Maintenance | 15 | 2: own a narrow source rebuild | 5: upstream image maintenance | 3: additional adapter |
+| Weighted total / 500 | 100 | **365** | **350** | **335** |
+
+Scores estimate engineering effort, not a delivery deadline. Sensitivity: reduce
+trial timing to 15 and redistribute its 15 points proportionally to the other
+criteria (security 36.4286, architecture 30.3571, maintenance 18.2143); totals become
+378.93 / 425 / 342.50. Waiting wins when speed matters less. The final offered
+choice was “Approfondir l'analyse et expliquer”.
+
+### Rebuild inputs and acceptance
+
+- Official source: `Radarr/Radarr`, commit
+  `af772b051ac27a0615c7f8b7f78622b6dc183be0`. The queried
+  `v7.0.3.10912` tag did not exist; never infer a source revision from an image tag.
+- Downloaded GitHub source archive SHA-256:
+  `e64fd88a9cc31c7737b049b606bf412f6e7d9042d1c0c50e17f3862f9506a4fc`.
+- SDK: `mcr.microsoft.com/dotnet/sdk:10.0.404-alpine3.24`, manifest-list digest
+  `sha256:0294f285d062afacc8b5f6d7febb0cd4ee879320e5585fa15f2f4ebf1feb9ba7`.
+- Candidate patch: the one exact `SixLabors.ImageSharp` package reference in
+  `src/NzbDrone.Core/Radarr.Core.csproj`, from `3.1.12` to `3.2.0`. NuGet's official
+  version index confirms publication. Compilation and vulnerability scanning must
+  confirm suitability; publication alone is not acceptance.
+- Compile the Linux console project (`Radarr.Console.csproj`), not the Windows
+  desktop project. Rebuild its complete dependency graph and dependency manifests;
+  never swap a binary into an incompatible published graph.
+- Preserve upstream licensing, UI and native dependencies. Run the upstream image
+  resize success/error tests plus actual startup, authentication, persistence and
+  resource-limit acceptance. Keep generated build logs and image identity.
+- No new vulnerability suppression, altered scanner inventory, ignored advisory
+  or skipped security step is an acceptable fix. The final image must pass the
+  existing HIGH/CRITICAL image gate before service startup.
+
+### Interruption boundary
+
+The controller translates SIGTERM into a catchable interruption while preserving
+and restoring the previous handler. Publication failure attempts private
+recreation and then an owned stop if withdrawal fails; cleanup failures remain
+visible without hiding the original error. SIGKILL and power loss cannot execute
+cleanup: operators must reconcile the owned installation after either event.
+A completed installation with changed managed settings is refused without writes.

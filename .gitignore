@@ -5,6 +5,9 @@ build/
 coverage/
 *.tsbuildinfo
 __pycache__/
+.venv/
+.pytest_cache/
+.coverage*
 
 # Environment — only .env.example is committed
 .env
