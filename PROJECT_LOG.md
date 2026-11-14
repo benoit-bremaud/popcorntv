@@ -4,7 +4,7 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
-## 2026-11-13 — Parser suffix complexity (#330)
+## 2026-11-13 — Parser suffix complexity (PR #333, `74a7807`)
 
 - Characterized the actual legacy parser against fixed commit `5bfeffb` on controlled
   matching/nonmatching suffix inputs. Current callers are filesystem-derived scanner paths;
@@ -16,6 +16,20 @@ context: merged PRs, decisions, tags, infra events. Not a release changelog — 
   sweep; final test review found Must 0 / Should 0. Final measurements and gate results are
   recorded separately in `docs/architecture/review-local.md` after source freeze.
 - The change also publishes the prepared #332 merge log. No deployment or service write.
+- Squash-merged PR #333 from `perf/330-parser-separator-scan` after independent test,
+  code, artifact and report reviews found Must 0 / Should 0. Source/evidence `9ea9164`,
+  final report-only publication `6e888b0`. The optional configured automatic review completed
+  without findings. Merge used the existing owner-authorized missing-attestation exception
+  tracked in #329; no failing local check was waived.
+- Final bounded gate: 1,446 application tests with real FFmpeg and zero skips, 22,236 separate
+  deterministic parser comparisons, two Chromium smoke journeys, SonarQube/Semgrep/secrets
+  scans and typecheck/lint/format/build passed. Sonar unresolved-issue inventory is now zero.
+  The first default-worker FFmpeg timeout remains failed evidence; maxWorkers=4 passed the
+  full unchanged suite without skips, raised timeouts or retry flags. #329 owns formal runner
+  resource stability and signed attestation before #315 A.
+- Reported progress before the next brick remains approximately 60% overall and three of ten
+  initial functional bricks (30%); this is maintenance, not a delivered acquisition feature.
+  #330 is closed; #329 is next. Reusable testing lessons are tracked in agents-skills #466.
 
 ## 2026-11-13 — Legacy server maintainability (PR #332, `5bfeffb`)
 

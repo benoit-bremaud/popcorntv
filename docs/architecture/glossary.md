@@ -1,6 +1,6 @@
 # Architecture glossary
 
-Incremental glossary for adaptive wishlist design (#307). Historical features and the separate #128 branch retain their own specifications; this is not a historical backfill.
+Incremental glossary for adaptive wishlist design (#307) and signed local gates (#329). Historical features and the separate #128 branch retain their own specifications; this is not a historical backfill.
 
 | Term | Definition | Source |
 |---|---|---|
@@ -10,6 +10,8 @@ Incremental glossary for adaptive wishlist design (#307). Historical features an
 | Download client | Engine that retrieves bytes, distinct from an indexer or publication source; initially qBittorrent, future second backend tracked by #325. | ADR-0034 |
 | External recovery service | Configured retrieval engine behind server-owned boundaries; qBittorrent is first under ADR-0034, with future client diversity. | Adaptive wishlist specification §2–7 |
 | Generation | Stable version of one preparation content/source attempt; restart and ordinary telemetry fluctuations do not change it. | Adaptive wishlist specification §2–7 |
+| Local checks | Required verification commands executed on the owner's machine. | Accepted local gate design, REQ-30–33 |
+| Local gate | Repository command that checks and attests one clean, origin-published commit. | Accepted local gate design, REQ-30–33 |
 | Indexer | Search/catalog service managed through Prowlarr; multiple configured indexers can reference the same upstream content. | REQ-28 / ADR-0034 |
 | Notification store | Existing private persisted notices extended with exact target/generation deduplication. | Adaptive wishlist specification §2–7 |
 | Owner | Existing administrative role; viewer interest alone does not grant acquisition permission. | Adaptive wishlist specification §2–7 |
@@ -22,6 +24,7 @@ Incremental glossary for adaptive wishlist design (#307). Historical features an
 | Ready notification | Profile-specific historical notice that a preparation became ready; Play rechecks current readiness. | Adaptive wishlist specification §2–7 |
 | Recovery boundary | Injected interface for the selected backend protocol, with a deterministic test double. | Adaptive wishlist specification §2–7 |
 | Source candidate | Publication/content identity satisfying the accepted language, quality and format constraints. | Adaptive wishlist specification §2–7 |
+| SSH signer | Existing or dedicated protected signing identity, authorized only through the trusted main-branch public signer file. | Accepted local gate design, REQ-31 |
 | Verified coverage | Byte/time regions confirmed readable by the recovery backend, not inferred from filesystem length. | Adaptive wishlist specification §2–7 |
 | Viewer | Signed-in household user acting through an owned profile. | Adaptive wishlist specification §2–7 |
 | Wishlist | Existing authenticated personal title interests and their private repository/API. | Adaptive wishlist specification §2–7 |

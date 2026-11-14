@@ -95,3 +95,16 @@ The owner validated A and the weights/contract on 2026-11-13; final publication/
 
 T-28/T-29 are design cases, not claimed executable tests. Indexer and retrieval-engine diversity
 remain separate; native libtorrent fallback does not itself add another acquisition provider.
+
+## Signed local gate design — 2026-11-14
+
+| Source and requirement | Realization | Responsibility | Planned verification | Status |
+|---|---|---|---|---|
+| #329 → REQ-30 | SEQ-attest-local-gate | Local gate recipes and toolchain | Cases TC-01, TC-11, TC-13 in [signed local gate](qa/cases/329-signed-local-gate.md) | accepted design; implementation pending |
+| #329 → REQ-31 | SEQ-attest-local-gate | Local gate and SSH signer, canonical repository transport | Cases TC-01–05, TC-08–10, TC-14–15 | accepted design; implementation pending |
+| #329 → REQ-32 | SEQ-attest-local-gate | Local checks and evidence publication | Cases TC-06–08, TC-10, TC-14 | accepted design; implementation pending |
+| #329 → REQ-33 | Local gate protocol resource contract | Bounded test runner and pinned runtime | Cases TC-11–12 | accepted design; measurements pending |
+
+The [protocol](specs/local-gate-protocol.md) and sequence describe the owner-accepted workflow,
+not an implemented gate. Option A authorizes the bootstrap public signer; no executable test
+result or deployment follows from these matrix entries.
