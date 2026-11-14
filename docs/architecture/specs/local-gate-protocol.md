@@ -165,4 +165,6 @@ REQ-30–32. [Designed cases](../qa/cases/329-signed-local-gate.md) cover REQ-30
 Only a sequence is needed: no application domain entities, new runtime deployment or user
 data flow is introduced. Requirements/traceability, dependency direction, proportionality
 and pattern fit passed independent review and correction verification (Must 0 / Should 0)
-before owner validation. No implementation test results are claimed by this specification.
+before owner validation. Implementation and its real signed gate were accepted in PR #340
+(checked e7e555e, squash 6a3c4ac); see the [validation chronology](../qa/2026-11-14-issue-329-local-gate.md)
+for actual results and retained failures. The specification itself is not deployment evidence.

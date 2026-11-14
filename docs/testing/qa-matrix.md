@@ -587,7 +587,7 @@ These are local infrastructure results, not deployed-product or real-acquisition
 | E329-03 / TC-11,13 | Real staged-secret redaction, hooks, frozen-lock mismatch and pinned runtime | Disposable fixtures; no real personal secret or network dependency installation |
 | E329-04 / TC-12 | Bounded full application suite with real FFmpeg, no exclusive/skipped/todo tests | Explicit shared/server/web package inventory; fresh JSON reports, existing timeouts unchanged |
 | E329-05 | Required Python and browser tests cannot succeed through incomplete execution | Real Python/Vitest boundary fixtures plus checked Playwright reports; browser API remains stubbed |
-| E329-06 | Real signed gate on the final clean pushed head | Pending publication; final SHA/status and review acceptance recorded on the implementation PR |
+| E329-06 | Real signed gate on the final clean pushed head | 2026-11-14 · e7e555e · local · OK: 22 checks exit zero, real SSH note and success status separately verified; PR #340 merged at 6a3c4ac |
 | E335-01 | OSV findings removed without exclusions; tooling compatibility preserved | Two parent-qualified overrides, frozen install, real disposable Drizzle generation; no real DB migration |
 | E339-01 | Subtitle concurrency test remains correct when filesystem admission reverses request order | Real IO with an explicit reversed-boundary fixture; nine targeted tests pass, no production change |
 | E339-02 | Regression detects the old fixture deadlock and broken admission limit | Disposable mutations reproduce the 5-second timeout and exact two-versus-one invocation failure; not full-suite green evidence |

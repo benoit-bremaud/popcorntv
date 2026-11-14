@@ -1,6 +1,6 @@
 # Test cases — signed local gate
 
-These cases were derived from #329 and REQ-30–33 before implementation; executable mappings below distinguish integration evidence from the pending real signed gate.
+These cases were derived from #329 and REQ-30–33 before implementation; executable mappings below distinguish integration checks from final exact-head signed-gate evidence.
 
 ## Cases
 
@@ -33,8 +33,10 @@ TC-14 with real subprocesses/locks and substituted tool/network boundaries.
 `test_local_ci_tools.py` adds actual Gitleaks staged/redaction, Vitest only/skip/todo,
 frozen-pnpm mismatch and installed Lefthook/commit-message rejection for TC-11/13.
 The checked Python runner and browser-report guards also reject incomplete required suites.
-TC-12 is the complete 1,446-test real-FFmpeg application run; every expected package must
-report a nonempty all-passed JSON result. The final exact-head signed gate remains pending.
+TC-12 is the final complete 1,447-test real-FFmpeg application run; every expected package
+reports a nonempty all-passed JSON result. Head e7e555e passed the real signed gate with
+37 infrastructure tests and two browser smokes. PR #340 merged at 6a3c4ac; the dated
+[chronology](../2026-11-14-issue-329-local-gate.md) preserves failed evidence separately.
 
 Each executed case must link its test file and checked SHA. Record measured toolchain/worker
 settings and original failed runs separately from later fixes. Two production-build browser

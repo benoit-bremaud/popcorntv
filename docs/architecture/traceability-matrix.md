@@ -100,11 +100,12 @@ remain separate; native libtorrent fallback does not itself add another acquisit
 
 | Source and requirement | Realization | Responsibility | Planned verification | Status |
 |---|---|---|---|---|
-| #329 → REQ-30 | SEQ-attest-local-gate | Local gate recipes and toolchain | Cases TC-01, TC-11, TC-13 in [signed local gate](qa/cases/329-signed-local-gate.md) | accepted design; implementation pending |
-| #329 → REQ-31 | SEQ-attest-local-gate | Local gate and SSH signer, canonical repository transport | Cases TC-01–05, TC-08–10, TC-14–15 | accepted design; implementation pending |
-| #329 → REQ-32 | SEQ-attest-local-gate | Local checks and evidence publication | Cases TC-06–08, TC-10, TC-14 | accepted design; implementation pending |
-| #329 → REQ-33 | Local gate protocol resource contract | Bounded test runner and pinned runtime | Cases TC-11–12 | accepted design; measurements pending |
+| #329 → REQ-30 | SEQ-attest-local-gate | Local gate recipes and toolchain | Cases TC-01, TC-11, TC-13 in [signed local gate](qa/cases/329-signed-local-gate.md) | implemented; PR #340, checked e7e555e |
+| #329 → REQ-31 | SEQ-attest-local-gate | Local gate and SSH signer, canonical repository transport | Cases TC-01–05, TC-08–10, TC-14–15 | implemented; real signature verified, PR #340 |
+| #329 → REQ-32 | SEQ-attest-local-gate | Local checks and evidence publication | Cases TC-06–08, TC-10, TC-14 | implemented; failed d748f1d retained, corrected e7e555e passed |
+| #329 → REQ-33 | Local gate protocol resource contract | Bounded test runner and pinned runtime | Cases TC-11–12 | implemented; 1,447 application tests, zero skips, clean-shell pre-push 93.56 s |
 
-The [protocol](specs/local-gate-protocol.md) and sequence describe the owner-accepted workflow,
-not an implemented gate. Option A authorizes the bootstrap public signer; no executable test
-result or deployment follows from these matrix entries.
+The [protocol](specs/local-gate-protocol.md) and sequence describe the implemented workflow.
+The [validation chronology](qa/2026-11-14-issue-329-local-gate.md) distinguishes original
+failed runs from final exact-head signed evidence. PR #340 merged at 6a3c4ac; that new squash
+commit needs its own gate before any authorized deployment. No deployment is claimed here.
