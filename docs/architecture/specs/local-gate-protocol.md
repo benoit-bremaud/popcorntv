@@ -2,7 +2,8 @@
 
 Issue #329 makes local verification reproducible and binds merge permission to the exact checked commit.
 
-Status: proposed, awaiting owner validation. This document grants no signing authority and
+Status: accepted by the owner on 2026-11-14, including option A and its weights. The public
+primary SSH identity is authorized for local-gate signing. This document
 does not authorize deployment. The existing owner-approved bootstrap waiver remains explicit
 until the replacement is operational. Source: #329 and the owner's local-only CI rules.
 
@@ -34,7 +35,7 @@ Tests replace transport, while using real temporary Git repositories and real SS
 | `gate` | `check`, build, Sonar with quality-gate wait, production-build browser smoke, applicable container scans and SBOM | Exact published head; every required result retained |
 | `merge` | Fresh PR head, trusted attestation and latest gate status, then SHA-pinned squash merge | No automatic deployment or admin bypass |
 
-The following inventory defines the migration contract before owner validation. Implementation
+The following inventory defines the accepted migration contract. Implementation
 review verifies the actual wiring against it. Preserve existing pinned container scan images in the
 Makefile as their single source of truth. Remove replaced hosted workflows in the migration
 PR. GitHub-only checks such as service-hosted CodeQL/dependency-review/Scorecard are listed
@@ -134,8 +135,7 @@ deployment. Report product/epic progress after each merged PR.
 ## Signing identity decision
 
 A reuses the existing primary SSH identity with project-local configuration. B creates a
-dedicated local-CI identity. C publishes an unsigned status only. No key is authorized by
-this proposal. Existing primary and homelab identities are distinct; the homelab key is not
+dedicated local-CI identity. C publishes an unsigned status only. The owner accepted A on 2026-11-14; the bootstrap trust store records its public key. Existing primary and homelab identities are distinct; the homelab key is not
 proposed. Fingerprints and agent availability were inspected, not private key contents.
 
 Scores are engineering judgments (0–5), based on observed agent availability and the stated
@@ -164,5 +164,5 @@ protected private storage and agent enrollment before adding its public key to m
 REQ-30–32. [Designed cases](../qa/cases/329-signed-local-gate.md) cover REQ-30–33.
 Only a sequence is needed: no application domain entities, new runtime deployment or user
 data flow is introduced. Requirements/traceability, dependency direction, proportionality
-and pattern fit must pass independent review before owner validation. No implementation
-test results are claimed by this proposed specification.
+and pattern fit passed independent review and correction verification (Must 0 / Should 0)
+before owner validation. No implementation test results are claimed by this specification.

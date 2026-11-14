@@ -5,7 +5,7 @@ This interaction shows when a checked commit becomes eligible for an exact-head 
 > **Feature:** #329 — signed local gate
 > **Source spec:** [Local gate protocol](../../specs/local-gate-protocol.md)
 > **Realises:** REQ-30–32 · **ID:** SEQ-attest-local-gate
-> **Decisions captured:** proposed two-PR trust bootstrap and signing identity selection
+> **Decisions captured:** owner-accepted two-PR trust bootstrap and primary signing identity
 
 ## Context
 
