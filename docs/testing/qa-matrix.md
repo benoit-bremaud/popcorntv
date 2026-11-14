@@ -572,3 +572,20 @@ Final measured results and checked SHA follow in review-local.
 | E330-02 / TC-07 | Actual frozen baseline/current complete parser outputs agree | Deterministic exhaustive short corpus plus explicit metadata/Unicode fixtures; final execution pending |
 | E330-03 / TC-08 | Matching/nonmatching suffix scaling measured separately from unit assertions | Bounded real-parser benchmark, five medians, observable checksum and source hashes; oversized inputs do not prove production exploitability |
 | E330-04 | Final local gate and resolution of S8786 | Exact checked SHA/results recorded after execution; no suppression or artificial filename limit |
+
+### Signed local gate — #329
+
+[Case design](../architecture/qa/cases/329-signed-local-gate.md),
+[accepted protocol](../architecture/specs/local-gate-protocol.md) and
+[operating instructions](../architecture/specs/local-gate-operation.md).
+These are local infrastructure results, not deployed-product or real-acquisition QA.
+
+| Case | Verification | Evidence and limits |
+|---|---|---|
+| E329-01 / TC-01–05,15 | Actual Git notes and SSH trust, canonical host/repository/SHA, revocation | Real temporary keys/repos; only GitHub transport substituted |
+| E329-02 / TC-06–10,14 | Failed/unconfirmed publication, exact retry bound, preserved unrelated notes and gate/merge lock | Real subprocesses/OS locks; five-attempt boundary and SHA-pinned merge rejection |
+| E329-03 / TC-11,13 | Real staged-secret redaction, hooks, frozen-lock mismatch and pinned runtime | Disposable fixtures; no real personal secret or network dependency installation |
+| E329-04 / TC-12 | Bounded full application suite with real FFmpeg, no exclusive/skipped/todo tests | Explicit shared/server/web package inventory; fresh JSON reports, existing timeouts unchanged |
+| E329-05 | Required Python and browser tests cannot succeed through incomplete execution | Real Python/Vitest boundary fixtures plus checked Playwright reports; browser API remains stubbed |
+| E329-06 | Real signed gate on the final clean pushed head | Pending publication; final SHA/status and review acceptance recorded on the implementation PR |
+| E335-01 | OSV findings removed without exclusions; tooling compatibility preserved | Two parent-qualified overrides, frozen install, real disposable Drizzle generation; no real DB migration |

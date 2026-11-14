@@ -1,0 +1,12 @@
+pre-commit:
+  jobs:
+    - name: staged checks
+      run: mise x -- just fast
+commit-msg:
+  jobs:
+    - name: conventional commit
+      run: sh scripts/check-commit-msg.sh {1}
+pre-push:
+  jobs:
+    - name: local checks
+      run: mise x -- just check

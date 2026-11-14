@@ -1,5 +1,9 @@
 .git
 .github
+.claude
+.codex
+.agents
+.mise
 **/.env*
 !.env.example
 **/node_modules

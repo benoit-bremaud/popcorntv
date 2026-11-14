@@ -28,7 +28,7 @@ TRIVY_RUN = docker run --rm --user "$$(id -u):$$(id -g)" -v "$(CURDIR)":/repo:ro
 scan-docker-config: ## Trivy misconfiguration scan of the Dockerfiles
 	@mkdir -p "$(TRIVY_CACHE)" .trivy
 	$(TRIVY_RUN) -e TRIVY_MISCONFIG_SCANNERS=dockerfile "$(TRIVY_IMAGE)" \
-		config --cache-dir /cache --severity HIGH,CRITICAL --exit-code 1 --ignorefile .trivyignore.yaml .
+		config --cache-dir /cache --severity HIGH,CRITICAL --exit-code 1 --ignorefile .trivyignore.yaml --skip-dirs .claude --skip-dirs .codex --skip-dirs .agents .
 
 # No --ignore-unfixed (#110, audit SA-03): unfixed CVEs block too, unless accepted in
 # .trivyignore.yaml with an expiry, so a new unfixed Critical cannot hide.
@@ -39,6 +39,17 @@ scan-docker-image: ## Trivy vulnerability scan: make scan-docker-image IMAGE=nam
 		image --cache-dir /cache --severity HIGH,CRITICAL --scanners vuln \
 		--ignorefile .trivyignore.yaml --exit-code "$(TRIVY_EXIT)" --format "$(TRIVY_FORMAT)" \
 		$(if $(TRIVY_OUTPUT),--output "/out/$(TRIVY_OUTPUT)") "$(IMAGE)"
+
+.PHONY: scan-source-security gate-sbom
+
+scan-source-security: ## Scan tracked source/dependencies with the existing pinned Trivy engine
+	@mkdir -p "$(TRIVY_CACHE)" .trivy
+	$(TRIVY_RUN) "$(TRIVY_IMAGE)" fs --cache-dir /cache --severity HIGH,CRITICAL --scanners vuln,misconfig --ignorefile .trivyignore.yaml --exit-code 1 --skip-dirs node_modules --skip-dirs .git --skip-dirs data --skip-dirs media --skip-dirs .claude --skip-dirs .codex --skip-dirs .agents .
+
+gate-sbom: ## Emit a current-head image SBOM outside the tracked worktree
+	@test -n "$(IMAGE)" || { echo "usage: make gate-sbom IMAGE=name:tag"; exit 2; }
+	@mkdir -p "$(TRIVY_CACHE)" .trivy
+	$(TRIVY_RUN) --group-add "$$(stat -c %g /var/run/docker.sock)" -v /var/run/docker.sock:/var/run/docker.sock "$(TRIVY_IMAGE)" image --cache-dir /cache --format spdx-json --output /out/gate-sbom.spdx.json "$(IMAGE)"
 
 # Local staging (#204): the production image of HEAD run like on the Pi, on
 # https://localhost:8443, for QA passes before a Pi deploy. The build context is
