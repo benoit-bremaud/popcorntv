@@ -109,3 +109,15 @@ The [protocol](specs/local-gate-protocol.md) and sequence describe the implement
 The [validation chronology](qa/2026-11-14-issue-329-local-gate.md) distinguishes original
 failed runs from final exact-head signed evidence. PR #340 merged at 6a3c4ac; that new squash
 commit needs its own gate before any authorized deployment. No deployment is claimed here.
+
+## Local discovery proposal — 2026-11-14
+
+| Source and requirement | Realization | Responsibility | Designed verification | Status |
+|---|---|---|---|---|
+| #327 → REQ-34 | Local deployment view, topology contract | Local operator and isolated services | [TC-01–03,05,07,10](qa/cases/327-local-discovery.md) | proposed; no installation |
+| #327 → REQ-35 | Local deployment view, protected-state contract | Initializer and authenticated local administration | TC-02–05,07,10 | proposed; no installation |
+| #327 → REQ-36 | Topology responsibility decision A | Future #310 trigger, Radarr executor, Prowlarr indexers | TC-06,08 | proposed; detailed owner validation pending |
+| #327 → REQ-37 | Empty/offline bootstrap boundary | Local discovery services, controlled fixtures | TC-01,04,06,09 | owner chose empty configuration; implementation pending |
+
+The [proposal](specs/local-discovery-topology.md) does not implement scheduling, provider
+finality, VPN retrieval or playability. Its deployment view and cases describe future work.
