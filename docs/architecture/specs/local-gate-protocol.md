@@ -45,7 +45,7 @@ as alternatives, not claimed to be identical engines. No hosted jobs are added o
 | Existing workflow/job | Local command contract | Version/configuration/globs | Applicability |
 |---|---|---|---|
 | `ci/verify` install and statics | `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm lint`, `pnpm format:check` | Node 22.23.4, pnpm 10.30.3; package tools from frozen lockfile; existing ESLint/Prettier configs, workspace-wide | Every check; install during setup with lock consistency checked |
-| `ci/verify` tests | `FFMPEG_IT=1 pnpm --workspace-concurrency=1 -r --if-present test --coverage --maxWorkers=4` | Frozen Vitest/coverage dependencies and existing package configs | Every check; candidate worker setting measured before acceptance |
+| `ci/verify` tests | Sequential explicit shared/server/web `pnpm --filter PACKAGE test --coverage --maxWorkers=4 --allowOnly=false` invocations with `FFMPEG_IT=1` and fresh JSON reports | Frozen Vitest/coverage dependencies and existing package configs; reject missing packages, empty/incomplete results | Every check; four workers per package, no workspace concurrency |
 | `ci/verify` build | `pnpm build` | Frozen TypeScript/Vite and package build configs | Every gate |
 | `docker-security/hadolint` | `make lint-docker` | Hadolint 2.15.1, digest in Makefile; `.hadolint.yaml`, Dockerfile | Docker path filter below, otherwise explicit not-applicable |
 | `docker-security/config` | `make scan-docker-config` | Trivy 0.76.0, digest in Makefile; Dockerfile and existing ignore config | Same Docker filter |
@@ -72,9 +72,9 @@ Python, FFmpeg and sonar-scanner versions are captured as prerequisites rather t
 claimed mise-managed pins. Security findings, unavailable required services and broken report
 generation remain blocking.
 
-Initial worker candidate: four workers per package with workspace concurrency one. The
-previous successful evidence used four workers per package with packages running concurrently;
-the sequential candidate still needs measurement. Keep fixture timeouts unchanged. Pin the
+Implemented worker setting: four workers per package, invoking required packages sequentially.
+The first successful complete `just check` exercised all 1,446 application tests and their
+JSON completeness predicates without skips. Keep fixture timeouts unchanged. Pin the
 validated Node 22 runtime and pnpm version and ensure pnpm executes under that Node, rather
 than the installed standalone binary's embedded Node 20. Add runtime guards and verify a
 clean shell without the temporary helper directory. Missing infrastructure may be reported

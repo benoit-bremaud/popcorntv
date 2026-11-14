@@ -1,6 +1,6 @@
 # Test cases — signed local gate
 
-These proposed cases derive from #329 and REQ-30–33 before implementation; none is reported as executed.
+These cases were derived from #329 and REQ-30–33 before implementation; executable mappings below distinguish integration evidence from the pending real signed gate.
 
 ## Cases
 
@@ -26,6 +26,15 @@ the external boundary. Do not mock signature verification or the gate's own pred
 | TC-15 | Bootstrap / revocation | REQ-31 | Trust store absent from main, later key revocation | No first attestation before bootstrap; revoked key rejected | Git/crypto integration |
 
 ## Acceptance evidence
+
+`scripts/tests/test_local_ci_attest.py` implements TC-01–05, TC-07–09 and TC-15 using real
+Git notes and SSH signatures. `test_local_ci_runner.py` exercises TC-06–08, TC-10–11 and
+TC-14 with real subprocesses/locks and substituted tool/network boundaries.
+`test_local_ci_tools.py` adds actual Gitleaks staged/redaction, Vitest only/skip/todo,
+frozen-pnpm mismatch and installed Lefthook/commit-message rejection for TC-11/13.
+The checked Python runner and browser-report guards also reject incomplete required suites.
+TC-12 is the complete 1,446-test real-FFmpeg application run; every expected package must
+report a nonempty all-passed JSON result. The final exact-head signed gate remains pending.
 
 Each executed case must link its test file and checked SHA. Record measured toolchain/worker
 settings and original failed runs separately from later fixes. Two production-build browser

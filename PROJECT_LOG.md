@@ -4,6 +4,24 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-14 — Signed gate trust bootstrap (PR #334, `feb0621`)
+
+- Squash-merged `ci/329-local-gate-bootstrap` after owner acceptance of option A and its
+  weights: reuse the existing primary SSH public identity for local gate signing. Main now
+  holds the allowed signer; private key material was neither copied nor committed.
+- Accepted the protocol, sequence, traceability and 15 designed cases. Independent design
+  and fresh pre-push reviews corrected local merge/rerun locking, pending-publication failure
+  semantics and accepted-status wording; final verification found Must 0 / Should 0.
+- Checked head `7b9f58a`: 1,446 tests passed with real FFmpeg and maxWorkers=4, zero skipped;
+  types/lint/format/build, two API-stubbed Chromium smokes, Gitleaks, Semgrep and local
+  SonarQube passed. The optional automatic review reported its usage limit; it supplied no
+  code findings and was not treated as a required local gate.
+- Used the existing owner-authorized absent-attestation bootstrap exception; no failed check
+  was waived. No runtime verifier, deployment or acquisition feature is delivered by #334.
+  #329 stays open for the executable gate, tests and signed verification.
+- Reported progress before implementation: approximately 60% overall and three of ten initial
+  functional bricks (30%). This merge also publishes the previous #333 journal entry.
+
 ## 2026-11-13 — Parser suffix complexity (PR #333, `74a7807`)
 
 - Characterized the actual legacy parser against fixed commit `5bfeffb` on controlled
