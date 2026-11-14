@@ -60,6 +60,24 @@ inline `typeof import(...)` type annotation. An explicit type-only namespace imp
 that lint error; targeted lint/types/format and all nine extractor tests then pass. The
 clean-shell check must pass again on the corrected commit; its earlier failure is retained.
 
+## Final signed gate and merge
+
+Corrected head `e7e555e2e684d7b838a702169fe38eb9b794f656` passed the real gate. All 22
+logged checks exited zero, with 138.04 seconds of recorded check time: 57 shared, 905 server
+and 485 web tests (1,447 total), 37 infrastructure tests, zero skipped/todo, and two browser
+smokes without retries/flaky outcomes. Clean-shell pre-push passed in 93.56 seconds.
+SonarQube passed (95.4% new coverage, 0% new duplication, zero unresolved issues), as did
+types/lint/format, frozen install, OSV, Gitleaks, Semgrep, Hadolint, Trivy configuration/source/
+image scans, the current-head image build and SPDX SBOM generation.
+
+The gate published a signed Git note before success status at 2026-11-14T10:35:44Z. A
+separate remote verification succeeded. No open inline review thread or actual review finding
+remained; the optional automated hosted review was unavailable because of quota. Local code
+and test-pertinence correction reviews were Must 0 / Should 0. `mise x -- just merge 340`
+verified the signature/status again and merged PR #340 at `6a3c4ac7bc5e764c3d520753f321f4a4261e1aa4`
+on 2026-11-14T10:37:47Z. That squash has a different identity and requires its own gate before
+any later authorized deployment.
+
 ## Security and QA boundaries
 
 #335 removes the two OSV findings with parent-qualified dependency overrides and validates
@@ -68,9 +86,8 @@ real disposable Drizzle migration generation; see the [dependency report](2026-1
 worktrees. #336 unsupported ESLint and #337 React search-element test warnings remain tracked
 with an exit before #315 A; neither is a waived failed gate check.
 
-The QA ledger has E329-01–06 and E335-01. Final corrected-head publication must run the full
-gate again and verify its remote signed note/status. The implementation PR records that final
-head and result; this report does not retroactively change the failed d748f1d run. No staging
+The QA ledger has E329-01–06, E335-01 and E339-01–02. The implementation PR records the final
+head and signed result; this report does not retroactively change the failed d748f1d run. No staging
 or Pi deployment, real acquisition, child-policy acceptance or release tag is claimed.
 
 Reusable lessons are tracked in agents-skills #485. This change leaves the functional project

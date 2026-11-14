@@ -4,6 +4,35 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-14 — Signed local gate adoption (PR #340, `6a3c4ac`)
+
+- Squash-merged `ci/329-signed-local-gate` through `mise x -- just merge 340` after a real
+  verified attestation on `e7e555e`. Locked just/mise/Lefthook recipes replace six disabled
+  hosted workflows; gate/merge share an OS lock and enforce trusted-main SSH signatures,
+  canonical host/repository/SHA and successful exact-head status.
+- Final gate: 22 logged checks, zero nonzero exits, 138.04 seconds of check time; 1,447
+  application tests with real FFmpeg, 37 infrastructure tests and two API-stubbed Chromium
+  smokes passed without skips. SonarQube, SAST, OSV, secrets, image/config/source scans,
+  production image build and SPDX SBOM passed. Sonar unresolved inventory remains zero.
+- The clean-shell pre-push passed in 93.56 seconds. Independent code and test-pertinence
+  reviews plus correction verification found Must 0 / Should 0. The optional automatic
+  review was quota-limited; no actual code finding or inline thread was left unanswered.
+- Kept the failed `d748f1d` gate as evidence. #339 removes an existing test fixture's request
+  ordering deadlock and adds forced reversed admission; isolated mutations prove both that
+  regression and the admission-limit assertion. No production extraction change, raised
+  timeout, retry or failing-check waiver. #335 resolves two dependency findings and #338
+  excludes local agent worktrees from container scope. All four issues closed with #340.
+- No deployment or release. The squash commit has no gate attestation yet; a later authorized
+  deployment requires its own main-head gate. Reported progress before any next functional
+  brick remains approximately 60% overall and three of ten initial bricks (30%). #327 is next;
+  #336/#337 have an exit before #315 A. Reusable lessons are tracked in agents-skills #485.
+
+## 2026-11-14 — Publish signed gate closeout
+
+- The accompanying documentation-only follow-up on `docs/329-merge-log` publishes #340's
+  actual merge identity, verified QA results and implemented traceability. It changes no
+  runtime or deployment behavior and remains subject to the same signed merge gate.
+
 ## 2026-11-14 — Signed gate trust bootstrap (PR #334, `feb0621`)
 
 - Squash-merged `ci/329-local-gate-bootstrap` after owner acceptance of option A and its
