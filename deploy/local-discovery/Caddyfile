@@ -1,0 +1,28 @@
+{
+	auto_https off
+	admin off
+	persist_config off
+	log default {
+		level ERROR
+		format filter {
+			wrap json
+			fields {
+				request>headers delete
+				request>uri delete
+			}
+		}
+	}
+}
+
+:9696 {
+	handle /.well-known/popcorntv-ingress-health {
+		respond "ok" 200
+	}
+	handle {
+		reverse_proxy {$DISCOVERY_PROWLARR_IP}:9696
+	}
+}
+
+:7878 {
+	reverse_proxy {$DISCOVERY_RADARR_IP}:7878
+}

@@ -91,7 +91,8 @@ def check():
         ['uv', 'run', '--frozen', '--group', 'ci', 'python', 'scripts/check_python_tests.py',
          '-q', 'scripts/tests/test_discovery.py', 'scripts/tests/test_python_completeness.py',
          '--cov=local_discovery', '--cov=check_python_tests', '--cov-branch',
-         '--cov-fail-under=90', '--cov-report=term', '--cov-report=json:coverage/python.json'],
+         '--cov-fail-under=90', '--cov-report=term', '--cov-report=json:coverage/python.json',
+         '--cov-report=xml:coverage/python.xml'],
         ['lefthook', 'validate'], ['shellcheck', 'scripts/attest.sh', 'scripts/check-commit-msg.sh'],
         ['gitleaks', 'git', '--redact', '--no-banner'],
         ['osv-scanner', 'scan', 'source', '--lockfile=pnpm-lock.yaml', '--lockfile=uv.lock'],
@@ -194,7 +195,7 @@ def gate(base):
                 raise RuntimeError('SIXLABORS_LICENSE_FILE must name an existing private license file')
             for command in (
                 ['just', 'discovery-build', str(license_file)],
-                ['make', 'lint-docker', 'HADOLINT_FILES=Dockerfile deploy/local-discovery/radarr.Dockerfile'],
+                ['make', 'lint-docker', 'HADOLINT_FILES=Dockerfile deploy/local-discovery/radarr.Dockerfile deploy/local-discovery/ingress.Dockerfile'],
                 ['uv', 'run', '--frozen', '--group', 'ci', 'python', 'scripts/check_python_tests.py',
                  '-q', 'scripts/tests/test_discovery_runtime.py'],
                 ['pnpm', 'build'],

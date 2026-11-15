@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import logging
 import shutil
 import sys
 import tempfile
 import time
+import urllib.error
+import urllib.parse
 import urllib.request
+from dataclasses import replace
 from pathlib import Path
 
 import local_discovery as discovery
@@ -87,6 +91,13 @@ def verify_isolation(installation: discovery.Installation) -> None:
         else:
             pytest.fail("local network canary did not become ready")
         for row in discovery.owned_containers(installation):
+            if (
+                discovery.object_map(discovery.object_map(row["Config"])["Labels"])[
+                    "com.docker.compose.service"
+                ]
+                == "ingress"
+            ):
+                continue
             identity, image = str(row["Id"]), str(row["Image"])
             commands = [
                 (
@@ -169,10 +180,12 @@ def verify_isolation(installation: discovery.Installation) -> None:
                 raise
 
 
-def verify_limits(installation: discovery.Installation) -> None:
+def verify_limits(
+    installation: discovery.Installation, *, published: bool = False
+) -> None:
     """Inspect effective constraints and PID 1 identity rather than Compose intentions."""
     rows = discovery.owned_containers(installation)
-    assert len(rows) == 2
+    assert len(rows) == 3
     for row in rows:
         config, host = (
             discovery.object_map(row["Config"]),
@@ -180,15 +193,28 @@ def verify_limits(installation: discovery.Installation) -> None:
         )
         service = discovery.object_map(config["Labels"])["com.docker.compose.service"]
         assert config["User"] == f"{installation.uid}:{installation.gid}"
-        assert host["ReadonlyRootfs"] is True and host["NanoCpus"] == 1_000_000_000
-        assert host["Memory"] == (256 if service == "prowlarr" else 512) * 1024 * 1024
-        assert host["PidsLimit"] == 128 and not host["PortBindings"]
+        ingress = service == "ingress"
+        assert host["ReadonlyRootfs"] is True
+        assert host["NanoCpus"] == (250_000_000 if ingress else 1_000_000_000)
+        assert (
+            host["Memory"]
+            == (96 if ingress else 256 if service == "prowlarr" else 512) * 1024 * 1024
+        )
+        assert host["PidsLimit"] == (64 if ingress else 128)
+        if not ingress or not published:
+            assert not host["PortBindings"]
         assert host["Dns"] == ["127.0.0.1"]
         mounts = discovery.object_map(host["Tmpfs"])
-        for destination, mode, size, execution in (
-            ("/tmp", "0700", "32m", "noexec"),
-            ("/run", "0755", "16m", "exec"),
-        ):
+        expected = (
+            [
+                ("/tmp", "0700", "8m", "noexec"),
+                ("/data", "0700", "8m", "noexec"),
+                ("/config", "0700", "8m", "noexec"),
+            ]
+            if ingress
+            else [("/tmp", "0700", "32m", "noexec"), ("/run", "0755", "16m", "exec")]
+        )
+        for destination, mode, size, execution in expected:
             options = str(mounts[destination]).split(",")
             assert {
                 f"uid={installation.uid}",
@@ -218,22 +244,190 @@ def verify_limits(installation: discovery.Installation) -> None:
         assert values["NoNewPrivs"] == "1"
 
 
+def provider_request(
+    api: discovery.Api, path: str, *, payload: object = None
+) -> object:
+    """Exercise the disposable Prowlarr API; schema metadata has a separate 8 MiB budget."""
+    request = urllib.request.Request(
+        api.base + "/api/v1/" + path,
+        data=None if payload is None else json.dumps(payload).encode(),
+        method="GET" if payload is None else "POST",
+        headers={
+            "X-Api-Key": api.credential.api_key,
+            "Content-Type": "application/json",
+        },
+    )
+    try:
+        with api.opener.open(request, timeout=20) as response:
+            body = response.read(8 * 1024 * 1024 + 1)
+            assert len(body) <= 8 * 1024 * 1024
+            result: object = json.loads(body)
+            return result
+    except urllib.error.HTTPError as error:
+        status = error.code
+        error.close()
+        raise discovery.DiscoveryError(
+            f"synthetic provider request failed: HTTP {status}"
+        ) from None
+
+
+def provider_rows(value: object) -> list[dict[str, object]]:
+    """Narrow controlled schema/search replies without leaking payloads in diagnostics."""
+    assert isinstance(value, list)
+    return [discovery.object_map(row) for row in value]
+
+
+def verify_synthetic_sources(installation: discovery.Installation) -> None:
+    """Create two local-only sources, then prove a fresh result survives one outage."""
+    api = discovery.Api(installation, discovery.SERVICES[0])
+    schema = next(
+        row
+        for row in provider_rows(provider_request(api, "indexer/schema"))
+        if row.get("implementation") == "Torznab"
+    )
+    identifiers: list[str] = []
+    indexers: list[int] = []
+    urls: list[str] = []
+    try:
+        for number in (4, 5):
+            address = str(installation.subnet[number])
+            url = f"http://{address}:19090"
+            urls.append(url)
+            identifier = discovery.command(
+                [
+                    "docker",
+                    "run",
+                    "-d",
+                    "--label",
+                    "io.popcorntv.acceptance=" + installation.identity,
+                    "--network",
+                    installation.project + "_discovery",
+                    "--ip",
+                    address,
+                    "--read-only",
+                    "--cap-drop",
+                    "ALL",
+                    "--security-opt",
+                    "no-new-privileges",
+                    "--user",
+                    f"{installation.uid}:{installation.gid}",
+                    "--memory",
+                    "64m",
+                    "--pids-limit",
+                    "32",
+                    "-v",
+                    str(discovery.ROOT / "deploy/local-discovery/fixtures/torznab.mjs")
+                    + ":/fixture.mjs:ro",
+                    "--entrypoint",
+                    "node",
+                    CANARY_IMAGE,
+                    "/fixture.mjs",
+                    str(number),
+                ]
+            ).strip()
+            identifiers.append(identifier)
+            for _attempt in range(50):
+                try:
+                    counters(url)
+                    break
+                except OSError:
+                    time.sleep(0.1)
+            else:
+                pytest.fail("synthetic source did not become ready")
+            settings = copy.deepcopy(schema)
+            settings.pop("id", None)
+            settings.update(
+                {
+                    "name": f"Local synthetic {number}",
+                    "enable": True,
+                    "appProfileId": 1,
+                    "priority": 25,
+                }
+            )
+            fields = settings["fields"]
+            assert isinstance(fields, list)
+            values = {
+                "baseUrl": url,
+                "apiPath": "/api",
+                "apiKey": "synthetic-not-a-real-provider-key",
+            }
+            for value in fields:
+                field = discovery.object_map(value)
+                name = field.get("name")
+                if isinstance(name, str) and name in values:
+                    field["value"] = values[name]
+            created = discovery.object_map(
+                provider_request(api, "indexer", payload=settings)
+            )
+            identity = created["id"]
+            assert isinstance(identity, int)
+            indexers.append(identity)
+        before = [counters(url) for url in urls]
+        query = urllib.parse.urlencode(
+            {"query": "Fixture healthy", "type": "search", "indexerIds": indexers},
+            doseq=True,
+        )
+        results = provider_rows(provider_request(api, "search?" + query))
+        assert {row["indexerId"] for row in results} == set(indexers)
+        for url, prior in zip(urls, before, strict=True):
+            assert count(counters(url), "searches") > count(prior, "searches")
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        request = urllib.request.Request(urls[0] + "/fail", data=b"", method="POST")
+        with opener.open(request, timeout=2) as response:
+            assert response.status == 200
+        assert counters(urls[0])["unavailable"] is True
+        before_healthy = counters(urls[1])
+        query = urllib.parse.urlencode(
+            {"query": "Fixture outage", "type": "search", "indexerIds": indexers},
+            doseq=True,
+        )
+        results = provider_rows(provider_request(api, "search?" + query))
+        assert {row["indexerId"] for row in results} == {indexers[1]}
+        assert count(counters(urls[1]), "searches") > count(before_healthy, "searches")
+        for url in urls:
+            with pytest.raises(urllib.error.HTTPError) as failure:
+                opener.open(url + "/no-payload", timeout=2)
+            assert failure.value.code == 410
+            failure.value.close()
+    finally:
+        primary = sys.exception()
+        for identifier in identifiers:
+            try:
+                row = inspect_one(identifier)
+                labels = discovery.object_map(
+                    discovery.object_map(row["Config"])["Labels"]
+                )
+                assert labels.get("io.popcorntv.acceptance") == installation.identity
+                discovery.command(["docker", "rm", "-f", identifier])
+            except BaseException:
+                logging.getLogger(__name__).error(
+                    "synthetic source cleanup unconfirmed: %s", identifier
+                )
+                if primary is None:
+                    raise
+
+
 def test_real_private_bootstrap_restart_and_network_isolation() -> None:
     """Run the required real-image journey, preserving failed state if cleanup fails."""
     root = Path(tempfile.mkdtemp(prefix="popcorntv-discovery-acceptance-"))
     installation: discovery.Installation | None = None
     try:
-        installation = discovery.initialize(root / "state")
+        installation = replace(
+            discovery.initialize(root / "state"),
+            published_ports={"prowlarr": 0, "radarr": 0},
+        )
         private = {
             path: path.read_bytes()
             for path in installation.root.glob("*-credentials.json")
         }
         discovery.start(installation, publish=False)
         verify_limits(installation)
+        discovery.start(installation, publish=True)
+        verify_limits(installation, published=True)
         verify_isolation(installation)
         discovery.compose(installation, ["stop"])
-        discovery.start(installation, publish=False)
-        verify_limits(installation)
+        discovery.start(installation, publish=True)
+        verify_limits(installation, published=True)
         if any(path.read_bytes() != value for path, value in private.items()):
             pytest.fail("private credentials changed across restart")
         for service in discovery.SERVICES:
@@ -242,6 +436,7 @@ def test_real_private_bootstrap_restart_and_network_isolation() -> None:
             assert api.request(
                 "/", authenticated=False, cookie="invalid=fixture"
             ).status in (302, 401, 403)
+        verify_synthetic_sources(installation)
     finally:
         primary = sys.exception()
         try:

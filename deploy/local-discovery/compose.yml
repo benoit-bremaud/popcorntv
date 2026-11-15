@@ -63,6 +63,43 @@ services:
       retries: 24
       start_period: 20s
 
+  ingress:
+    <<: *service
+    image: ${DISCOVERY_INGRESS_IMAGE:?build the corrected proxy first}
+    pull_policy: never
+    mem_limit: 96m
+    cpus: 0.25
+    pids_limit: 64
+    environment:
+      DISCOVERY_PROWLARR_IP: ${DISCOVERY_PROWLARR_IP:?}
+      DISCOVERY_RADARR_IP: ${DISCOVERY_RADARR_IP:?}
+    tmpfs:
+      - /tmp:uid=${DISCOVERY_UID},gid=${DISCOVERY_GID},mode=0700,size=8m,noexec,nosuid,nodev
+      - /data:uid=${DISCOVERY_UID},gid=${DISCOVERY_GID},mode=0700,size=8m,noexec,nosuid,nodev
+      - /config:uid=${DISCOVERY_UID},gid=${DISCOVERY_GID},mode=0700,size=8m,noexec,nosuid,nodev
+    volumes:
+      - type: bind
+        source: ${DISCOVERY_STATE_ROOT:?}/ingress.Caddyfile
+        target: /etc/caddy/Caddyfile
+        read_only: true
+        bind: { create_host_path: false }
+    networks:
+      discovery: { ipv4_address: '${DISCOVERY_INGRESS_IP}' }
+    healthcheck:
+      test:
+        [
+          CMD,
+          wget,
+          --quiet,
+          --spider,
+          --timeout=2,
+          http://127.0.0.1:9696/.well-known/popcorntv-ingress-health,
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+      start_period: 20s
+
 networks:
   discovery:
     internal: true

@@ -40,13 +40,14 @@ this is controller enforcement, not a claim of vendor-native key expiry. Stop
 remains available after credential expiry. Preserve the state directory when
 stopping; do not reset another installation or delete an owner's configuration.
 
-Startup scans both images with the existing blocking HIGH/CRITICAL policy. Radarr
+Startup scans all three images with the existing blocking HIGH/CRITICAL policy. Radarr
 is resolved to its local immutable image ID, checked for expected source/patch
 metadata, scanned by ID and started by that same ID, avoiding a mutable tag race.
-No automatic registry pull is permitted for the custom Radarr image.
+The rebuilt Caddy proxy follows the same immutable-ID rule. No automatic registry
+pull is permitted for either custom image.
 
 Bootstrap first runs without published ports, verifies empty configuration and
-administrative authentication, and disables Radarr RSS grabbing. Only then are
+administrative authentication, and disables Radarr RSS grabbing. Only then does the fixed Caddy ingress publish
 Prowlarr <http://127.0.0.1:19696> and Radarr <http://127.0.0.1:17878> published.
 Credentials remain in the private `*-credentials.json` files; no browser-facing
 PopcornTV configuration contains these keys. Repeated startup validates completed
@@ -67,3 +68,34 @@ real-container acceptance as specified in
 `docs/architecture/qa/cases/327-local-discovery.md`. This installation must stay
 empty; source fixtures use a separate project, state and network. No Pi deployment
 or PopcornTV deployment is performed by these recipes.
+
+
+## Ingress and homelab boundary
+
+The application containers stay on their internal-only network. Caddy alone gains
+a second network, with a separately preflight-allocated subnet recorded in private
+state. Effective network membership and loopback bindings must match the contract.
+A Compose success with missing actual bindings is refused and withdrawn.
+
+The build recipe also rebuilds official Caddy source at the pinned corrected
+revision in `ingress.Dockerfile`; stock 2.11.9 failed the dependency scan. This
+snapshot is for local acceptance. The Pi's existing central Caddy is configured
+in `bb-homelab/services/caddy/`; this recipe does not alter it or the existing
+PopcornTV staging Caddy. A Pi deployment needs separate ARM64/runtime validation.
+
+To run the complete disposable acceptance journey after building:
+
+```sh
+mise x -- uv run --frozen --group ci python scripts/check_python_tests.py -q scripts/tests/test_discovery_runtime.py
+```
+
+It verifies private and published startup, actual limits, TCP/DNS isolation with
+positive controls, restart, and two synthetic Torznab sources. One fixture then
+returns 503; a fresh search must still reach the healthy source. Their download
+URLs always return 410 and serve no media. These sources exist only in temporary
+state and never enter the operator installation. Ephemeral loopback ports avoid
+conflicts with the operator's fixed administration ports.
+
+The full L2 gate requires `SIXLABORS_LICENSE_FILE` to name your existing private
+license file. It rebuilds both custom images and repeats real acceptance before
+issuing signed evidence. Never put license contents into that variable.

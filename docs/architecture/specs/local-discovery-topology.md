@@ -59,15 +59,16 @@ It is not on main and is not an installed service. Its owner-only administrator 
 cannot simply become the household wishlist policy. Reuse these lessons, not a competing
 Seerr scheduler or an unreviewed wholesale cherry-pick.
 
-## Proposed local deployment contract
+## Accepted local deployment contract
 
 Separate Compose project under `deploy/local-discovery/`; do not modify existing staging
 or Pi deployment. Compose operations are explicit commands, never an implicit server startup.
 
 | Service | Host administration | Internal API | Initial resource ceiling |
 |---|---|---|---|
-| Prowlarr | 127.0.0.1:19696 | HTTP 9696 | 256 MiB, 1 CPU, 128 PIDs |
-| Radarr | 127.0.0.1:17878 | HTTP 7878 | 512 MiB, 1 CPU, 128 PIDs |
+| Prowlarr | 127.0.0.1:19696 via ingress | HTTP 9696 | 256 MiB, 1 CPU, 128 PIDs |
+| Radarr | 127.0.0.1:17878 via ingress | HTTP 7878 | 512 MiB, 1 CPU, 128 PIDs |
+| Fixed Caddy ingress | Both loopback ports | Fixed application upstreams | 96 MiB, 0.25 CPU, 64 PIDs |
 
 These memory ceilings are starting budgets, to be measured at startup/restart; an OOM is a
 failed acceptance result, not silently fixed by removing the limit. Logs: Docker rotation
@@ -232,3 +233,72 @@ deselected suites. The Python lockfile is scanned alongside the pnpm lockfile.
 The gate still requires all existing application and security checks; a private
 startup journey does not certify the pending synthetic-source or public-loopback
 acceptance cases.
+
+## Accepted ingress correction (#345) — owner validation 2026-11-15
+
+Docker records requested `HostConfig.PortBindings` for the internal-only bridge,
+but actual `NetworkSettings.Ports` is null and loopback connections are refused.
+Compose success therefore cannot establish actual publication. The controller
+must check effective bindings and authenticated loopback requests before reporting
+success; failure must retain state and withdraw publication.
+
+The application network must keep its proven TCP/DNS isolation. The owner validated option A before its implementation. The central Pi proxy
+and the existing PopcornTV staging proxy remain outside this local change.
+
+| Criterion | Weight | A: fixed Caddy ingress | B: host relay process | C: private-IP administration |
+| --- | ---: | --- | --- | --- |
+| Security verification | 30 | 5: apps stay internal; fixed upstreams | 4: additional host lifecycle | 5: existing private path proved |
+| Accepted loopback contract | 25 | 5: loopback port publication on ingress | 3: custom host lifecycle required | 2: requires changing the requirement |
+| Maintenance | 20 | 4: pinned existing proxy technology | 2: new proxy/service code | 5: no added component |
+| Delivery effort | 25 | 4: small proxy and acceptance extension | 3: new lifecycle and failure tests | 5: already privately reachable |
+| Weighted total / 500 | 100 | **455** | **310** | **425** |
+
+Recommendation A: one bounded non-root Caddy sidecar with fixed upstream private
+IPs and no forward-proxy behavior. Only the sidecar joins an ingress-capable
+network and publishes the two loopback ports; Radarr/Prowlarr remain on the
+internal-only network. Disable the Caddy administration API, redact request
+headers/URIs from diagnostics, pin the image, bound resources and repeat egress
+canary checks against the apps with ingress present. Add actual effective-binding,
+authentication and restart tests. The additional container does not authorize
+external indexers, media retrieval, a Pi deploy or a PopcornTV staging deploy.
+
+Sensitivity: halve loopback-contract weight to 12.5 and redistribute its weight
+proportionally (security 35, maintenance 23.3333, delivery 29.1667). Totals become
+447.50 / 311.67 / 462.50: C wins if changing the loopback requirement is acceptable.
+Final offered response: “Approfondir l'analyse et expliquer”.
+
+
+### Implemented ingress constraints and provenance
+
+The proxy's internal address is subnet slot 6; fixture sources use slots 4 and 5.
+A second /29 is allocated using the existing collision checks before creation,
+excluding the application subnet, Docker allocations and non-default host routes.
+It is persisted as a private identity-bound `ingress-network.json`; reruns refuse
+invalid records and changed Caddy configuration without overwriting them. The
+controller verifies Docker's actual network labels, internal/IPv6 flags, subnets,
+fixed addresses and exact per-service attachments, not just requested YAML.
+
+All three images are scanned before startup. Rebuilt Radarr and Caddy are resolved
+to validated immutable image IDs and started with those same IDs. Caddy 2.11.9's
+stock image failed on go-jose/v3 and x/net. The local proxy therefore rebuilds
+unmodified official Caddy commit `7ce9f0823762109fc67911f95f6af1a697345ab7` with
+Go 1.27.4 and `-mod=readonly`; this upstream graph uses go-jose/v4 4.1.9 and x/net
+0.62.0. The source archive SHA-256 is
+`23ab43a740477cdfbcecb129010add212003a49089db9145f36e04227856625d`.
+The compiler image is pinned at
+`sha256:0a5f7fe796599ff487605987432e7619ae45beeb2fba4c2ce0b907879932aebf`.
+The actual rebuilt artifact passes the existing HIGH/CRITICAL scan with no new
+suppression. This is an unreleased local snapshot, not an upstream stable release.
+
+Only Caddy gains the ingress attachment. Automatic HTTPS, its administration API
+and configuration persistence are disabled. Upstreams are fixed private IPs;
+request headers and URIs are removed from its runtime logs. The publication check
+requires actual loopback-only bindings plus authenticated requests through both
+proxy listeners. Rollback also verifies effective private topology and absent
+bindings before declaring withdrawal complete. Acceptance uses ephemeral loopback
+ports so the installed operator services can stay running.
+
+The bb-homelab configuration already defines the Pi's central Caddy and a PopcornTV
+site with per-backend networks. Its repository and current local staging remain
+unchanged. Future Pi integration reuses that central proxy and requires separate
+ARM64/runtime/deployment validation; the local x64 Radarr build is not a Pi artifact.

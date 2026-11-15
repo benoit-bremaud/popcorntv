@@ -1,6 +1,15 @@
-# Applied only after private authentication and empty-state verification succeeds.
+# Only the fixed reverse proxy joins an ingress-capable network.
 services:
-  prowlarr:
-    ports: ['127.0.0.1:${DISCOVERY_PROWLARR_HOST_PORT:-19696}:9696']
-  radarr:
-    ports: ['127.0.0.1:${DISCOVERY_RADARR_HOST_PORT:-17878}:7878']
+  ingress:
+    networks:
+      ingress: {}
+    ports:
+      - '127.0.0.1:${DISCOVERY_PROWLARR_HOST_PORT:-19696}:9696'
+      - '127.0.0.1:${DISCOVERY_RADARR_HOST_PORT:-17878}:7878'
+
+networks:
+  ingress:
+    enable_ipv6: false
+    ipam:
+      config:
+        - subnet: ${DISCOVERY_INGRESS_SUBNET:?}

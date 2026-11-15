@@ -450,10 +450,73 @@ def controller(
             stack.enter_context(model.serve(api))
             apis[service.name], models[service.name] = api, model
 
+        state = {"started": False, "published": False}
+
         def api_boundary(
-            _installation: discovery.Installation, service: discovery.Service
+            _installation: discovery.Installation,
+            service: discovery.Service,
+            *,
+            published: bool = False,
+            port: int | None = None,
         ) -> discovery.Api:
             return apis[service.name]
+
+        def container_inventory() -> list[dict[str, object]]:
+            rows: list[dict[str, object]] = []
+            for name in [*(service.name for service in discovery.SERVICES), "ingress"]:
+                networks: dict[str, object] = {
+                    installation.project + "_discovery": {
+                        "IPAddress": str(installation.subnet[6])
+                        if name == "ingress"
+                        else installation.address(
+                            next(
+                                service
+                                for service in discovery.SERVICES
+                                if service.name == name
+                            )
+                        )
+                    }
+                }
+                ports: dict[str, object] = {}
+                if state["published"] and name == "ingress":
+                    networks[installation.project + "_ingress"] = {
+                        "IPAddress": str(discovery.load_ingress_subnet(installation)[2])
+                    }
+                    ports = {
+                        f"{service.port}/tcp": [
+                            {"HostIp": "127.0.0.1", "HostPort": str(service.host_port)}
+                        ]
+                        for service in discovery.SERVICES
+                    }
+                rows.append(
+                    {
+                        "Id": "fixture-" + name,
+                        "Config": {
+                            "Labels": {
+                                "com.docker.compose.project": installation.project,
+                                "com.docker.compose.service": name,
+                                "io.popcorntv.discovery.install": installation.identity,
+                            }
+                        },
+                        "Mounts": [
+                            {
+                                "Destination": "/etc/caddy/Caddyfile"
+                                if name == "ingress"
+                                else "/config",
+                                "Source": str(
+                                    installation.root
+                                    / (
+                                        "ingress.Caddyfile"
+                                        if name == "ingress"
+                                        else name
+                                    )
+                                ),
+                            }
+                        ],
+                        "NetworkSettings": {"Networks": networks, "Ports": ports},
+                    }
+                )
+            return rows
 
         def docker_boundary(arguments: list[str], **_kwargs: object) -> str:
             calls.append(arguments)
@@ -463,26 +526,73 @@ def controller(
                     + "a" * 64
                     + "\n"
                     + discovery.RADARR_TAG
+                    + "\n"
+                    + discovery.CADDY_IMAGE
                 )
             if arguments[:3] == ["docker", "image", "inspect"]:
+                ingress = arguments[3] == discovery.CADDY_IMAGE
                 return json.dumps(
                     [
                         {
-                            "Id": "sha256:" + "b" * 64,
+                            "Id": "sha256:" + ("c" if ingress else "b") * 64,
                             "Config": {
                                 "Labels": {
-                                    "org.opencontainers.image.revision": discovery.RADARR_REVISION,
+                                    "org.opencontainers.image.revision": discovery.CADDY_REVISION
+                                    if ingress
+                                    else discovery.RADARR_REVISION,
                                     "io.popcorntv.radarr.imagesharp": "3.2.0",
                                 }
                             },
                         }
                     ]
                 )
+            if arguments[:3] == ["docker", "network", "inspect"]:
+                ingress = arguments[3].endswith("_ingress")
+                return json.dumps(
+                    [
+                        {
+                            "Internal": not ingress,
+                            "EnableIPv6": False,
+                            "Labels": {
+                                "com.docker.compose.project": installation.project,
+                                "com.docker.compose.network": "ingress"
+                                if ingress
+                                else "discovery",
+                            },
+                            "IPAM": {
+                                "Config": [
+                                    {
+                                        "Subnet": str(
+                                            discovery.load_ingress_subnet(installation)
+                                            if ingress
+                                            else installation.subnet
+                                        )
+                                    }
+                                ]
+                            },
+                        }
+                    ]
+                )
+            if arguments[:2] == ["docker", "ps"]:
+                return (
+                    " ".join(
+                        "fixture-" + name for name in ("prowlarr", "radarr", "ingress")
+                    )
+                    if state["started"]
+                    else ""
+                )
+            if arguments[:2] == ["docker", "inspect"]:
+                return json.dumps(container_inventory())
+            if arguments[:2] == ["docker", "compose"] and "up" in arguments:
+                state["started"] = True
+                state["published"] = str(discovery.PUBLISH) in arguments
             return ""
 
         monkeypatch.setattr(discovery, "Api", api_boundary)
         monkeypatch.setattr(discovery, "command", docker_boundary)
-        monkeypatch.setattr(discovery, "check_ports", lambda _owned=None: None)
+        monkeypatch.setattr(
+            discovery, "check_ports", lambda _owned=None, *, ports=None: None
+        )
         yield models, calls
 
 
@@ -934,3 +1044,133 @@ def test_private_acceptance_does_not_reserve_operator_admin_ports(
     monkeypatch.setattr(discovery, "check_ports", forbidden_port_check)
     discovery.start(installation, publish=False)
     assert not any(str(discovery.PUBLISH) in call for call in calls)
+
+
+def test_ingress_configuration_is_private_idempotent_and_never_reset(
+    installation: discovery.Installation,
+) -> None:
+    discovery.prepare_ingress(installation)
+    subnet = discovery.load_ingress_subnet(installation)
+    assert not subnet.overlaps(installation.subnet)
+    path = installation.root / "ingress.Caddyfile"
+    assert stat.S_IMODE(path.stat().st_mode) == 0o600
+    original = path.read_text()
+    discovery.prepare_ingress(installation)
+    assert path.read_text() == original
+    path.write_text("owner change")
+    with pytest.raises(discovery.DiscoveryError, match="changed"):
+        discovery.prepare_ingress(installation)
+    assert path.read_text() == "owner change"
+
+
+@pytest.mark.parametrize("change", ["identity", "schema", "overlap", "range", "prefix"])
+def test_invalid_ingress_network_record_is_preserved(
+    installation: discovery.Installation, change: str
+) -> None:
+    discovery.prepare_ingress(installation)
+    path = installation.root / "ingress-network.json"
+    record = json.loads(path.read_text())
+    if change == "identity":
+        record["identity"] = "foreign"
+    elif change == "schema":
+        record["schema"] = 2
+    else:
+        record["subnet"] = {
+            "overlap": str(installation.subnet),
+            "range": "192.168.1.0/29",
+            "prefix": "10.203.206.0/28",
+        }[change]
+    path.write_text(json.dumps(record))
+    before = path.read_bytes()
+    with pytest.raises(discovery.DiscoveryError):
+        discovery.prepare_ingress(installation)
+    assert path.read_bytes() == before
+
+
+@pytest.mark.parametrize(
+    "fault",
+    [
+        "app-network",
+        "network-owner",
+        "network-isolation",
+        "network-subnet",
+        "service-address",
+    ],
+)
+def test_network_boundary_drift_prevents_publication(
+    installation: discovery.Installation,
+    controller: tuple[dict[str, FakeArr], list[list[str]]],
+    monkeypatch: pytest.MonkeyPatch,
+    fault: str,
+) -> None:
+    _models, calls = controller
+    original = discovery.command
+
+    def drifted(arguments: list[str], *, env: dict[str, str] | None = None) -> str:
+        value = original(arguments, env=env)
+        if arguments[:3] == ["docker", "network", "inspect"]:
+            data = json.loads(value)
+            if fault == "network-owner":
+                data[0]["Labels"]["com.docker.compose.project"] = "foreign"
+            elif fault == "network-isolation":
+                data[0]["Internal"] = False
+            elif fault == "network-subnet":
+                data[0]["IPAM"]["Config"][0]["Subnet"] = "192.168.1.0/29"
+            return json.dumps(data)
+        if arguments[:2] == ["docker", "inspect"]:
+            data = json.loads(value)
+            if fault == "app-network":
+                data[0]["NetworkSettings"]["Networks"]["foreign"] = {}
+            elif fault == "service-address":
+                data[0]["NetworkSettings"]["Networks"][
+                    installation.project + "_discovery"
+                ]["IPAddress"] = "10.0.0.1"
+            return json.dumps(data)
+        return value
+
+    monkeypatch.setattr(discovery, "command", drifted)
+    with pytest.raises(discovery.DiscoveryError):
+        discovery.start(installation)
+    assert not any(str(discovery.PUBLISH) in call for call in calls)
+    assert any("stop" in call for call in calls)
+
+
+@pytest.mark.parametrize(
+    "fault", ["missing", "wide-binding", "wrong-port", "duplicate"]
+)
+def test_unconfirmed_actual_publication_rolls_back(
+    installation: discovery.Installation,
+    controller: tuple[dict[str, FakeArr], list[list[str]]],
+    monkeypatch: pytest.MonkeyPatch,
+    fault: str,
+) -> None:
+    _models, calls = controller
+    original = discovery.command
+
+    def altered_bindings(
+        arguments: list[str], *, env: dict[str, str] | None = None
+    ) -> str:
+        value = original(arguments, env=env)
+        if arguments[:2] == ["docker", "inspect"]:
+            data = json.loads(value)
+            for row in data:
+                ports = row["NetworkSettings"]["Ports"]
+                if not ports:
+                    continue
+                bindings = ports["9696/tcp"]
+                if fault == "missing":
+                    ports["9696/tcp"] = None
+                elif fault == "wide-binding":
+                    bindings[0]["HostIp"] = "0.0.0.0"
+                elif fault == "wrong-port":
+                    bindings[0]["HostPort"] = "19999"
+                else:
+                    bindings.append(dict(bindings[0]))
+            return json.dumps(data)
+        return value
+
+    monkeypatch.setattr(discovery, "command", altered_bindings)
+    with pytest.raises(discovery.DiscoveryError, match="publication"):
+        discovery.start(installation)
+    assert any("--force-recreate" in call for call in calls)
+    discovery.verify_withdrawal(installation)

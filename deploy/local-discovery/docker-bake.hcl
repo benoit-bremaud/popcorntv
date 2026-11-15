@@ -9,3 +9,10 @@ target "radarr" {
   secret = ["id=sixlabors,src=${SIXLABORS_LICENSE_FILE}"]
   output = ["type=docker"]
 }
+
+target "ingress" {
+  context = "."
+  dockerfile = "deploy/local-discovery/ingress.Dockerfile"
+  tags = ["popcorntv-discovery-ingress:7ce9f08"]
+  output = ["type=docker"]
+}
