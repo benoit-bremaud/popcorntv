@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Provision private, empty local discovery services without retrieving media.
 
-Run through the pinned environment: ``mise x -- uv run --frozen python
+Run through the pinned environment: ``mise x -- uv run --frozen --group ci python
 scripts/local_discovery.py init|start|status|stop``. Credentials stay in private state.
 """
 
@@ -52,6 +52,10 @@ RADARR_REVISION = "af772b051ac27a0615c7f8b7f78622b6dc183be0"
 
 class DiscoveryError(RuntimeError):
     """A categorical provisioning failure safe to print without provider payloads."""
+
+
+class CredentialsExpired(DiscoveryError):
+    """Rotation is due: the running services must not keep serving on expired keys."""
 
 
 class DiscoveryInterrupted(BaseException):
@@ -313,7 +317,7 @@ def load_installation(root: Path) -> Installation:
         if expiry.tzinfo is None:
             raise DiscoveryError("credential expiry must include a timezone")
         if expiry <= datetime.now(UTC):
-            raise DiscoveryError(
+            raise CredentialsExpired(
                 "credential rotation due; automatic replacement refused"
             )
         credentials[service.name] = Credential(username, password, key, expires)
@@ -878,6 +882,16 @@ def verify_initialization_denial(installation: Installation) -> None:
             )
 
 
+def stop_owned(installation: Installation, unconfirmed: str) -> None:
+    """Best-effort stop of the owned services; never replaces the primary error."""
+    stopped = False
+    with contextlib.suppress(BaseException):
+        compose(installation, ["stop"])
+        stopped = True
+    if not stopped:
+        LOGGER.error(unconfirmed)
+
+
 def require_first_listen_auth(installation: Installation) -> None:
     """Refuse unsafe legacy settings instead of briefly listening without authentication."""
     for service in SERVICES:
@@ -893,14 +907,10 @@ def require_first_listen_auth(installation: Installation) -> None:
             config.findtext("AuthenticationMethod", "").lower() != "forms"
             or config.findtext("AuthenticationRequired", "").lower() != "enabled"
         ):
-            stopped = False
-            with contextlib.suppress(BaseException):
-                compose(installation, ["stop"])
-                stopped = True
-            if not stopped:
-                LOGGER.error(
-                    "unsafe legacy authentication; owned-service stop unconfirmed"
-                )
+            stop_owned(
+                installation,
+                "unsafe legacy authentication; owned-service stop unconfirmed",
+            )
             raise DiscoveryError(
                 "first-listen authentication required; legacy state preserved"
             )
@@ -1078,7 +1088,13 @@ def start(installation: Installation, *, publish: bool = True) -> None:
     with installation_lock(installation):
         require_first_listen_auth(installation)
         prepare_ingress(installation)
-        radarr_image, ingress_image = verify_images(installation)
+        try:
+            radarr_image, ingress_image = verify_images(installation)
+        except BaseException:
+            # A rerun must not leave services published on images that no longer pass.
+            LOGGER.error("image verification failed; stopping owned services")
+            stop_owned(installation, "image verification failed; stop unconfirmed")
+            raise
         if publish:
             check_ports(
                 owned_host_ports(owned_containers(installation)),
@@ -1143,14 +1159,10 @@ def start(installation: Installation, *, publish: bool = True) -> None:
                 LOGGER.error(
                     "private rollback unconfirmed; attempting owned-service stop"
                 )
-                stopped = False
-                with contextlib.suppress(BaseException):
-                    compose(installation, ["stop"])
-                    stopped = True
-                if not stopped:
-                    LOGGER.error(
-                        "stop unconfirmed; retained state requires operator reconciliation"
-                    )
+                stop_owned(
+                    installation,
+                    "stop unconfirmed; retained state requires operator reconciliation",
+                )
             raise
 
 
@@ -1168,7 +1180,14 @@ def main() -> None:
     elif arguments.action == "stop":
         installation = load_identity(arguments.state)
     else:
-        installation = load_installation(arguments.state)
+        try:
+            installation = load_installation(arguments.state)
+        except CredentialsExpired:
+            expired = load_identity(arguments.state)
+            with installation_lock(expired):
+                LOGGER.error("credentials expired; stopping owned services")
+                stop_owned(expired, "credentials expired; stop unconfirmed")
+            raise
     if arguments.action == "start":
         start(installation)
     elif arguments.action == "stop":

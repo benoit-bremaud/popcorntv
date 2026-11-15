@@ -172,6 +172,8 @@ class FakeArr:
         self.reject_write = False
         self.bad_login = False
         self.leak_initialization = False
+        self.open_ui = False
+        self.ignore_session = False
 
     @contextlib.contextmanager
     def serve(self, api: discovery.Api) -> Iterator[None]:
@@ -201,7 +203,8 @@ class FakeArr:
                     self.respond(200, {"apiKey": model.credential.api_key})
                     return
                 if self.path == "/":
-                    self.respond(200 if valid_cookie else 401, {})
+                    authorized = valid_cookie and not model.ignore_session
+                    self.respond(200 if authorized or model.open_ui else 401, {})
                     return
                 if not valid_key:
                     self.respond(401, {})
@@ -1283,3 +1286,204 @@ def test_malformed_bootstrap_xml_cli_refuses_without_docker_io(
     assert "Traceback" not in result.stderr
     assert not marker.exists()
     assert path.read_bytes() == malformed
+
+
+def with_application_binding(
+    monkeypatch: pytest.MonkeyPatch, *, only_when_published: bool
+) -> None:
+    """Make Docker report a host port bound directly on an application container."""
+    original = discovery.command
+
+    def bound(arguments: list[str], *, env: dict[str, str] | None = None) -> str:
+        value = original(arguments, env=env)
+        if arguments[:2] != ["docker", "inspect"]:
+            return value
+        data = json.loads(value)
+        published = any(row["NetworkSettings"]["Ports"] for row in data)
+        if published or not only_when_published:
+            data[0]["NetworkSettings"]["Ports"] = {
+                "9696/tcp": [{"HostIp": "127.0.0.1", "HostPort": "19696"}]
+            }
+        return json.dumps(data)
+
+    monkeypatch.setattr(discovery, "command", bound)
+
+
+def test_application_port_bypassing_ingress_rolls_back(
+    installation: discovery.Installation,
+    controller: tuple[dict[str, FakeArr], list[list[str]]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _models, calls = controller
+    with_application_binding(monkeypatch, only_when_published=True)
+    with pytest.raises(discovery.DiscoveryError, match="bypasses ingress"):
+        discovery.start(installation)
+    assert any("--force-recreate" in call for call in calls)
+
+
+def test_leftover_binding_after_rollback_is_not_a_confirmed_withdrawal(
+    installation: discovery.Installation,
+    controller: tuple[dict[str, FakeArr], list[list[str]]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    discovery.start(installation, publish=False)
+    discovery.verify_withdrawal(installation)
+    with_application_binding(monkeypatch, only_when_published=False)
+    with pytest.raises(discovery.DiscoveryError, match="withdrawal not confirmed"):
+        discovery.verify_withdrawal(installation)
+
+
+@pytest.mark.parametrize(
+    ("fault", "message"),
+    [
+        ("open_ui", "administrative UI authentication not enforced"),
+        ("ignore_session", "login session not authorized"),
+    ],
+)
+def test_login_proof_refuses_an_open_ui_and_an_unusable_session(
+    installation: discovery.Installation, fault: str, message: str
+) -> None:
+    api = discovery.Api(installation, discovery.SERVICES[0])
+    model = FakeArr(api.credential)
+    with model.serve(api):
+        discovery.configure(api)
+        discovery.verify_auth(api)
+        setattr(model, fault, True)
+        with pytest.raises(discovery.DiscoveryError, match=message):
+            discovery.verify_auth(api)
+
+
+def failing_stop(monkeypatch: pytest.MonkeyPatch, calls: list[list[str]]) -> None:
+    """Make every owned-service stop fail at the Docker boundary."""
+    original = discovery.command
+
+    def refused(arguments: list[str], *, env: dict[str, str] | None = None) -> str:
+        if arguments[-1] == "stop":
+            calls.append(arguments)
+            raise discovery.DiscoveryError("fixture stop failure")
+        return original(arguments, env=env)
+
+    monkeypatch.setattr(discovery, "command", refused)
+
+
+def test_failed_stop_never_replaces_the_legacy_authentication_refusal(
+    installation: discovery.Installation,
+    controller: tuple[dict[str, FakeArr], list[list[str]]],
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    _models, calls = controller
+    path = installation.root / "prowlarr/config.xml"
+    path.write_text(
+        path.read_text().replace(
+            "<AuthenticationRequired>Enabled</AuthenticationRequired>",
+            "<AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>",
+        )
+    )
+    failing_stop(monkeypatch, calls)
+    with (
+        caplog.at_level(logging.ERROR),
+        pytest.raises(discovery.DiscoveryError, match="first-listen"),
+    ):
+        discovery.start(installation)
+    assert any(call[-1] == "stop" for call in calls)
+    assert "owned-service stop unconfirmed" in caplog.text
+    assert not any("up" in call for call in calls)
+
+
+@pytest.mark.parametrize("stop_fails", [False, True])
+def test_image_scan_failure_on_a_rerun_stops_the_running_services(
+    installation: discovery.Installation,
+    controller: tuple[dict[str, FakeArr], list[list[str]]],
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    stop_fails: bool,
+) -> None:
+    _models, calls = controller
+    discovery.start(installation)
+    del calls[:]
+    if stop_fails:
+        failing_stop(monkeypatch, calls)
+    original = discovery.command
+
+    def rejected_image(
+        arguments: list[str], *, env: dict[str, str] | None = None
+    ) -> str:
+        if arguments[0] == "make":
+            raise discovery.DiscoveryError("blocking scan")
+        return original(arguments, env=env)
+
+    monkeypatch.setattr(discovery, "command", rejected_image)
+    with (
+        caplog.at_level(logging.ERROR),
+        pytest.raises(discovery.DiscoveryError, match="blocking scan"),
+    ):
+        discovery.start(installation)
+    assert any(call[-1] == "stop" for call in calls)
+    assert not any("up" in call for call in calls)
+    assert ("image verification failed; stop unconfirmed" in caplog.text) is stop_fails
+
+
+@pytest.mark.parametrize("action", ["start", "status"])
+@pytest.mark.parametrize("stop_fails", [False, True])
+def test_expired_credentials_stop_owned_services_and_refuse(
+    installation: discovery.Installation,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    action: str,
+    stop_fails: bool,
+) -> None:
+    path = installation.root / "prowlarr-credentials.json"
+    record = json.loads(path.read_text())
+    record["expires_at"] = "2020-01-01T00:00:00+00:00"
+    path.write_text(json.dumps(record))
+    before = path.read_bytes()
+    calls: list[list[str]] = []
+
+    def docker_boundary(
+        arguments: list[str], *, env: dict[str, str] | None = None
+    ) -> str:
+        calls.append(arguments)
+        if stop_fails and "compose" in arguments:
+            raise discovery.DiscoveryError("fixture stop failure")
+        return ""
+
+    monkeypatch.setattr(discovery, "command", docker_boundary)
+    monkeypatch.setattr(
+        sys, "argv", ["local_discovery.py", action, "--state", str(installation.root)]
+    )
+    with (
+        caplog.at_level(logging.ERROR),
+        pytest.raises(discovery.CredentialsExpired),
+    ):
+        discovery.main()
+    assert [call for call in calls if "compose" in call][-1][-1] == "stop"
+    assert not any("up" in call for call in calls)
+    assert ("credentials expired; stop unconfirmed" in caplog.text) is stop_fails
+    assert path.read_bytes() == before
+
+
+@pytest.mark.parametrize(
+    "document",
+    [
+        (
+            b'<!DOCTYPE Config [<!ENTITY a "aaaa">]><Config><AuthenticationMethod>&a;'
+            b"</AuthenticationMethod></Config>"
+        ),
+        (
+            b'<!DOCTYPE Config [<!ENTITY x SYSTEM "file:///etc/hostname">]>'
+            b"<Config><AuthenticationMethod>&x;</AuthenticationMethod></Config>"
+        ),
+    ],
+    ids=["internal-entity", "external-entity"],
+)
+def test_entity_bearing_authentication_xml_is_refused_and_preserved(
+    installation: discovery.Installation, document: bytes
+) -> None:
+    path = installation.root / "prowlarr/config.xml"
+    path.write_bytes(document)
+    with pytest.raises(
+        discovery.DiscoveryError, match="invalid private authentication XML"
+    ):
+        discovery.require_first_listen_auth(installation)
+    assert path.read_bytes() == document
