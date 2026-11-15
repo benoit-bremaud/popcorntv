@@ -612,7 +612,7 @@ execution boundaries and historical failed evidence. Global CI is deferred to
 | E327-04 | Two synthetic sources respond; one503 failure is contacted while the other supplies a fresh result; payload URLs410 | Future #310 scheduling/backoff and real-source configuration |
 | E345-01 | Actual loopback bindings and authenticated requests through fixed Caddy; apps attached only to internal network | Central Pi Caddy integration remains separate |
 | E345-02 | Component cases reject null/wide/duplicate/wrong bindings and foreign networks; effective rollback verified | Global exact-head validation pending |
-| E346-01 | Forms enabled before first listen; anonymous initialization denied before user provisioning and after rejected setup | Final adversarial verification pending |
+| E346-01 | Forms enabled before first listen; anonymous initialization denied before user provisioning and after rejected setup | Adversarial verification closed at16327d2; global validation pending |
 | E346-02 | Generated operator keys replaced; new keys valid, old keys refused; private state retained | No assertion of prior third-party access |
 | E346-03 | Fixture HTML/XML injection scan corrected; targeted Semgrep zero findings | Last complete L1 was red before this fix; global rerun pending |
 
@@ -622,3 +622,7 @@ these infrastructure-only rows; existing product UI QA rows remain historical.
 The final targeted Python run adds the leaky-backend stop regression: **93 passed,
 91.08% combined coverage**. The full global CI/Sonar/production workflow remains
 explicitly deferred; the previous complete L1 failure is not retroactively green.
+
+The final XML-refusal case passed separately in 0.25 seconds. Independent
+adversarial verification of `16327d2` reports Must 0 / Should 0; no new aggregate
+94-case execution, global gate or deployment is inferred from that review.

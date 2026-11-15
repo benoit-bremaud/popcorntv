@@ -135,3 +135,14 @@ not log the key. The targeted run passed **93 cases** in 69.36 seconds, with
 case measurements for the targeted Python scope; it does not replace a complete
 CI recipe. Documentation presence for the two production Python modules is
 measured separately from test coverage.
+
+
+### Independent verification closeout
+
+Fresh adversarial verification of `16327d2` reports all original findings fixed,
+no regression, no remaining Must or Should. The malformed-XML CLI regression
+passed separately in 0.25 seconds after the preceding complete targeted run;
+there is no claim of a new 94-case aggregate execution. Public documentation
+presence for the two new production Python modules is 53/53 declarations
+(48 + 5), measured separately from behavioral coverage. The consolidated local
+review preserves the deferred global execution status.
