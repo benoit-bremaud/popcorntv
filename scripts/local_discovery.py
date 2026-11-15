@@ -11,6 +11,7 @@ import argparse
 import contextlib
 import fcntl
 import functools
+import http.client
 import ipaddress
 import json
 import logging
@@ -538,7 +539,12 @@ class Api:
             cookie_header = session_cookies(error.headers)
             error.close()
             return ApiResponse(error.code, cookie=cookie_header)
-        except (urllib.error.URLError, TimeoutError, OSError) as error:
+        except (
+            urllib.error.URLError,
+            TimeoutError,
+            OSError,
+            http.client.HTTPException,
+        ) as error:
             raise DiscoveryError(
                 f"{self.service.name} API unavailable; outcome may be uncertain"
             ) from error

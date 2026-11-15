@@ -22,6 +22,7 @@ class RunnerTest(unittest.TestCase):
         self.addCleanup(fixture.doCleanups)
         self.fixture = fixture
         self.repo, self.env = fixture.repo, fixture.env
+        self.env.pop('LOCAL_CI_DISCOVERY', None)
         self.scripts = self.repo / 'scripts'
         self.scripts.mkdir()
         (self.scripts / 'tests').mkdir()

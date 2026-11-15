@@ -1,4 +1,5 @@
-# Dependency updates: pnpm workspace, pinned GitHub Actions, Docker base images, compose images.
+# Dependency updates: pnpm workspace, Python (uv), pinned GitHub Actions, Docker base images
+# (application and local discovery), compose images.
 version: 2
 updates:
   - package-ecosystem: npm

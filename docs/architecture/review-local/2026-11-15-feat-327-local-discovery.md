@@ -4,13 +4,13 @@ This record distinguishes resolved source-review findings and targeted acceptanc
 
 - Date: 2026-11-15.
 - Branch: `feat/327-local-discovery`; base `origin/main` at `9ef3db5`.
-- Latest reviewed source: `d6a833e` (Opus adversarial reviewer, second round); its findings are
-  corrected in the commit that follows it, whose verification is recorded in the pull request.
+- Latest reviewed source: `cd62451` (Opus adversarial reviewer, third round, push gate open); its
+  one Should is corrected in the commit that follows it.
 - Dimensions: fresh adversarial source review, design/container verification,
   independent test-quality review, documentation/traceability reconciliation,
   targeted security and correctness checks.
-- Source verdict at `d6a833e`: Must 1 / Should 4 / Nice 9, push gate closed; all Must and Should
-  corrected in the following commit, remaining Nice items filed (#349).
+- Source verdict at `cd62451`: Must 0 / Should 1 / Nice 4; the Should corrected in the following
+  commit, remaining Nice items filed (#349).
 - Publication/execution status: pending. No global-green claim, signed attestation,
   push, PR publication, merge or deployment is recorded by this review.
 
@@ -26,7 +26,8 @@ later rounds were run by the fresh Opus `adversarial-reviewer` agent. No hosted 
 | Verification | 16327d2 | XML failure translated safely; actual CLI regression checks no Docker call, no traceback, unchanged bytes; all findings fixed, none regressed; adversarial push gate open |
 | Opus review | 3a7381a | Must 1: #327 status contradicted between spec and glossary; Should 9: untested fail-closed paths, expired keys kept serving, failed scan on a rerun left the stack published, unenforced `uv.lock`, wrong deployment note, heavy gate steps on every diff without an owner decision, missing ADR and commands, Semgrep XML finding, lint broken by `data/`; Nice 9; push gate closed |
 | Opus verification | d6a833e | Round-one findings fixed or filed (#347–#350); new Must 1: `DISCOVERY_PATHS` missed the Trivy ignore file, the test runner, the mise pins and renames; Should 4: no mechanism behind the #315 replay, path list not fully pinned, `status` not fail-closed on a failed proof, this record stale; Nice 9; push gate closed |
-| Corrections | after d6a833e | Path list completed and pinned, renames and quoted names handled, `LOCAL_CI_DISCOVERY=1` forced replay recorded as `run (forced)`, evidence `scheduled` until the discovery steps pass, `status` stops the owned services on a failed proof, sensitivity figures corrected |
+| Opus verification | cd62451 | Round-two findings fixed or filed; Must 0; Should 1: a malformed HTTP answer escaped the `status` stop; Nice 4; push gate open. The Should and the Nice items are corrected in the following commit |
+| Corrections | d6a833e..cd62451 | Path list completed and pinned, renames and quoted names handled, `LOCAL_CI_DISCOVERY=1` forced replay recorded as `run (forced)`, evidence `scheduled` until the discovery steps pass, `status` stops the owned services on a failed proof, sensitivity figures corrected |
 
 The adversarial dimension's open line is not an execution gate. Global CI and
 exact-head attestation remain pending under the explicit owner deferral to #315.
@@ -98,7 +99,7 @@ _None in the reviewed corrections._
 
 ### Nice
 
-_None._
+Filed on #349, not fixed in this pull request.
 
 ### Intentional boundaries
 

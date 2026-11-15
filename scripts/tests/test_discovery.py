@@ -174,6 +174,7 @@ class FakeArr:
         self.leak_initialization = False
         self.open_ui = False
         self.ignore_session = False
+        self.malformed = False
 
     @contextlib.contextmanager
     def serve(self, api: discovery.Api) -> Iterator[None]:
@@ -193,6 +194,9 @@ class FakeArr:
                 self.wfile.write(content)
 
             def do_GET(self) -> None:
+                if model.malformed:
+                    self.wfile.write(b"garbage\r\n\r\n")
+                    return
                 valid_key = self.headers.get("X-Api-Key") == model.credential.api_key
                 cookies = SimpleCookie()
                 cookies.load(self.headers.get("Cookie", ""))
@@ -984,6 +988,13 @@ def test_cli_status_checks_actual_http_config_without_writes(
     assert {name: model.writes for name, model in models.items()} == writes
 
 
+@pytest.mark.parametrize(
+    ("fault", "message"),
+    [
+        ("open_ui", "administrative UI authentication not enforced"),
+        ("malformed", "radarr API unavailable"),
+    ],
+)
 @pytest.mark.parametrize("stop_fails", [False, True])
 def test_cli_status_stops_owned_services_when_a_proof_fails(
     installation: discovery.Installation,
@@ -991,10 +1002,12 @@ def test_cli_status_stops_owned_services_when_a_proof_fails(
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
     stop_fails: bool,
+    fault: str,
+    message: str,
 ) -> None:
     models, calls = controller
     discovery.start(installation)
-    models["radarr"].open_ui = True
+    setattr(models["radarr"], fault, True)
     if stop_fails:
         failing_stop(monkeypatch, calls)
     del calls[:]
@@ -1003,10 +1016,7 @@ def test_cli_status_stops_owned_services_when_a_proof_fails(
     )
     with (
         caplog.at_level(logging.ERROR),
-        pytest.raises(
-            discovery.DiscoveryError,
-            match="administrative UI authentication not enforced",
-        ),
+        pytest.raises(discovery.DiscoveryError, match=message),
     ):
         discovery.main()
     assert calls[-1][-1] == "stop"

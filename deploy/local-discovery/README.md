@@ -61,7 +61,8 @@ settings without overwriting owner edits.
 ## Failure diagnosis and acceptance
 
 Diagnostics report categorical failures without API bodies or credential values.
-Image scan reports are under ignored `.trivy/`. A failed startup preserves state
+Image scan reports are under ignored `.trivy/`. A failed `status` proof stops the
+owned services. A failed startup preserves state
 and attempts to withdraw published ports; failed withdrawal falls back to an
 owned-service stop and explicitly reports an unconfirmed stop. SIGTERM follows
 that cleanup path; SIGKILL and power loss require later operator reconciliation.
@@ -104,7 +105,9 @@ conflicts with the operator's fixed administration ports.
 For a diff that touches a discovery path, the full L2 gate requires
 `SIXLABORS_LICENSE_FILE` to name your existing private license file: it rebuilds both
 custom images and repeats real acceptance before issuing signed evidence. Any other
-diff skips both steps and records `not-applicable` in the run evidence. Never put license contents into that variable.
+diff skips both steps and records `not-applicable` in the run evidence.
+`LOCAL_CI_DISCOVERY=1` forces both steps on any head, with the same license file, and
+records `run (forced)`. Never put license contents into that variable.
 
 The build recipe includes the `radarr-regression` Bake target: the two pinned
 upstream image-resize success/error tests must pass without skips. Final global
