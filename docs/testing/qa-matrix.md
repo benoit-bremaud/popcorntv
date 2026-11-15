@@ -609,10 +609,10 @@ execution boundaries and historical failed evidence. Global CI is deferred to
 | E327-01 | Local empty Prowlarr/Radarr startup, authenticated API and UI, persistence across restart | Real external indexers deliberately absent |
 | E327-02 | Effective UID/caps/CPU/memory/PIDs, tmpfs, read-only root and log rotation for three services | ARM64/Pi budgets not validated |
 | E327-03 | TCP/DNS denied with ingress present, same-image positive controls before/after and real canary counters | No VPN retrieval proof in this brick |
-| E327-04 | Two synthetic sources respond; one503 failure is contacted while the other supplies a fresh result; payload URLs410 | Future #310 scheduling/backoff and real-source configuration |
+| E327-04 | Two synthetic sources respond; one 503 failure is contacted while the other supplies a fresh result; payload URLs 410 | Future #310 scheduling/backoff and real-source configuration |
 | E345-01 | Actual loopback bindings and authenticated requests through fixed Caddy; apps attached only to internal network | Central Pi Caddy integration remains separate |
 | E345-02 | Component cases reject null/wide/duplicate/wrong bindings and foreign networks; effective rollback verified | Global exact-head validation pending |
-| E346-01 | Forms enabled before first listen; anonymous initialization denied before user provisioning and after rejected setup | Adversarial verification closed at16327d2; global validation pending |
+| E346-01 | Forms enabled before first listen; anonymous initialization denied before user provisioning and after rejected setup | Adversarial verification closed at 16327d2; global validation pending |
 | E346-02 | Generated operator keys replaced; new keys valid, old keys refused; private state retained | No assertion of prior third-party access |
 | E346-03 | Fixture HTML/XML injection scan corrected; targeted Semgrep zero findings | Last complete L1 was red before this fix; global rerun pending |
 

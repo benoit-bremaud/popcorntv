@@ -61,7 +61,15 @@ spacing / typography, tests with every feature (Vitest unit, Playwright e2e late
   (`deploy/staging/compose.yml`, env `.env.staging`); QA passes run here before any Pi
   deploy, the Pi only gets a post-deploy smoke check (spec deploy-homelab §2).
   `make staging-logs` · `make staging-down` (keeps data) · `make staging-reset`.
-- `make lint-docker` · `make scan-docker-config` · `make scan-docker-image IMAGE=…`.
+- `make lint-docker` (the three Dockerfiles) · `make scan-docker-config` ·
+  `make scan-docker-image IMAGE=…`.
+- `mise x -- just setup` — pinned tools, including the Python infra toolchain (uv, `uv.lock`,
+  ruff, mypy strict, pytest). `mise x -- just fast | check | gate` — local signed gate
+  (`scripts/local-ci.py`, spec `docs/architecture/specs/local-gate-operation.md`);
+  `mise x -- just merge <n>` is the only merge path.
+- `mise x -- just discovery-build /abs/sixlabors.lic` then `just discovery-init | discovery-start |
+  discovery-status | discovery-stop` — empty local Prowlarr / Radarr on loopback
+  (`deploy/local-discovery/README.md`).
 
 ## Current state
 
@@ -169,6 +177,15 @@ keyed by `(kind, tmdb_id)`, `GET /title-links/:kind/:tmdbId` answers `{ url, edi
 signed-in caller, `PUT | DELETE` owner-only, pure `normaliseTitleLink` in `packages/shared`
 (http(s), host, no credentials, ≤ 2048), web `TitleLink` under *Where to watch* opens it in a
 new tab; the server never fetches it, never logs it).
+#327 local discovery services (epic #306; spec `docs/architecture/specs/local-discovery-topology.md`,
+ADR-0036: separate Compose project `deploy/local-discovery/` — pinned Prowlarr, Radarr rebuilt from
+source with the corrected ImageSharp (Six Labors license as BuildKit secret), one Caddy ingress built
+from source; applications on an internal network with no host port, the two administration ports on
+`127.0.0.1` only after the private authentication proof; Python controller
+`scripts/local_discovery.py` (init / start / status / stop, state under ignored
+`data/local-discovery/`, 90-day credentials, fail-closed: any failed proof withdraws the ports or
+stops the owned services); no source configured, nothing retrieved; the gate rebuilds and replays
+the real-container journey only for a diff touching `DISCOVERY_PATHS`).
 
 Server layout (flat, component diagram 03): `src/library/` holds the pure `name-parser`
 and `path-guard`, the `ffprobe` runner (only process egress), the `folder-lister` (one-level `readdir` of `MEDIA_ROOT`), the `scanner`, the pure `identity` (carry-over keys, ADR-0018), the `scheduler` (interval rescans, ADR-0016), the per-library

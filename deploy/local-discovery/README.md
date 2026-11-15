@@ -36,8 +36,12 @@ mise x -- just discovery-stop
 The controller rejects remote Docker contexts. The state directory defaults to
 ignored `data/local-discovery/`, with private credentials and installation
 identity. Generated credentials expire after 90 days for operator rotation;
-this is controller enforcement, not a claim of vendor-native key expiry. Stop
-remains available after credential expiry. Preserve the state directory when
+this is controller enforcement, not a claim of vendor-native key expiry. Once
+they expire, `start` and `status` refuse and stop the owned services, so nothing
+keeps listening on expired keys; `stop` remains available. There is no in-place
+`rotate` action yet (#347): while the installation is still empty by
+design, rotate by moving the stopped state directory aside and running
+`discovery-init` then `discovery-start` again. Preserve the state directory when
 stopping; do not reset another installation or delete an owner's configuration.
 
 Startup scans all three images with the existing blocking HIGH/CRITICAL policy. Radarr
@@ -49,7 +53,7 @@ pull is permitted for either custom image.
 Forms authentication is required from the first listen, including private bootstrap.
 Bootstrap first runs without published ports, verifies empty configuration and
 administrative authentication, and disables Radarr RSS grabbing. Only then does the fixed Caddy ingress publish
-Prowlarr <http://127.0.0.1:19696> and Radarr <http://127.0.0.1:17878> published.
+Prowlarr <http://127.0.0.1:19696> and Radarr <http://127.0.0.1:17878>.
 Credentials remain in the private `*-credentials.json` files; no browser-facing
 PopcornTV configuration contains these keys. Repeated startup validates completed
 settings without overwriting owner edits.
@@ -97,9 +101,10 @@ URLs always return 410 and serve no media. These sources exist only in temporary
 state and never enter the operator installation. Ephemeral loopback ports avoid
 conflicts with the operator's fixed administration ports.
 
-The full L2 gate requires `SIXLABORS_LICENSE_FILE` to name your existing private
-license file. It rebuilds both custom images and repeats real acceptance before
-issuing signed evidence. Never put license contents into that variable.
+For a diff that touches a discovery path, the full L2 gate requires
+`SIXLABORS_LICENSE_FILE` to name your existing private license file: it rebuilds both
+custom images and repeats real acceptance before issuing signed evidence. Any other
+diff skips both steps and records `not-applicable` in the run evidence. Never put license contents into that variable.
 
 The build recipe includes the `radarr-regression` Bake target: the two pinned
 upstream image-resize success/error tests must pass without skips. Final global

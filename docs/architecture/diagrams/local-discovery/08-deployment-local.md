@@ -40,7 +40,9 @@ flowchart LR
 
 ## Notes
 
-No external indexer, download client, Internet egress or permanent-media path is attached.
+No external indexer, download client or permanent-media path is attached. The two application
+containers sit on an internal network without Internet egress; the reverse proxy's ingress
+network is an ordinary NAT bridge, so the proxy itself (and only it) could reach outside.
 Local synchronization is not already configured by a line in the diagram. PopcornTV's future
 #310 cadence and #328 VPN network are outside this deployment; no staging/Pi change occurs.
 

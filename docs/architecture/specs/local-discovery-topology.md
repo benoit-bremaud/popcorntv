@@ -4,7 +4,9 @@ Issue #327 prepares an empty, isolated Prowlarr/Radarr installation before real 
 
 Status: accepted by the owner on 2026-11-14, including option A and its weights, after
 independent design review and correction verification (Must 0 / Should 0). Empty configuration
-is required; implementation and real-container acceptance remain in progress.
+is required. Implemented in #327: the targeted real-container acceptance passed at `bedfe9f`
+and `16327d2` (QA matrix E327-04, E345-01); the global gate on the whole epic is deferred to
+#315.
 
 ## Need and boundaries
 
@@ -119,9 +121,9 @@ Use real pinned containers for startup/restart/auth/limits and a disposable dete
 Torznab fixture for later approved test-only wiring. Fixtures are local synthetic catalog
 entries with no downloadable bytes, subscriptions or external tracker calls. Each run owns
 its isolated state and can delete only that state, never the operator's persistent install.
-Fixture services use a separate Compose project/network and their own generated config/keys;
-they must not attach to, write application-sync settings into or configure indexers on the
-persistent empty installation. Bootstrap reruns verify existing state and refuse unexpected
+Fixture services join only the network of the disposable acceptance installation (its own
+Compose project, subnet and generated config/keys); they never attach to, write
+application-sync settings into or configure indexers on the persistent empty installation. Bootstrap reruns verify existing state and refuse unexpected
 owner edits rather than resetting it to empty. Tests demonstrate this refusal without loss.
 
 Timeouts/uncertain configuration writes require a fresh read before retry. Prove only local
@@ -225,14 +227,18 @@ independently and parses all `Set-Cookie` fields without forwarding cookie
 attributes. It rejects missing/wrong API credentials and anonymous UI access
 before publication. Private acceptance does not reserve operator host ports.
 
-The local L2 gate now rebuilds the image from its pinned inputs using an existing
-private `SIXLABORS_LICENSE_FILE`, lints both Dockerfiles and executes the actual
-private-container acceptance journey. Unit/component Python tests enforce a
+The local L2 gate lints both Dockerfiles on every run. When the diff against the base
+touches a discovery path (`deploy/local-discovery/`, the controller and its tests, the
+Python manifests, `scripts/local-ci.py`, `justfile`, `Makefile`, `.hadolint.yaml`), it also
+rebuilds the image from its pinned inputs using an existing private `SIXLABORS_LICENSE_FILE`
+and executes the actual private-container acceptance journey; any other diff records
+`not-applicable` in the run evidence and needs no license (owner decision 2026-11-15,
+ADR-0036). #315 replays both steps on the whole epic. Unit/component Python tests enforce a
 90% combined branch/statement coverage ratchet and refuse empty/skipped/xfail or
 deselected suites. The Python lockfile is scanned alongside the pnpm lockfile.
-The gate still requires all existing application and security checks; a private
-startup journey does not certify the pending synthetic-source or public-loopback
-acceptance cases.
+The gate still requires all existing application and security checks. The private
+startup journey alone does not certify the synthetic-source and public-loopback cases:
+those were accepted separately (QA matrix E327-04, E345-01).
 
 ## Accepted ingress correction (#345) — owner validation 2026-11-15
 
