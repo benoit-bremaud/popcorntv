@@ -34,6 +34,9 @@ from pathlib import Path
 from types import FrameType
 from typing import NoReturn, cast
 
+import defusedxml.ElementTree as SafeET
+from defusedxml import DefusedXmlException
+
 ROOT = Path(__file__).resolve().parent.parent
 COMPOSE = ROOT / "deploy/local-discovery/compose.yml"
 PUBLISH = ROOT / "deploy/local-discovery/publish.yml"
@@ -881,8 +884,8 @@ def require_first_listen_auth(installation: Installation) -> None:
         path = installation.root / service.name / "config.xml"
         private_path(path, directory=False)
         try:
-            config = ET.parse(path).getroot()
-        except ET.ParseError as error:
+            config = SafeET.fromstring(path.read_bytes())
+        except (ET.ParseError, DefusedXmlException) as error:
             raise DiscoveryError(
                 "invalid private authentication XML; state preserved"
             ) from error
