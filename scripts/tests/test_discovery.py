@@ -1248,3 +1248,38 @@ def test_unprotected_first_listen_stops_without_account_writes_or_secret_logs(
     assert "rollback unconfirmed" in caplog.text
     assert installation.credentials["prowlarr"].api_key not in caplog.text
     assert installation.root.exists()
+
+
+def test_malformed_bootstrap_xml_cli_refuses_without_docker_io(
+    installation: discovery.Installation, tmp_path: Path
+) -> None:
+    path = installation.root / "radarr/config.xml"
+    malformed = b"<Config><AuthenticationMethod>Forms"
+    path.write_bytes(malformed)
+    marker = tmp_path / "docker-called"
+    docker = tmp_path / "docker"
+    docker.write_text(
+        f"#!{sys.executable}\nfrom pathlib import Path\nPath({str(marker)!r}).write_text('called')\nraise SystemExit(99)\n"
+    )
+    docker.chmod(0o755)
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(discovery.ROOT / "scripts/local_discovery.py"),
+            "start",
+            "--state",
+            str(installation.root),
+        ],
+        env=dict(
+            os.environ, PATH=str(tmp_path) + os.pathsep + os.environ.get("PATH", "")
+        ),
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=False,
+    )
+    assert result.returncode == 1
+    assert "invalid private authentication XML; state preserved" in result.stderr
+    assert "Traceback" not in result.stderr
+    assert not marker.exists()
+    assert path.read_bytes() == malformed

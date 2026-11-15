@@ -880,7 +880,12 @@ def require_first_listen_auth(installation: Installation) -> None:
     for service in SERVICES:
         path = installation.root / service.name / "config.xml"
         private_path(path, directory=False)
-        config = ET.parse(path).getroot()
+        try:
+            config = ET.parse(path).getroot()
+        except ET.ParseError as error:
+            raise DiscoveryError(
+                "invalid private authentication XML; state preserved"
+            ) from error
         if (
             config.findtext("AuthenticationMethod", "").lower() != "forms"
             or config.findtext("AuthenticationRequired", "").lower() != "enabled"
