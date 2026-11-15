@@ -323,6 +323,7 @@ def verify_synthetic_sources(installation: discovery.Installation) -> None:
                     CANARY_IMAGE,
                     "/fixture.mjs",
                     str(number),
+                    address,
                 ]
             ).strip()
             identifiers.append(identifier)
@@ -376,6 +377,7 @@ def verify_synthetic_sources(installation: discovery.Installation) -> None:
         with opener.open(request, timeout=2) as response:
             assert response.status == 200
         assert counters(urls[0])["unavailable"] is True
+        before_failed = counters(urls[0])
         before_healthy = counters(urls[1])
         query = urllib.parse.urlencode(
             {"query": "Fixture outage", "type": "search", "indexerIds": indexers},
@@ -383,6 +385,7 @@ def verify_synthetic_sources(installation: discovery.Installation) -> None:
         )
         results = provider_rows(provider_request(api, "search?" + query))
         assert {row["indexerId"] for row in results} == {indexers[1]}
+        assert count(counters(urls[0]), "attempts") > count(before_failed, "attempts")
         assert count(counters(urls[1]), "searches") > count(before_healthy, "searches")
         for url in urls:
             with pytest.raises(urllib.error.HTTPError) as failure:
@@ -420,6 +423,24 @@ def test_real_private_bootstrap_restart_and_network_isolation() -> None:
             path: path.read_bytes()
             for path in installation.root.glob("*-credentials.json")
         }
+        # Observe first listen before account provisioning, then a real rejected setup request.
+        discovery.prepare_ingress(installation)
+        radarr_image, ingress_image = discovery.verify_images(installation)
+        discovery.compose(
+            installation,
+            ["up", "-d", "--wait", "--wait-timeout", "120"],
+            radarr_image=radarr_image,
+            ingress_image=ingress_image,
+        )
+        discovery.verify_initialization_denial(installation)
+        for service in discovery.SERVICES:
+            api = discovery.Api(installation, service)
+            host = discovery.object_map(api.json("config/host"))
+            assert host.get("username") in (None, "")
+            api.credential = replace(api.credential, api_key="0" * 32)
+            with pytest.raises(discovery.DiscoveryError):
+                discovery.configure(api)
+        discovery.verify_withdrawal(installation)
         discovery.start(installation, publish=False)
         verify_limits(installation)
         discovery.start(installation, publish=True)

@@ -21,6 +21,17 @@ RUN --mount=type=secret,id=sixlabors,required=true \
     -p:AssemblyVersion=7.0.3.10912 -p:AssemblyConfiguration=popcorntv-local \
     -p:Deterministic=true -p:SixLaborsLicenseFile=/run/secrets/sixlabors -o /out
 
+FROM backend AS regression
+RUN --mount=type=secret,id=sixlabors,required=true \
+    dotnet test src/NzbDrone.Core.Test/Radarr.Core.Test.csproj \
+    -c Release -f net10.0 -r linux-musl-x64 \
+    --filter FullyQualifiedName~ImageResizerFixture \
+    -p:RuntimeIdentifiers=linux-musl-x64 -p:Platform=Posix -p:SolutionDir=/src/src/ \
+    -p:AssemblyVersion=7.0.3.10912 -p:AssemblyConfiguration=popcorntv-local \
+    -p:Deterministic=true -p:SixLaborsLicenseFile=/run/secrets/sixlabors \
+    --logger 'trx;LogFileName=imagesharp.trx' --results-directory /tmp/regression \
+    && grep -q '<Counters total="2" executed="2" passed="2" failed="0"' /tmp/regression/imagesharp.trx
+
 FROM node:22.23.4-trixie-slim@sha256:be1e2a3dc2c4fd68cdfadad2a696a280e0d2749098bee509230174d72fb768c6 AS frontend
 WORKDIR /src
 COPY --from=source /src/ /src/
@@ -28,7 +39,7 @@ RUN corepack enable && corepack prepare yarn@1.22.22 --activate \
     && yarn install --frozen-lockfile --non-interactive --network-timeout 120000 \
     && yarn run build --env production
 
-FROM lscr.io/linuxserver/radarr:nightly-7.0.3.10912-ls35@sha256:dd9df7c4fa6ca578f5463b4528cf7c4e729c35b006ab5307f71acd1961a84917
+FROM lscr.io/linuxserver/radarr:nightly-7.0.3.10912-ls35@sha256:dd9df7c4fa6ca578f5463b4528cf7c4e729c35b006ab5307f71acd1961a84917 AS runtime
 # Preserve the vendor's init/native OS packages, replace its complete published app.
 RUN rm -rf /app/radarr/bin && mkdir -p /app/radarr/bin
 COPY --from=backend /out/ /app/radarr/bin/

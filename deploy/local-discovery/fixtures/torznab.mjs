@@ -2,7 +2,12 @@
 import http from 'node:http';
 import { argv } from 'node:process';
 import { URL } from 'node:url';
+import { isIPv4 } from 'node:net';
 const instance = argv[2] ?? 'fixture';
+const advertisedAddress = argv[3] ?? '127.0.0.1';
+if (!/^[a-z0-9-]+$/.test(instance) || !isIPv4(advertisedAddress)) {
+  throw new Error('invalid controlled fixture identity/address');
+}
 
 let unavailable = false;
 let searches = 0;
@@ -39,7 +44,7 @@ http
     }
     searches += 1;
     response.end(
-      `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:torznab="http://torznab.com/schemas/2015/feed"><channel><title>Local fixture</title><description>Synthetic acceptance only</description><link>http://fixture.invalid/</link><item><title>Fixture.Movie.2000.1080p.WEB-DL.Source${instance}</title><guid isPermaLink="false">local-fixture-release-${instance}</guid><pubDate>Sat, 14 Nov 2026 12:00:00 GMT</pubDate><size>1048576</size><category>2000</category><enclosure url="http://${request.headers.host}/no-payload" length="1048576" type="application/x-bittorrent"/><torznab:attr name="category" value="2000"/><torznab:attr name="seeders" value="5"/><torznab:attr name="peers" value="10"/><torznab:attr name="downloadvolumefactor" value="1"/><torznab:attr name="uploadvolumefactor" value="1"/></item></channel></rss>`,
+      `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:torznab="http://torznab.com/schemas/2015/feed"><channel><title>Local fixture</title><description>Synthetic acceptance only</description><link>http://fixture.invalid/</link><item><title>Fixture.Movie.2000.1080p.WEB-DL.Source${instance}</title><guid isPermaLink="false">local-fixture-release-${instance}</guid><pubDate>Sat, 14 Nov 2026 12:00:00 GMT</pubDate><size>1048576</size><category>2000</category><enclosure url="http://${advertisedAddress}:19090/no-payload" length="1048576" type="application/x-bittorrent"/><torznab:attr name="category" value="2000"/><torznab:attr name="seeders" value="5"/><torznab:attr name="peers" value="10"/><torznab:attr name="downloadvolumefactor" value="1"/><torznab:attr name="uploadvolumefactor" value="1"/></item></channel></rss>`,
     );
   })
   .listen(19090, '0.0.0.0');

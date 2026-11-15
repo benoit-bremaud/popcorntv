@@ -164,7 +164,7 @@ class FakeArr:
 
     def __init__(self, credential: discovery.Credential) -> None:
         self.credential = credential
-        self.host: dict[str, object] = {"authenticationMethod": "none"}
+        self.host: dict[str, object] = {"authenticationMethod": "forms", "username": ""}
         self.indexer: dict[str, object] = {"rssSyncInterval": 15}
         self.entries: list[object] = []
         self.writes: list[str] = []
@@ -232,6 +232,7 @@ class FakeArr:
                 form = parse_qs(content.decode())
                 if (
                     model.bad_login
+                    or model.host.get("username") != model.credential.username
                     or form.get("username") != [model.credential.username]
                     or form.get("password") != [model.credential.password]
                 ):
@@ -290,7 +291,7 @@ def test_rejected_write_does_not_retry_or_reset(
     with model.serve(api), pytest.raises(discovery.DiscoveryError):
         discovery.configure(api)
     assert not model.writes
-    assert model.host == {"authenticationMethod": "none"}
+    assert model.host == {"authenticationMethod": "forms", "username": ""}
 
 
 def test_nonempty_owner_state_is_preserved(
@@ -1174,3 +1175,52 @@ def test_unconfirmed_actual_publication_rolls_back(
         discovery.start(installation)
     assert any("--force-recreate" in call for call in calls)
     discovery.verify_withdrawal(installation)
+
+
+def test_forms_policy_without_an_account_still_provisions_the_operator(
+    installation: discovery.Installation,
+) -> None:
+    api = discovery.Api(installation, discovery.SERVICES[0])
+    model = FakeArr(api.credential)
+    model.host = {**discovery.host_policy(), "username": ""}
+    with model.serve(api):
+        assert api.request("/initialize.json", authenticated=False).status == 401
+        discovery.configure(api)
+        assert model.host["username"] == api.credential.username
+        assert len(model.writes) == 1
+        discovery.verify_auth(api)
+
+
+def test_unsafe_legacy_authentication_is_stopped_without_rewriting_state(
+    installation: discovery.Installation,
+    controller: tuple[dict[str, FakeArr], list[list[str]]],
+) -> None:
+    _models, calls = controller
+    path = installation.root / "radarr/config.xml"
+    path.write_text(
+        path.read_text().replace(
+            "<AuthenticationMethod>Forms</AuthenticationMethod>",
+            "<AuthenticationMethod>None</AuthenticationMethod>",
+        )
+    )
+    before = path.read_bytes()
+    with pytest.raises(discovery.DiscoveryError, match="first-listen"):
+        discovery.start(installation)
+    assert not any("up" in call for call in calls)
+    assert any("stop" in call for call in calls)
+    assert path.read_bytes() == before
+
+
+def test_bootstrap_never_replaces_a_foreign_administrator(
+    installation: discovery.Installation,
+) -> None:
+    api = discovery.Api(installation, discovery.SERVICES[0])
+    model = FakeArr(api.credential)
+    model.host = {**discovery.host_policy(), "username": "owner-edited"}
+    with (
+        model.serve(api),
+        pytest.raises(discovery.DiscoveryError, match="administrator changed"),
+    ):
+        discovery.configure(api)
+    assert not model.writes
+    assert model.host["username"] == "owner-edited"

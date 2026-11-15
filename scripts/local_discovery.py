@@ -380,7 +380,7 @@ def initialize(root: Path) -> Installation:
             "BindAddress": "*",
             "Port": str(service.port),
             "ApiKey": key,
-            "AuthenticationMethod": "None",
+            "AuthenticationMethod": "Forms",
             "AuthenticationRequired": "Enabled",
             "LogLevel": "info",
             "LogSizeLimit": "1",
@@ -470,6 +470,7 @@ class Api:
         published: bool = False,
         port: int | None = None,
     ) -> None:
+        """Keep credentials confined to one validated service or loopback endpoint."""
         self.service = service
         self.credential = installation.credentials[service.name]
         self.base = (
@@ -728,7 +729,14 @@ def configure(api: Api) -> None:
     verify_empty(api)
     host = object_map(api.json("config/host"))
     desired = host_policy()
-    if any(host.get(key) != value for key, value in desired.items()):
+    username = host.get("username")
+    if username not in (None, "", api.credential.username):
+        raise DiscoveryError(
+            f"{api.service.name} existing administrator changed; state preserved"
+        )
+    if username != api.credential.username or any(
+        host.get(key) != value for key, value in desired.items()
+    ):
         host.update(desired)
         host.update(
             {
@@ -852,6 +860,40 @@ def verify_images(installation: Installation) -> tuple[str, str]:
     if not ingress_id:
         raise DiscoveryError("required ingress image missing")
     return radarr_id, ingress_id
+
+
+def verify_initialization_denial(installation: Installation) -> None:
+    """The unauthenticated UI bootstrap route must never expose an enduring API key."""
+    for service in SERVICES:
+        if Api(installation, service).request(
+            "/initialize.json", authenticated=False
+        ).status not in (302, 401, 403):
+            raise DiscoveryError(
+                f"{service.name} initialization metadata is not protected"
+            )
+
+
+def require_first_listen_auth(installation: Installation) -> None:
+    """Refuse unsafe legacy settings instead of briefly listening without authentication."""
+    for service in SERVICES:
+        path = installation.root / service.name / "config.xml"
+        private_path(path, directory=False)
+        config = ET.parse(path).getroot()
+        if (
+            config.findtext("AuthenticationMethod", "").lower() != "forms"
+            or config.findtext("AuthenticationRequired", "").lower() != "enabled"
+        ):
+            stopped = False
+            with contextlib.suppress(BaseException):
+                compose(installation, ["stop"])
+                stopped = True
+            if not stopped:
+                LOGGER.error(
+                    "unsafe legacy authentication; owned-service stop unconfirmed"
+                )
+            raise DiscoveryError(
+                "first-listen authentication required; legacy state preserved"
+            )
 
 
 def prepare_ingress(installation: Installation) -> None:
@@ -1000,6 +1042,7 @@ def verify_publication(installation: Installation) -> None:
 def verify_withdrawal(installation: Installation) -> None:
     """Confirm actual private topology and absent port bindings after rollback."""
     verify_network_membership(installation, published=False)
+    verify_initialization_denial(installation)
     for row in owned_containers(installation):
         ports = object_map(object_map(row["NetworkSettings"])["Ports"])
         if any(value for value in ports.values()):
@@ -1023,6 +1066,7 @@ def bootstrap_completed(installation: Installation) -> bool:
 def start(installation: Installation, *, publish: bool = True) -> None:
     """Authenticate privately before publication; keep state and withdraw ports on failure."""
     with installation_lock(installation):
+        require_first_listen_auth(installation)
         prepare_ingress(installation)
         radarr_image, ingress_image = verify_images(installation)
         if publish:
@@ -1038,6 +1082,7 @@ def start(installation: Installation, *, publish: bool = True) -> None:
                 ingress_image=ingress_image,
             )
             verify_network_membership(installation, published=False)
+            verify_initialization_denial(installation)
             completed = bootstrap_completed(installation)
             for service in SERVICES:
                 api = Api(installation, service)
