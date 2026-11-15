@@ -302,3 +302,34 @@ The bb-homelab configuration already defines the Pi's central Caddy and a Popcor
 site with per-backend networks. Its repository and current local staging remain
 unchanged. Future Pi integration reuses that central proxy and requires separate
 ARM64/runtime/deployment validation; the local x64 Radarr build is not a Pi artifact.
+
+
+### First-listen authentication correction (#346)
+
+The host can reach an internal Docker bridge. New XML therefore enables Forms
+and requires authentication **before the first process listen**, rather than
+starting with None. The controller refuses unsafe legacy settings, attempts an
+owned stop and preserves the existing configuration. Account provisioning uses
+the key-protected API even when all policy fields already match; an absent
+administrator is not mistaken for completed configuration, and a foreign
+administrator is never silently replaced.
+
+Anonymous `/initialize.json` access is checked before any account writes and in
+withdrawal verification. A backend that still exposes initialization metadata
+cannot pass bootstrap or remain a confirmed running rollback: the owned stop
+fallback is attempted. The real journey checks this denial before provisioning
+and after a rejected setup request. Generated operator keys from the earlier
+bootstrap were rotated as a precaution, with new-key verification and old-key
+rejection; this is not a claim that another user actually accessed them.
+
+The source-pinned ImageResizerFixture success/error regression is now a Bake
+`radarr-regression` target. The build recipe requires its two tests to execute
+and pass via TRX counters; a filter matching no tests or skipped cases cannot
+satisfy it. Its next execution belongs to the deferred global build/gate; the
+historical manual run remains separate evidence of two passed cases.
+
+The owner deferred the global CI run to #315 immediately before Pi deployment.
+Targeted checks and independent review continue; no signed global success,
+merge or deployment is inferred from them. The original Caddy decision remains
+accepted: source rebuild maintenance reduces A's maintenance estimate from 4 to
+3, total 435/500, still above C's 425/500. The Pi reuses bb-homelab's central Caddy.

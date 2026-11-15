@@ -41,9 +41,9 @@ inspection, restart persistence and fixture-only Torznab behavior remain pending
 #343. No real-container case is marked passed from a Docker command double.
 
 
-## Private runtime evidence — 2026-11-15
+## Historical private runtime evidence — snapshot 6329c95
 
-The reproducible command `mise x -- uv run --frozen --group ci python
+At snapshot `6329c95`, the command `mise x -- uv run --frozen --group ci python
 scripts/check_python_tests.py -q scripts/tests/test_discovery_runtime.py` passed
 one journey in 33.53 seconds after the cleanup/limits review fixes. It uses a
 separate temporary project/state and removes only positively identified owned
@@ -78,3 +78,60 @@ these final runtime/CI additions; it must be rerun on the final change. No signe
 full gate, PR merge, Pi deployment or PopcornTV staging deployment is claimed.
 TC-09 (two synthetic sources/outage) and actual positive loopback publication
 remain pending. Component tests alone do not complete those cases.
+
+
+## Current implementation and targeted evidence — 2026-11-15
+
+Source snapshots: `d0cfa62` adds the effective fixed ingress and synthetic-source
+journey; `bedfe9f` enforces forms authentication before first listen and preserves
+the upstream ImageSharp regression target. The current acceptance command has
+evolved beyond the earlier private-only snapshot and now deliberately publishes
+**ephemeral loopback ports in disposable state** and configures **synthetic sources
+only in that disposable project**.
+
+- The extended real-container journey passed in 68.19 seconds after the
+  first-listen correction. Before account provisioning, anonymous
+  `/initialize.json` access is denied. A real rejected setup attempt does not
+  expose the key or disable authentication; later keyed provisioning succeeds.
+- Prowlarr and Radarr are still internal-only. The fixed Caddy proxy alone has
+  a second, explicitly preflight-allocated network. Real bindings, network labels,
+  IPv6/internal flags, fixed addresses and authenticated proxy paths are checked.
+- Private/published startup and stop/start preserve credentials. Actual UID,
+  capabilities, CPU/memory/PIDs, read-only root, tmpfs and log rotation are checked
+  for all three services. TCP/DNS canary denial remains bracketed by successful
+  same-image positive controls with counter increments, with ingress present.
+- Both synthetic Torznab sources supply distinct result IDs. After one returns
+  503, a new query must contact the failed source (attempt counter advances),
+  reach the healthy source (search counter advances), and return only the healthy
+  result. Every fixture download URL returns 410 and has no media payload.
+- The separate operator installation was confirmed empty, with authenticated
+  access on 127.0.0.1:19696 and 127.0.0.1:17878. Its two generated API keys were
+  rotated using the vendor ResetApiKey command; new keys were verified and old
+  keys rejected. No secret values were printed or committed. Earlier temporary
+  test containers/networks were removed while private diagnostic state was kept.
+- Targeted Semgrep on the corrected Torznab fixture passed 68 applicable rules,
+  zero findings. The last complete L1 run had failed this rule before its fix;
+  the complete recipe has **not** been rerun green since that correction.
+
+The recorded 90.96% combined coverage belongs to the preceding 89-case run; the
+first-listen targeted run passed 92 cases. A further failing-backend regression
+was added and is measured separately. Do not reuse an earlier percentage as a
+measurement of a later tree.
+
+TC-09 and actual positive loopback publication now have targeted real evidence.
+Final global CI, SonarQube, signed exact-head attestation, PR merge, full
+wishlist-to-watch QA, ARM64 validation and Pi deployment are **pending**. The owner
+explicitly deferred global CI to the pre-deployment milestone (#315). No new
+PopcornTV staging or Pi deployment took place.
+
+
+### Final targeted regression measurement
+
+The additional leaky-backend regression verifies that exposing initialization
+metadata prevents all account writes/publication, fails private rollback
+verification, attempts the owned stop fallback, preserves private state and does
+not log the key. The targeted run passed **93 cases** in 69.36 seconds, with
+**91.08% combined statement/branch coverage**. This supersedes the earlier 89/92
+case measurements for the targeted Python scope; it does not replace a complete
+CI recipe. Documentation presence for the two production Python modules is
+measured separately from test coverage.

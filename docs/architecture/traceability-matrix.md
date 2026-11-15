@@ -110,14 +110,17 @@ The [validation chronology](qa/2026-11-14-issue-329-local-gate.md) distinguishes
 failed runs from final exact-head signed evidence. PR #340 merged at 6a3c4ac; that new squash
 commit needs its own gate before any authorized deployment. No deployment is claimed here.
 
-## Local discovery proposal — 2026-11-14
+## Local discovery implementation — 2026-11-15
 
 | Source and requirement | Realization | Responsibility | Designed verification | Status |
 |---|---|---|---|---|
-| #327 → REQ-34 | Local deployment view, topology contract | Local operator and isolated services | [TC-01–03,05,07,10](qa/cases/327-local-discovery.md) | proposed; no installation |
-| #327 → REQ-35 | Local deployment view, protected-state contract | Initializer and authenticated local administration | TC-02–05,07,10 | proposed; no installation |
-| #327 → REQ-36 | Topology responsibility decision A | Future #310 trigger, Radarr executor, Prowlarr indexers | TC-06,08 | proposed; detailed owner validation pending |
-| #327 → REQ-37 | Empty/offline bootstrap boundary | Local discovery services, controlled fixtures | TC-01,04,06,09 | owner chose empty configuration; implementation pending |
+| #327 → REQ-34 | Local deployment view, topology contract | Local operator and isolated services | [TC-01–03,05,07,10](qa/cases/327-local-discovery.md) | implemented locally; targeted real-container acceptance passed; final global gate deferred |
+| #327 → REQ-35 | Local deployment view, protected-state contract | Initializer and authenticated local administration | TC-02–05,07,10 | implemented locally; targeted real-container acceptance passed; final global gate deferred |
+| #327 → REQ-36 | Topology responsibility decision A | Future #310 trigger, Radarr executor, Prowlarr indexers | TC-06,08 | decision A approved; empty/RSS policy verified; #310 scheduling pending |
+| #327 → REQ-37 | Empty/offline bootstrap boundary | Local discovery services, controlled fixtures | TC-01,04,06,09 | operator installation remains empty; disposable two-source/outage acceptance passed |
 
-The [proposal](specs/local-discovery-topology.md) does not implement scheduling, provider
-finality, VPN retrieval or playability. Its deployment view and cases describe future work.
+The [implemented topology](specs/local-discovery-topology.md) does not implement scheduling,
+provider finality, VPN retrieval or playability. The controller and real-container cases verify
+local discovery infrastructure; #310–315 retain the remaining workflow. The first-listen
+authentication correction is in `bedfe9f`; global CI and merge remain pending owner
+workflow #315 before deployment.

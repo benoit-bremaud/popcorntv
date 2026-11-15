@@ -46,6 +46,7 @@ metadata, scanned by ID and started by that same ID, avoiding a mutable tag race
 The rebuilt Caddy proxy follows the same immutable-ID rule. No automatic registry
 pull is permitted for either custom image.
 
+Forms authentication is required from the first listen, including private bootstrap.
 Bootstrap first runs without published ports, verifies empty configuration and
 administrative authentication, and disables Radarr RSS grabbing. Only then does the fixed Caddy ingress publish
 Prowlarr <http://127.0.0.1:19696> and Radarr <http://127.0.0.1:17878> published.
@@ -99,3 +100,8 @@ conflicts with the operator's fixed administration ports.
 The full L2 gate requires `SIXLABORS_LICENSE_FILE` to name your existing private
 license file. It rebuilds both custom images and repeats real acceptance before
 issuing signed evidence. Never put license contents into that variable.
+
+The build recipe includes the `radarr-regression` Bake target: the two pinned
+upstream image-resize success/error tests must pass without skips. Final global
+CI remains a separate pre-deployment milestone; targeted acceptance does not
+certify the complete wishlist-to-watch workflow.

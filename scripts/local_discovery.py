@@ -109,6 +109,7 @@ class Installation:
 
     @property
     def project(self) -> str:
+        """Scope Compose lifecycle operations to this installation identity."""
         return "popcorntv-discovery-" + self.identity
 
     def address(self, service: Service) -> str:
@@ -436,7 +437,8 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         headers: object,
         newurl: str,
     ) -> None:
-        return None
+        """Keep credential-bearing requests from following service-provided redirects."""
+        return
 
 
 @dataclass(frozen=True)

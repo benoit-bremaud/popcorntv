@@ -594,3 +594,31 @@ These are local infrastructure results, not deployed-product or real-acquisition
 
 The [#329 validation chronology](../architecture/qa/2026-11-14-issue-329-local-gate.md)
 preserves the failed first gate separately from pre-push successes and corrected-head results.
+
+
+## Local discovery infrastructure — 2026-11-15
+
+These rows record targeted infrastructure acceptance, not a new deployed-product
+QA pass. Source snapshots are `d0cfa62` and the first-listen correction `bedfe9f`.
+See [the dated cases](../architecture/qa/cases/327-local-discovery.md) for exact
+execution boundaries and historical failed evidence. Global CI is deferred to
+#315 before deployment; no signed gate or Pi promotion is claimed.
+
+| Case | Targeted evidence | Remaining boundary |
+|---|---|---|
+| E327-01 | Local empty Prowlarr/Radarr startup, authenticated API and UI, persistence across restart | Real external indexers deliberately absent |
+| E327-02 | Effective UID/caps/CPU/memory/PIDs, tmpfs, read-only root and log rotation for three services | ARM64/Pi budgets not validated |
+| E327-03 | TCP/DNS denied with ingress present, same-image positive controls before/after and real canary counters | No VPN retrieval proof in this brick |
+| E327-04 | Two synthetic sources respond; one503 failure is contacted while the other supplies a fresh result; payload URLs410 | Future #310 scheduling/backoff and real-source configuration |
+| E345-01 | Actual loopback bindings and authenticated requests through fixed Caddy; apps attached only to internal network | Central Pi Caddy integration remains separate |
+| E345-02 | Component cases reject null/wide/duplicate/wrong bindings and foreign networks; effective rollback verified | Global exact-head validation pending |
+| E346-01 | Forms enabled before first listen; anonymous initialization denied before user provisioning and after rejected setup | Final adversarial verification pending |
+| E346-02 | Generated operator keys replaced; new keys valid, old keys refused; private state retained | No assertion of prior third-party access |
+| E346-03 | Fixture HTML/XML injection scan corrected; targeted Semgrep zero findings | Last complete L1 was red before this fix; global rerun pending |
+
+Accessibility, responsive layout and browser navigation are not applicable to
+these infrastructure-only rows; existing product UI QA rows remain historical.
+
+The final targeted Python run adds the leaky-backend stop regression: **93 passed,
+91.08% combined coverage**. The full global CI/Sonar/production workflow remains
+explicitly deferred; the previous complete L1 failure is not retroactively green.

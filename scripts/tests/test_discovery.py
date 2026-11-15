@@ -171,6 +171,7 @@ class FakeArr:
         self.lose_response = False
         self.reject_write = False
         self.bad_login = False
+        self.leak_initialization = False
 
     @contextlib.contextmanager
     def serve(self, api: discovery.Api) -> Iterator[None]:
@@ -196,6 +197,9 @@ class FakeArr:
                 valid_cookie = (
                     "fixture" in cookies and cookies["fixture"].value == "authorized"
                 )
+                if self.path == "/initialize.json" and model.leak_initialization:
+                    self.respond(200, {"apiKey": model.credential.api_key})
+                    return
                 if self.path == "/":
                     self.respond(200 if valid_cookie else 401, {})
                     return
@@ -1224,3 +1228,23 @@ def test_bootstrap_never_replaces_a_foreign_administrator(
         discovery.configure(api)
     assert not model.writes
     assert model.host["username"] == "owner-edited"
+
+
+def test_unprotected_first_listen_stops_without_account_writes_or_secret_logs(
+    installation: discovery.Installation,
+    controller: tuple[dict[str, FakeArr], list[list[str]]],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    models, calls = controller
+    models["prowlarr"].leak_initialization = True
+    with (
+        caplog.at_level(logging.ERROR),
+        pytest.raises(discovery.DiscoveryError, match="metadata is not protected"),
+    ):
+        discovery.start(installation)
+    assert all(not model.writes for model in models.values())
+    assert not any(str(discovery.PUBLISH) in call for call in calls)
+    assert any("stop" in call for call in calls)
+    assert "rollback unconfirmed" in caplog.text
+    assert installation.credentials["prowlarr"].api_key not in caplog.text
+    assert installation.root.exists()
