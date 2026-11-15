@@ -11,6 +11,10 @@ import test_local_ci_attest as attest_fixtures
 SOURCE = Path(__file__).resolve().parents[1] / 'local-ci.py'
 
 
+# The lint steps also name this file; only the pytest run of it is the real-container journey.
+RUNTIME_JOURNEY = ['-q', 'scripts/tests/test_discovery_runtime.py']
+
+
 class RunnerTest(unittest.TestCase):
     def setUp(self):
         fixture = attest_fixtures.AttestationTest()
@@ -87,17 +91,58 @@ sys.exit(1 if os.environ.get('CI_TEST_FAIL_TOOL')==name else 0)
                          '--cov=local_discovery', '--cov=check_python_tests', '--cov-branch',
                          '--cov-fail-under=90'):
             self.assertIn(required, python_tests)
-        self.assertTrue(any('discovery-build' in c for c in commands))
-        self.assertTrue(any('scripts/tests/test_discovery_runtime.py' in c for c in commands))
+        # main...main changes no discovery path: no licensed rebuild, no real-container journey.
+        self.assertFalse(any('discovery-build' in c for c in commands))
+        self.assertNotIn(RUNTIME_JOURNEY, [c[-2:] for c in commands])
         dependency_scan = next(c for c in commands if c[0] == 'osv-scanner')
         self.assertIn('--lockfile=uv.lock', dependency_scan)
         self.assertIn('--lockfile=pnpm-lock.yaml', dependency_scan)
         reports = list((self.repo / '.git/local-ci-runs').glob('*/result'))
         self.assertEqual(len(reports), 1)
         self.assertEqual(reports[0].read_text(), 'success\n')
+        self.assertEqual((reports[0].parent / 'discovery').read_text(), 'not-applicable\n')
         versions = json.loads((reports[0].parent / 'versions.json').read_text())
         self.assertEqual(set(versions), {'node', 'pnpm', 'python', 'git', 'ffmpeg', 'docker', 'sonar-scanner'})
         self.assertTrue(all(versions.values()))
+
+    def discovery_branch(self, path='deploy/local-discovery/compose.yml'):
+        self.fixture.git('checkout', '-b', 'feature')
+        target = self.repo / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text('fixture\n')
+        self.fixture.git('add', path)
+        self.fixture.git('commit', '-m', 'ci(test): touch a discovery path')
+        self.fixture.git('push', '-u', 'origin', 'feature')
+
+    def test_discovery_diff_runs_licensed_rebuild_and_real_container_journey(self):
+        self.discovery_branch()
+        self.run_recipe('gate')
+        commands = [json.loads(line) for line in self.log.read_text().splitlines()]
+        self.assertTrue(any('discovery-build' in c for c in commands))
+        self.assertIn(RUNTIME_JOURNEY, [c[-2:] for c in commands])
+        report = next((self.repo / '.git/local-ci-runs').glob('*/discovery'))
+        self.assertEqual(report.read_text(), 'run\n')
+
+    def test_controller_and_manifest_paths_are_discovery_paths(self):
+        spec = importlib.util.spec_from_file_location('fixture_local_ci', self.runner)
+        runner = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(runner)
+        for path in ('scripts/local_discovery.py', 'scripts/tests/test_discovery_runtime.py', 'uv.lock',
+                     'scripts/local-ci.py', 'Makefile'):
+            self.assertTrue(path.startswith(runner.DISCOVERY_PATHS), path)
+        for path in ('apps/web/src/main.tsx', 'docs/architecture/glossary.md', 'Dockerfile'):
+            self.assertFalse(path.startswith(runner.DISCOVERY_PATHS), path)
+
+    def test_discovery_diff_without_private_license_never_attests(self):
+        self.discovery_branch()
+        self.run_recipe('gate', good=False, SIXLABORS_LICENSE_FILE='')
+        self.assertEqual(self.fixture.latest(), 'failure')
+        self.assertNotIn('discovery-build', self.log.read_text())
+
+    def test_unrelated_diff_needs_no_license(self):
+        self.discovery_branch('apps/web/src/fixture.ts')
+        self.run_recipe('gate', SIXLABORS_LICENSE_FILE='')
+        self.assertNotIn('discovery-build', self.log.read_text())
 
     def test_failed_check_keeps_other_check_results_but_never_attests(self):
         self.run_recipe('gate', good=False, CI_TEST_FAIL_TOOL='osv-scanner')

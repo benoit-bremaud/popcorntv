@@ -17,6 +17,9 @@ REPORT = None
 PYTHON_SOURCES = ('scripts/local_discovery.py', 'scripts/check_python_tests.py',
                   'scripts/tests/test_discovery.py', 'scripts/tests/test_python_completeness.py',
                   'scripts/tests/test_discovery_runtime.py')
+# A diff touching none of these cannot change the discovery images or their controller.
+DISCOVERY_PATHS = ('deploy/local-discovery/', 'scripts/local_discovery.py', 'scripts/tests/test_discovery',
+                   'scripts/local-ci.py', 'pyproject.toml', 'uv.lock', 'justfile', 'Makefile', '.hadolint.yaml')
 
 
 def output(*cmd):
@@ -190,14 +193,24 @@ def gate(base):
             (REPORT / 'versions.json').write_text(json.dumps(versions, indent=2) + '\n')
             if not check():
                 raise RuntimeError('required check failed')
-            license_file = Path(os.environ.get('SIXLABORS_LICENSE_FILE', ''))
-            if not license_file.is_absolute() or not license_file.is_file() or license_file.stat().st_mode & 0o077:
-                raise RuntimeError('SIXLABORS_LICENSE_FILE must name an existing private license file')
+            # The licensed Radarr rebuild and real-container journey run only for a diff that can
+            # affect them (owner decision 2026-11-15, ADR-0036); #315 replays them on the whole epic.
+            changed = output('git', 'diff', '--name-only', base + '...' + head).splitlines()
+            discovery = []
+            if any(name.startswith(DISCOVERY_PATHS) for name in changed):
+                license_file = Path(os.environ.get('SIXLABORS_LICENSE_FILE', ''))
+                if not license_file.is_absolute() or not license_file.is_file() or license_file.stat().st_mode & 0o077:
+                    raise RuntimeError('SIXLABORS_LICENSE_FILE must name an existing private license file')
+                discovery = [
+                    ['just', 'discovery-build', str(license_file)],
+                    ['uv', 'run', '--frozen', '--group', 'ci', 'python', 'scripts/check_python_tests.py',
+                     '-q', 'scripts/tests/test_discovery_runtime.py'],
+                ]
+            else:
+                print('local-ci: discovery image steps not applicable: no discovery path changed', flush=True)
+            (REPORT / 'discovery').write_text('run\n' if discovery else 'not-applicable\n')
             for command in (
-                ['just', 'discovery-build', str(license_file)],
-                ['make', 'lint-docker', 'HADOLINT_FILES=Dockerfile deploy/local-discovery/radarr.Dockerfile deploy/local-discovery/ingress.Dockerfile'],
-                ['uv', 'run', '--frozen', '--group', 'ci', 'python', 'scripts/check_python_tests.py',
-                 '-q', 'scripts/tests/test_discovery_runtime.py'],
+                *discovery,
                 ['pnpm', 'build'],
                 ['sonar-scanner', '-Dsonar.qualitygate.wait=true', '-Dsonar.qualitygate.timeout=180'],
                 ['pnpm', '--filter', '@popcorntv/web', 'exec', 'playwright', 'test', '--config=playwright.local-ci.config.ts'],
@@ -237,7 +250,7 @@ def gate(base):
                             len(case.get('results', [])) != 1 or case['results'][0].get('status') != 'passed'
                             for case in cases):
                         raise RuntimeError('browser test did not pass exactly once')
-            # Always run container checks for this initial migration. No path exemption can hide a failure.
+            # The application container checks always run: no path exemption can hide a failure there.
             subprocess.run([*ATTEST, 'write', 'gate', head], cwd=ROOT, check=True)
             (REPORT / 'result').write_text('success\n')
         except BaseException:
