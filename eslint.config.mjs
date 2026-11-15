@@ -6,6 +6,8 @@ export default tseslint.config(
     ignores: [
       // Agent worktrees are separate checkouts, not inputs to this repository's checks.
       '.claude/**',
+      // Runtime state of the local stacks (gitignored, may hold root-owned mounts).
+      'data/**',
       '**/dist/**',
       '**/build/**',
       '**/coverage/**',

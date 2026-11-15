@@ -13,8 +13,8 @@
     "coverage": "pnpm -r --if-present test --coverage",
     "build": "pnpm -r --if-present build",
     "lint": "eslint . && node scripts/log-coverage.mjs",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format": "prettier --write . '!data'",
+    "format:check": "prettier --check . '!data'",
     "dev:server": "pnpm --filter @popcorntv/shared build && pnpm --filter @popcorntv/server dev",
     "dev:web": "pnpm --filter @popcorntv/web dev",
     "log-coverage": "node scripts/log-coverage.mjs"
