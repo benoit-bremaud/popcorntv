@@ -1195,10 +1195,17 @@ def main() -> None:
             compose(installation, ["stop"])
             LOGGER.info("discovery stopped; private state retained")
     elif arguments.action == "status":
-        for service in SERVICES:
-            api = Api(installation, service)
-            verify_configuration(api)
-            LOGGER.info("%s API reachable, authenticated and empty", service.name)
+        try:
+            for service in SERVICES:
+                api = Api(installation, service)
+                verify_configuration(api)
+                LOGGER.info("%s API reachable, authenticated and empty", service.name)
+        except DiscoveryError:
+            # A failed proof must not leave the administration ports published.
+            with installation_lock(installation):
+                LOGGER.error("status proof failed; stopping owned services")
+                stop_owned(installation, "status proof failed; stop unconfirmed")
+            raise
 
 
 if __name__ == "__main__":

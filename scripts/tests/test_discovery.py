@@ -984,6 +984,35 @@ def test_cli_status_checks_actual_http_config_without_writes(
     assert {name: model.writes for name, model in models.items()} == writes
 
 
+@pytest.mark.parametrize("stop_fails", [False, True])
+def test_cli_status_stops_owned_services_when_a_proof_fails(
+    installation: discovery.Installation,
+    controller: tuple[dict[str, FakeArr], list[list[str]]],
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    stop_fails: bool,
+) -> None:
+    models, calls = controller
+    discovery.start(installation)
+    models["radarr"].open_ui = True
+    if stop_fails:
+        failing_stop(monkeypatch, calls)
+    del calls[:]
+    monkeypatch.setattr(
+        sys, "argv", ["local_discovery.py", "status", "--state", str(installation.root)]
+    )
+    with (
+        caplog.at_level(logging.ERROR),
+        pytest.raises(
+            discovery.DiscoveryError,
+            match="administrative UI authentication not enforced",
+        ),
+    ):
+        discovery.main()
+    assert calls[-1][-1] == "stop"
+    assert ("status proof failed; stop unconfirmed" in caplog.text) is stop_fails
+
+
 @pytest.mark.parametrize(
     "record",
     [
@@ -1478,12 +1507,25 @@ def test_expired_credentials_stop_owned_services_and_refuse(
     ids=["internal-entity", "external-entity"],
 )
 def test_entity_bearing_authentication_xml_is_refused_and_preserved(
-    installation: discovery.Installation, document: bytes
+    installation: discovery.Installation,
+    monkeypatch: pytest.MonkeyPatch,
+    document: bytes,
 ) -> None:
     path = installation.root / "prowlarr/config.xml"
     path.write_bytes(document)
+    calls: list[list[str]] = []
+
+    def docker_boundary(
+        arguments: list[str], *, env: dict[str, str] | None = None
+    ) -> str:
+        calls.append(arguments)
+        return ""
+
+    monkeypatch.setattr(discovery, "command", docker_boundary)
     with pytest.raises(
         discovery.DiscoveryError, match="invalid private authentication XML"
     ):
         discovery.require_first_listen_auth(installation)
+    # An expanded entity would reach the legacy-settings branch and its stop.
+    assert calls == []
     assert path.read_bytes() == document

@@ -67,8 +67,8 @@ spacing / typography, tests with every feature (Vitest unit, Playwright e2e late
   ruff, mypy strict, pytest). `mise x -- just fast | check | gate` — local signed gate
   (`scripts/local-ci.py`, spec `docs/architecture/specs/local-gate-operation.md`);
   `mise x -- just merge <n>` is the only merge path.
-- `mise x -- just discovery-build /abs/sixlabors.lic` then `just discovery-init | discovery-start |
-  discovery-status | discovery-stop` — empty local Prowlarr / Radarr on loopback
+- `mise x -- just discovery-build /abs/sixlabors.lic` then `mise x -- just discovery-init |
+  discovery-start | discovery-status | discovery-stop` — empty local Prowlarr / Radarr on loopback
   (`deploy/local-discovery/README.md`).
 
 ## Current state
@@ -185,7 +185,8 @@ from source; applications on an internal network with no host port, the two admi
 `scripts/local_discovery.py` (init / start / status / stop, state under ignored
 `data/local-discovery/`, 90-day credentials, fail-closed: any failed proof withdraws the ports or
 stops the owned services); no source configured, nothing retrieved; the gate rebuilds and replays
-the real-container journey only for a diff touching `DISCOVERY_PATHS`).
+the real-container journey only for a diff touching `DISCOVERY_PATHS`, or when forced with
+`LOCAL_CI_DISCOVERY=1`).
 
 Server layout (flat, component diagram 03): `src/library/` holds the pure `name-parser`
 and `path-guard`, the `ffprobe` runner (only process egress), the `folder-lister` (one-level `readdir` of `MEDIA_ROOT`), the `scanner`, the pure `identity` (carry-over keys, ADR-0018), the `scheduler` (interval rescans, ADR-0016), the per-library

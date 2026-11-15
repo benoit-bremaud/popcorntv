@@ -35,8 +35,10 @@ in the spec while the work advanced; this record gathers them so later bricks ci
 5. **Gate scope**. The licensed Radarr rebuild and the real-container journey run in `just gate`
    only when the diff against the base touches a path in `DISCOVERY_PATHS`
    (`scripts/local-ci.py`); every other diff records `discovery: not-applicable` in the run
-   evidence. Both Dockerfiles are still linted on every run, and #315 replays both steps on the
-   whole epic before any deployment.
+   evidence. A rename counts through both of its paths. Both Dockerfiles are still linted on every
+   run. `LOCAL_CI_DISCOVERY=1` forces both steps on any head and records `run (forced)`: a gate on
+   a `main` SHA has an empty diff, so this is how #315 replays them on the merged epic before any
+   deployment.
 
 ## Weighted comparison — decision 4
 
@@ -50,7 +52,8 @@ Scores 0–5, weights sum to 100.
 | Effort | 15 | 4 | 5 | 3 |
 | Total /500 | 100 | **435** | **390** | **300** |
 
-Sensitivity: A stays first while the simplicity weight stays under about 45.
+Sensitivity: A stays first while the simplicity weight stays under about 39, the other weights
+reduced in proportion.
 
 ## Weighted comparison — decision 5
 
@@ -58,18 +61,20 @@ Sensitivity: A stays first while the simplicity weight stays under about 45.
 |---|---:|---|---|
 | A defect in the discovery stack is caught before merge | 35 | 4 — every diff that can change it runs both steps; a base-image drift waits for #315 | 5 |
 | Gate usable on unrelated bricks | 30 | 5 — no license, no 20-minute rebuild | 1 — every web or docs diff needs the private license file |
-| Evidence stays honest | 20 | 4 — `not-applicable` is recorded, never shown as passed | 5 |
+| Evidence stays honest | 20 | 4 — `not-applicable` is recorded in the local run evidence, never shown as passed; the signed note does not carry it (#349) | 5 |
 | Maintenance | 15 | 3 — a path list to keep current, tested | 5 |
 | Total /500 | 100 | **415** | **380** |
 
-Sensitivity: B overtakes A only if the first criterion weighs more than about 60.
+Sensitivity: B overtakes A only if the first criterion weighs more than about 52, the other
+weights reduced in proportion.
 
 ## Consequences
 
 - `pyproject.toml` gains one runtime dependency (`defusedxml`), tracked by Dependabot `uv`;
   `uv sync --locked` refuses a stale lock.
 - The path list is part of the gate: a new file that can change the discovery images must be added
-  to `DISCOVERY_PATHS`, and `scripts/tests/test_local_ci_runner.py` pins the current list.
+  to `DISCOVERY_PATHS`, and `scripts/tests/test_local_ci_runner.py` pins the whole list, so removing
+  an entry fails a test.
 - The earlier rule "no path exemption" of the gate specification keeps applying to the application
   container checks; this record is its single exception
   ([local gate operation](../specs/local-gate-operation.md)).

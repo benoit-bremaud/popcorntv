@@ -228,12 +228,14 @@ attributes. It rejects missing/wrong API credentials and anonymous UI access
 before publication. Private acceptance does not reserve operator host ports.
 
 The local L2 gate lints both Dockerfiles on every run. When the diff against the base
-touches a discovery path (`deploy/local-discovery/`, the controller and its tests, the
-Python manifests, `scripts/local-ci.py`, `justfile`, `Makefile`, `.hadolint.yaml`), it also
+touches a discovery path (`DISCOVERY_PATHS` in `scripts/local-ci.py`: `deploy/local-discovery/`,
+the controller, `scripts/tests/` and their runner, the Python and mise manifests,
+`scripts/local-ci.py`, `justfile`, `Makefile`, the Hadolint, Trivy and Docker ignore files), it also
 rebuilds the image from its pinned inputs using an existing private `SIXLABORS_LICENSE_FILE`
 and executes the actual private-container acceptance journey; any other diff records
 `not-applicable` in the run evidence and needs no license (owner decision 2026-11-15,
-ADR-0036). #315 replays both steps on the whole epic. Unit/component Python tests enforce a
+ADR-0036). `LOCAL_CI_DISCOVERY=1` forces both steps on any head and records `run (forced)`;
+#315 uses it to replay them on the merged epic. Unit/component Python tests enforce a
 90% combined branch/statement coverage ratchet and refuse empty/skipped/xfail or
 deselected suites. The Python lockfile is scanned alongside the pnpm lockfile.
 The gate still requires all existing application and security checks. The private

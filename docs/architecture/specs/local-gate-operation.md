@@ -50,7 +50,9 @@ Every gate runs the application container checks, even when the old path filter 
 apply. One scoped exception (owner decision 2026-11-15, ADR-0036): the licensed discovery
 image rebuild and its real-container journey run only when the diff against the base touches
 a discovery path, listed in `DISCOVERY_PATHS` of `scripts/local-ci.py`; otherwise the run
-evidence records `discovery: not-applicable`. No other step is skipped. Browser tests remain API-stubbed smoke, not real movie
+evidence records `discovery: not-applicable`. `LOCAL_CI_DISCOVERY=1 mise x -- just gate` forces
+both steps on any head, for example a `main` SHA whose diff is empty, and records
+`discovery: run (forced)`. No other step is skipped. Browser tests remain API-stubbed smoke, not real movie
 acquisition QA. The existing Makefile staging/deployment commands are unchanged and are
 not invoked by gate or merge. A squash creates a different main SHA, which needs a fresh
 gate before any later authorized deployment.

@@ -17,9 +17,11 @@ REPORT = None
 PYTHON_SOURCES = ('scripts/local_discovery.py', 'scripts/check_python_tests.py',
                   'scripts/tests/test_discovery.py', 'scripts/tests/test_python_completeness.py',
                   'scripts/tests/test_discovery_runtime.py')
-# A diff touching none of these cannot change the discovery images or their controller.
-DISCOVERY_PATHS = ('deploy/local-discovery/', 'scripts/local_discovery.py', 'scripts/tests/test_discovery',
-                   'scripts/local-ci.py', 'pyproject.toml', 'uv.lock', 'justfile', 'Makefile', '.hadolint.yaml')
+# Everything that builds, scans, runs or tests the discovery images and their controller, including
+# the pinned toolchain and the scanner configuration, so a changed scanner cannot exempt itself.
+DISCOVERY_PATHS = ('deploy/local-discovery/', 'scripts/local_discovery.py', 'scripts/check_python_tests.py',
+                   'scripts/tests/', 'scripts/local-ci.py', 'pyproject.toml', 'uv.lock', 'mise.toml', 'mise.lock',
+                   'justfile', 'Makefile', '.hadolint.yaml', '.trivyignore.yaml', '.dockerignore')
 
 
 def output(*cmd):
@@ -194,10 +196,14 @@ def gate(base):
             if not check():
                 raise RuntimeError('required check failed')
             # The licensed Radarr rebuild and real-container journey run only for a diff that can
-            # affect them (owner decision 2026-11-15, ADR-0036); #315 replays them on the whole epic.
-            changed = output('git', 'diff', '--name-only', base + '...' + head).splitlines()
+            # affect them (owner decision 2026-11-15, ADR-0036); LOCAL_CI_DISCOVERY=1 forces them on any
+            # head, which is how #315 replays them on the merged epic. A rename lists both of its paths
+            # and no name is quoted, so moving a file out of a discovery path still counts.
+            changed = subprocess.check_output(
+                ['git', 'diff', '--name-only', '--no-renames', '-z', base + '...' + head], cwd=ROOT).decode().split('\0')
+            forced = os.environ.get('LOCAL_CI_DISCOVERY') == '1'
             discovery = []
-            if any(name.startswith(DISCOVERY_PATHS) for name in changed):
+            if forced or any(name.startswith(DISCOVERY_PATHS) for name in changed):
                 license_file = Path(os.environ.get('SIXLABORS_LICENSE_FILE', ''))
                 if not license_file.is_absolute() or not license_file.is_file() or license_file.stat().st_mode & 0o077:
                     raise RuntimeError('SIXLABORS_LICENSE_FILE must name an existing private license file')
@@ -208,7 +214,7 @@ def gate(base):
                 ]
             else:
                 print('local-ci: discovery image steps not applicable: no discovery path changed', flush=True)
-            (REPORT / 'discovery').write_text('run\n' if discovery else 'not-applicable\n')
+            (REPORT / 'discovery').write_text('scheduled\n' if discovery else 'not-applicable\n')
             for command in (
                 *discovery,
                 ['pnpm', 'build'],
@@ -234,6 +240,8 @@ def gate(base):
                     env = dict(os.environ, PLAYWRIGHT_JSON_OUTPUT_NAME=str(REPORT / 'browser-tests.json'))
                 if not invoke(command, env):
                     raise RuntimeError('required gate step failed')
+                if discovery and command is discovery[-1]:
+                    (REPORT / 'discovery').write_text('run (forced)\n' if forced else 'run\n')
                 if 'playwright' in command:
                     report = json.loads((REPORT / 'browser-tests.json').read_text())
                     stats = report.get('stats', {})

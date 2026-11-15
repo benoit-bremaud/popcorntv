@@ -53,6 +53,7 @@ docs/architecture/
 | Feature    | Diagrams                                | Status  |
 | ---------- | --------------------------------------- | ------- |
 | `adaptive-wishlist` | [spec](specs/adaptive-wishlist-lifecycle.md), [diagrams](diagrams/adaptive-wishlist) | lifecycle documented; recovery contract accepted; runtime implementation pending |
+| `local-discovery` | [spec](specs/local-discovery-topology.md), [diagrams](diagrams/local-discovery) | delivered (#327): empty local services, no source configured |
 | `playback` | [diagrams/playback](diagrams/playback)  | design  |
 
 ## Decisions

@@ -127,11 +127,48 @@ sys.exit(1 if os.environ.get('CI_TEST_FAIL_TOOL')==name else 0)
         spec = importlib.util.spec_from_file_location('fixture_local_ci', self.runner)
         runner = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(runner)
+        # The whole list is pinned: dropping an entry is a reviewed change (ADR-0036).
+        self.assertEqual(runner.DISCOVERY_PATHS, (
+            'deploy/local-discovery/', 'scripts/local_discovery.py', 'scripts/check_python_tests.py',
+            'scripts/tests/', 'scripts/local-ci.py', 'pyproject.toml', 'uv.lock', 'mise.toml', 'mise.lock',
+            'justfile', 'Makefile', '.hadolint.yaml', '.trivyignore.yaml', '.dockerignore'))
         for path in ('scripts/local_discovery.py', 'scripts/tests/test_discovery_runtime.py', 'uv.lock',
-                     'scripts/local-ci.py', 'Makefile'):
+                     'scripts/local-ci.py', 'Makefile', '.trivyignore.yaml', 'mise.toml'):
             self.assertTrue(path.startswith(runner.DISCOVERY_PATHS), path)
         for path in ('apps/web/src/main.tsx', 'docs/architecture/glossary.md', 'Dockerfile'):
             self.assertFalse(path.startswith(runner.DISCOVERY_PATHS), path)
+
+    def test_file_renamed_out_of_a_discovery_path_still_runs_the_discovery_steps(self):
+        fixture = self.repo / 'deploy/local-discovery/fixtures/torznab.mjs'
+        fixture.parent.mkdir(parents=True)
+        fixture.write_text('export const fixture = "synthetic torznab source for the journey";\n')
+        self.fixture.git('add', 'deploy/local-discovery/fixtures/torznab.mjs')
+        self.fixture.git('commit', '-m', 'ci(test): add a discovery fixture')
+        self.fixture.git('push', 'origin', 'main')
+        self.fixture.git('checkout', '-b', 'feature')
+        (self.repo / 'elsewhere').mkdir()
+        self.fixture.git('mv', 'deploy/local-discovery/fixtures/torznab.mjs', 'elsewhere/torznab.mjs')
+        self.fixture.git('commit', '-m', 'ci(test): move a discovery fixture away')
+        self.fixture.git('push', '-u', 'origin', 'feature')
+        self.run_recipe('gate')
+        self.assertIn('discovery-build', self.log.read_text())
+        report = next((self.repo / '.git/local-ci-runs').glob('*/discovery'))
+        self.assertEqual(report.read_text(), 'run\n')
+
+    def test_forced_discovery_runs_on_an_unrelated_head_and_says_so(self):
+        self.run_recipe('gate', LOCAL_CI_DISCOVERY='1')
+        commands = [json.loads(line) for line in self.log.read_text().splitlines()]
+        self.assertTrue(any('discovery-build' in c for c in commands))
+        self.assertIn(RUNTIME_JOURNEY, [c[-2:] for c in commands])
+        report = next((self.repo / '.git/local-ci-runs').glob('*/discovery'))
+        self.assertEqual(report.read_text(), 'run (forced)\n')
+
+    def test_failed_discovery_step_is_never_recorded_as_run(self):
+        self.discovery_branch()
+        self.run_recipe('gate', good=False, CI_TEST_FAIL_TOOL='just')
+        self.assertEqual(self.fixture.latest(), 'failure')
+        report = next((self.repo / '.git/local-ci-runs').glob('*/discovery'))
+        self.assertEqual(report.read_text(), 'scheduled\n')
 
     def test_discovery_diff_without_private_license_never_attests(self):
         self.discovery_branch()
