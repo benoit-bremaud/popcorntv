@@ -84,7 +84,7 @@ def check():
         ['pnpm', 'install', '--frozen-lockfile'],
         ['pnpm', 'typecheck'], ['pnpm', 'lint'], ['pnpm', 'format:check'],
         ['python3', 'scripts/test-local-ci.py'],
-        ['uv', 'sync', '--frozen', '--group', 'ci'],
+        ['uv', 'sync', '--locked', '--group', 'ci'],
         ['uv', 'run', '--frozen', '--group', 'ci', 'ruff', 'check', *PYTHON_SOURCES],
         ['uv', 'run', '--frozen', '--group', 'ci', 'ruff', 'format', '--check', *PYTHON_SOURCES],
         ['uv', 'run', '--frozen', '--group', 'ci', 'mypy', *PYTHON_SOURCES],

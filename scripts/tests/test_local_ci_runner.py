@@ -81,7 +81,7 @@ sys.exit(1 if os.environ.get('CI_TEST_FAIL_TOOL')==name else 0)
         self.assertIn('--maxWorkers=4', tests)
         self.assertIn('--allowOnly=false', tests)
         self.assertEqual(len([c for c in commands if '--coverage' in c]), 3)
-        self.assertTrue(any(c[:3] == ['uv', 'sync', '--frozen'] for c in commands))
+        self.assertTrue(any(c[:3] == ['uv', 'sync', '--locked'] for c in commands))
         python_tests = next(c for c in commands if 'python' in c and 'scripts/check_python_tests.py' in c)
         for required in ('scripts/tests/test_discovery.py', 'scripts/tests/test_python_completeness.py',
                          '--cov=local_discovery', '--cov=check_python_tests', '--cov-branch',

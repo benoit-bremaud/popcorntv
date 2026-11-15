@@ -6,7 +6,7 @@ default: check
 setup:
     mise install --locked
     mise x -- pnpm install --frozen-lockfile
-    mise x -- uv sync --frozen --group ci
+    mise x -- uv sync --locked --group ci
     mise x -- lefthook install
 
 # Staged files only. Does not recursively invoke lefthook.
