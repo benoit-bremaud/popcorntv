@@ -4,6 +4,32 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-18 — Local discovery qualification (PR #351)
+
+- PR #351 on `feat/327-local-discovery` provisions private, initially empty Prowlarr
+  and Radarr services behind verified loopback ingress. It verifies authentication,
+  installation ownership, effective networks, immutable image scan identities and
+  publication withdrawal. Discovery preflight refusals now attempt an owned-service
+  stop before returning the original error.
+- Responsibility refactors in `2f7e593` and `5e84f37` separate credential validation,
+  configuration, provenance/scanning and effective network/binding checks. Independent
+  source and architecture reviews found no remaining Must or Should. The complete L1
+  on `5e84f37` passed: 45 infrastructure, 125 Python, 11 dependency-controller and 1,447
+  application tests, with real FFmpeg, 94.30% Python coverage and no skipped tests.
+- Preserved unsuccessful full-gate evidence: `e432866` passed the rebuilt discovery
+  images and fresh real-container journey, then failed on 33 Sonar findings. Refactoring
+  reduced this to eight individually reviewed findings; later L2 steps were not reached.
+  This entry does not claim a successful exact-head gate, attestation, merge or deployment.
+- **Decisions**: the owner approved the local-scope Sonar dispositions on 2026-11-18:
+  seven accepted findings and one return-type false positive. Refinement work remains
+  open in #352, alongside #349. The decision changes no scanner rules or test thresholds;
+  the complete signed gate remains mandatory. Existing local transport/toolchain trust
+  must be reassessed before widening exposure. The separate bounded picomatch correction
+  expires exclusively on 2026-12-01; see `SECURITY.md`.
+- Incremental commits and tracked handoff records preserve verified work across sessions.
+  No Raspberry Pi deployment is authorized by this qualification. A project checkpoint
+  follows #351 before the next functional task.
+
 ## 2026-11-14 — Signed local gate adoption (PR #340, `6a3c4ac`)
 
 - Squash-merged `ci/329-signed-local-gate` through `mise x -- just merge 340` after a real

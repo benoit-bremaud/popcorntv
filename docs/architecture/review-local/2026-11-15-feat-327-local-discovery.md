@@ -263,5 +263,23 @@ transport choices before applying accepted-risk dispositions.
 | S5886 | 1 | Type-analysis false positive: `dataclasses.replace()` retains the runtime `Installation` type; strict mypy accepts the annotated return. |
 | S8572 | 1 | Categorical CLI logging intentionally omits traceback and chained exception data to avoid exposing credentials/provider payloads. Preserve that security contract instead of enabling exception logging. |
 
-No issue in this table is closed by this record. No merge authorization follows
-from targeted tests or these proposed dispositions.
+The owner approved option A on 2026-11-18 with the explicit condition that the
+refinement work stay in the backlog. Issue #352 records that follow-up and stays
+open after #351. The comparison scored A (individual documented review) 460/500,
+C (retain findings and suspend merge) 425/500 and B (broader redesign) 290/500.
+Weights were security 35, preserved guarantees 25, maintenance 20, available
+evidence 15 and staging progress 5. Doubling maintenance to 40 and proportionally
+rescaling the other weights yields A 470, C 443.75 and B 267.5.
+
+Applied individual Sonar comments link each finding to #352. S5886 is marked
+FALSE_POSITIVE; the other seven findings are ACCEPTED for the current local
+scope. An authenticated post-write inventory confirms zero unresolved findings.
+This is not a new scan or successful global gate. No rule exclusions or threshold
+changes were made, and no follow-up is reported as implemented.
+
+Full L1 on `5e84f37` passed with exit 0: 45 infrastructure, 125 Python, 11 Node
+and 1,447 application tests, with real FFmpeg and no skips. Python coverage is
+94.30%; Node controller coverage is 96.50% lines / 92% branches / 100% functions.
+Semgrep reports zero findings and the bounded OSV controller passed. The exact-head
+global gate, signed attestation verification and review-comment reconciliation
+remain mandatory before merge.

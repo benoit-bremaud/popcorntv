@@ -61,3 +61,25 @@ that one finding. The signed gate executes this check after a frozen installatio
 any proof failure or expiration blocks it. See the operational contract in
 `docs/architecture/specs/local-gate-operation.md`. Replace the patch and classification
 together when an official corrected package is validated.
+
+## Local discovery review boundaries
+
+On 2026-11-18 the owner approved individual Sonar dispositions for the local
+discovery topology in PR #351. Seven findings are accepted in this scope:
+private/loopback HTTP (two), operator toolchain PATH trust (two), the bounded
+RFC1918 allocation pool, termination control flow and categorical logging
+without sensitive tracebacks. One return-type finding on `dataclasses.replace`
+is a reviewed false positive; strict typing remains enforced.
+
+HTTP destinations remain confined to validated private Docker addresses or
+loopback publication, with proxies disabled, redirects refused, authentication
+enforced and effective network/container ownership inspected. Tool execution
+trusts the operator's pinned mise environment. These boundaries do not protect
+against a compromised host administrator or operator account and do not extend
+to remote exposure.
+
+The follow-up work remains open in [#352](https://github.com/benoit-bremaud/popcorntv/issues/352)
+for project refinement, including transport and executable provenance hardening,
+deployment network bounds, termination guarantees and safe diagnostics. Reassess
+the dispositions whenever the deployment trust boundary or corresponding code
+changes. They change no test threshold, scanner rule or exact-head gate requirement.
