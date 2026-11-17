@@ -54,7 +54,7 @@ if name=='pnpm' and 'playwright' in sys.argv:
  status='failed' if os.environ.get('CI_TEST_BROWSER_EXPECTED_FAIL') else 'passed'
  Path(os.environ['PLAYWRIGHT_JSON_OUTPUT_NAME']).write_text(json.dumps({'stats':{'expected':1,'skipped':skipped},'errors':[],
  'suites':[{'specs':[{'tests':[{'expectedStatus':status,'results':[{'status':status}]}]}]}]}))
-sys.exit(1 if os.environ.get('CI_TEST_FAIL_TOOL')==name else 0)
+sys.exit(1 if os.environ.get('CI_TEST_FAIL_TOOL')==name or (os.environ.get('CI_TEST_FAIL_DEPENDENCIES') and name=='node' and 'scripts/check-dependencies.mjs' in sys.argv) else 0)
 ''')
             path.chmod(0o755)
         for folder, package in (('packages/shared', '@popcorntv/shared'), ('apps/server', '@popcorntv/server'),
@@ -95,9 +95,11 @@ sys.exit(1 if os.environ.get('CI_TEST_FAIL_TOOL')==name else 0)
         # main...main changes no discovery path: no licensed rebuild, no real-container journey.
         self.assertFalse(any('discovery-build' in c for c in commands))
         self.assertNotIn(RUNTIME_JOURNEY, [c[-2:] for c in commands])
-        dependency_scan = next(c for c in commands if c[0] == 'osv-scanner')
-        self.assertIn('--lockfile=uv.lock', dependency_scan)
-        self.assertIn('--lockfile=pnpm-lock.yaml', dependency_scan)
+        self.assertIn(['node', 'scripts/check-dependencies.mjs'], commands)
+        dependency_tests = next(c for c in commands if 'scripts/tests/check-dependencies.test.mjs' in c)
+        self.assertIn('--test-coverage-lines=90', dependency_tests)
+        self.assertIn('--test-coverage-branches=80', dependency_tests)
+        self.assertIn('--test-coverage-functions=90', dependency_tests)
         reports = list((self.repo / '.git/local-ci-runs').glob('*/result'))
         self.assertEqual(len(reports), 1)
         self.assertEqual(reports[0].read_text(), 'success\n')
@@ -183,7 +185,7 @@ sys.exit(1 if os.environ.get('CI_TEST_FAIL_TOOL')==name else 0)
         self.assertNotIn('discovery-build', self.log.read_text())
 
     def test_failed_check_keeps_other_check_results_but_never_attests(self):
-        self.run_recipe('gate', good=False, CI_TEST_FAIL_TOOL='osv-scanner')
+        self.run_recipe('gate', good=False, CI_TEST_FAIL_DEPENDENCIES='1')
         self.assertEqual(self.fixture.latest(), 'failure')
         self.assertIn('docker', self.log.read_text())
         self.assertNotIn('sonar.qualitygate.wait', self.log.read_text())

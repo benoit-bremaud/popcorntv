@@ -1,18 +1,19 @@
 # Security
 
+Security reporting, local verification and runtime protections for PopcornTV.
+
 ## Reporting
 
 Open a private security advisory on GitHub (Security → Advisories → Report a
 vulnerability). Do not open a public issue for a vulnerability.
 
-## What is scanned in CI
+## Local security checks
 
 | Tool              | Scope                                           | Blocking |
 | ----------------- | ----------------------------------------------- | -------- |
 | Gitleaks          | Secrets, full history, every push + weekly      | yes      |
-| CodeQL            | SAST on JavaScript/TypeScript                   | yes      |
-| Dependency review | New CVEs introduced by dependency changes (PRs) | yes      |
-| OSSF Scorecard    | Repository hygiene                              | no       |
+| Semgrep CE        | Application and infrastructure source           | yes      |
+| OSV               | Both pnpm and uv dependency lockfiles            | yes      |
 | Hadolint          | Dockerfile lint (`make lint-docker`)            | yes      |
 | Trivy config      | Dockerfile misconfigurations                    | yes      |
 | Trivy image       | HIGH/CRITICAL CVEs, fixed or not, in the image  | yes      |
@@ -45,3 +46,18 @@ Dependabot bumps).
 - Every FFmpeg and ffprobe input is confined to the `file` protocol and the
   `matroska,mov,avi,mpegts` demuxers, so a crafted file cannot open URLs, sibling files or
   a rarely used parser (ADR-0028).
+
+## Temporary dependency correction
+
+GHSA-fc5q-39xc-vjpf (CVE-2026-112366) is locally mitigated in `picomatch` 4.0.7 by
+refusing all repeated extglobs. This deliberately removes that matching capability.
+The owner authorized the patch and a conditional advisory classification on 2026-11-17,
+expiring exclusively on 2026-12-01. The unmodified scanner report remains available.
+No other vulnerability is accepted by this classification.
+
+`node scripts/check-dependencies.mjs` verifies the exact patch and installed parser
+fingerprints, package identity, installation paths and matcher behavior before classifying
+that one finding. The signed gate executes this check after a frozen installation;
+any proof failure or expiration blocks it. See the operational contract in
+`docs/architecture/specs/local-gate-operation.md`. Replace the patch and classification
+together when an official corrected package is validated.

@@ -85,6 +85,9 @@ def fast():
 def check():
     runtime()
     env = dict(os.environ, FFMPEG_IT='1', PYTHONDONTWRITEBYTECODE='1', PYTEST_ADDOPTS='')
+    if REPORT is not None:
+        env['PCTV_DEPENDENCY_REPORT_DIR'] = str(REPORT / 'dependencies')
+    (ROOT / 'coverage').mkdir(exist_ok=True)
     commands = [
         ['pnpm', 'install', '--frozen-lockfile'],
         ['pnpm', 'typecheck'], ['pnpm', 'lint'], ['pnpm', 'format:check'],
@@ -100,7 +103,13 @@ def check():
          '--cov-report=xml:coverage/python.xml'],
         ['lefthook', 'validate'], ['shellcheck', 'scripts/attest.sh', 'scripts/check-commit-msg.sh'],
         ['gitleaks', 'git', '--redact', '--no-banner'],
-        ['osv-scanner', 'scan', 'source', '--lockfile=pnpm-lock.yaml', '--lockfile=uv.lock'],
+        ['node', '--experimental-test-coverage',
+         '--test-coverage-include=scripts/check-dependencies.mjs',
+         '--test-coverage-lines=90', '--test-coverage-branches=80', '--test-coverage-functions=90',
+         '--test-reporter=tap', '--test-reporter=lcov',
+         '--test-reporter-destination=stdout', '--test-reporter-destination=coverage/dependencies.lcov',
+         '--test', 'scripts/tests/check-dependencies.test.mjs'],
+        ['node', 'scripts/check-dependencies.mjs'],
         ['docker', 'run', '--rm', '--user', str(os.getuid()) + ':' + str(os.getgid()),
          '-e', 'SEMGREP_SEND_METRICS=off', '-e', 'SEMGREP_ENABLE_VERSION_CHECK=0',
          '-e', 'EIO_BACKEND=posix', '-v', str(ROOT) + ':/src:ro', '-w', '/src', SEMGREP,

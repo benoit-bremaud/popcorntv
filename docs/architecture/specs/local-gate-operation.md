@@ -90,3 +90,28 @@ tests. Infrastructure tests use real Git/SSH with only external transports/CLI t
 substituted; separate real Gitleaks, Vitest, pnpm and installed-hook fixtures test those
 boundaries. These tests are required by check. No unrelated live acquisition, personal
 credential replay or deployment belongs to this gate migration.
+
+## Temporary picomatch mitigation — 2026-11-17
+
+The owner authorized the local `picomatch@4.0.7` patch and conditional classification
+of GHSA-fc5q-39xc-vjpf until, exclusively, 2026-12-01. The patch rejects every repeated
+extglob (`+(...)` and `*(...)`) with `SyntaxError`, including legitimate uses; ordinary
+wildcards and nonrepeating extglobs retain their behavior. This mitigates the advisory's
+repeated-extglob class, not all possible regular-expression risks.
+
+After frozen installation, `scripts/check-dependencies.mjs` checks patch registration,
+the patch SHA-256, installed package identities and parser SHA-256 for every resolved
+workspace instance, then executes matcher regressions. The raw OSV scan still covers
+both `pnpm-lock.yaml` and `uv.lock`, with an explicit empty configuration and all
+vulnerabilities included. Only the exact advisory on npm `picomatch` 4.0.7 from the
+root pnpm lockfile is classified as locally corrected. Any other finding, expired
+classification, missing report, process failure or proof drift fails the check.
+
+Each invocation gets a fresh evidence directory containing `osv-raw.json` and, only
+on successful classification, `dependency-mitigation.json`. During gate these live
+under its retained `dependencies/` directory; standalone checks retain them in the
+system temporary directory. No global vulnerability ignore is added. The dependency
+controller's tests run with coverage floors and publish LCOV for SonarQube. Docker
+copies the patch before frozen installation. Remove the patch and classification
+together once an official fixed release has passed the full gate; expiry never
+renews itself.
