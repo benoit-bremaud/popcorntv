@@ -36,6 +36,16 @@ spacing / typography, tests with every feature (Vitest unit, Playwright e2e late
 - After every merged PR, report estimated overall project progress and current-epic progress to the owner before starting the next brick. State the basis and distinguish delivered features from test coverage.
 - Every chat is named `#N Issue title` and works on that single issue.
 - Log every merged PR and decision in `PROJECT_LOG.md` (skill `project-log-discipline`).
+- Commit small, coherent increments throughout development. Before a session break or
+  context handoff, commit completed work instead of leaving it staged. An incomplete local
+  checkpoint must explicitly record its limitations and failed or unrun checks; never bypass
+  hooks, weaken tests or imply delivery. Pushes retain the existing review gate.
+- Keep active worktrees in durable storage, not `/tmp`. Before an interruption, record the
+  branch, commit, unfinished changes, validation evidence, blockers and next action in the
+  task's tracked handoff or review record. Keep secrets out of that record.
+- Before pruning a missing worktree, inspect and preserve its retained index: its branch
+  tip alone does not reveal staged work. A recovery archive supplements a checkpoint commit;
+  it does not replace one.
 - Containers follow skill `docker-hardening` (non-root, HEALTHCHECK, pinned bases, Hadolint,
   Trivy).
 
