@@ -235,3 +235,33 @@ No rule exclusion, changed threshold, suppression or issue-status change was
 used. Explicit HTTP destinations, the RFC1918 allocation bound, termination
 control flow, trusted operator toolchain and categorical no-traceback logging
 remain visible for their security review. The global gate remains RED.
+
+### Final inventory extraction and proposed issue dispositions
+
+The diagnostic reduced the inventory from 33 to nine issues without changing
+an issue status. Its one remaining complexity finding concerns Docker IPAM and
+host-route collection. `occupied_docker_networks()` now owns the Docker adapter;
+`occupied_networks()` combines its allocations with host routes. Empty Docker
+inventory still permits host-route inspection. Independent delta review found
+Must 0 / Should 0 / Nice 0. The complete Python suite passed again: 125 tests in
+100.40 seconds, 94.30% combined coverage with the same 90% floor. Ruff, format and
+strict mypy on the five-file gate scope passed. The diagnostic scan of this final
+extraction confirms all complexity findings resolved: eight issues remain,
+new-code coverage is 95.3% and duplication is 0%. Its exit code is still 1:
+the unresolved issue count exceeds the unchanged zero-violation threshold.
+
+The following are proposed individual dispositions, not applied statuses or a
+global scanner exception. The owner must approve the residual local trust and
+transport choices before applying accepted-risk dispositions.
+
+| Rule | Count | Technical disposition proposed |
+|---|---:|---|
+| S4036 | 2 | Retain operator toolchain trust for `pnpm` and `osv-scanner`: execution enters through the pinned mise environment; the controller is an unprivileged local gate, not a service accepting remote command names. Resolving the same ambient PATH to an absolute path alone would not harden this boundary. |
+| S5332 | 2 | Retain HTTP only for the installation's bounded private Docker service addresses or loopback publication. Proxies are disabled, redirects refused and actual topology/publication inspected. This does not provide confidentiality against the host administrator. |
+| S1313 | 1 | The explicit RFC1918 constant bounds validation/allocation; it is not an external service destination. Collision detection includes Docker allocations and nondefault host routes. |
+| S5709 | 1 | The signal-control exception intentionally traverses ordinary exception handlers, reaches existing `BaseException` cleanup boundaries and exits with status 143. Replacing its base class is not behavior-neutral. |
+| S5886 | 1 | Type-analysis false positive: `dataclasses.replace()` retains the runtime `Installation` type; strict mypy accepts the annotated return. |
+| S8572 | 1 | Categorical CLI logging intentionally omits traceback and chained exception data to avoid exposing credentials/provider payloads. Preserve that security contract instead of enabling exception logging. |
+
+No issue in this table is closed by this record. No merge authorization follows
+from targeted tests or these proposed dispositions.

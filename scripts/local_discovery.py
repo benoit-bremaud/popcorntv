@@ -335,18 +335,25 @@ def load_installation(root: Path) -> Installation:
     return replace(installation, credentials=credentials)
 
 
-def occupied_networks() -> list[ipaddress.IPv4Network]:
-    """Include Docker IPAM and real host routes, excluding the default route."""
+def occupied_docker_networks() -> list[ipaddress.IPv4Network]:
+    """Read allocated Docker IPv4 blocks, including networks with no IPAM config."""
     found: list[ipaddress.IPv4Network] = []
     identifiers = command(["docker", "network", "ls", "-q"]).split()
-    if identifiers:
-        rows = json.loads(command(["docker", "network", "inspect", *identifiers]))
-        for row in rows:
-            for config in row.get("IPAM", {}).get("Config", []) or []:
-                if config.get("Subnet"):
-                    network = ipaddress.ip_network(config["Subnet"])
-                    if isinstance(network, ipaddress.IPv4Network):
-                        found.append(network)
+    if not identifiers:
+        return found
+    rows = json.loads(command(["docker", "network", "inspect", *identifiers]))
+    for row in rows:
+        for config in row.get("IPAM", {}).get("Config", []) or []:
+            if config.get("Subnet"):
+                network = ipaddress.ip_network(config["Subnet"])
+                if isinstance(network, ipaddress.IPv4Network):
+                    found.append(network)
+    return found
+
+
+def occupied_networks() -> list[ipaddress.IPv4Network]:
+    """Combine Docker IPAM and real host routes, excluding the default route."""
+    found = occupied_docker_networks()
     for route in json.loads(command(["ip", "-j", "route"])):
         if route.get("dst") not in (None, "default"):
             network = ipaddress.ip_network(route["dst"], strict=False)
