@@ -24,7 +24,8 @@ CANARY_IMAGE = "node:22.23.4-trixie-slim@sha256:be1e2a3dc2c4fd68cdfadad2a696a280
 def inspect_one(identifier: str) -> dict[str, object]:
     """Read one known container's actual metadata without printing configuration."""
     value: object = json.loads(discovery.command(["docker", "inspect", identifier]))
-    assert isinstance(value, list) and len(value) == 1
+    assert isinstance(value, list)
+    assert len(value) == 1
     return discovery.object_map(value[0])
 
 
@@ -151,9 +152,8 @@ def verify_isolation(installation: discovery.Installation) -> None:
                 before = counters(url)
                 discovery.command(positive)
                 after = counters(url)
-                assert isinstance(before[counter], int) and isinstance(
-                    after[counter], int
-                )
+                assert isinstance(before[counter], int)
+                assert isinstance(after[counter], int)
                 assert count(after, counter) > count(before, counter)
                 with pytest.raises(discovery.DiscoveryError):
                     discovery.command(["docker", "exec", identity, *command])
@@ -240,7 +240,8 @@ def verify_limits(
             if ":" in line
         }
         assert set(values["Uid"].split()) == {str(installation.uid)}
-        assert int(values["CapEff"], 16) == 0 and int(values["CapBnd"], 16) == 0
+        assert int(values["CapEff"], 16) == 0
+        assert int(values["CapBnd"], 16) == 0
         assert values["NoNewPrivs"] == "1"
 
 

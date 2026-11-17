@@ -145,8 +145,9 @@ def test_subnet_selection_rejects_overlap_and_exhaustion() -> None:
     first = ipaddress.IPv4Network("10.203.206.0/29")
     assert choose([]) == first
     assert choose([first]) == ipaddress.IPv4Network("10.203.206.8/29")
+    exhausted = [ipaddress.IPv4Network("10.203.0.0/16")]
     with pytest.raises(discovery.DiscoveryError):
-        choose([ipaddress.IPv4Network("10.203.0.0/16")])
+        choose(exhausted)
 
 
 def test_lock_refuses_overlap_and_releases(

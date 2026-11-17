@@ -49,6 +49,11 @@ RADARR_TAG = "popcorntv-radarr:af772b0-imagesharp3.2.0"
 CADDY_IMAGE = "popcorntv-discovery-ingress:7ce9f08"
 CADDY_REVISION = "7ce9f0823762109fc67911f95f6af1a697345ab7"
 RADARR_REVISION = "af772b051ac27a0615c7f8b7f78622b6dc183be0"
+DISCOVERY_POOL = ipaddress.IPv4Network("10.203.206.0/24")
+SERVICE_LABEL = "com.docker.compose.service"
+HOST_CONFIG_ENDPOINT = "config/host"
+INDEXER_CONFIG_ENDPOINT = "config/indexer"
+PUBLICATION_REFUSAL = "effective loopback publication not confirmed"
 
 
 class DiscoveryError(RuntimeError):
@@ -283,7 +288,7 @@ def load_identity(root: Path) -> Installation:
     if (
         not isinstance(subnet, ipaddress.IPv4Network)
         or subnet.prefixlen != 29
-        or not subnet.subnet_of(ipaddress.IPv4Network("10.203.206.0/24"))
+        or not subnet.subnet_of(DISCOVERY_POOL)
     ):
         raise DiscoveryError("invalid installation subnet")
     for service in SERVICES:
@@ -291,37 +296,42 @@ def load_identity(root: Path) -> Installation:
     return Installation(root, identity, subnet, os.getuid(), os.getgid(), {})
 
 
+def load_credential(path: Path) -> Credential:
+    """Validate one private credential record, including its timezone and rotation date."""
+    private_path(path, directory=False)
+    secret = object_map(json.loads(path.read_text()))
+    username, password, key, expires = (
+        secret.get(name) for name in ("username", "password", "api_key", "expires_at")
+    )
+    if (
+        not isinstance(username, str)
+        or username != "popcorntv-operator"
+        or not isinstance(password, str)
+        or len(password) < 32
+        or not isinstance(key, str)
+        or not re.fullmatch(r"[a-f0-9]{32}", key)
+        or not isinstance(expires, str)
+    ):
+        raise DiscoveryError("invalid private credential record")
+    expiry = datetime.fromisoformat(expires)
+    if expiry.tzinfo is None:
+        raise DiscoveryError("credential expiry must include a timezone")
+    if expiry <= datetime.now(UTC):
+        raise CredentialsExpired(
+            "credential rotation due; automatic replacement refused"
+        )
+    return Credential(username, password, key, expires)
+
+
 def load_installation(root: Path) -> Installation:
     """Require valid private API credentials for setup, start and status operations."""
     installation = load_identity(root)
-    root = installation.root
-    credentials: dict[str, Credential] = {}
-    for service in SERVICES:
-        path = root / (service.name + "-credentials.json")
-        private_path(path, directory=False)
-        secret = object_map(json.loads(path.read_text()))
-        username, password, key, expires = (
-            secret.get(name)
-            for name in ("username", "password", "api_key", "expires_at")
+    credentials = {
+        service.name: load_credential(
+            installation.root / (service.name + "-credentials.json")
         )
-        if (
-            not isinstance(username, str)
-            or username != "popcorntv-operator"
-            or not isinstance(password, str)
-            or len(password) < 32
-            or not isinstance(key, str)
-            or not re.fullmatch(r"[a-f0-9]{32}", key)
-            or not isinstance(expires, str)
-        ):
-            raise DiscoveryError("invalid private credential record")
-        expiry = datetime.fromisoformat(expires)
-        if expiry.tzinfo is None:
-            raise DiscoveryError("credential expiry must include a timezone")
-        if expiry <= datetime.now(UTC):
-            raise CredentialsExpired(
-                "credential rotation due; automatic replacement refused"
-            )
-        credentials[service.name] = Credential(username, password, key, expires)
+        for service in SERVICES
+    }
     return replace(installation, credentials=credentials)
 
 
@@ -347,7 +357,7 @@ def occupied_networks() -> list[ipaddress.IPv4Network]:
 
 def choose_subnet(occupied: list[ipaddress.IPv4Network]) -> ipaddress.IPv4Network:
     """Choose a bounded free private block; no random collision-prone network guessing."""
-    for candidate in ipaddress.IPv4Network("10.203.206.0/24").subnets(new_prefix=29):
+    for candidate in DISCOVERY_POOL.subnets(new_prefix=29):
         if not any(candidate.overlaps(other) for other in occupied):
             return candidate
     raise DiscoveryError("no collision-free local discovery subnet")
@@ -446,7 +456,6 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         newurl: str,
     ) -> None:
         """Keep credential-bearing requests from following service-provided redirects."""
-        return
 
 
 @dataclass(frozen=True)
@@ -483,11 +492,11 @@ class Api:
         """Keep credentials confined to one validated service or loopback endpoint."""
         self.service = service
         self.credential = installation.credentials[service.name]
-        self.base = (
-            f"http://127.0.0.1:{installation.host_port(service) if port is None else port}"
-            if published
-            else f"http://{installation.address(service)}:{service.port}"
-        )
+        if published:
+            selected_port = installation.host_port(service) if port is None else port
+            self.base = f"http://127.0.0.1:{selected_port}"
+        else:
+            self.base = f"http://{installation.address(service)}:{service.port}"
         self.opener = urllib.request.build_opener(
             urllib.request.ProxyHandler({}), NoRedirect()
         )
@@ -540,8 +549,6 @@ class Api:
             error.close()
             return ApiResponse(error.code, cookie=cookie_header)
         except (
-            urllib.error.URLError,
-            TimeoutError,
             OSError,
             http.client.HTTPException,
         ) as error:
@@ -621,7 +628,7 @@ def owned_containers(installation: Installation) -> list[dict[str, object]]:
     for value in decoded:
         row = object_map(value)
         labels = object_map(object_map(row.get("Config")).get("Labels"))
-        name = labels.get("com.docker.compose.service")
+        name = labels.get(SERVICE_LABEL)
         if (
             labels.get("com.docker.compose.project") != installation.project
             or labels.get("io.popcorntv.discovery.install") != installation.identity
@@ -648,19 +655,26 @@ def owned_containers(installation: Installation) -> list[dict[str, object]]:
     return result
 
 
+def inspected_host_ports(bindings: dict[str, object]) -> set[int]:
+    """Extract numeric host ports from a single inspected container's bindings."""
+    ports: set[int] = set()
+    for rows in bindings.values():
+        if not isinstance(rows, list):
+            continue
+        for row in rows:
+            value = object_map(row).get("HostPort")
+            if isinstance(value, str) and value.isdecimal():
+                ports.add(int(value))
+    return ports
+
+
 def owned_host_ports(containers: list[dict[str, object]]) -> set[int]:
     """Only proven owned bindings may explain a busy port during a start rerun."""
     ports: set[int] = set()
     for container in containers:
         bindings = object_map(container.get("NetworkSettings")).get("Ports")
-        if not isinstance(bindings, dict):
-            continue
-        for rows in bindings.values():
-            if isinstance(rows, list):
-                for row in rows:
-                    value = object_map(row).get("HostPort")
-                    if isinstance(value, str) and value.isdecimal():
-                        ports.add(int(value))
+        if isinstance(bindings, dict):
+            ports.update(inspected_host_ports(bindings))
     return ports
 
 
@@ -727,22 +741,21 @@ def host_policy() -> dict[str, object]:
 def verify_configuration(api: Api) -> None:
     """Validate a completed install without changing owner-edited state."""
     verify_empty(api)
-    host = object_map(api.json("config/host"))
+    host = object_map(api.json(HOST_CONFIG_ENDPOINT))
     if any(host.get(key) != value for key, value in host_policy().items()):
         raise DiscoveryError(
             f"{api.service.name} managed settings changed; state preserved"
         )
     if api.service.name == "radarr":
-        interval = object_map(api.json("config/indexer")).get("rssSyncInterval")
+        interval = object_map(api.json(INDEXER_CONFIG_ENDPOINT)).get("rssSyncInterval")
         if type(interval) is not int or interval != 0:
             raise DiscoveryError("Radarr RSS settings changed; state preserved")
     verify_auth(api)
 
 
-def configure(api: Api) -> None:
-    """Reconcile desired config by fresh reads, including uncertain accepted PUTs."""
-    verify_empty(api)
-    host = object_map(api.json("config/host"))
+def configure_host(api: Api) -> None:
+    """Preserve foreign administrators and confirm host writes with a fresh read."""
+    host = object_map(api.json(HOST_CONFIG_ENDPOINT))
     desired = host_policy()
     username = host.get("username")
     if username not in (None, "", api.credential.username):
@@ -761,25 +774,36 @@ def configure(api: Api) -> None:
             }
         )
         try:
-            api.json("config/host", payload=host)
+            api.json(HOST_CONFIG_ENDPOINT, payload=host)
         except DiscoveryError:
             LOGGER.warning(
                 "%s configuration response uncertain; checking fresh state",
                 api.service.name,
             )
-        current = object_map(api.json("config/host"))
+        current = object_map(api.json(HOST_CONFIG_ENDPOINT))
         if any(current.get(key) != value for key, value in desired.items()):
             raise DiscoveryError(f"{api.service.name} host configuration not confirmed")
+
+
+def disable_radarr_rss(api: Api) -> None:
+    """Disable Radarr polling, including confirmation after an uncertain accepted PUT."""
+    indexers = object_map(api.json(INDEXER_CONFIG_ENDPOINT))
+    if indexers.get("rssSyncInterval") != 0:
+        indexers["rssSyncInterval"] = 0
+        try:
+            api.json(INDEXER_CONFIG_ENDPOINT, payload=indexers)
+        except DiscoveryError:
+            LOGGER.warning("Radarr RSS update uncertain; checking fresh state")
+        if object_map(api.json(INDEXER_CONFIG_ENDPOINT)).get("rssSyncInterval") != 0:
+            raise DiscoveryError("Radarr RSS disablement not confirmed")
+
+
+def configure(api: Api) -> None:
+    """Reconcile desired config by fresh reads, including uncertain accepted PUTs."""
+    verify_empty(api)
+    configure_host(api)
     if api.service.name == "radarr":
-        indexers = object_map(api.json("config/indexer"))
-        if indexers.get("rssSyncInterval") != 0:
-            indexers["rssSyncInterval"] = 0
-            try:
-                api.json("config/indexer", payload=indexers)
-            except DiscoveryError:
-                LOGGER.warning("Radarr RSS update uncertain; checking fresh state")
-            if object_map(api.json("config/indexer")).get("rssSyncInterval") != 0:
-                raise DiscoveryError("Radarr RSS disablement not confirmed")
+        disable_radarr_rss(api)
     verify_configuration(api)
     LOGGER.info(
         "%s authentication and empty-state configuration verified", api.service.name
@@ -804,6 +828,49 @@ def check_ports(
                 ) from error
 
 
+def rebuilt_image_identity(image: str, name: str, revision: str) -> str:
+    """Require one immutable image with the expected source and compatibility labels."""
+    decoded: object = json.loads(command(["docker", "image", "inspect", image]))
+    if not isinstance(decoded, list) or len(decoded) != 1:
+        raise DiscoveryError(f"rebuilt {name} image inventory invalid")
+    row = object_map(decoded[0])
+    labels = object_map(object_map(row.get("Config")).get("Labels"))
+    identity = row.get("Id")
+    if (
+        not isinstance(identity, str)
+        or not re.fullmatch(r"sha256:[a-f0-9]{64}", identity)
+        or labels.get("org.opencontainers.image.revision") != revision
+        or (
+            name == "Radarr" and labels.get("io.popcorntv.radarr.imagesharp") != "3.2.0"
+        )
+    ):
+        raise DiscoveryError(f"rebuilt {name} provenance not verified")
+    return identity
+
+
+def scan_discovery_image(image: str, name: str, digest: str) -> None:
+    """Scan the exact immutable identity and retain its categorical failure report."""
+    report = f"discovery-{name}-{digest[:12]}.json"
+    try:
+        command(
+            [
+                "make",
+                "-C",
+                str(ROOT),
+                "scan-docker-image",
+                "IMAGE=" + image,
+                "TRIVY_FORMAT=json",
+                "TRIVY_OUTPUT=" + report,
+                "TRIVY_EXIT=1",
+            ]
+        )
+    except DiscoveryError:
+        LOGGER.error(
+            "%s image scan failed; startup refused; report=.trivy/%s", name, report
+        )
+        raise
+
+
 def verify_images(installation: Installation) -> tuple[str, str]:
     """Scan the immutable local Radarr identity and pinned upstream Prowlarr before up."""
     images = compose(installation, ["config", "--images"]).splitlines()
@@ -812,36 +879,11 @@ def verify_images(installation: Installation) -> tuple[str, str]:
     ingress_id = ""
     for image in images:
         if image == RADARR_TAG and "radarr" not in names:
-            rows = json.loads(command(["docker", "image", "inspect", image]))
-            if not isinstance(rows, list) or len(rows) != 1:
-                raise DiscoveryError("rebuilt Radarr image inventory invalid")
-            row = object_map(rows[0])
-            labels = object_map(object_map(row.get("Config")).get("Labels"))
-            identity = row.get("Id")
-            if (
-                not isinstance(identity, str)
-                or not re.fullmatch(r"sha256:[a-f0-9]{64}", identity)
-                or labels.get("org.opencontainers.image.revision") != RADARR_REVISION
-                or labels.get("io.popcorntv.radarr.imagesharp") != "3.2.0"
-            ):
-                raise DiscoveryError("rebuilt Radarr provenance not verified")
-            name, digest, radarr_id = "radarr", identity[7:], identity
-            image = identity
+            radarr_id = rebuilt_image_identity(image, "Radarr", RADARR_REVISION)
+            name, digest, image = "radarr", radarr_id[7:], radarr_id
         elif image == CADDY_IMAGE and "ingress" not in names:
-            decoded: object = json.loads(command(["docker", "image", "inspect", image]))
-            if not isinstance(decoded, list) or len(decoded) != 1:
-                raise DiscoveryError("rebuilt ingress image inventory invalid")
-            row = object_map(decoded[0])
-            labels = object_map(object_map(row.get("Config")).get("Labels"))
-            identity = row.get("Id")
-            if (
-                not isinstance(identity, str)
-                or not re.fullmatch(r"sha256:[a-f0-9]{64}", identity)
-                or labels.get("org.opencontainers.image.revision") != CADDY_REVISION
-            ):
-                raise DiscoveryError("rebuilt ingress provenance not verified")
-            name, digest, ingress_id = "ingress", identity[7:], identity
-            image = identity
+            ingress_id = rebuilt_image_identity(image, "ingress", CADDY_REVISION)
+            name, digest, image = "ingress", ingress_id[7:], ingress_id
         else:
             match = re.fullmatch(
                 r"lscr\.io/linuxserver/(prowlarr):[\w.-]+@sha256:([a-f0-9]{64})",
@@ -851,25 +893,7 @@ def verify_images(installation: Installation) -> tuple[str, str]:
                 raise DiscoveryError("unexpected or unpinned discovery image")
             name, digest = match[1], match[2]
         names.add(name)
-        report = f"discovery-{name}-{digest[:12]}.json"
-        try:
-            command(
-                [
-                    "make",
-                    "-C",
-                    str(ROOT),
-                    "scan-docker-image",
-                    "IMAGE=" + image,
-                    "TRIVY_FORMAT=json",
-                    "TRIVY_OUTPUT=" + report,
-                    "TRIVY_EXIT=1",
-                ]
-            )
-        except DiscoveryError:
-            LOGGER.error(
-                "%s image scan failed; startup refused; report=.trivy/%s", name, report
-            )
-            raise
+        scan_discovery_image(image, name, digest)
     if names != {service.name for service in SERVICES} | {"ingress"} or not radarr_id:
         raise DiscoveryError("required discovery image missing")
     if not ingress_id:
@@ -954,48 +978,50 @@ def load_ingress_subnet(installation: Installation) -> ipaddress.IPv4Network:
         or row.get("identity") != installation.identity
         or not isinstance(subnet, ipaddress.IPv4Network)
         or subnet.prefixlen != 29
-        or not subnet.subnet_of(ipaddress.IPv4Network("10.203.206.0/24"))
+        or not subnet.subnet_of(DISCOVERY_POOL)
         or subnet.overlaps(installation.subnet)
     ):
         raise DiscoveryError("invalid owned ingress network record")
     return subnet
 
 
+def verify_network(
+    installation: Installation, role: str, subnet: ipaddress.IPv4Network
+) -> None:
+    """Prove a network's ownership, isolation mode, IPv4-only policy and allocation."""
+    name = installation.project + "_" + role
+    decoded: object = json.loads(command(["docker", "network", "inspect", name]))
+    if not isinstance(decoded, list) or len(decoded) != 1:
+        raise DiscoveryError("owned network inventory invalid")
+    row = object_map(decoded[0])
+    labels = object_map(row.get("Labels"))
+    if (
+        labels.get("com.docker.compose.project") != installation.project
+        or labels.get("com.docker.compose.network") != role
+        or row.get("Internal") is not (role == "discovery")
+        or row.get("EnableIPv6") is not False
+    ):
+        raise DiscoveryError("network ownership or isolation not verified")
+    configs = object_map(row.get("IPAM")).get("Config")
+    if (
+        not isinstance(configs, list)
+        or len(configs) != 1
+        or object_map(configs[0]).get("Subnet") != str(subnet)
+    ):
+        raise DiscoveryError("effective network subnet changed")
+
+
 def verify_network_membership(installation: Installation, *, published: bool) -> None:
     """Inspect actual network ownership, isolation and exact service attachments."""
     discovery_name = installation.project + "_discovery"
     ingress_name = installation.project + "_ingress"
-    expected_networks = {discovery_name: (True, installation.subnet, "discovery")}
-    if published:
-        expected_networks[ingress_name] = (
-            False,
-            load_ingress_subnet(installation),
-            "ingress",
-        )
-    for name, (internal, subnet, role) in expected_networks.items():
-        decoded: object = json.loads(command(["docker", "network", "inspect", name]))
-        if not isinstance(decoded, list) or len(decoded) != 1:
-            raise DiscoveryError("owned network inventory invalid")
-        row = object_map(decoded[0])
-        labels = object_map(row.get("Labels"))
-        if (
-            labels.get("com.docker.compose.project") != installation.project
-            or labels.get("com.docker.compose.network") != role
-            or row.get("Internal") is not internal
-            or row.get("EnableIPv6") is not False
-        ):
-            raise DiscoveryError("network ownership or isolation not verified")
-        configs = object_map(row.get("IPAM")).get("Config")
-        if (
-            not isinstance(configs, list)
-            or len(configs) != 1
-            or object_map(configs[0]).get("Subnet") != str(subnet)
-        ):
-            raise DiscoveryError("effective network subnet changed")
+    # Read the persisted ingress allocation before inspecting either effective network.
+    ingress_subnet = load_ingress_subnet(installation) if published else None
+    verify_network(installation, "discovery", installation.subnet)
+    if ingress_subnet is not None:
+        verify_network(installation, "ingress", ingress_subnet)
     for row in owned_containers(installation):
-        service_name = object_map(object_map(row["Config"])["Labels"])[
-            "com.docker.compose.service"
-        ]
+        service_name = object_map(object_map(row["Config"])["Labels"])[SERVICE_LABEL]
         networks = object_map(object_map(row["NetworkSettings"])["Networks"])
         allowed = (
             {discovery_name, ingress_name}
@@ -1015,6 +1041,23 @@ def verify_network_membership(installation: Installation, *, published: bool) ->
             raise DiscoveryError("effective private service address changed")
 
 
+def loopback_port(installation: Installation, service: Service, values: object) -> int:
+    """Accept only one effective loopback binding matching the requested service port."""
+    if not isinstance(values, list) or len(values) != 1:
+        raise DiscoveryError(PUBLICATION_REFUSAL)
+    binding = object_map(values[0])
+    value = binding.get("HostPort")
+    if (
+        binding.get("HostIp") != "127.0.0.1"
+        or not isinstance(value, str)
+        or not value.isdecimal()
+        or not 1 <= int(value) <= 65535
+        or installation.host_port(service) not in (0, int(value))
+    ):
+        raise DiscoveryError(PUBLICATION_REFUSAL)
+    return int(value)
+
+
 def verify_publication(installation: Installation) -> None:
     """Require effective proxy loopback bindings and actual authenticated reachability."""
     verify_network_membership(installation, published=True)
@@ -1022,9 +1065,7 @@ def verify_publication(installation: Installation) -> None:
     ingress = [
         row
         for row in rows
-        if object_map(object_map(row["Config"])["Labels"]).get(
-            "com.docker.compose.service"
-        )
+        if object_map(object_map(row["Config"])["Labels"]).get(SERVICE_LABEL)
         == "ingress"
     ]
     if len(ingress) != 1:
@@ -1032,27 +1073,16 @@ def verify_publication(installation: Installation) -> None:
     bindings = object_map(object_map(ingress[0]["NetworkSettings"])["Ports"])
     actual = {key: value for key, value in bindings.items() if value is not None}
     if set(actual) != {f"{service.port}/tcp" for service in SERVICES}:
-        raise DiscoveryError("effective loopback publication not confirmed")
+        raise DiscoveryError(PUBLICATION_REFUSAL)
     selected: dict[str, int] = {}
     for service in SERVICES:
-        values = actual[f"{service.port}/tcp"]
-        if not isinstance(values, list) or len(values) != 1:
-            raise DiscoveryError("effective loopback publication not confirmed")
-        binding = object_map(values[0])
-        value = binding.get("HostPort")
-        if (
-            binding.get("HostIp") != "127.0.0.1"
-            or not isinstance(value, str)
-            or not value.isdecimal()
-            or not 1 <= int(value) <= 65535
-            or installation.host_port(service) not in (0, int(value))
-        ):
-            raise DiscoveryError("effective loopback publication not confirmed")
-        selected[service.name] = int(value)
+        selected[service.name] = loopback_port(
+            installation, service, actual[f"{service.port}/tcp"]
+        )
     for row in rows:
         if row is not ingress[0]:
             ports = object_map(object_map(row["NetworkSettings"])["Ports"])
-            if any(value for value in ports.values()):
+            if any(ports.values()):
                 raise DiscoveryError("application publication bypasses ingress")
     for service in SERVICES:
         verify_configuration(
@@ -1067,7 +1097,7 @@ def verify_withdrawal(installation: Installation) -> None:
     verify_initialization_denial(installation)
     for row in owned_containers(installation):
         ports = object_map(object_map(row["NetworkSettings"])["Ports"])
-        if any(value for value in ports.values()):
+        if any(ports.values()):
             raise DiscoveryError("effective publication withdrawal not confirmed")
 
 

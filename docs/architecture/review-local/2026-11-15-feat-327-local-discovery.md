@@ -1,19 +1,20 @@
 # Local review — PopcornTV local discovery
 
-This record distinguishes resolved source-review findings and targeted acceptance from the owner's deferred global validation.
+This record distinguishes source-review findings, targeted acceptance and unsuccessful global validation.
 
 - Date: 2026-11-15.
 - Branch: `feat/327-local-discovery`; base `origin/main` at `9ef3db5`.
-- Latest functional verification: `44f7229` on 2026-11-17; the malformed-response
-  correction passes four targeted regression cases. Documentation corrections below
-  require verification before publication.
+- Latest published functional verification: `e432866` on 2026-11-17. The
+  responsibility refactor recorded below has targeted verification and still
+  requires publication and an exact-head global gate.
 - Dimensions: fresh adversarial source review, design/container verification,
   independent test-quality review, documentation/traceability reconciliation,
   targeted security and correctness checks.
 - Source verdict at `cd62451`: Must 0 / Should 1 / Nice 4; the Should corrected in the following
   commit, remaining Nice items filed (#349).
-- Publication: PR #351 is open on `44f7229`. The 2026-11-17 complete gate attempt
-  failed at OSV; no successful attestation, merge or deployment is claimed.
+- Publication: PR #351 is open on `e432866`. Its complete gate passed dependency
+  checks and the real-container journey, then failed at SonarQube. No successful
+  attestation, merge or deployment is claimed.
 
 ## Adversarial review
 
@@ -195,3 +196,42 @@ Evidence: `/tmp/popcorntv-327-preflight-before.log`,
 were not accepted as complete runs by the completeness wrapper. No failing run
 is reclassified as successful. Global L1/L2 and exact-head attestation remain
 required before publication/merge.
+
+## Responsibility refactor and failed global gate — 2026-11-18
+
+The complete gate on `e432866` recorded 22 successful steps followed by a
+SonarQube failure: 33 new violations, new-code coverage 95.3% and duplication 0%.
+The successful steps include 45 infrastructure tests, 125 Python tests, 11 Node
+controller tests and 1,447 application tests without skips, plus Gitleaks,
+Semgrep and the bounded OSV classification. The discovery build and a fresh
+real-container journey passed (one test in 111.90 seconds). The Radarr xUnit
+target reused BuildKit cache; it is not two freshly executed tests in this run.
+Browser checks, later container/source/image scans and SBOM were not reached.
+No successful gate attestation was written.
+
+The follow-up refactor separates credential validation, inspected binding
+decoding, host configuration, Radarr RSS configuration, image provenance,
+image scanning, effective network validation and loopback binding validation.
+The orchestration retains validation and write order, immutable scan identities,
+fresh reads after uncertain writes and the existing ownership/cleanup boundaries.
+Named constants retain the same bounded subnet, service label and endpoint
+policies. Test assertions are separated without removing a condition; the
+exception test constructs its input before the exception boundary.
+
+Independent architecture and correction reviews found Must 0 / Should 0 / Nice 0.
+The architecture review found no justified additional design pattern: cohesive
+functions satisfy the current responsibility boundaries without another layer.
+Targeted execution passed all 125 Python tests in 103.42 seconds, with 94.38%
+combined coverage against the unchanged 90% floor. All 11 Node tests passed;
+controller coverage remains 96.50% lines / 92% branches / 100% functions.
+Ruff, Prettier and strict mypy on the gate's exact five-file Python scope passed.
+An earlier manually broadened mypy command mistakenly included the existing
+untyped infrastructure-runner tests and failed with 218 errors in two files;
+that diagnostic is not a successful gate check or a newly changed source scope.
+
+A subsequent diagnostic Sonar scan of the uncommitted refactor also failed;
+its remaining issue inventory must be reconciled before publication/merge.
+No rule exclusion, changed threshold, suppression or issue-status change was
+used. Explicit HTTP destinations, the RFC1918 allocation bound, termination
+control flow, trusted operator toolchain and categorical no-traceback logging
+remain visible for their security review. The global gate remains RED.

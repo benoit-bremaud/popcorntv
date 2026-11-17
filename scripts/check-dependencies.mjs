@@ -26,7 +26,7 @@ export function packagePaths(inventory) {
     for (const [name, child] of Object.entries(value)) {
       if (name === 'picomatch' || child?.from === 'picomatch') {
         assert(
-          child && child.version === '4.0.7' && typeof child.path === 'string',
+          child?.version === '4.0.7' && typeof child.path === 'string',
           'unexpected picomatch identity',
         );
         paths.add(child.path);
@@ -79,7 +79,7 @@ export function verifyPatch(root, inventory, today = new Date().toISOString().sl
       '+(a**b)c',
       '+(*a!)b',
       '+(*(ab)c)',
-      '+(a\\/*b)',
+      String.raw`+(a\/*b)`,
       '+([/]a*b)',
       '@(+(*a))',
     ]) {
