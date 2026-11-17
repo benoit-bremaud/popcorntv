@@ -163,3 +163,35 @@ classified one locally corrected finding. Local evidence is retained in
 `/tmp/popcorntv-327-integration-check.log` and
 `/tmp/popcorntv-dependencies-EXFTBD/`. Exact-head L2 execution remains pending;
 pre-push success does not make the global gate green.
+
+## Preflight cleanup correction — 2026-11-17
+
+The project refresh audit found that XML/private-file/ingress validation and
+requested-port checks could refuse a rerun before entering cleanup, leaving a
+previously published installation running. `start` now places all preflight
+checks under one existing owned-service stop boundary. The authentication
+validator remains side-effect-free. Cleanup preserves the original exception;
+failed or foreign ownership never permits a mutation and remains unconfirmed.
+
+Fourteen added integration cases cover six faults with successful/failed stop,
+foreign ownership and a real occupied port. Container observations retain the
+subnet from actual fixture publication rather than rereading subsequently
+damaged configuration. The CLI regression records its complete Docker history
+and requires only context inspection when the local daemon cannot be confirmed.
+The original XML refusal, no traceback, unchanged bytes and explicit unconfirmed
+stop remain asserted.
+
+Before correction, the first thirteen selected cases produced twelve failures
+and one pass. After correction, an intermediate complete run had 124 passes and
+one CLI-fixture failure; its assumed first Docker command was incorrect. The
+final fixture names and verifies the daemon-unconfirmed scenario accurately.
+The final unfiltered run passed all 125 Python cases at 94.24% combined coverage
+with the unchanged 90% floor. Ruff and strict mypy passed. Independent source
+and test review: Must 0 / Should 0 / Nice 0 after verification.
+
+Evidence: `/tmp/popcorntv-327-preflight-before.log`,
+`/tmp/popcorntv-327-preflight-after.log`,
+`/tmp/popcorntv-327-preflight-final.log`. Earlier filtered diagnostic invocations
+were not accepted as complete runs by the completeness wrapper. No failing run
+is reclassified as successful. Global L1/L2 and exact-head attestation remain
+required before publication/merge.

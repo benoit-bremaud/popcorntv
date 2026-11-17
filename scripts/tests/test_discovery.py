@@ -13,6 +13,7 @@ import subprocess
 import sys
 import threading
 from collections.abc import Iterator
+from dataclasses import replace
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -20,6 +21,8 @@ from urllib.parse import parse_qs
 
 import local_discovery as discovery
 import pytest
+
+CHECK_PORTS = discovery.check_ports
 
 
 @pytest.fixture
@@ -463,6 +466,7 @@ def controller(
             apis[service.name], models[service.name] = api, model
 
         state = {"started": False, "published": False}
+        observed_ingress: dict[str, ipaddress.IPv4Network] = {}
 
         def api_boundary(
             _installation: discovery.Installation,
@@ -492,7 +496,7 @@ def controller(
                 ports: dict[str, object] = {}
                 if state["published"] and name == "ingress":
                     networks[installation.project + "_ingress"] = {
-                        "IPAddress": str(discovery.load_ingress_subnet(installation)[2])
+                        "IPAddress": str(observed_ingress["subnet"][2])
                     }
                     ports = {
                         f"{service.port}/tcp": [
@@ -598,6 +602,10 @@ def controller(
             if arguments[:2] == ["docker", "compose"] and "up" in arguments:
                 state["started"] = True
                 state["published"] = str(discovery.PUBLISH) in arguments
+                if state["published"]:
+                    observed_ingress["subnet"] = discovery.load_ingress_subnet(
+                        installation
+                    )
             return ""
 
         monkeypatch.setattr(discovery, "Api", api_boundary)
@@ -1292,7 +1300,7 @@ def test_unprotected_first_listen_stops_without_account_writes_or_secret_logs(
     assert installation.root.exists()
 
 
-def test_malformed_bootstrap_xml_cli_refuses_without_docker_io(
+def test_malformed_bootstrap_xml_cli_preserves_state_when_daemon_is_unconfirmed(
     installation: discovery.Installation, tmp_path: Path
 ) -> None:
     path = installation.root / "radarr/config.xml"
@@ -1301,9 +1309,18 @@ def test_malformed_bootstrap_xml_cli_refuses_without_docker_io(
     marker = tmp_path / "docker-called"
     docker = tmp_path / "docker"
     docker.write_text(
-        f"#!{sys.executable}\nfrom pathlib import Path\nPath({str(marker)!r}).write_text('called')\nraise SystemExit(99)\n"
+        f"#!{sys.executable}\nimport json, sys\nfrom pathlib import Path\nwith Path({str(marker)!r}).open('a') as log:\n log.write(json.dumps(sys.argv[1:]) + '\\n')\nraise SystemExit(99)\n"
     )
     docker.chmod(0o755)
+    environment = dict(os.environ)
+    for key in (
+        "DOCKER_HOST",
+        "DOCKER_CONTEXT",
+        "DOCKER_TLS_VERIFY",
+        "DOCKER_CERT_PATH",
+    ):
+        environment.pop(key, None)
+    environment["PATH"] = str(tmp_path) + os.pathsep + os.environ.get("PATH", "")
     result = subprocess.run(
         [
             sys.executable,
@@ -1312,9 +1329,7 @@ def test_malformed_bootstrap_xml_cli_refuses_without_docker_io(
             "--state",
             str(installation.root),
         ],
-        env=dict(
-            os.environ, PATH=str(tmp_path) + os.pathsep + os.environ.get("PATH", "")
-        ),
+        env=environment,
         capture_output=True,
         text=True,
         timeout=10,
@@ -1323,7 +1338,9 @@ def test_malformed_bootstrap_xml_cli_refuses_without_docker_io(
     assert result.returncode == 1
     assert "invalid private authentication XML; state preserved" in result.stderr
     assert "Traceback" not in result.stderr
-    assert not marker.exists()
+    history = [json.loads(line) for line in marker.read_text().splitlines()]
+    assert history == [["context", "inspect", "--format", "{{.Endpoints.docker.Host}}"]]
+    assert "owned-service stop unconfirmed" in result.stderr
     assert path.read_bytes() == malformed
 
 
@@ -1460,7 +1477,9 @@ def test_image_scan_failure_on_a_rerun_stops_the_running_services(
         discovery.start(installation)
     assert any(call[-1] == "stop" for call in calls)
     assert not any("up" in call for call in calls)
-    assert ("image verification failed; stop unconfirmed" in caplog.text) is stop_fails
+    assert (
+        "startup preflight failed; owned-service stop unconfirmed" in caplog.text
+    ) is stop_fails
 
 
 @pytest.mark.parametrize("action", ["start", "status"])
@@ -1536,6 +1555,141 @@ def test_entity_bearing_authentication_xml_is_refused_and_preserved(
         discovery.DiscoveryError, match="invalid private authentication XML"
     ):
         discovery.require_first_listen_auth(installation)
-    # An expanded entity would reach the legacy-settings branch and its stop.
+    # Validation stays free of Docker IO; start owns cleanup after a refusal.
     assert calls == []
     assert path.read_bytes() == document
+
+
+@pytest.mark.parametrize("stop_fails", [False, True])
+@pytest.mark.parametrize(
+    ("fault", "error_type", "message"),
+    [
+        (
+            "malformed-xml",
+            discovery.DiscoveryError,
+            "invalid private authentication XML",
+        ),
+        ("missing-config", FileNotFoundError, "config.xml"),
+        ("public-config", discovery.DiscoveryError, "state path must be private"),
+        ("changed-ingress", discovery.DiscoveryError, "ingress configuration changed"),
+        ("invalid-network", json.JSONDecodeError, "Expecting value"),
+        ("interrupted", discovery.DiscoveryInterrupted, ""),
+    ],
+)
+def test_preflight_failure_on_published_installation_attempts_owned_stop(
+    installation: discovery.Installation,
+    controller: tuple[dict[str, FakeArr], list[list[str]]],
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    fault: str,
+    error_type: type[BaseException],
+    message: str,
+    stop_fails: bool,
+) -> None:
+    models, calls = controller
+    discovery.start(installation)
+    assert any(str(discovery.PUBLISH) in call and "up" in call for call in calls)
+    writes = {name: list(model.writes) for name, model in models.items()}
+    path = installation.root / "radarr/config.xml"
+    if fault == "malformed-xml":
+        path.write_bytes(b"<Config><AuthenticationMethod>Forms")
+    elif fault == "missing-config":
+        path.unlink()
+    elif fault == "public-config":
+        path.chmod(0o644)
+    elif fault == "changed-ingress":
+        path = installation.root / "ingress.Caddyfile"
+        path.write_text("owner-edited ingress")
+    elif fault == "invalid-network":
+        path = installation.root / "ingress-network.json"
+        path.write_text("owner-edited invalid record")
+    else:
+        original = discovery.command
+
+        def interrupted(
+            arguments: list[str], *, env: dict[str, str] | None = None
+        ) -> str:
+            if "--images" in arguments:
+                raise discovery.DiscoveryInterrupted()
+            return original(arguments, env=env)
+
+        monkeypatch.setattr(discovery, "command", interrupted)
+    before = path.read_bytes() if path.exists() else None
+    mode = path.stat().st_mode if path.exists() else None
+    if stop_fails:
+        failing_stop(monkeypatch, calls)
+    del calls[:]
+    with (
+        caplog.at_level(logging.ERROR),
+        pytest.raises(error_type, match=message or None),
+    ):
+        discovery.start(installation)
+    stops = [call for call in calls if call[-1] == "stop"]
+    assert len(stops) == 1
+    assert installation.project in stops[0]
+    assert not any("up" in call for call in calls)
+    assert {name: model.writes for name, model in models.items()} == writes
+    assert (path.read_bytes() if path.exists() else None) == before
+    assert (path.stat().st_mode if path.exists() else None) == mode
+    assert ("owned-service stop unconfirmed" in caplog.text) is stop_fails
+    for credential in installation.credentials.values():
+        assert credential.password not in caplog.text
+        assert credential.api_key not in caplog.text
+
+
+def test_preflight_failure_never_stops_a_foreign_container(
+    installation: discovery.Installation,
+    controller: tuple[dict[str, FakeArr], list[list[str]]],
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    _models, calls = controller
+    discovery.start(installation)
+    path = installation.root / "radarr/config.xml"
+    path.write_text("malformed owner state")
+    original = discovery.command
+
+    def foreign_inventory(
+        arguments: list[str], *, env: dict[str, str] | None = None
+    ) -> str:
+        value = original(arguments, env=env)
+        if arguments[:2] == ["docker", "inspect"]:
+            rows = json.loads(value)
+            rows[0]["Config"]["Labels"]["io.popcorntv.discovery.install"] = "foreign"
+            return json.dumps(rows)
+        return value
+
+    monkeypatch.setattr(discovery, "command", foreign_inventory)
+    del calls[:]
+    with (
+        caplog.at_level(logging.ERROR),
+        pytest.raises(
+            discovery.DiscoveryError, match="invalid private authentication XML"
+        ),
+    ):
+        discovery.start(installation)
+    assert not any("compose" in call for call in calls)
+    assert "owned-service stop unconfirmed" in caplog.text
+    assert path.read_text() == "malformed owner state"
+
+
+def test_busy_new_publication_port_on_rerun_stops_owned_services(
+    installation: discovery.Installation,
+    controller: tuple[dict[str, FakeArr], list[list[str]]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _models, calls = controller
+    discovery.start(installation)
+    monkeypatch.setattr(discovery, "check_ports", CHECK_PORTS)
+    with socket.socket() as busy:
+        busy.bind(("127.0.0.1", 0))
+        requested = replace(
+            installation, published_ports={"prowlarr": busy.getsockname()[1]}
+        )
+        del calls[:]
+        with pytest.raises(
+            discovery.DiscoveryError, match="administration port.*unavailable"
+        ):
+            discovery.start(requested)
+    assert len([call for call in calls if call[-1] == "stop"]) == 1
+    assert not any("up" in call for call in calls)

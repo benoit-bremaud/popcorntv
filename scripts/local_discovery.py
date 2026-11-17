@@ -899,7 +899,7 @@ def stop_owned(installation: Installation, unconfirmed: str) -> None:
 
 
 def require_first_listen_auth(installation: Installation) -> None:
-    """Refuse unsafe legacy settings instead of briefly listening without authentication."""
+    """Validate first-listen authentication; start owns cleanup after any refusal."""
     for service in SERVICES:
         path = installation.root / service.name / "config.xml"
         private_path(path, directory=False)
@@ -913,10 +913,6 @@ def require_first_listen_auth(installation: Installation) -> None:
             config.findtext("AuthenticationMethod", "").lower() != "forms"
             or config.findtext("AuthenticationRequired", "").lower() != "enabled"
         ):
-            stop_owned(
-                installation,
-                "unsafe legacy authentication; owned-service stop unconfirmed",
-            )
             raise DiscoveryError(
                 "first-listen authentication required; legacy state preserved"
             )
@@ -1092,20 +1088,25 @@ def bootstrap_completed(installation: Installation) -> bool:
 def start(installation: Installation, *, publish: bool = True) -> None:
     """Authenticate privately before publication; keep state and withdraw ports on failure."""
     with installation_lock(installation):
-        require_first_listen_auth(installation)
-        prepare_ingress(installation)
         try:
+            require_first_listen_auth(installation)
+            prepare_ingress(installation)
             radarr_image, ingress_image = verify_images(installation)
+            if publish:
+                check_ports(
+                    owned_host_ports(owned_containers(installation)),
+                    ports=tuple(
+                        installation.host_port(service) for service in SERVICES
+                    ),
+                )
         except BaseException:
-            # A rerun must not leave services published on images that no longer pass.
-            LOGGER.error("image verification failed; stopping owned services")
-            stop_owned(installation, "image verification failed; stop unconfirmed")
-            raise
-        if publish:
-            check_ports(
-                owned_host_ports(owned_containers(installation)),
-                ports=tuple(installation.host_port(service) for service in SERVICES),
+            # A rerun may already be published: every preflight refusal must stop it.
+            LOGGER.error("startup preflight failed; stopping owned services")
+            stop_owned(
+                installation,
+                "startup preflight failed; owned-service stop unconfirmed",
             )
+            raise
         try:
             compose(
                 installation,
