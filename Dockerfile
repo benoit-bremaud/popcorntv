@@ -26,11 +26,30 @@ RUN pnpm install --frozen-lockfile --filter @popcorntv/server... --filter @popco
 COPY packages/shared packages/shared
 COPY apps/server apps/server
 COPY apps/web apps/web
-# --legacy: pnpm 10 only deploys injected workspaces by default; the workspace keeps plain
-# links so edits to packages/shared are seen live in dev (no injected hard-link copies).
 RUN pnpm --filter @popcorntv/server... build \
-  && pnpm --filter @popcorntv/server --prod deploy --legacy /out \
   && pnpm --filter @popcorntv/web build
+
+# A clean production workspace preserves the lockfile and relative package links.
+# Reuse the downloaded store and Node headers. Offline packaging cannot re-resolve
+# versions through the registry, even if a dependency is missing from the store.
+# Copy cached files directly across build layers to avoid overlay link copy-up.
+RUN --network=none mkdir -p /out/apps/server /out/apps/web /out/packages/shared \
+  && cp package.json pnpm-lock.yaml pnpm-workspace.yaml /out/ \
+  && cp -R patches /out/ \
+  && cp apps/server/package.json /out/apps/server/ \
+  && cp apps/web/package.json /out/apps/web/ \
+  && cp packages/shared/package.json /out/packages/shared/ \
+  && npm_config_nodedir="/root/.cache/node-gyp/$(node -p process.versions.node)" \
+    pnpm --dir /out --filter @popcorntv/server... install --prod --frozen-lockfile --offline \
+      --package-import-method=copy \
+  && cp -R apps/server/dist apps/server/drizzle /out/apps/server/ \
+  && cp -R packages/shared/dist /out/packages/shared/ \
+  && rm -r /out/apps/web /out/patches \
+  && test -f /out/apps/server/drizzle/meta/_journal.json
+WORKDIR /out/apps/server
+RUN --network=none node --input-type=module -e 'import Database from "better-sqlite3"; import "@popcorntv/shared"; const db = new Database(":memory:"); if (db.prepare("SELECT 1 AS ready").get().ready !== 1) process.exit(1); db.close();' \
+  && test -f /app/apps/web/dist/index.html \
+  && test -f /app/apps/web/dist/404.html
 
 FROM node:22.23.4-trixie-slim@sha256:be1e2a3dc2c4fd68cdfadad2a696a280e0d2749098bee509230174d72fb768c6
 # `apt-get upgrade` (DL3005) is deliberate: the node base image lags Debian's security
@@ -70,4 +89,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 # tini as PID 1 forwards signals to Node and reaps any FFmpeg child left behind, whatever
 # starts the container (compose, docker run, a homelab orchestrator).
 ENTRYPOINT ["/usr/bin/tini", "--"]
-CMD ["node", "dist/index.js"]
+CMD ["node", "apps/server/dist/index.js"]
