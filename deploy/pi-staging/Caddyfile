@@ -2,6 +2,13 @@
 {
 	admin off
 	skip_install_trust
+	pki {
+		ca local {
+			name "PopCornTV staging"
+			root_cn "PopCornTV staging Root"
+			intermediate_cn "PopCornTV staging Intermediate"
+		}
+	}
 }
 
 # Security headers, imported by the site and by its error routes: `handle_errors` does not
@@ -19,7 +26,7 @@
 	}
 }
 
-{$PCTV_STAGE_HOST}:8443 {
+popcorntv-staging.bb-homelab.local:8443 {
 	tls internal
 	encode zstd gzip
 

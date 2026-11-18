@@ -10,6 +10,7 @@ import unittest
 
 SOURCE = Path(__file__).resolve().parents[2] / 'deploy/pi-staging/start.sh'
 TAILNET_IP = '100.100.10.20'
+STAGE_HOST = 'popcorntv-staging.bb-homelab.local'
 APP_IMAGE = 'sha256:' + 'a' * 64
 CADDY_IMAGE = 'popcorntv-caddy@sha256:' + 'b' * 64
 
@@ -63,7 +64,8 @@ fi''',
             binary.chmod(0o700)
         self.env = dict(
             os.environ, PATH=f'{binaries}:{os.defpath}', FIXTURE_LOG=str(self.log),
-            PCTV_STAGE_TAILNET_IP=TAILNET_IP, FIXTURE_TAILSCALE_IP=TAILNET_IP,
+            PCTV_STAGE_HOST=STAGE_HOST, PCTV_STAGE_TAILNET_IP=TAILNET_IP,
+            FIXTURE_TAILSCALE_IP=TAILNET_IP,
             FIXTURE_INTERFACE=json.dumps([{'addr_info': [{'local': TAILNET_IP}]}]),
             PCTV_STAGE_IMAGE=APP_IMAGE, PCTV_STAGE_CADDY_IMAGE=CADDY_IMAGE,
             FIXTURE_APP_IMAGE=json.dumps({
@@ -100,6 +102,17 @@ fi''',
 
     def test_reported_address_must_also_be_assigned_to_tailscale0(self):
         self.assert_ingress_refused(self.launch(FIXTURE_INTERFACE='[{"addr_info": []}]'))
+
+    def test_refuses_other_hosts_and_malformed_values_before_host_checks(self):
+        for host in (
+            '', 'bb-homelab', 'popcorntv.bb-homelab.local', 'other.bb-homelab.local',
+            f'{STAGE_HOST}:8443', f'{STAGE_HOST}.', f'{STAGE_HOST}\nother',
+        ):
+            with self.subTest(host=host):
+                result = self.launch(PCTV_STAGE_HOST=host)
+                self.assertEqual(result.returncode, 1)
+                self.assertEqual(result.stderr.strip(), 'pi-staging.ingress_refused:stage_host_invalid')
+                self.assertEqual(self.log.read_text(), '')
 
     def test_refuses_unavailable_or_malformed_host_observations(self):
         for observation in (dict(FIXTURE_TAILSCALE_CODE='2'), dict(FIXTURE_INTERFACE='invalid')):

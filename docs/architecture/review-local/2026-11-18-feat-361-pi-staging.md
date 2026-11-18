@@ -31,3 +31,10 @@ Review the independent PopCornTV and Caddy staging deployment for #361.
 - The targeted Pi staging suite passed 17 tests after the fixes. Hadolint, ShellCheck, Prettier and the rendered staging Compose model were checked locally.
 - The first pre-push hook exposed an infrastructure test isolation issue. Git's repository-local environment redirected fixture setup into the parent repository. The fixture runner now clears the variables listed by `git rev-parse --local-env-vars` before loading the tests.
 - There are no pull-request workflows in this project. Signed attestation, SonarQube, end-to-end testing and the merge checks belong to the post-push gate. The native deployment and product QA have their own entry conditions.
+
+## Staging hostname follow-up
+
+- The original bare host shared its HSTS policy across ports. The owner selected a dedicated hostname while keeping the one-year HSTS policy.
+- Verification confirmed a literal Caddy site hostname and a launch guard that rejects the bare host, production, unrelated names and malformed values before host checks. The app's Compose origin resolves to the same dedicated name.
+- All 18 focused tests passed. Offline Caddy adaptation and validation confirmed the sole site hostname and the distinct staging authority names.
+- The prior signed gate covers the previous revision. The push hook and signed gate must validate this follow-up revision before merge.

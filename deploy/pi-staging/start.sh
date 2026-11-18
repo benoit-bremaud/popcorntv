@@ -2,6 +2,11 @@
 # Start only the verified Pi staging project against the local Docker daemon.
 set -eu
 
+if [ "${PCTV_STAGE_HOST:-}" != 'popcorntv-staging.bb-homelab.local' ]; then
+    printf '%s\n' 'pi-staging.ingress_refused:stage_host_invalid' >&2
+    exit 1
+fi
+
 stage_dir=$(CDPATH='' cd -P "$(dirname "$0")" && pwd)
 unset DOCKER_CONTEXT DOCKER_HOST
 sh "$stage_dir/check-storage.sh"

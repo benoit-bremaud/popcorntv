@@ -91,6 +91,7 @@ verdicts differ. All execution boxes start unchecked.
 | [ ] | PRI-04 | On disposable accounts only, check implemented account deletion effects and documented export/backup behavior. A missing promised export/deletion capability is a finding, not automatic N/A. |
 | [ ] | PRI-08 | Retention time-travel/purge proof runs on the local tier with isolated data. Mark N/A (local tier only) in staging and link separate evidence; do not alter the host clock. |
 | [ ] | MOB-01…14 and native-only checks | N/A: this is a web application, not a native release. Mobile browsers, touch controls, viewport, orientation and accessibility remain covered by UI/A11Y, not waived with the native domain. |
+| [ ] | Real mobile browsers | BLOCKED for the initial Pi staging deployment until the dedicated hostname and staging TLS trust are verified on the test phones. Run desktop mobile emulation for responsive layouts and supported touch interactions, and record those results separately from real-device QA. |
 | [ ] | CLI/library/firmware-only checks | FON-14/15/16, UI-09, A11Y-15, PERF-06/08/09, ROB-11, USA-07 and PRI-06 are N/A to the deployed W/A product unless the session explicitly includes such a deliverable. The discovery CLI annex has its own applicability. |
 
 ## Security cards and local-boundary annex

@@ -7,12 +7,16 @@ Prepare the independent PopCornTV application and Caddy deployment for product Q
 The operator confirmed on 2026-11-18 that `bb-homelab` is ARM64, Docker uses
 `/mnt/appdata/docker` on the mounted USB disk, and the private bind tree
 `/mnt/appdata/popcorntv-staging` passed the versioned storage guard. The
-versioned Caddyfile and a mode-0600 `app.env` are installed. The initial
+candidate Caddyfile and a mode-0600 `app.env` were installed. Refresh the
+Caddyfile from the approved revision before startup. The initial
 environment file has no TMDB token. Configure one through the staging-only
 secret process before exercising TMDB-dependent cases.
 
-The QA client resolved `bb-homelab` to the Pi's verified Tailnet IPv4.
-TCP 8443 was free. Docker and the host already use `172.30.0.0/16`, so the
+The initial QA preflight confirmed the Pi's Tailnet IPv4 and TCP 8443 was
+free. The final staging origin is
+`https://popcorntv-staging.bb-homelab.local:8443`. Verify its client-side
+host mapping against the Pi's Tailnet IPv4 before startup. Docker and the
+host already use `172.30.0.0/16`, so the
 initial `172.30.220.0/24` proposal was rejected. The operator verified
 `10.231.200.0/24` and the in-bridge Caddy address `10.231.200.10`
 against the current route and Docker network inventories. Recheck the

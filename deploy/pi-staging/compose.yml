@@ -82,8 +82,6 @@ services:
     platform: linux/arm64
     pull_policy: never
     user: '1000:1000'
-    environment:
-      PCTV_STAGE_HOST: ${PCTV_STAGE_HOST:?set the staging DNS name}
     ports:
       - target: 8443
         published: '8443'

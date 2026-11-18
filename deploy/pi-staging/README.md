@@ -12,9 +12,9 @@ Run PopCornTV staging in its own Compose project on the Pi's mounted USB disk, w
   manifest digest and its Linux ARM64 platform.
   The app and its one-shot asset copier use that same reference. No application port is
   published. The one-shot copier has no network.
-- Select a staging host name distinct from production. Resolve it to the Pi's
-  verified `tailscale0` IPv4 address on the QA clients. Set `PCTV_STAGE_HOST` to
-  that name, `PCTV_STAGE_TAILNET_IP` to that address, and check that TCP 8443 is
+- Set `PCTV_STAGE_HOST=popcorntv-staging.bb-homelab.local` and resolve it to the
+  Pi's verified `tailscale0` IPv4 address on the QA clients. Set
+  `PCTV_STAGE_TAILNET_IP` to that address, and check that TCP 8443 is
   still free. Choose a non-overlapping `PCTV_STAGE_SUBNET` and reserve the fixed
   in-bridge `PCTV_STAGE_PROXY_IP` for Caddy. Never bind to a wildcard. Caddy
   rejects non-Tailnet IPv4 connection sources and uses its own internal CA.
@@ -58,8 +58,8 @@ missing bind paths. Docker
 logs rotate on the daemon's USB data root. Containers have no automatic restart,
 so an absent USB mount during boot does not bypass the supported startup guard.
 The application filesystem is read-only outside the explicit staging binds and
-its temporary filesystem. The Caddy CA survives restarts in its dedicated data
-directory. Trust that CA only for the designated QA clients.
+its temporary filesystem. The `PopCornTV staging Root` authority survives
+restarts in its dedicated data directory. Keep `skip_install_trust` enabled.
 
 After startup, verify HTTPS from a QA client. Compose waits for the application
 health check and for Caddy to run. Caddy readiness is confirmed by requesting
@@ -68,9 +68,18 @@ the health endpoint through the staging origin using the staging CA:
 ```sh
 stage_ca=$(mktemp)
 ssh benoit@bb-homelab 'cat /mnt/appdata/popcorntv-staging/caddy-data/caddy/pki/authorities/local/root.crt' >"$stage_ca"
-curl --fail --silent --show-error --cacert "$stage_ca" https://bb-homelab:8443/api/health
+openssl x509 -in "$stage_ca" -noout -subject -fingerprint -sha256
+curl --fail --silent --show-error --cacert "$stage_ca" https://popcorntv-staging.bb-homelab.local:8443/api/health
 rm -f -- "$stage_ca"
 ```
+
+For browser QA, copy only the public root certificate through the trusted
+SSH connection and identify it by its SHA-256 fingerprint. Import it under
+**Settings → Privacy & Security → Certificates → View Certificates →
+Authorities** in a dedicated Firefox QA profile. Limit trust to that profile.
+After QA, remove the matching authority in that profile's **Authorities**
+tab and delete any temporary public certificate file. Keep the operating
+system trust store and everyday browser profiles free of the staging authority.
 
 If startup partially fails, inspect this project's Compose logs and stop the
 project using the command below. Retain its data. Before switching application
@@ -88,12 +97,23 @@ to the separate production project after approval. Production has no QA or smoke
 
 ## Operator SSH and current preparation hold
 
-The owner runs all further Pi SSH commands from a terminal. The proposed initial
-origin is `https://bb-homelab:8443`, using the existing Tailnet name. Resolve it
-on the QA client and compare it with `tailscale ip -4` on the Pi. It has a different host name from
-production. The earlier optional `popcorntv-staging.bb-homelab.local` name has no
-confirmed mapping. The staging Caddy CA is trusted on the QA clients after the
-first approved staging startup.
+The owner runs all further Pi SSH commands from a terminal. The staging
+origin is `https://popcorntv-staging.bb-homelab.local:8443`. Add this
+entry to `/etc/hosts` on each Linux QA client using the Pi's actual Tailnet IPv4:
+
+```text
+<pi-tailnet-ip> popcorntv-staging.bb-homelab.local
+```
+
+Compare `getent ahostsv4 popcorntv-staging.bb-homelab.local` on the QA client
+with `tailscale ip -4` on the Pi. The launcher rejects the bare
+`bb-homelab` name because HSTS would apply to other services on that host
+across ports. It also reserves the production hostname for production
+because the session cookie is scoped by hostname.
+
+Before the first approved startup, install the Caddyfile from the reviewed
+revision on the staging USB disk. The launcher refuses to use a previous
+copy. The dedicated authority is created on first startup.
 
 Root preparation can proceed separately from the image hold. On the Pi, verify
 the exact mounted USB disk first and create only the new staging root using
@@ -155,8 +175,8 @@ PCTV_STAGE
 ```
 
 The operator confirmed `staging-directories-ready` on `bb-homelab` on
-2026-11-18. The versioned Caddyfile and private `app.env` were subsequently
-installed on the USB disk.
+2026-11-18. A candidate Caddyfile and private `app.env` were subsequently
+installed on the USB disk. Refresh the Caddyfile from the approved checkout.
 
 The first two official Caddy candidates failed the blocking artifact scan. A
 versioned ARM64 candidate built from an upstream commit passed the same scan
