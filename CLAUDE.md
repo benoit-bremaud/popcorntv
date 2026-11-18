@@ -67,10 +67,11 @@ spacing / typography, tests with every feature (Vitest unit, Playwright e2e late
   `http://localhost:3000`; e.g. `API_URL=http://localhost:3001 pnpm dev:web`).
 - `pnpm typecheck` · `pnpm lint` · `pnpm format:check` · `pnpm test` · `pnpm coverage` ·
   `pnpm build`.
-- `make staging-up` — production image of HEAD on <https://localhost:8443>, like the Pi
-  (`deploy/staging/compose.yml`, env `.env.staging`); QA passes run here before any Pi
-  deploy, the Pi only gets a post-deploy smoke check (spec deploy-homelab §2).
+- `make staging-up` — local rehearsal of the production image of HEAD on
+  <https://localhost:8443> (`deploy/staging/compose.yml`, env `.env.staging`).
   `make staging-logs` · `make staging-down` (keeps data) · `make staging-reset`.
+- Run product QA on the independent [Pi staging deployment](deploy/pi-staging/README.md).
+  Use the [FULL staging checklist](docs/testing/qa-full-staging-checklist.md).
 - `make lint-docker` (the three Dockerfiles) · `make scan-docker-config` ·
   `make scan-docker-image IMAGE=…`.
 - `mise x -- just setup` — pinned tools, including the Python infra toolchain (uv, `uv.lock`,

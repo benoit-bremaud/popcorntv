@@ -32,7 +32,7 @@ class PiStagingStorageTest(unittest.TestCase):
         binaries = root / 'bin'
         binaries.mkdir()
         commands = {
-            'mountpoint': 'exit 0',
+            'mountpoint': 'exit "${FIXTURE_MOUNT_CODE:-0}"',
             'findmnt': '''case "$*" in
   *SOURCE*) printf '%s\\n' /dev/fixture ;;
   *FSROOT*) printf '%s\\n' "${FIXTURE_FSROOT:-/}" ;;
@@ -42,17 +42,17 @@ class PiStagingStorageTest(unittest.TestCase):
     ;;
   *) exit 2 ;;
 esac''',
-            'lsblk': "printf '%s\\n' usb",
+            'lsblk': '''printf '%s\\n' "${FIXTURE_TRANSPORT:-usb}"''',
             'stat': '''case "$2:$3" in
   %d:/) printf '%s\\n' os ;;
-  %d:*) printf '%s\\n' usb ;;
+  %d:*) printf '%s\\n' "${FIXTURE_DEVICE:-usb}" ;;
   %u:%a:*) printf '1000:'; exec /usr/bin/stat -c %a "$3" ;;
   %u:%h:*) printf '1000:'; exec /usr/bin/stat -c %h "$3" ;;
   *) exec /usr/bin/stat "$@" ;;
 esac''',
             'docker': '''[ "$*" = '--host unix:///var/run/docker.sock info --format {{.DockerRootDir}}' ] || exit 2
-printf '%s\\n' "$FIXTURE_APPDATA/docker"''',
-            'python3': "printf '%s\\n' \"$FIXTURE_APPDATA/containerd\"",
+printf '%s\\n' "${FIXTURE_DOCKER_ROOT:-$FIXTURE_APPDATA/docker}"''',
+            'python3': '''printf '%s\\n' "${FIXTURE_CONTAINERD_ROOT:-$FIXTURE_APPDATA/containerd}"''',
         }
         for name, body in commands.items():
             command = binaries / name
@@ -70,6 +70,24 @@ printf '%s\\n' "$FIXTURE_APPDATA/docker"''',
         result = self.check_storage(FIXTURE_NESTED=f'{self.stage}-other/data')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout, 'pi-staging.storage_verified\n')
+
+    def test_refuses_a_missing_mount_os_disk_or_non_usb_device(self):
+        for field, value, reason in (
+            ('FIXTURE_MOUNT_CODE', '1', 'appdata_not_mounted'),
+            ('FIXTURE_DEVICE', 'os', 'appdata_uses_os_device'),
+            ('FIXTURE_TRANSPORT', 'sata', 'appdata_usb_unconfirmed'),
+        ):
+            with self.subTest(field=field):
+                result = self.check_storage(**{field: value})
+                self.assertEqual(result.returncode, 1)
+                self.assertEqual(result.stderr.strip(), f'pi-staging.storage_refused:{reason}')
+
+    def test_refuses_daemon_roots_outside_the_usb_mount(self):
+        for field in ('FIXTURE_DOCKER_ROOT', 'FIXTURE_CONTAINERD_ROOT'):
+            with self.subTest(field=field):
+                result = self.check_storage(**{field: '/var/lib/outside-usb'})
+                self.assertEqual(result.returncode, 1)
+                self.assertEqual(result.stderr.strip(), 'pi-staging.storage_refused:path_outside_appdata')
 
     def test_refuses_same_device_mount_at_or_below_staging_root(self):
         for path in (self.stage, self.stage / 'data', self.stage / 'media' / r'fixture\x20folder'):

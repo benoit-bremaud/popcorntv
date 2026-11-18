@@ -3,7 +3,6 @@
 import json
 import os
 from pathlib import Path
-import shutil
 import subprocess
 import tempfile
 import unittest
@@ -23,7 +22,12 @@ class PiStagingStartTest(unittest.TestCase):
         self.stage = self.root / 'pi staging'
         self.stage.mkdir()
         self.script = self.stage / SOURCE.name
-        shutil.copyfile(SOURCE, self.script)
+        self.installed_caddyfile = self.root / 'installed-Caddyfile'
+        self.installed_caddyfile.write_text('reviewed Caddyfile')
+        (self.stage / 'Caddyfile').write_text('reviewed Caddyfile')
+        self.script.write_text(SOURCE.read_text().replace(
+            '/mnt/appdata/popcorntv-staging/Caddyfile', str(self.installed_caddyfile),
+        ))
         (self.stage / 'compose.yml').touch()
         (self.stage / 'check-storage.sh').write_text('''
 printf '%s\\n' storage >> "$FIXTURE_LOG"
@@ -41,6 +45,7 @@ printf '%s\\n' "$FIXTURE_TAILSCALE_IP"''',
 printf '%s\\n' interface >> "$FIXTURE_LOG"
 printf '%s\\n' "$FIXTURE_INTERFACE"''',
             'docker': '''[ -z "${DOCKER_CONTEXT+x}${DOCKER_HOST+x}" ] || exit 2
+[ "$1:$2" = '--host:unix:///var/run/docker.sock' ] || exit 2
 if [ "$3" = image ] && [ "$4" = inspect ]; then
     printf 'inspect:%s\\n' "$7" >> "$FIXTURE_LOG"
     case "$7" in
@@ -105,6 +110,21 @@ fi''',
         result = self.launch(FIXTURE_STORAGE_CODE='1')
         self.assertEqual(result.returncode, 1)
         self.assertEqual(self.log.read_text().splitlines(), ['storage'])
+
+    def test_refuses_an_installed_caddyfile_that_differs_from_the_checkout(self):
+        self.installed_caddyfile.write_text('stale Caddyfile')
+        result = self.launch()
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stderr.strip(), 'pi-staging.ingress_refused:caddyfile_mismatch')
+        self.assertEqual(self.log.read_text().splitlines(), ['storage'])
+
+    def test_refuses_an_app_image_with_the_wrong_raw_identity(self):
+        result = self.launch(FIXTURE_APP_IMAGE=json.dumps({
+            'id': 'sha256:' + 'd' * 64, 'os': 'linux', 'architecture': 'arm64', 'digests': [],
+        }))
+        self.assertEqual(result.returncode, 1)
+        self.assertIn('app_identity_unconfirmed', result.stderr)
+        self.assertNotIn('compose', self.log.read_text().splitlines())
 
     def test_refuses_a_mutable_tag_before_compose(self):
         result = self.launch(PCTV_STAGE_CADDY_IMAGE='popcorntv-caddy:latest')

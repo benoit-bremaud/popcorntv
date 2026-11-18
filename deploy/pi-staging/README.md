@@ -4,11 +4,13 @@ Run PopCornTV staging in its own Compose project on the Pi's mounted USB disk, w
 
 ## Deployment prerequisites
 
+- The Pi needs Docker Compose v2 and Python 3.11 or later. The storage guard
+  reads the local containerd configuration with Python's `tomllib`.
 - Qualify the exact ARM64 app and Caddy artifacts before deploying. Set
   `PCTV_STAGE_IMAGE` and `PCTV_STAGE_CADDY_IMAGE` to locally loaded, approved
   immutable references. The launcher verifies each image ID or repository
   manifest digest and its Linux ARM64 platform.
-  The app and its one-shot asset copier use that same ID. No application port is
+  The app and its one-shot asset copier use that same reference. No application port is
   published. The one-shot copier has no network.
 - Select a staging host name distinct from production. Resolve it to the Pi's
   verified `tailscale0` IPv4 address on the QA clients. Set `PCTV_STAGE_HOST` to
@@ -44,7 +46,8 @@ docker --host unix:///var/run/docker.sock compose \
 sh deploy/pi-staging/start.sh
 ```
 
-The guard checks the USB mount separately from the OS disk, the actual Docker
+The guard checks the installed Caddyfile against the reviewed checkout. It also
+checks the USB mount separately from the OS disk, the actual Docker
 and configured containerd roots, canonical project bind paths, and private
 staging ownership and modes. It rejects mountpoints at or within the staging
 tree and staging configuration files with additional hard links. The launch
@@ -57,6 +60,23 @@ so an absent USB mount during boot does not bypass the supported startup guard.
 The application filesystem is read-only outside the explicit staging binds and
 its temporary filesystem. The Caddy CA survives restarts in its dedicated data
 directory. Trust that CA only for the designated QA clients.
+
+After startup, verify HTTPS from a QA client. Compose waits for the application
+health check and for Caddy to run. Caddy readiness is confirmed by requesting
+the health endpoint through the staging origin using the staging CA:
+
+```sh
+stage_ca=$(mktemp)
+ssh benoit@bb-homelab 'cat /mnt/appdata/popcorntv-staging/caddy-data/caddy/pki/authorities/local/root.crt' >"$stage_ca"
+curl --fail --silent --show-error --cacert "$stage_ca" https://bb-homelab:8443/api/health
+rm -f -- "$stage_ca"
+```
+
+If startup partially fails, inspect this project's Compose logs and stop the
+project using the command below. Retain its data. Before switching application
+versions, stop staging with the current deployment settings. Then select the
+new immutable reference and run the guarded launcher so the previous Caddy
+process cannot serve during asset replacement.
 
 Run the [FULL checklist](../../docs/testing/qa-full-staging-checklist.md) on this
 Pi staging origin. To stop staging, use the Compose command above with `down`

@@ -5,6 +5,10 @@ set -eu
 stage_dir=$(CDPATH='' cd -P "$(dirname "$0")" && pwd)
 unset DOCKER_CONTEXT DOCKER_HOST
 sh "$stage_dir/check-storage.sh"
+if ! cmp -s -- "$stage_dir/Caddyfile" /mnt/appdata/popcorntv-staging/Caddyfile; then
+    printf '%s\n' 'pi-staging.ingress_refused:caddyfile_mismatch' >&2
+    exit 1
+fi
 
 python3 - "${PCTV_STAGE_TAILNET_IP:-}" <<'PY'
 import ipaddress
