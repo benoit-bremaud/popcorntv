@@ -4,16 +4,16 @@ This record distinguishes source-review findings, targeted acceptance, failed at
 
 - Date: 2026-11-15.
 - Branch: `feat/327-local-discovery`; base `origin/main` at `9ef3db5`.
-- Latest full verified gate: `5787bd5` on 2026-11-18. The follow-up documentation
-  adds the owner's requested future FULL staging checklist and requires its own
-  exact-head verification before merge.
+- Latest full verified gate: `7441a47` on 2026-11-18, including the future FULL
+  staging checklist and bounded synthetic fixture threads. This closeout changes
+  only the branch's review report; its published head is gated again before merge.
 - Dimensions: fresh adversarial source review, design/container verification,
   independent test-quality review, documentation/traceability reconciliation,
   targeted security and correctness checks.
 - Source verdict at `cd62451`: Must 0 / Should 1 / Nice 4; the Should corrected in the following
   commit, remaining Nice items filed (#349).
-- Publication: PR #351 is open on `5787bd5`, with a successful gate and verified
-  attestation. The earlier `e432866` Sonar failure remains recorded separately.
+- Publication: PR #351 is open on `7441a47`, with a successful gate and verified
+  attestation. Earlier failed Sonar and loaded-host runs remain recorded separately.
   No merge or deployment is claimed.
 
 ## Adversarial review
@@ -368,3 +368,49 @@ context justifies a fresh full qualification; it is not proof that the fixture
 thread bound alone cured the availability timeout. Isolated results do not make
 the previous failed L1 green. Issue #353 preserves the incident and acceptance
 criteria. Full L1/L2 and exact-head signature verification remain required.
+
+## Final functional qualification — `7441a477ac7941c11ebdb8f723204c0f3ae3bffd`
+
+Independent committed-head review: Must 0 / Should 0 / Nice 0; push review gate
+open. Full L1 and its repeated pre-push hook passed with no skips; the hook
+completed in 139.01 seconds and publication succeeded. The host's performance
+profile was confirmed read-only after the owner's change. Other workloads were
+not stopped, and the 501-title dataset, 500-title provider cap, assertions,
+timeouts and four-worker limit stayed unchanged.
+
+Full L2 then passed with exit 0: 30/30 recorded commands returned zero,
+`result=success`, `discovery=run` and the working tree remained clean.
+
+| Check | Final functional-head result |
+|---|---|
+| Infrastructure | 45 tests passed |
+| Python | 125 tests passed; 94.30% coverage |
+| Dependency controller | 11 tests passed; 96.50% lines / 92% branches / 100% functions |
+| Application | 57 shared + 905 server with real FFmpeg + 485 web = 1,447 passed; no skips |
+| Real discovery journey | One freshly executed container test passed in 67.35 seconds |
+| Discovery / application builds | Successful BuildKit cache reuse; not freshly executed Radarr xUnit tests |
+| SonarQube | PASSED; accepted local-scope dispositions remain individually linked to #352 |
+| Browser | Two production-web Chromium journeys passed in 4.9 seconds with stubbed APIs; not FULL staging/media QA |
+| Security / supply chain | Gitleaks, Semgrep, bounded OSV, Hadolint, Trivy config/source/image and SPDX SBOM all passed |
+| Documentation | Separate unchanged presence counts: 447/469 TypeScript exports, 65/65 public discovery/completeness Python declarations; not a gate-measured quality percentage |
+
+The exact-SHA signature verification passed with exit 0:
+
+```text
+attest: verified gate 7441a477ac7941c11ebdb8f723204c0f3ae3bffd
+```
+
+Evidence:
+`.git/local-ci-runs/20261118T004406Z-7441a477ac7941c11ebdb8f723204c0f3ae3bffd-1210907/`.
+The scanned application image is
+`popcorntv:gate-7441a477ac7941c11ebdb8f723204c0f3ae3bffd`; the generated inventory
+is `.trivy/gate-sbom.spdx.json`. Earlier failures remain failed historical runs.
+Issue #353 retains the loaded-host investigation; isolated success is not used
+as a substitute for these complete results. Refinements #347–#350 and #352 remain
+open. No deployment or staging QA execution is claimed.
+
+**Functional-head gate GREEN and signature-verified.** The closeout commit differs
+from this checked head only in this review report. Before merge, verify that
+path-only difference, publish it through the normal pre-push hook, run the full
+gate again and verify the final full SHA. No further functional change is covered
+by the report-only closeout rule.
