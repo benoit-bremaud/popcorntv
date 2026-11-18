@@ -18,8 +18,11 @@ context: merged PRs, decisions, tags, infra events. Not a release changelog — 
   application tests, with real FFmpeg, 94.30% Python coverage and no skipped tests.
 - Preserved unsuccessful full-gate evidence: `e432866` passed the rebuilt discovery
   images and fresh real-container journey, then failed on 33 Sonar findings. Refactoring
-  reduced this to eight individually reviewed findings; later L2 steps were not reached.
-  This entry does not claim a successful exact-head gate, attestation, merge or deployment.
+  reduced this to eight individually reviewed findings; later L2 steps were not reached
+  in that failed run. The later full gate on `5787bd5` passed all 30 steps: fresh
+  real-container acceptance, SonarQube, two API-stubbed browser journeys, production
+  image build/scans and SBOM. Its exact-SHA signature verification passed. The xUnit
+  build target reused cache and is not a fresh two-test execution in that run.
 - **Decisions**: the owner approved the local-scope Sonar dispositions on 2026-11-18:
   seven accepted findings and one return-type false positive. Refinement work remains
   open in #352, alongside #349. The decision changes no scanner rules or test thresholds;
@@ -27,6 +30,9 @@ context: merged PRs, decisions, tags, infra events. Not a release changelog — 
   must be reassessed before widening exposure. The separate bounded picomatch correction
   expires exclusively on 2026-12-01; see `SECURITY.md`.
 - Incremental commits and tracked handoff records preserve verified work across sessions.
+  The owner's requested future FULL staging checklist is linked from the QA ledger;
+  it covers all applicable domains and preserves NOT TESTED/blocked cases. Adding it
+  and this final evidence moves the head, which requires a new published-head gate.
   No Raspberry Pi deployment is authorized by this qualification. A project checkpoint
   follows #351 before the next functional task.
 

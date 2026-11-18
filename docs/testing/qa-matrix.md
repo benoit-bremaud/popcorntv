@@ -1,10 +1,42 @@
 # QA coverage ledger — PopCornTV
 
-One row per screen or flow. Cell format: `date · SHA · environment · OK | KO #N | — (reason)`. Source: [full pass of 2026-11-08](../architecture/qa/2026-11-08-full-pass-pi.md), [pass of 2026-11-10](../architecture/qa/2026-11-10-full-pass-pi.md). Responsive cells: only 619 px and 1728 px were reachable. Offline cells: no probe possible with the tool in use. A row is complete when every cell carries a date or a reason.
+Historical evidence by screen or flow, kept separately from future test preparation. Cell format: `date · SHA · environment · OK | KO #N | — (reason)`. Baselines include [2026-11-08 Pi](../architecture/qa/2026-11-08-full-pass-pi.md), [2026-11-10 Pi](../architecture/qa/2026-11-10-full-pass-pi.md), [2026-11-11 full staging](../architecture/qa/2026-11-11-full-pass-staging.md) and [2026-11-12 targeted TMDB staging](../architecture/qa/2026-11-12-tmdb-pass-staging.md). The original table below retains its original viewport/tool limitations; later dated sections record subsequent checks. A row is complete when every cell carries a date or a reason.
 
 The #308 experimental rows at the end record local recovery/player evidence separately from
 deployed-product QA. They do not supersede the historical Pi/staging results or certify the
 wishlist-to-ready workflow.
+
+## Next full staging session — preparation 2026-11-18
+
+Use the [full staging QA checklist](qa-full-staging-checklist.md) on the exact
+deployed production image through its real staging ingress. It covers all ten
+FULL domains and P0–P2 items, with input boundaries, state transitions, regression
+replay, accessibility, inspector/server logs, fault recovery and resource evidence.
+Every case starts **NOT TESTED**. Preparing it is not a deployment or an executed
+QA pass. Update ledger cells only after observing the corresponding case on the
+recorded staging SHA; local gate and historical Pi results remain separate.
+
+| Area | Planned project cases | Current session status |
+|---|---|---|
+| Setup, sign-in, invitations, reset, password/device/account lifecycle | STG-01–04, STG-06 | NOT TESTED — future disposable seeded accounts |
+| Profiles and per-account isolation | STG-05, STG-15, STG-18–20 | NOT TESTED — future staging session |
+| Libraries, scan, metadata and existing schedules | STG-07–09 | NOT TESTED — fixture roots/media and pass-window logs required |
+| Catalog, search, dialogs, history and episode navigation | STG-10–11, STG-16 | NOT TESTED — real browsers and populated fixtures required |
+| Direct/HLS playback, audio, subtitles and progress | STG-12–15 | NOT TESTED — direct/transcode/multitrack/series fixtures required |
+| Discover, providers, wishlist, notifications and title links | STG-17–19 | NOT TESTED — valid authorized staging TMDB configuration required |
+| #309 persistent preparation request contract | STG-20 | NOT TESTED — no acquisition/readiness claim from persistence alone |
+| Input sweep, past defects and exploration | STG-21–23 | NOT TESTED — replay both staging baselines and all applicable ledger sections |
+| #327 separate discovery infrastructure | Discovery annex in the checklist | NOT TESTED on staging — only if explicitly included in that topology |
+| #315 A complete-file acquisition trial | Separate milestone acceptance | BLOCKED until #328/#310/#311/#314 A are integrated and real-service writes separately authorized |
+| Progressive readiness, child acquisition policy, second backend | #312/#313/#314 B/#316/#325 | No current delivery claim; reassess applicability at the deployed SHA |
+
+Security execution additionally requires the confirmed read-only scope and test
+cards. Historical rate-limit bursts are not replay instructions. Blocked checks,
+missing screen-reader/viewport/media capabilities and absent server logs never
+become a fresh PASS by linking an earlier test. See the checklist for exact
+reporting, redaction, ownership/cleanup and staging-attestation conditions.
+
+## Historical flow ledger
 
 | Flow | Nominal | Error | Offline | Back | Accessibility | Responsive |
 |---|---|---|---|---|---|---|

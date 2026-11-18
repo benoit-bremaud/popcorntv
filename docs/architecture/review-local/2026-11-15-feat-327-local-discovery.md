@@ -1,20 +1,20 @@
 # Local review — PopcornTV local discovery
 
-This record distinguishes source-review findings, targeted acceptance and unsuccessful global validation.
+This record distinguishes source-review findings, targeted acceptance, failed attempts and verified exact-head global validation.
 
 - Date: 2026-11-15.
 - Branch: `feat/327-local-discovery`; base `origin/main` at `9ef3db5`.
-- Latest published functional verification: `e432866` on 2026-11-17. The
-  responsibility refactor recorded below has targeted verification and still
-  requires publication and an exact-head global gate.
+- Latest full verified gate: `5787bd5` on 2026-11-18. The follow-up documentation
+  adds the owner's requested future FULL staging checklist and requires its own
+  exact-head verification before merge.
 - Dimensions: fresh adversarial source review, design/container verification,
   independent test-quality review, documentation/traceability reconciliation,
   targeted security and correctness checks.
 - Source verdict at `cd62451`: Must 0 / Should 1 / Nice 4; the Should corrected in the following
   commit, remaining Nice items filed (#349).
-- Publication: PR #351 is open on `e432866`. Its complete gate passed dependency
-  checks and the real-container journey, then failed at SonarQube. No successful
-  attestation, merge or deployment is claimed.
+- Publication: PR #351 is open on `5787bd5`, with a successful gate and verified
+  attestation. The earlier `e432866` Sonar failure remains recorded separately.
+  No merge or deployment is claimed.
 
 ## Adversarial review
 
@@ -283,3 +283,55 @@ and 1,447 application tests, with real FFmpeg and no skips. Python coverage is
 Semgrep reports zero findings and the bounded OSV controller passed. The exact-head
 global gate, signed attestation verification and review-comment reconciliation
 remain mandatory before merge.
+
+## Pre-merge gate — checked head `5787bd55abb148f8429780a5f729c1469d1c6385`
+
+The full gate passed with exit 0: 30 recorded commands all returned zero,
+`result=success` and `discovery=run`. The pre-push hook also passed on this head
+in 453.97 seconds. The independent committed-head verification reports
+Must 0 / Should 0 / Nice 0 and push review gate open.
+
+| Step | Result |
+|---|---|
+| Tests | 45 infrastructure, 125 Python, 11 Node and 1,447 application tests (57 shared / 905 server with real FFmpeg / 485 web); no skips |
+| Runtime discovery | Fresh real-container journey: one test passed in 97.25 seconds; discovery build passed in 5.44 seconds with BuildKit cache reused |
+| Regression build | Radarr's xUnit target reused BuildKit cache; not two freshly executed tests in this run |
+| Coverage | Python 94.30%; Node controller 96.50% lines / 92% branches / 100% functions; unchanged runner floors |
+| Documentation presence | TypeScript exported declarations: 447/469 (95.31%); public declarations in the discovery/completeness Python controllers: 65/65. Separate AST presence counts, not gate-measured contract-quality coverage |
+| SonarQube | PASSED, exit 0, 89.42 seconds; approved individual dispositions remain linked to open #352 |
+| Secrets / SAST / dependencies | Gitleaks clean; Semgrep zero findings; bounded OSV check passed without a new global ignore |
+| Browser | Two Chromium journeys passed against the production web build with stubbed APIs; not a full deployed-product/media QA session |
+| Containers / supply chain | Hadolint, Trivy config, source security, production image build, image scan and SBOM all passed |
+| CI mirror | No enabled hosted PR workflow; the repository uses the local pinned gate |
+
+The invocation `sh scripts/attest.sh verify gate HEAD` was refused with exit 1:
+`expected a full commit SHA`. This is an argument error, not a successful
+verification. The supported exact-SHA invocation then passed with exit 0:
+
+```text
+attest: verified gate 5787bd55abb148f8429780a5f729c1469d1c6385
+```
+
+Structured evidence is retained under
+`.git/local-ci-runs/20261117T235047Z-5787bd55abb148f8429780a5f729c1469d1c6385-55906/`.
+The current PR discussion contains only optional automated-review execution/quota
+status, with no actual inline code finding or review submission to answer. No
+hosted review was requested during this qualification.
+
+**Gate GREEN and verified on the checked SHA above.** This record and the newly
+requested FULL staging checklist/ledger are a documentation change after that
+SHA: the new head must be published, gated and signature-verified again before
+merge. The new change is not a report-only commit and gets independent review.
+
+## Future FULL staging checklist — owner request 2026-11-18
+
+Added `docs/testing/qa-full-staging-checklist.md` and a planned-session index in
+the existing coverage ledger. They preserve historical results and leave the
+future cases NOT TESTED. The checklist covers all ten FULL domains and P0–P2
+applicability, disposable test-account/media fixtures, input/state boundaries,
+regressions, real browser/media paths, screen reader, performance, pass-window
+logs, safe fault isolation and exact-deployment staging attestation. It distinguishes
+merged #309 persistence, optional #327 topology and unintegrated acquisition work.
+Security execution requires the owner's confirmed read-only scope/cards; the
+historical rate-limit bursts are not new instructions. No staging test or
+deployment was performed while writing this checklist.
