@@ -4,6 +4,7 @@ Prepare a full product and security review of the exact production image deploye
 
 ## Session identity and entry conditions
 
+- [ ] For Pi staging, record the USB storage guard, exact Linux ARM64 application and Caddy references, available host resources, Tailnet address, bridge, port and certificate trust at the actual staging origin. Use the [Pi staging runbook](../../deploy/pi-staging/README.md) and [preparation record](../architecture/qa/2026-11-18-pi-staging-preparation.md).
 - [ ] Record the session date and start/end timestamps with timezone, exact staging URL confirmed by the owner, deployed Git SHA and immutable image digest, comparison base, browser versions and host architecture.
 - [ ] Confirm that the application API and static assets belong to the same release, through the real staging Caddy origin. Do not substitute the Vite development server, mocked browser APIs or an application port that bypasses ingress.
 - [ ] Link the successful exact-head local gate and verified attestation. This is a prerequisite, not a substitute for deployed-product QA.
@@ -27,6 +28,7 @@ resource qualification. Preparing this checklist authorizes no deployment.
 | Surface | What the session must establish |
 |---|---|
 | Existing media application | Authentication, profiles, libraries, scan/metadata, catalog, direct/HLS playback, subtitles/audio, progress, Discover, wishlist, notifications and owner administration work through staging ingress. |
+| Base Pi staging (#361) | Exercise the application and Caddy with dedicated fixtures. Record the availability of TMDB and mark retrieval-dependent cases BLOCKED until the integrated retrieval application is deployed and in scope. |
 | Durable preparation requests (#309) | Validate only the merged API/persistence contract available at the deployed SHA, using disposable wishlist fixtures and profile isolation. It does not prove source search, transfer or readiness. |
 | Local discovery services (#327) | Execute the separate infrastructure annex only if those services are explicitly included in the approved staging topology. Their local real-container proofs are not deployed-staging results. |
 | Unmerged or unfinished work | #328 retrieval/VPN, #310 daily multi-indexer search, #311 bounded cache and #314 A complete-file handoff are BLOCKED until the required implementation and integration are present. Reassess their actual status at the session SHA. |
