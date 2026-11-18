@@ -335,3 +335,36 @@ merged #309 persistence, optional #327 topology and unintegrated acquisition wor
 Security execution requires the owner's confirmed read-only scope/cards; the
 historical rate-limit bursts are not new instructions. No staging test or
 deployment was performed while writing this checklist.
+
+## Loaded-host qualification incident — #353
+
+The first complete L1 on documentation-only `0f3042b` failed (exit 1). Server
+results were 900 passed, one failed and four unexecuted: the keyframe fixture
+hook exceeded 10,000 ms, and the real 501-title provider-cap case exceeded
+5,000 ms. The other suites passed, including all 485 web tests. No publication
+or successful gate on `0f3042b` follows from that run.
+
+The isolated keyframe file passed four tests in 5.13 seconds. The isolated
+availability file still failed its cap case (19 passed, one failed; 5.90 seconds
+for the failing test). At diagnosis the host had 20 logical CPUs, load averages
+30.70/29.68/18.16 and later samples of 96–97% CPU busy with run queues of 30–36.
+The owner confirmed multiple other concurrent sessions. No unrelated process was
+stopped. These observations support contention but do not prove its complete cause.
+
+The three synthetic FFmpeg encodes now bound video codec and simple-filter
+threads to one. No media duration, cadence, GOP, B-frame setting, test timeout,
+worker bound, assertion, title count or production behavior changed. Seven real
+FFmpeg integration tests passed in the two affected files. A separate content
+inspection extracted the literal argv from the actual test source, generated all
+three fixtures with real FFmpeg, and decoded them with ffprobe: both 30-second
+fixtures retain 720 frames, 516 B-frames and keyframes at offsets 0/5/10/15/20/25;
+MPEG-TS audio starts at 1.460111 seconds before video at 1.483333 seconds. The
+one-second Matroska control retains 25 frames, including 16 B-frames.
+
+During diagnosis the owner reported switching to performance power mode. The unchanged
+availability file passed all 20 tests in 991 ms total (320 ms test time), with
+the 501-title dataset and 500-title provider cap intact. This changed execution
+context justifies a fresh full qualification; it is not proof that the fixture
+thread bound alone cured the availability timeout. Isolated results do not make
+the previous failed L1 green. Issue #353 preserves the incident and acceptance
+criteria. Full L1/L2 and exact-head signature verification remain required.

@@ -35,6 +35,12 @@ context: merged PRs, decisions, tags, infra events. Not a release changelog — 
   and this final evidence moves the head, which requires a new published-head gate.
   No Raspberry Pi deployment is authorized by this qualification. A project checkpoint
   follows #351 before the next functional task.
+- The first L1 on checklist commit `0f3042b` failed two server timing checks under
+  a heavily loaded host (#353). Preserved the red run and isolated diagnostics. Bounded
+  only synthetic FFmpeg codec/filter threads, retaining real B-frame/GOP/audio fixtures
+  and every assertion/deadline. The owner confirmed concurrent sessions and changed to
+  performance power mode; the unchanged 501-title boundary then passed in isolation.
+  These diagnostics do not replace a fresh successful complete qualification.
 
 ## 2026-11-14 — Signed local gate adoption (PR #340, `6a3c4ac`)
 

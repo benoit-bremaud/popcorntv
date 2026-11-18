@@ -91,6 +91,24 @@ substituted; separate real Gitleaks, Vitest, pnpm and installed-hook fixtures te
 boundaries. These tests are required by check. No unrelated live acquisition, personal
 credential replay or deployment belongs to this gate migration.
 
+### Concurrent host workloads and media fixtures
+
+The four-worker Vitest bound does not bound a native encoder's internal threads.
+Synthetic H.264 fixture generation therefore sets output video codec threads and
+simple-filter threads to one. It retains the real encoder, duration, cadence,
+B-frames, GOP and audio/video timing assertions. Production transcoding behavior
+is unchanged by this test-fixture policy.
+
+Other concurrent workloads and host power policy can still exhaust a test's
+wall-clock budget. Preserve a failure and its load/power context; an isolated
+pass is diagnostic only. Do not lower the 501-title persistence boundary, change
+`PROVIDERS_MAX`, increase timeouts or replace SQLite/domain behavior with mocks.
+After a justified correction or documented execution-context change, the complete
+recipe must pass without skips before publication, and the exact-head gate and
+signature verification remain mandatory. Never stop another workload or change
+the host power policy without the owner's authorization. See #353 for the
+qualification incident and remaining evidence.
+
 ## Temporary picomatch mitigation — 2026-11-17
 
 The owner authorized the local `picomatch@4.0.7` patch and conditional classification

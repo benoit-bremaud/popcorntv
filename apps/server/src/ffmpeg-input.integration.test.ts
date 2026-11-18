@@ -32,15 +32,20 @@ describe.runIf(process.env['FFMPEG_IT'] === '1')('confined FFmpeg input', () => 
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
     const address = server.address();
     port = typeof address === 'object' && address !== null ? address.port : 0;
+    // A fixture encoder must not allocate an automatic thread pool per test worker.
     execFileSync('ffmpeg', [
       '-v',
       'error',
+      '-filter_threads',
+      '1',
       '-f',
       'lavfi',
       '-i',
       'testsrc=d=1',
       '-c:v',
       'libx264',
+      '-threads:v',
+      '1',
       '-y',
       join(dir, 'ok.mkv'),
     ]);
