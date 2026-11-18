@@ -11,6 +11,10 @@ import test_local_ci_attest as attest_fixtures
 SOURCE = Path(__file__).resolve().parents[1] / 'local-ci.py'
 
 
+# The lint steps also name this file; only the pytest run of it is the real-container journey.
+RUNTIME_JOURNEY = ['-q', 'scripts/tests/test_discovery_runtime.py']
+
+
 class RunnerTest(unittest.TestCase):
     def setUp(self):
         fixture = attest_fixtures.AttestationTest()
@@ -18,6 +22,7 @@ class RunnerTest(unittest.TestCase):
         self.addCleanup(fixture.doCleanups)
         self.fixture = fixture
         self.repo, self.env = fixture.repo, fixture.env
+        self.env.pop('LOCAL_CI_DISCOVERY', None)
         self.scripts = self.repo / 'scripts'
         self.scripts.mkdir()
         (self.scripts / 'tests').mkdir()
@@ -30,7 +35,7 @@ class RunnerTest(unittest.TestCase):
         (self.repo / '.nvmrc').write_text('22.23.4\n')
         self.log = fixture.root / 'commands.jsonl'
         self.env['CI_TEST_COMMAND_LOG'] = str(self.log)
-        for name in ('node', 'pnpm', 'lefthook', 'shellcheck', 'gitleaks', 'osv-scanner', 'docker', 'make', 'sonar-scanner', 'ffmpeg'):
+        for name in ('node', 'pnpm', 'uv', 'just', 'lefthook', 'shellcheck', 'gitleaks', 'osv-scanner', 'docker', 'make', 'sonar-scanner', 'ffmpeg'):
             path = fixture.bin / name
             path.write_text('''#!/usr/bin/env python3
 import json,os,sys
@@ -49,7 +54,7 @@ if name=='pnpm' and 'playwright' in sys.argv:
  status='failed' if os.environ.get('CI_TEST_BROWSER_EXPECTED_FAIL') else 'passed'
  Path(os.environ['PLAYWRIGHT_JSON_OUTPUT_NAME']).write_text(json.dumps({'stats':{'expected':1,'skipped':skipped},'errors':[],
  'suites':[{'specs':[{'tests':[{'expectedStatus':status,'results':[{'status':status}]}]}]}]}))
-sys.exit(1 if os.environ.get('CI_TEST_FAIL_TOOL')==name else 0)
+sys.exit(1 if os.environ.get('CI_TEST_FAIL_TOOL')==name or (os.environ.get('CI_TEST_FAIL_DEPENDENCIES') and name=='node' and 'scripts/check-dependencies.mjs' in sys.argv) else 0)
 ''')
             path.chmod(0o755)
         for folder, package in (('packages/shared', '@popcorntv/shared'), ('apps/server', '@popcorntv/server'),
@@ -61,6 +66,10 @@ sys.exit(1 if os.environ.get('CI_TEST_FAIL_TOOL')==name else 0)
         fixture.git('commit', '-m', 'ci(test): add runner fixture')
         fixture.git('push', 'origin', 'main')
         self.env['SONAR_TOKEN'] = 'fixture-only-not-a-real-secret'
+        license_file = fixture.root / 'sixlabors.lic'
+        license_file.write_text('fixture-only-no-real-license')
+        license_file.chmod(0o600)
+        self.env['SIXLABORS_LICENSE_FILE'] = str(license_file)
 
     def run_recipe(self, *args, good=True, **env):
         result = self.fixture.command('python3', str(self.runner), *args, good=good, env=dict(self.env, **env))
@@ -77,17 +86,114 @@ sys.exit(1 if os.environ.get('CI_TEST_FAIL_TOOL')==name else 0)
         self.assertIn('--maxWorkers=4', tests)
         self.assertIn('--allowOnly=false', tests)
         self.assertEqual(len([c for c in commands if '--coverage' in c]), 3)
+        self.assertTrue(any(c[:3] == ['uv', 'sync', '--locked'] for c in commands))
+        python_tests = next(c for c in commands if 'python' in c and 'scripts/check_python_tests.py' in c)
+        for required in ('scripts/tests/test_discovery.py', 'scripts/tests/test_python_completeness.py',
+                         '--cov=local_discovery', '--cov=check_python_tests', '--cov-branch',
+                         '--cov-fail-under=90'):
+            self.assertIn(required, python_tests)
+        # main...main changes no discovery path: no licensed rebuild, no real-container journey.
+        self.assertFalse(any('discovery-build' in c for c in commands))
+        self.assertNotIn(RUNTIME_JOURNEY, [c[-2:] for c in commands])
+        self.assertIn(['node', 'scripts/check-dependencies.mjs'], commands)
+        dependency_tests = next(c for c in commands if 'scripts/tests/check-dependencies.test.mjs' in c)
+        self.assertIn('--test-coverage-lines=90', dependency_tests)
+        self.assertIn('--test-coverage-branches=80', dependency_tests)
+        self.assertIn('--test-coverage-functions=90', dependency_tests)
         reports = list((self.repo / '.git/local-ci-runs').glob('*/result'))
         self.assertEqual(len(reports), 1)
         self.assertEqual(reports[0].read_text(), 'success\n')
+        self.assertEqual((reports[0].parent / 'discovery').read_text(), 'not-applicable\n')
         versions = json.loads((reports[0].parent / 'versions.json').read_text())
         self.assertEqual(set(versions), {'node', 'pnpm', 'python', 'git', 'ffmpeg', 'docker', 'sonar-scanner'})
         self.assertTrue(all(versions.values()))
 
+    def discovery_branch(self, path='deploy/local-discovery/compose.yml'):
+        self.fixture.git('checkout', '-b', 'feature')
+        target = self.repo / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text('fixture\n')
+        self.fixture.git('add', path)
+        self.fixture.git('commit', '-m', 'ci(test): touch a discovery path')
+        self.fixture.git('push', '-u', 'origin', 'feature')
+
+    def test_discovery_diff_runs_licensed_rebuild_and_real_container_journey(self):
+        self.discovery_branch()
+        self.run_recipe('gate')
+        commands = [json.loads(line) for line in self.log.read_text().splitlines()]
+        self.assertTrue(any('discovery-build' in c for c in commands))
+        self.assertIn(RUNTIME_JOURNEY, [c[-2:] for c in commands])
+        report = next((self.repo / '.git/local-ci-runs').glob('*/discovery'))
+        self.assertEqual(report.read_text(), 'run\n')
+
+    def test_controller_and_manifest_paths_are_discovery_paths(self):
+        spec = importlib.util.spec_from_file_location('fixture_local_ci', self.runner)
+        runner = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(runner)
+        # The whole list is pinned: dropping an entry is a reviewed change (ADR-0036).
+        self.assertEqual(runner.DISCOVERY_PATHS, (
+            'deploy/local-discovery/', 'scripts/local_discovery.py', 'scripts/check_python_tests.py',
+            'scripts/tests/', 'scripts/local-ci.py', 'pyproject.toml', 'uv.lock', 'mise.toml', 'mise.lock',
+            'justfile', 'Makefile', '.hadolint.yaml', '.trivyignore.yaml', '.dockerignore'))
+        for path in ('scripts/local_discovery.py', 'scripts/tests/test_discovery_runtime.py', 'uv.lock',
+                     'scripts/local-ci.py', 'Makefile', '.trivyignore.yaml', 'mise.toml'):
+            self.assertTrue(path.startswith(runner.DISCOVERY_PATHS), path)
+        for path in ('apps/web/src/main.tsx', 'docs/architecture/glossary.md', 'Dockerfile'):
+            self.assertFalse(path.startswith(runner.DISCOVERY_PATHS), path)
+
+    def test_file_renamed_out_of_a_discovery_path_still_runs_the_discovery_steps(self):
+        fixture = self.repo / 'deploy/local-discovery/fixtures/torznab.mjs'
+        fixture.parent.mkdir(parents=True)
+        fixture.write_text('export const fixture = "synthetic torznab source for the journey";\n')
+        self.fixture.git('add', 'deploy/local-discovery/fixtures/torznab.mjs')
+        self.fixture.git('commit', '-m', 'ci(test): add a discovery fixture')
+        self.fixture.git('push', 'origin', 'main')
+        self.fixture.git('checkout', '-b', 'feature')
+        (self.repo / 'elsewhere').mkdir()
+        self.fixture.git('mv', 'deploy/local-discovery/fixtures/torznab.mjs', 'elsewhere/torznab.mjs')
+        self.fixture.git('commit', '-m', 'ci(test): move a discovery fixture away')
+        self.fixture.git('push', '-u', 'origin', 'feature')
+        self.run_recipe('gate')
+        self.assertIn('discovery-build', self.log.read_text())
+        report = next((self.repo / '.git/local-ci-runs').glob('*/discovery'))
+        self.assertEqual(report.read_text(), 'run\n')
+
+    def test_forced_discovery_runs_on_an_unrelated_head_and_says_so(self):
+        self.run_recipe('gate', LOCAL_CI_DISCOVERY='1')
+        commands = [json.loads(line) for line in self.log.read_text().splitlines()]
+        self.assertTrue(any('discovery-build' in c for c in commands))
+        self.assertIn(RUNTIME_JOURNEY, [c[-2:] for c in commands])
+        report = next((self.repo / '.git/local-ci-runs').glob('*/discovery'))
+        self.assertEqual(report.read_text(), 'run (forced)\n')
+
+    def test_failed_discovery_step_is_never_recorded_as_run(self):
+        self.discovery_branch()
+        self.run_recipe('gate', good=False, CI_TEST_FAIL_TOOL='just')
+        self.assertEqual(self.fixture.latest(), 'failure')
+        report = next((self.repo / '.git/local-ci-runs').glob('*/discovery'))
+        self.assertEqual(report.read_text(), 'scheduled\n')
+
+    def test_discovery_diff_without_private_license_never_attests(self):
+        self.discovery_branch()
+        self.run_recipe('gate', good=False, SIXLABORS_LICENSE_FILE='')
+        self.assertEqual(self.fixture.latest(), 'failure')
+        self.assertNotIn('discovery-build', self.log.read_text())
+
+    def test_unrelated_diff_needs_no_license(self):
+        self.discovery_branch('apps/web/src/fixture.ts')
+        self.run_recipe('gate', SIXLABORS_LICENSE_FILE='')
+        self.assertNotIn('discovery-build', self.log.read_text())
+
     def test_failed_check_keeps_other_check_results_but_never_attests(self):
-        self.run_recipe('gate', good=False, CI_TEST_FAIL_TOOL='osv-scanner')
+        self.run_recipe('gate', good=False, CI_TEST_FAIL_DEPENDENCIES='1')
         self.assertEqual(self.fixture.latest(), 'failure')
         self.assertIn('docker', self.log.read_text())
+        self.assertNotIn('sonar.qualitygate.wait', self.log.read_text())
+
+    def test_failed_python_tool_never_attests(self):
+        self.run_recipe('gate', good=False, CI_TEST_FAIL_TOOL='uv')
+        self.assertEqual(self.fixture.latest(), 'failure')
+        self.assertIn('scripts/check_python_tests.py', self.log.read_text())
         self.assertNotIn('sonar.qualitygate.wait', self.log.read_text())
 
     def test_failed_pending_starts_no_checks(self):

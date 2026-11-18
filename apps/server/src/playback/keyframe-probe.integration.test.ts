@@ -18,15 +18,20 @@ describe.runIf(process.env['FFMPEG_IT'] === '1')('createKeyframeProbe with FFmpe
   beforeAll(async () => {
     dir = await mkdtemp(join(tmpdir(), 'popcorntv-keyframe-'));
     file = join(dir, 'gop.mkv');
+    // Bound fixture CPU independently of Vitest workers; retain B-frames and the 5 s GOP.
     execFileSync('ffmpeg', [
       '-v',
       'error',
+      '-filter_threads',
+      '1',
       '-f',
       'lavfi',
       '-i',
       'testsrc=d=30:r=24',
       '-c:v',
       'libx264',
+      '-threads:v',
+      '1',
       '-g',
       '120',
       '-keyint_min',
@@ -38,8 +43,8 @@ describe.runIf(process.env['FFMPEG_IT'] === '1')('createKeyframeProbe with FFmpe
     ts = join(dir, 'gop.ts');
     // prettier-ignore
     execFileSync('ffmpeg', [
-      '-v', 'error', '-f', 'lavfi', '-i', 'testsrc=d=30:r=24', '-f', 'lavfi', '-i', 'sine=d=30',
-      '-c:v', 'libx264', '-g', '120', '-keyint_min', '120', '-sc_threshold', '0',
+      '-v', 'error', '-filter_threads', '1', '-f', 'lavfi', '-i', 'testsrc=d=30:r=24', '-f', 'lavfi', '-i', 'sine=d=30',
+      '-c:v', 'libx264', '-threads:v', '1', '-g', '120', '-keyint_min', '120', '-sc_threshold', '0',
       '-c:a', 'aac', '-f', 'mpegts', ts,
     ]);
   });

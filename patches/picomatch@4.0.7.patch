@@ -1,0 +1,14 @@
+diff --git a/lib/parse.js b/lib/parse.js
+index 29207512c60183b4bb9bf5112be3b9b5f4a9a9fd..af9442e8e86929bab08b87f0176dee23d291758b 100644
+--- a/lib/parse.js
++++ b/lib/parse.js
+@@ -521,6 +521,9 @@ const parse = (input, options) => {
+   };
+ 
+   const extglobOpen = (type, value) => {
++    if (type === 'plus' || type === 'star') {
++      throw new SyntaxError('Repeated extglobs are disabled by the local security policy');
++    }
+     const token = { ...EXTGLOB_CHARS[value], conditions: 1, inner: '' };
+ 
+     token.prev = prev;

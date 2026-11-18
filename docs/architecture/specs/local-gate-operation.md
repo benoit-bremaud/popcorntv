@@ -46,8 +46,13 @@ The gate does not load `.env`, `.env.staging` or real application data.
    `mise x -- just merge PR_NUMBER` only after review acceptance. The command locks the same
    repository as gate, verifies current head/status/signature and submits a SHA-pinned merge.
 
-All initial-migration gates run container checks, even when the old path filter would not
-apply. No required step is skipped. Browser tests remain API-stubbed smoke, not real movie
+Every gate runs the application container checks, even when the old path filter would not
+apply. One scoped exception (owner decision 2026-11-15, ADR-0036): the licensed discovery
+image rebuild and its real-container journey run only when the diff against the base touches
+a discovery path, listed in `DISCOVERY_PATHS` of `scripts/local-ci.py`; otherwise the run
+evidence records `discovery: not-applicable`. `LOCAL_CI_DISCOVERY=1 mise x -- just gate` forces
+both steps on any head, for example a `main` SHA whose diff is empty, and records
+`discovery: run (forced)`. No other step is skipped. Browser tests remain API-stubbed smoke, not real movie
 acquisition QA. The existing Makefile staging/deployment commands are unchanged and are
 not invoked by gate or merge. A squash creates a different main SHA, which needs a fresh
 gate before any later authorized deployment.
@@ -85,3 +90,46 @@ tests. Infrastructure tests use real Git/SSH with only external transports/CLI t
 substituted; separate real Gitleaks, Vitest, pnpm and installed-hook fixtures test those
 boundaries. These tests are required by check. No unrelated live acquisition, personal
 credential replay or deployment belongs to this gate migration.
+
+### Concurrent host workloads and media fixtures
+
+The four-worker Vitest bound does not bound a native encoder's internal threads.
+Synthetic H.264 fixture generation therefore sets output video codec threads and
+simple-filter threads to one. It retains the real encoder, duration, cadence,
+B-frames, GOP and audio/video timing assertions. Production transcoding behavior
+is unchanged by this test-fixture policy.
+
+Other concurrent workloads and host power policy can still exhaust a test's
+wall-clock budget. Preserve a failure and its load/power context; an isolated
+pass is diagnostic only. Do not lower the 501-title persistence boundary, change
+`PROVIDERS_MAX`, increase timeouts or replace SQLite/domain behavior with mocks.
+After a justified correction or documented execution-context change, the complete
+recipe must pass without skips before publication, and the exact-head gate and
+signature verification remain mandatory. Never stop another workload or change
+the host power policy without the owner's authorization. See #353 for the
+qualification incident and remaining evidence.
+
+## Temporary picomatch mitigation — 2026-11-17
+
+The owner authorized the local `picomatch@4.0.7` patch and conditional classification
+of GHSA-fc5q-39xc-vjpf until, exclusively, 2026-12-01. The patch rejects every repeated
+extglob (`+(...)` and `*(...)`) with `SyntaxError`, including legitimate uses; ordinary
+wildcards and nonrepeating extglobs retain their behavior. This mitigates the advisory's
+repeated-extglob class, not all possible regular-expression risks.
+
+After frozen installation, `scripts/check-dependencies.mjs` checks patch registration,
+the patch SHA-256, installed package identities and parser SHA-256 for every resolved
+workspace instance, then executes matcher regressions. The raw OSV scan still covers
+both `pnpm-lock.yaml` and `uv.lock`, with an explicit empty configuration and all
+vulnerabilities included. Only the exact advisory on npm `picomatch` 4.0.7 from the
+root pnpm lockfile is classified as locally corrected. Any other finding, expired
+classification, missing report, process failure or proof drift fails the check.
+
+Each invocation gets a fresh evidence directory containing `osv-raw.json` and, only
+on successful classification, `dependency-mitigation.json`. During gate these live
+under its retained `dependencies/` directory; standalone checks retain them in the
+system temporary directory. No global vulnerability ignore is added. The dependency
+controller's tests run with coverage floors and publish LCOV for SonarQube. Docker
+copies the patch before frozen installation. Remove the patch and classification
+together once an official fixed release has passed the full gate; expiry never
+renews itself.

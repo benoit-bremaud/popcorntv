@@ -14,6 +14,14 @@ ROOT = Path(__file__).resolve().parent.parent
 ATTEST = ['sh', str(ROOT / 'scripts/attest.sh')]
 SEMGREP = 'semgrep/semgrep:1.181.0@sha256:81474464c1f07483ba0682a44787fd93c91397419762a04abe2bafaae396304b'
 REPORT = None
+PYTHON_SOURCES = ('scripts/local_discovery.py', 'scripts/check_python_tests.py',
+                  'scripts/tests/test_discovery.py', 'scripts/tests/test_python_completeness.py',
+                  'scripts/tests/test_discovery_runtime.py')
+# Everything that builds, scans, runs or tests the discovery images and their controller, including
+# the pinned toolchain and the scanner configuration, so a changed scanner cannot exempt itself.
+DISCOVERY_PATHS = ('deploy/local-discovery/', 'scripts/local_discovery.py', 'scripts/check_python_tests.py',
+                   'scripts/tests/', 'scripts/local-ci.py', 'pyproject.toml', 'uv.lock', 'mise.toml', 'mise.lock',
+                   'justfile', 'Makefile', '.hadolint.yaml', '.trivyignore.yaml', '.dockerignore')
 
 
 def output(*cmd):
@@ -66,19 +74,42 @@ def fast():
     source = [f for f in files if Path(f).suffix in ('.ts', '.tsx', '.js', '.mjs', '.cjs')]
     if source:
         good = invoke(['pnpm', 'exec', 'eslint', '--', *source]) and good
+    python_source = [name for name in files if name in PYTHON_SOURCES]
+    if python_source:
+        prefix = ['uv', 'run', '--frozen', '--group', 'ci', 'ruff']
+        good = invoke([*prefix, 'format', '--check', *python_source]) and good
+        good = invoke([*prefix, 'check', *python_source]) and good
     return good
 
 
 def check():
     runtime()
-    env = dict(os.environ, FFMPEG_IT='1', PYTHONDONTWRITEBYTECODE='1')
+    env = dict(os.environ, FFMPEG_IT='1', PYTHONDONTWRITEBYTECODE='1', PYTEST_ADDOPTS='')
+    if REPORT is not None:
+        env['PCTV_DEPENDENCY_REPORT_DIR'] = str(REPORT / 'dependencies')
+    (ROOT / 'coverage').mkdir(exist_ok=True)
     commands = [
         ['pnpm', 'install', '--frozen-lockfile'],
         ['pnpm', 'typecheck'], ['pnpm', 'lint'], ['pnpm', 'format:check'],
         ['python3', 'scripts/test-local-ci.py'],
+        ['uv', 'sync', '--locked', '--group', 'ci'],
+        ['uv', 'run', '--frozen', '--group', 'ci', 'ruff', 'check', *PYTHON_SOURCES],
+        ['uv', 'run', '--frozen', '--group', 'ci', 'ruff', 'format', '--check', *PYTHON_SOURCES],
+        ['uv', 'run', '--frozen', '--group', 'ci', 'mypy', *PYTHON_SOURCES],
+        ['uv', 'run', '--frozen', '--group', 'ci', 'python', 'scripts/check_python_tests.py',
+         '-q', 'scripts/tests/test_discovery.py', 'scripts/tests/test_python_completeness.py',
+         '--cov=local_discovery', '--cov=check_python_tests', '--cov-branch',
+         '--cov-fail-under=90', '--cov-report=term', '--cov-report=json:coverage/python.json',
+         '--cov-report=xml:coverage/python.xml'],
         ['lefthook', 'validate'], ['shellcheck', 'scripts/attest.sh', 'scripts/check-commit-msg.sh'],
         ['gitleaks', 'git', '--redact', '--no-banner'],
-        ['osv-scanner', 'scan', 'source', '--lockfile=pnpm-lock.yaml'],
+        ['node', '--experimental-test-coverage',
+         '--test-coverage-include=scripts/check-dependencies.mjs',
+         '--test-coverage-lines=90', '--test-coverage-branches=80', '--test-coverage-functions=90',
+         '--test-reporter=tap', '--test-reporter=lcov',
+         '--test-reporter-destination=stdout', '--test-reporter-destination=coverage/dependencies.lcov',
+         '--test', 'scripts/tests/check-dependencies.test.mjs'],
+        ['node', 'scripts/check-dependencies.mjs'],
         ['docker', 'run', '--rm', '--user', str(os.getuid()) + ':' + str(os.getgid()),
          '-e', 'SEMGREP_SEND_METRICS=off', '-e', 'SEMGREP_ENABLE_VERSION_CHECK=0',
          '-e', 'EIO_BACKEND=posix', '-v', str(ROOT) + ':/src:ro', '-w', '/src', SEMGREP,
@@ -173,7 +204,28 @@ def gate(base):
             (REPORT / 'versions.json').write_text(json.dumps(versions, indent=2) + '\n')
             if not check():
                 raise RuntimeError('required check failed')
+            # The licensed Radarr rebuild and real-container journey run only for a diff that can
+            # affect them (owner decision 2026-11-15, ADR-0036); LOCAL_CI_DISCOVERY=1 forces them on any
+            # head, which is how #315 replays them on the merged epic. A rename lists both of its paths
+            # and no name is quoted, so moving a file out of a discovery path still counts.
+            changed = subprocess.check_output(
+                ['git', 'diff', '--name-only', '--no-renames', '-z', base + '...' + head], cwd=ROOT).decode().split('\0')
+            forced = os.environ.get('LOCAL_CI_DISCOVERY') == '1'
+            discovery = []
+            if forced or any(name.startswith(DISCOVERY_PATHS) for name in changed):
+                license_file = Path(os.environ.get('SIXLABORS_LICENSE_FILE', ''))
+                if not license_file.is_absolute() or not license_file.is_file() or license_file.stat().st_mode & 0o077:
+                    raise RuntimeError('SIXLABORS_LICENSE_FILE must name an existing private license file')
+                discovery = [
+                    ['just', 'discovery-build', str(license_file)],
+                    ['uv', 'run', '--frozen', '--group', 'ci', 'python', 'scripts/check_python_tests.py',
+                     '-q', 'scripts/tests/test_discovery_runtime.py'],
+                ]
+            else:
+                print('local-ci: discovery image steps not applicable: no discovery path changed', flush=True)
+            (REPORT / 'discovery').write_text('scheduled\n' if discovery else 'not-applicable\n')
             for command in (
+                *discovery,
                 ['pnpm', 'build'],
                 ['sonar-scanner', '-Dsonar.qualitygate.wait=true', '-Dsonar.qualitygate.timeout=180'],
                 ['pnpm', '--filter', '@popcorntv/web', 'exec', 'playwright', 'test', '--config=playwright.local-ci.config.ts'],
@@ -197,6 +249,8 @@ def gate(base):
                     env = dict(os.environ, PLAYWRIGHT_JSON_OUTPUT_NAME=str(REPORT / 'browser-tests.json'))
                 if not invoke(command, env):
                     raise RuntimeError('required gate step failed')
+                if discovery and command is discovery[-1]:
+                    (REPORT / 'discovery').write_text('run (forced)\n' if forced else 'run\n')
                 if 'playwright' in command:
                     report = json.loads((REPORT / 'browser-tests.json').read_text())
                     stats = report.get('stats', {})
@@ -213,7 +267,7 @@ def gate(base):
                             len(case.get('results', [])) != 1 or case['results'][0].get('status') != 'passed'
                             for case in cases):
                         raise RuntimeError('browser test did not pass exactly once')
-            # Always run container checks for this initial migration. No path exemption can hide a failure.
+            # The application container checks always run: no path exemption can hide a failure there.
             subprocess.run([*ATTEST, 'write', 'gate', head], cwd=ROOT, check=True)
             (REPORT / 'result').write_text('success\n')
         except BaseException:

@@ -4,6 +4,9 @@
 .codex
 .agents
 .mise
+.venv
+**/sixlabors.lic
+.pytest_cache
 **/.env*
 !.env.example
 **/node_modules

@@ -1,0 +1,416 @@
+# Local review — PopcornTV local discovery
+
+This record distinguishes source-review findings, targeted acceptance, failed attempts and verified exact-head global validation.
+
+- Date: 2026-11-15.
+- Branch: `feat/327-local-discovery`; base `origin/main` at `9ef3db5`.
+- Latest full verified gate: `7441a47` on 2026-11-18, including the future FULL
+  staging checklist and bounded synthetic fixture threads. This closeout changes
+  only the branch's review report; its published head is gated again before merge.
+- Dimensions: fresh adversarial source review, design/container verification,
+  independent test-quality review, documentation/traceability reconciliation,
+  targeted security and correctness checks.
+- Source verdict at `cd62451`: Must 0 / Should 1 / Nice 4; the Should corrected in the following
+  commit, remaining Nice items filed (#349).
+- Publication: PR #351 is open on `7441a47`, with a successful gate and verified
+  attestation. Earlier failed Sonar and loaded-host runs remain recorded separately.
+  No merge or deployment is claimed.
+
+## Adversarial review
+
+The review rounds used independent local reviews with separate context.
+
+| Round | Source | Result |
+|---|---|---|
+| Review | d0cfa62 | Must 1: anonymous first listen can expose API key; Should 2: reproducible resize regression and stale traceability; adversarial push gate closed |
+| Verification | 02bb954 | Original three findings fixed; new Should: malformed XML escapes categorical CLI handling; no new Must |
+| Verification | 16327d2 | XML failure translated safely; actual CLI regression checks no Docker call, no traceback, unchanged bytes; all findings fixed, none regressed; adversarial push gate open |
+| Independent review | 3a7381a | Must 1: #327 status contradicted between spec and glossary; Should 9: untested fail-closed paths, expired keys kept serving, failed scan on a rerun left the stack published, unenforced `uv.lock`, wrong deployment note, heavy gate steps on every diff without an owner decision, missing ADR and commands, Semgrep XML finding, lint broken by `data/`; Nice 9; push gate closed |
+| Independent verification | d6a833e | Round-one findings fixed or filed (#347–#350); new Must 1: `DISCOVERY_PATHS` missed the Trivy ignore file, the test runner, the mise pins and renames; Should 4: no mechanism behind the #315 replay, path list not fully pinned, `status` not fail-closed on a failed proof, this record stale; Nice 9; push gate closed |
+| Independent verification | cd62451 | Round-two findings fixed or filed; Must 0; Should 1: a malformed HTTP answer escaped the `status` stop; Nice 4; push gate open. The Should is corrected in `44f7229`; remaining Nice items are tracked in #349 |
+| Corrections | d6a833e..cd62451 | Path list completed and pinned, renames and quoted names handled, `LOCAL_CI_DISCOVERY=1` forced replay recorded as `run (forced)`, evidence `scheduled` until the discovery steps pass, `status` stops the owned services on a failed proof, sensitivity figures corrected |
+
+The review verdict is separate from execution. The owner authorized resuming the
+complete pre-merge gate on 2026-11-17; its current result is failure, as recorded below.
+
+## Findings and corrections
+
+- First listen: new configuration enables Forms/RequiredEnabled before process
+  startup. Unsafe legacy settings are refused without resetting configuration;
+  owned stop is attempted. Account provisioning handles an absent user despite
+  matching policy and preserves a foreign administrator.
+- Bootstrap leakage: anonymous initialization metadata is checked before account
+  writes and during rollback. A leaking backend prevents publication and triggers
+  stop fallback. Real-container acceptance observes denial before provisioning
+  and after a rejected setup request. Earlier generated operator API keys were
+  rotated through the official reset command, verified and old keys rejected.
+- Image compatibility/security: complete source builds retain Mono reflection
+  loading and a same-source UI, omit the disabled updater and use immutable
+  scan/start identities. Required licenses are private BuildKit secrets.
+- Regression reproducibility: Bake includes a pinned ImageResizerFixture target
+  with two executed/passed TRX counters. The historical manual run passed two
+  tests; the newly checked-in target awaits execution at the global milestone.
+- Effective ingress: actual loopback bindings, authenticated requests and exact
+  network ownership/attachments/addresses are checked. The second subnet is
+  allocated before creation against host routes and Docker networks. Effective
+  rollback is verified; failure is not hidden by cleanup.
+- Test quality: same-image TCP/DNS positive controls bracket denials and advance
+  canary counters. Synthetic outage checks both failed-source attempts and a fresh
+  healthy response. Source download endpoints return 410 and contain no media.
+- Traceability: historical private-only evidence is tied to 6329c95; current
+  published/source acceptance and deferred global status are documented separately.
+- Failure reporting: malformed XML produces a categorical CLI refusal rather than
+  an uncaught parser traceback. The regression verifies original bytes survive.
+
+## Targeted execution evidence
+
+| Check | Recorded result and scope |
+|---|---|
+| Python component/completeness suite | 93 passed, 91.08% combined statement/branch coverage before the final XML-only correction |
+| Final XML correction | One targeted actual CLI subprocess case passed in 0.25s; no claim of a new full 94-case run |
+| Real-image journey | One passed in 68.19s: pre-account authentication, rejected setup, private/published startup, limits, restart, isolation and synthetic sources |
+| Python static checks | Ruff and strict mypy passed on the changed production/test files |
+| Container checks | Pinned Hadolint passed on the changed builds; actual selected images passed HIGH/CRITICAL scans without new suppressions |
+| Security fixture fix | Targeted Semgrep: 68 applicable rules, zero findings |
+| Commit hooks | Staged gitleaks, formatting and lint passed; a style rejection was corrected and the hook rerun, never bypassed |
+| Documentation presence | 53/53 public declarations across the two new production Python modules have docstrings (48 + 5); this presence measure does not substitute for freshness review |
+
+## Historical global execution deferral — 2026-11-15
+
+The last complete L1 run on d0cfa62 failed on fixture response interpolation. That
+input was removed and its targeted recheck passed; the entire recipe has not
+subsequently been certified green. The owner explicitly requested that global CI
+wait until the pre-Pi deployment milestone. No step is waived or retroactively green.
+
+At that checkpoint, pending checks were: complete L1 rerun, build/regression targets, SonarQube including the added
+Python coverage import, browser E2E, complete image/config/source/SBOM checks and
+signed exact-head verification. Where `scripts/attest.sh` exists, merge still uses
+`mise x -- just merge N` after those steps pass. Existing product staging/Pi QA is
+not superseded by infrastructure fixtures. ARM64 and Pi integration remain separate.
+
+## Remaining findings
+
+### Must
+
+_None in the reviewed source; global execution remains pending._
+
+### Should
+
+_None in the reviewed corrections._
+
+### Nice
+
+Filed on #349, not fixed in this pull request.
+
+### Intentional boundaries
+
+The local fixed proxy does not change bb-homelab's central Caddy or existing
+staging. No real provider, downloader, media file, acquisition scheduler,
+progressive playback or ready notification is installed by this brick.
+
+## Resumed pre-merge validation — 2026-11-17
+
+- Checked head: `44f7229f79fd9c53be5ad4cdb959156ee6ee6605`.
+- Retained evidence: `.git/local-ci-runs/20261117T164206Z-44f7229f79fd9c53be5ad4cdb959156ee6ee6605-1008426/`.
+- Full gate exit: 1; `result=failure`. Eighteen recorded steps, one nonzero step:
+  OSV reports GHSA-fc5q-39xc-vjpf on `picomatch` 4.0.7 (High, CVSS 8.7).
+- Passed: locked install, typecheck, lint, format, 45 infrastructure tests,
+  Ruff, mypy, 111 Python tests (93.42% combined coverage), Lefthook,
+  ShellCheck, Gitleaks, Semgrep, and application suites (57 shared, 905 server,
+  485 web tests; no skipped tests).
+- Discovery rebuild/journey, SonarQube, browser and subsequent container/SBOM
+  steps were not reached. No attestation verification was attempted.
+- Failure-status publication also reported `attest: gh api failed (exit 1)`;
+  no successful remote status publication is inferred from this attempt.
+- Independent verification of the malformed-response correction: four targeted
+  cases passed, covering both faults with successful and failed owned-service stop.
+- Gate: **RED**. The dependency finding requires resolution before a new complete run.
+
+## Dependency correction and resumed review — 2026-11-17
+
+The owner authorized integrating a conservative `picomatch@4.0.7` patch and the
+conditional classification of GHSA-fc5q-39xc-vjpf, expiring exclusively on
+2026-12-01. The patch rejects every repeated extglob. Independent assessment of
+two upstream candidates found semantic regressions or incomplete mitigation;
+neither was adopted. The conservative prototype passed 48 refusal cases,
+550 preserved short matching comparisons and 1,447 application tests with actual
+FFmpeg; lint and production build passed. This prototype experiment did not
+constitute an installation or signed gate.
+
+The integration registers the patch in pnpm and its lockfile, supplies it to the
+Docker build, verifies every inventoried installed instance and preserves the
+raw OSV report for both lockfiles. No global ignore is introduced. Exact identity,
+patch/parser fingerprints, matcher regressions and exclusive expiry gate the
+single classification. Any other finding remains blocking. The local gate runs
+the new controller's tests with line/branch/function coverage floors and imports
+its LCOV into SonarQube.
+
+Independent source/security review and test-quality review found and verified:
+
+- A stale scanner report could survive a failed rerun: every invocation now gets
+  a new directory, and launch errors/signals are explicitly refused.
+- The executable scanner fixture now requires both lockfiles, all vulnerabilities,
+  JSON output and an explicitly empty config, preventing reduced scan scope.
+- CLI tests use a fixed date while production uses the actual date; wrong
+  ecosystems and source types have explicit rejection cases.
+
+Final source and test-review verdict: Must 0 / Should 0 / Nice 0; review gate open.
+Eleven controller tests passed, with 96.50% line, 92% branch and 100% function
+coverage in the independent targeted run. Trivy source precheck passed without a
+new suppression. The complete resumed L1 run passed with exit 0: 45 infrastructure, 111 Python,
+11 dependency-controller and 1,447 application tests, with actual FFmpeg and no
+skips. Types, lint, format, secrets and Semgrep passed; the real dependency check
+classified one locally corrected finding. Local evidence is retained in
+`/tmp/popcorntv-327-integration-check.log` and
+`/tmp/popcorntv-dependencies-EXFTBD/`. Exact-head L2 execution remains pending;
+pre-push success does not make the global gate green.
+
+## Preflight cleanup correction — 2026-11-17
+
+The project refresh audit found that XML/private-file/ingress validation and
+requested-port checks could refuse a rerun before entering cleanup, leaving a
+previously published installation running. `start` now places all preflight
+checks under one existing owned-service stop boundary. The authentication
+validator remains side-effect-free. Cleanup preserves the original exception;
+failed or foreign ownership never permits a mutation and remains unconfirmed.
+
+Fourteen added integration cases cover six faults with successful/failed stop,
+foreign ownership and a real occupied port. Container observations retain the
+subnet from actual fixture publication rather than rereading subsequently
+damaged configuration. The CLI regression records its complete Docker history
+and requires only context inspection when the local daemon cannot be confirmed.
+The original XML refusal, no traceback, unchanged bytes and explicit unconfirmed
+stop remain asserted.
+
+Before correction, the first thirteen selected cases produced twelve failures
+and one pass. After correction, an intermediate complete run had 124 passes and
+one CLI-fixture failure; its assumed first Docker command was incorrect. The
+final fixture names and verifies the daemon-unconfirmed scenario accurately.
+The final unfiltered run passed all 125 Python cases at 94.24% combined coverage
+with the unchanged 90% floor. Ruff and strict mypy passed. Independent source
+and test review: Must 0 / Should 0 / Nice 0 after verification.
+
+Evidence: `/tmp/popcorntv-327-preflight-before.log`,
+`/tmp/popcorntv-327-preflight-after.log`,
+`/tmp/popcorntv-327-preflight-final.log`. Earlier filtered diagnostic invocations
+were not accepted as complete runs by the completeness wrapper. No failing run
+is reclassified as successful. Global L1/L2 and exact-head attestation remain
+required before publication/merge.
+
+## Responsibility refactor and failed global gate — 2026-11-18
+
+The complete gate on `e432866` recorded 22 successful steps followed by a
+SonarQube failure: 33 new violations, new-code coverage 95.3% and duplication 0%.
+The successful steps include 45 infrastructure tests, 125 Python tests, 11 Node
+controller tests and 1,447 application tests without skips, plus Gitleaks,
+Semgrep and the bounded OSV classification. The discovery build and a fresh
+real-container journey passed (one test in 111.90 seconds). The Radarr xUnit
+target reused BuildKit cache; it is not two freshly executed tests in this run.
+Browser checks, later container/source/image scans and SBOM were not reached.
+No successful gate attestation was written.
+
+The follow-up refactor separates credential validation, inspected binding
+decoding, host configuration, Radarr RSS configuration, image provenance,
+image scanning, effective network validation and loopback binding validation.
+The orchestration retains validation and write order, immutable scan identities,
+fresh reads after uncertain writes and the existing ownership/cleanup boundaries.
+Named constants retain the same bounded subnet, service label and endpoint
+policies. Test assertions are separated without removing a condition; the
+exception test constructs its input before the exception boundary.
+
+Independent architecture and correction reviews found Must 0 / Should 0 / Nice 0.
+The architecture review found no justified additional design pattern: cohesive
+functions satisfy the current responsibility boundaries without another layer.
+Targeted execution passed all 125 Python tests in 103.42 seconds, with 94.38%
+combined coverage against the unchanged 90% floor. All 11 Node tests passed;
+controller coverage remains 96.50% lines / 92% branches / 100% functions.
+Ruff, Prettier and strict mypy on the gate's exact five-file Python scope passed.
+An earlier manually broadened mypy command mistakenly included the existing
+untyped infrastructure-runner tests and failed with 218 errors in two files;
+that diagnostic is not a successful gate check or a newly changed source scope.
+
+A subsequent diagnostic Sonar scan of the uncommitted refactor also failed;
+its remaining issue inventory must be reconciled before publication/merge.
+No rule exclusion, changed threshold, suppression or issue-status change was
+used. Explicit HTTP destinations, the RFC1918 allocation bound, termination
+control flow, trusted operator toolchain and categorical no-traceback logging
+remain visible for their security review. The global gate remains RED.
+
+### Final inventory extraction and proposed issue dispositions
+
+The diagnostic reduced the inventory from 33 to nine issues without changing
+an issue status. Its one remaining complexity finding concerns Docker IPAM and
+host-route collection. `occupied_docker_networks()` now owns the Docker adapter;
+`occupied_networks()` combines its allocations with host routes. Empty Docker
+inventory still permits host-route inspection. Independent delta review found
+Must 0 / Should 0 / Nice 0. The complete Python suite passed again: 125 tests in
+100.40 seconds, 94.30% combined coverage with the same 90% floor. Ruff, format and
+strict mypy on the five-file gate scope passed. The diagnostic scan of this final
+extraction confirms all complexity findings resolved: eight issues remain,
+new-code coverage is 95.3% and duplication is 0%. Its exit code is still 1:
+the unresolved issue count exceeds the unchanged zero-violation threshold.
+
+The following are proposed individual dispositions, not applied statuses or a
+global scanner exception. The owner must approve the residual local trust and
+transport choices before applying accepted-risk dispositions.
+
+| Rule | Count | Technical disposition proposed |
+|---|---:|---|
+| S4036 | 2 | Retain operator toolchain trust for `pnpm` and `osv-scanner`: execution enters through the pinned mise environment; the controller is an unprivileged local gate, not a service accepting remote command names. Resolving the same ambient PATH to an absolute path alone would not harden this boundary. |
+| S5332 | 2 | Retain HTTP only for the installation's bounded private Docker service addresses or loopback publication. Proxies are disabled, redirects refused and actual topology/publication inspected. This does not provide confidentiality against the host administrator. |
+| S1313 | 1 | The explicit RFC1918 constant bounds validation/allocation; it is not an external service destination. Collision detection includes Docker allocations and nondefault host routes. |
+| S5709 | 1 | The signal-control exception intentionally traverses ordinary exception handlers, reaches existing `BaseException` cleanup boundaries and exits with status 143. Replacing its base class is not behavior-neutral. |
+| S5886 | 1 | Type-analysis false positive: `dataclasses.replace()` retains the runtime `Installation` type; strict mypy accepts the annotated return. |
+| S8572 | 1 | Categorical CLI logging intentionally omits traceback and chained exception data to avoid exposing credentials/provider payloads. Preserve that security contract instead of enabling exception logging. |
+
+The owner approved option A on 2026-11-18 with the explicit condition that the
+refinement work stay in the backlog. Issue #352 records that follow-up and stays
+open after #351. The comparison scored A (individual documented review) 460/500,
+C (retain findings and suspend merge) 425/500 and B (broader redesign) 290/500.
+Weights were security 35, preserved guarantees 25, maintenance 20, available
+evidence 15 and staging progress 5. Doubling maintenance to 40 and proportionally
+rescaling the other weights yields A 470, C 443.75 and B 267.5.
+
+Applied individual Sonar comments link each finding to #352. S5886 is marked
+FALSE_POSITIVE; the other seven findings are ACCEPTED for the current local
+scope. An authenticated post-write inventory confirms zero unresolved findings.
+This is not a new scan or successful global gate. No rule exclusions or threshold
+changes were made, and no follow-up is reported as implemented.
+
+Full L1 on `5e84f37` passed with exit 0: 45 infrastructure, 125 Python, 11 Node
+and 1,447 application tests, with real FFmpeg and no skips. Python coverage is
+94.30%; Node controller coverage is 96.50% lines / 92% branches / 100% functions.
+Semgrep reports zero findings and the bounded OSV controller passed. The exact-head
+global gate, signed attestation verification and review-comment reconciliation
+remain mandatory before merge.
+
+## Pre-merge gate — checked head `5787bd55abb148f8429780a5f729c1469d1c6385`
+
+The full gate passed with exit 0: 30 recorded commands all returned zero,
+`result=success` and `discovery=run`. The pre-push hook also passed on this head
+in 453.97 seconds. The independent committed-head verification reports
+Must 0 / Should 0 / Nice 0 and push review gate open.
+
+| Step | Result |
+|---|---|
+| Tests | 45 infrastructure, 125 Python, 11 Node and 1,447 application tests (57 shared / 905 server with real FFmpeg / 485 web); no skips |
+| Runtime discovery | Fresh real-container journey: one test passed in 97.25 seconds; discovery build passed in 5.44 seconds with BuildKit cache reused |
+| Regression build | Radarr's xUnit target reused BuildKit cache; not two freshly executed tests in this run |
+| Coverage | Python 94.30%; Node controller 96.50% lines / 92% branches / 100% functions; unchanged runner floors |
+| Documentation presence | TypeScript exported declarations: 447/469 (95.31%); public declarations in the discovery/completeness Python controllers: 65/65. Separate AST presence counts, not gate-measured contract-quality coverage |
+| SonarQube | PASSED, exit 0, 89.42 seconds; approved individual dispositions remain linked to open #352 |
+| Secrets / SAST / dependencies | Gitleaks clean; Semgrep zero findings; bounded OSV check passed without a new global ignore |
+| Browser | Two Chromium journeys passed against the production web build with stubbed APIs; not a full deployed-product/media QA session |
+| Containers / supply chain | Hadolint, Trivy config, source security, production image build, image scan and SBOM all passed |
+| CI mirror | No enabled hosted PR workflow; the repository uses the local pinned gate |
+
+The invocation `sh scripts/attest.sh verify gate HEAD` was refused with exit 1:
+`expected a full commit SHA`. This is an argument error, not a successful
+verification. The supported exact-SHA invocation then passed with exit 0:
+
+```text
+attest: verified gate 5787bd55abb148f8429780a5f729c1469d1c6385
+```
+
+Structured evidence is retained under
+`.git/local-ci-runs/20261117T235047Z-5787bd55abb148f8429780a5f729c1469d1c6385-55906/`.
+The current PR discussion contains only optional automated-review execution/quota
+status, with no actual inline code finding or review submission to answer. No
+hosted review was requested during this qualification.
+
+**Gate GREEN and verified on the checked SHA above.** This record and the newly
+requested FULL staging checklist/ledger are a documentation change after that
+SHA: the new head must be published, gated and signature-verified again before
+merge. The new change is not a report-only commit and gets independent review.
+
+## Future FULL staging checklist — owner request 2026-11-18
+
+Added `docs/testing/qa-full-staging-checklist.md` and a planned-session index in
+the existing coverage ledger. They preserve historical results and leave the
+future cases NOT TESTED. The checklist covers all ten FULL domains and P0–P2
+applicability, disposable test-account/media fixtures, input/state boundaries,
+regressions, real browser/media paths, screen reader, performance, pass-window
+logs, safe fault isolation and exact-deployment staging attestation. It distinguishes
+merged #309 persistence, optional #327 topology and unintegrated acquisition work.
+Security execution requires the owner's confirmed read-only scope/cards; the
+historical rate-limit bursts are not new instructions. No staging test or
+deployment was performed while writing this checklist.
+
+## Loaded-host qualification incident — #353
+
+The first complete L1 on documentation-only `0f3042b` failed (exit 1). Server
+results were 900 passed, one failed and four unexecuted: the keyframe fixture
+hook exceeded 10,000 ms, and the real 501-title provider-cap case exceeded
+5,000 ms. The other suites passed, including all 485 web tests. No publication
+or successful gate on `0f3042b` follows from that run.
+
+The isolated keyframe file passed four tests in 5.13 seconds. The isolated
+availability file still failed its cap case (19 passed, one failed; 5.90 seconds
+for the failing test). At diagnosis the host had 20 logical CPUs, load averages
+30.70/29.68/18.16 and later samples of 96–97% CPU busy with run queues of 30–36.
+The owner confirmed multiple other concurrent sessions. No unrelated process was
+stopped. These observations support contention but do not prove its complete cause.
+
+The three synthetic FFmpeg encodes now bound video codec and simple-filter
+threads to one. No media duration, cadence, GOP, B-frame setting, test timeout,
+worker bound, assertion, title count or production behavior changed. Seven real
+FFmpeg integration tests passed in the two affected files. A separate content
+inspection extracted the literal argv from the actual test source, generated all
+three fixtures with real FFmpeg, and decoded them with ffprobe: both 30-second
+fixtures retain 720 frames, 516 B-frames and keyframes at offsets 0/5/10/15/20/25;
+MPEG-TS audio starts at 1.460111 seconds before video at 1.483333 seconds. The
+one-second Matroska control retains 25 frames, including 16 B-frames.
+
+During diagnosis the owner reported switching to performance power mode. The unchanged
+availability file passed all 20 tests in 991 ms total (320 ms test time), with
+the 501-title dataset and 500-title provider cap intact. This changed execution
+context justifies a fresh full qualification; it is not proof that the fixture
+thread bound alone cured the availability timeout. Isolated results do not make
+the previous failed L1 green. Issue #353 preserves the incident and acceptance
+criteria. Full L1/L2 and exact-head signature verification remain required.
+
+## Final functional qualification — `7441a477ac7941c11ebdb8f723204c0f3ae3bffd`
+
+Independent committed-head review: Must 0 / Should 0 / Nice 0; push review gate
+open. Full L1 and its repeated pre-push hook passed with no skips; the hook
+completed in 139.01 seconds and publication succeeded. The host's performance
+profile was confirmed read-only after the owner's change. Other workloads were
+not stopped, and the 501-title dataset, 500-title provider cap, assertions,
+timeouts and four-worker limit stayed unchanged.
+
+Full L2 then passed with exit 0: 30/30 recorded commands returned zero,
+`result=success`, `discovery=run` and the working tree remained clean.
+
+| Check | Final functional-head result |
+|---|---|
+| Infrastructure | 45 tests passed |
+| Python | 125 tests passed; 94.30% coverage |
+| Dependency controller | 11 tests passed; 96.50% lines / 92% branches / 100% functions |
+| Application | 57 shared + 905 server with real FFmpeg + 485 web = 1,447 passed; no skips |
+| Real discovery journey | One freshly executed container test passed in 67.35 seconds |
+| Discovery / application builds | Successful BuildKit cache reuse; not freshly executed Radarr xUnit tests |
+| SonarQube | PASSED; accepted local-scope dispositions remain individually linked to #352 |
+| Browser | Two production-web Chromium journeys passed in 4.9 seconds with stubbed APIs; not FULL staging/media QA |
+| Security / supply chain | Gitleaks, Semgrep, bounded OSV, Hadolint, Trivy config/source/image and SPDX SBOM all passed |
+| Documentation | Separate unchanged presence counts: 447/469 TypeScript exports, 65/65 public discovery/completeness Python declarations; not a gate-measured quality percentage |
+
+The exact-SHA signature verification passed with exit 0:
+
+```text
+attest: verified gate 7441a477ac7941c11ebdb8f723204c0f3ae3bffd
+```
+
+Evidence:
+`.git/local-ci-runs/20261118T004406Z-7441a477ac7941c11ebdb8f723204c0f3ae3bffd-1210907/`.
+The scanned application image is
+`popcorntv:gate-7441a477ac7941c11ebdb8f723204c0f3ae3bffd`; the generated inventory
+is `.trivy/gate-sbom.spdx.json`. Earlier failures remain failed historical runs.
+Issue #353 retains the loaded-host investigation; isolated success is not used
+as a substitute for these complete results. Refinements #347–#350 and #352 remain
+open. No deployment or staging QA execution is claimed.
+
+**Functional-head gate GREEN and signature-verified.** The closeout commit differs
+from this checked head only in this review report. Before merge, verify that
+path-only difference, publish it through the normal pre-push hook, run the full
+gate again and verify the final full SHA. No further functional change is covered
+by the report-only closeout rule.

@@ -1,6 +1,6 @@
 # Architecture glossary
 
-Incremental glossary for adaptive wishlist design (#307) and signed local gates (#329). Historical features and the separate #128 branch retain their own specifications; this is not a historical backfill.
+Incremental glossary for adaptive wishlist design (#307), signed local gates (#329) and local discovery (#327). Historical features and the separate #128 branch retain their own specifications; this is not a historical backfill.
 
 | Term | Definition | Source |
 |---|---|---|
@@ -12,6 +12,8 @@ Incremental glossary for adaptive wishlist design (#307) and signed local gates 
 | Generation | Stable version of one preparation content/source attempt; restart and ordinary telemetry fluctuations do not change it. | Adaptive wishlist specification §2–7 |
 | Local checks | Required verification commands executed on the owner's machine. | Accepted local gate design, REQ-30–33 |
 | Local gate | Repository command that checks and attests one clean, origin-published commit. | Accepted local gate design, REQ-30–33 |
+| Local discovery services | Isolated Prowlarr/Radarr installation, initially empty and distinct from retrieval or playback. | Implemented #327 topology, REQ-34–37 |
+| Local operator | Owner administering private local service configuration; distinct from a PopcornTV viewer. | Implemented #327 topology, REQ-35 |
 | Indexer | Search/catalog service managed through Prowlarr; multiple configured indexers can reference the same upstream content. | REQ-28 / ADR-0034 |
 | Notification store | Existing private persisted notices extended with exact target/generation deduplication. | Adaptive wishlist specification §2–7 |
 | Owner | Existing administrative role; viewer interest alone does not grant acquisition permission. | Adaptive wishlist specification §2–7 |
@@ -19,6 +21,8 @@ Incremental glossary for adaptive wishlist design (#307) and signed local gates 
 | Playback lease | Session-bound pin preventing cache replacement or eviction while content is consumed. | Adaptive wishlist specification §2–7 |
 | Preparation | Persisted lifecycle for one movie or episode target, shared by interested profiles. | Adaptive wishlist specification §2–7 |
 | Preparation coordinator | Proposed responsibility for due work, recovery reconciliation and persisted transitions. | Adaptive wishlist specification §2–7 |
+| Prowlarr | Service centralizing configured indexers and synchronizing their settings to applications such as Radarr. | Implemented #327 topology, REQ-36 |
+| Radarr | Movie-service search executor proposed for the future PopcornTV cadence; not the authority for local playability. | Implemented #327 topology, REQ-36 |
 | Readiness policy | Pure decision from verified coverage, metadata, conservative throughput and resource evidence. | Adaptive wishlist specification §2–7 |
 | Readiness snapshot | Generation-bound evidence of whether a target can currently start playback. | Adaptive wishlist specification §2–7 |
 | Ready notification | Profile-specific historical notice that a preparation became ready; Play rechecks current readiness. | Adaptive wishlist specification §2–7 |

@@ -1,0 +1,110 @@
+name: ${DISCOVERY_PROJECT:?use the local discovery controller}
+
+x-service: &service
+  user: '${DISCOVERY_UID:?}:${DISCOVERY_GID:?}'
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  pids_limit: 128
+  cpus: 1
+  tmpfs:
+    - /tmp:uid=${DISCOVERY_UID},gid=${DISCOVERY_GID},mode=0700,size=32m,noexec,nosuid,nodev
+    - /run:uid=${DISCOVERY_UID},gid=${DISCOVERY_GID},mode=0755,size=16m,exec,nosuid,nodev
+  environment:
+    TZ: Etc/UTC
+    UMASK: '077'
+    S6_READ_ONLY_ROOT: '1'
+  dns: [127.0.0.1]
+  extra_hosts:
+    prowlarr: ${DISCOVERY_PROWLARR_IP:?}
+    radarr: ${DISCOVERY_RADARR_IP:?}
+  restart: unless-stopped
+  stop_grace_period: 30s
+  labels:
+    io.popcorntv.discovery.install: ${DISCOVERY_INSTALL_ID:?}
+  logging:
+    driver: json-file
+    options: { max-size: 2m, max-file: '3' }
+
+services:
+  prowlarr:
+    <<: *service
+    image: lscr.io/linuxserver/prowlarr:nightly-3.0.2.5775-ls29@sha256:8548e568b1a16456fd72e1374ad8aae69690af146ddf6255696f287455436704
+    mem_limit: 256m
+    volumes:
+      - type: bind
+        source: ${DISCOVERY_STATE_ROOT:?}/prowlarr
+        target: /config
+        bind: { create_host_path: false }
+    networks:
+      discovery: { ipv4_address: '${DISCOVERY_PROWLARR_IP}' }
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, --max-time, '2', http://127.0.0.1:9696/ping]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+      start_period: 20s
+  radarr:
+    <<: *service
+    image: ${DISCOVERY_RADARR_IMAGE:?build the corrected local image first}
+    pull_policy: never
+    mem_limit: 512m
+    volumes:
+      - type: bind
+        source: ${DISCOVERY_STATE_ROOT:?}/radarr
+        target: /config
+        bind: { create_host_path: false }
+    networks:
+      discovery: { ipv4_address: '${DISCOVERY_RADARR_IP}' }
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, --max-time, '2', http://127.0.0.1:7878/ping]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+      start_period: 20s
+
+  ingress:
+    <<: *service
+    image: ${DISCOVERY_INGRESS_IMAGE:?build the corrected proxy first}
+    pull_policy: never
+    mem_limit: 96m
+    cpus: 0.25
+    pids_limit: 64
+    environment:
+      DISCOVERY_PROWLARR_IP: ${DISCOVERY_PROWLARR_IP:?}
+      DISCOVERY_RADARR_IP: ${DISCOVERY_RADARR_IP:?}
+    tmpfs:
+      - /tmp:uid=${DISCOVERY_UID},gid=${DISCOVERY_GID},mode=0700,size=8m,noexec,nosuid,nodev
+      - /data:uid=${DISCOVERY_UID},gid=${DISCOVERY_GID},mode=0700,size=8m,noexec,nosuid,nodev
+      - /config:uid=${DISCOVERY_UID},gid=${DISCOVERY_GID},mode=0700,size=8m,noexec,nosuid,nodev
+    volumes:
+      - type: bind
+        source: ${DISCOVERY_STATE_ROOT:?}/ingress.Caddyfile
+        target: /etc/caddy/Caddyfile
+        read_only: true
+        bind: { create_host_path: false }
+    networks:
+      discovery: { ipv4_address: '${DISCOVERY_INGRESS_IP}' }
+    healthcheck:
+      test:
+        [
+          CMD,
+          wget,
+          --quiet,
+          --spider,
+          --timeout=2,
+          http://127.0.0.1:9696/.well-known/popcorntv-ingress-health,
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+      start_period: 20s
+
+networks:
+  discovery:
+    internal: true
+    enable_ipv6: false
+    ipam:
+      config:
+        - subnet: ${DISCOVERY_SUBNET:?}
+# No published ports during bootstrap, media mounts, external network or Docker socket.
