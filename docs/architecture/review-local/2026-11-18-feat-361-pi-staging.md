@@ -29,4 +29,5 @@ Review the independent PopCornTV and Caddy staging deployment for #361.
 
 - The initial revision passed `just check`, including the test suites, dependency checks and redacted secret scan. Semgrep completed with a linked-worktree Git metadata warning.
 - The targeted Pi staging suite passed 17 tests after the fixes. Hadolint, ShellCheck, Prettier and the rendered staging Compose model were checked locally.
+- The first pre-push hook exposed an infrastructure test isolation issue. Git's repository-local environment redirected fixture setup into the parent repository. The fixture runner now clears the variables listed by `git rev-parse --local-env-vars` before loading the tests.
 - There are no pull-request workflows in this project. Signed attestation, SonarQube, end-to-end testing and the merge checks belong to the post-push gate. The native deployment and product QA have their own entry conditions.
