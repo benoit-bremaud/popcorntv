@@ -24,7 +24,7 @@ class PiStagingBuildImageTest(unittest.TestCase):
         self.git('-c', 'user.name=Build fixture', '-c',
                  'user.email=build@example.test', 'commit', '--quiet', '-m', 'fixture')
         self.revision = self.git('rev-parse', 'HEAD')
-        self.version = self.git('describe', '--tags', '--always', self.revision)
+        self.version = self.revision[:12]
         self.archive = self.root / 'reviewed release.tar'
         self.git('archive', '--format=tar', f'--output={self.archive}', self.revision)
         self.log = self.root / 'docker.jsonl'
@@ -35,17 +35,23 @@ class PiStagingBuildImageTest(unittest.TestCase):
 import hashlib
 import json
 import os
+from pathlib import Path
 import sys
 
 arguments = sys.argv[1:]
-if 'DOCKER_CONTEXT' in os.environ or 'DOCKER_HOST' in os.environ:
+if any(key in os.environ for key in ('BUILDX_BUILDER', 'DOCKER_CONTEXT', 'DOCKER_HOST')):
     sys.exit('unexpected Docker context')
 invocation = {'args': arguments}
 if arguments[2] == 'build':
     invocation['archive'] = hashlib.sha256(sys.stdin.buffer.read()).hexdigest()
+    iidfile = arguments.index('--iidfile') + 1
+    Path(arguments[iidfile]).write_text(os.environ['FIXTURE_BUILT_ID'])
+    arguments[iidfile] = '<build-id-file>'
 with open(os.environ['FIXTURE_LOG'], 'a') as log:
     print(json.dumps(invocation), file=log)
 if arguments[2:4] == ['image', 'inspect']:
+    if os.environ.get('FIXTURE_INSPECT_FAIL') == '1':
+        sys.exit(1)
     print(os.environ['FIXTURE_IMAGE'])
 ''')
         docker.chmod(0o700)
@@ -60,7 +66,7 @@ if arguments[2:4] == ['image', 'inspect']:
         }
         self.env = dict(
             os.environ, PATH=f'{binaries}:{os.defpath}', FIXTURE_LOG=str(self.log),
-            DOCKER_CONTEXT='unrelated', DOCKER_HOST='tcp://unrelated.invalid:2375',
+            FIXTURE_BUILT_ID=IMAGE_ID, BUILDX_BUILDER='unrelated', DOCKER_CONTEXT='unrelated', DOCKER_HOST='tcp://unrelated.invalid:2375',
         )
 
     def git(self, *args):
@@ -68,12 +74,11 @@ if arguments[2:4] == ['image', 'inspect']:
             ['git', *args], cwd=self.root, text=True, timeout=5,
         ).strip()
 
-    def build(self, archive=None, version=None):
+    def build(self, archive=None, extra=(), **observations):
         self.log.write_text('')
         return subprocess.run(
-            ['sh', str(SOURCE), str(archive or self.archive),
-             self.version if version is None else version],
-            cwd=self.root, env=dict(self.env, FIXTURE_IMAGE=json.dumps(self.image)),
+            ['sh', str(SOURCE), str(archive or self.archive), *extra],
+            cwd=self.root, env=dict(self.env, FIXTURE_IMAGE=json.dumps(self.image), **observations),
             capture_output=True, text=True, timeout=5, check=False,
         )
 
@@ -87,29 +92,35 @@ if arguments[2:4] == ['image', 'inspect']:
             [json.loads(line) for line in self.log.read_text().splitlines()],
             [
                 {
-                    'args': [*daemon, 'build', '--platform', 'linux/arm64',
+                    'args': [*daemon, 'build', '--iidfile', '<build-id-file>', '--platform', 'linux/arm64',
                              '--label', f'org.opencontainers.image.revision={self.revision}',
                              '--build-arg', f'APP_VERSION={self.version}', '--tag', tag, '-'],
                     'archive': hashlib.sha256(self.archive.read_bytes()).hexdigest(),
                 },
-                {'args': [*daemon, 'image', 'inspect', '--format', '{{json .}}', tag]},
+                {'args': [*daemon, 'image', 'inspect', '--format', '{{json .}}', IMAGE_ID]},
             ],
         )
 
-    def test_accepts_a_release_tag_as_the_baked_version(self):
-        version = 'v0.1.0-rc.1'
-        self.image['Config']['Env'] = [f'APP_VERSION={version}']
-        result = self.build(version=version)
+    def test_uses_the_archive_commit_after_the_checkout_advances(self):
+        self.git('-c', 'user.name=Build fixture', '-c',
+                 'user.email=build@example.test', 'commit', '--quiet', '--allow-empty',
+                 '-m', 'later fixture commit')
+        self.assertNotEqual(self.git('rev-parse', 'HEAD')[:12], self.version)
+        result = self.build()
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn(f'APP_VERSION={version}', self.log.read_text())
+        self.assertIn(f'APP_VERSION={self.version}', self.log.read_text())
 
-    def test_refuses_missing_default_and_malformed_versions_before_build(self):
-        for version in ('', 'dev', 'v1.0.0 injected', '.invalid', 'a' * 65):
-            with self.subTest(version=version):
-                result = self.build(version=version)
-                self.assertIn('invalid_version', result.stderr)
-                self.assertEqual(result.returncode, 2)
-                self.assertEqual(self.log.read_text(), '')
+    def test_refuses_a_caller_supplied_version_before_build(self):
+        result = self.build(extra=('deadbeef1234',))
+        self.assertEqual(result.returncode, 2)
+        self.assertIn('Usage:', result.stderr)
+        self.assertEqual(self.log.read_text(), '')
+
+    def test_refuses_failed_image_inspection_without_printing_an_id(self):
+        result = self.build(FIXTURE_INSPECT_FAIL='1')
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stdout, '')
+        self.assertIn('artifact_version_unconfirmed', result.stderr)
 
     def test_refuses_an_archive_without_a_git_commit_before_build(self):
         invalid = self.root / 'invalid.tar'

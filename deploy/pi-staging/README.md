@@ -35,32 +35,30 @@ Run PopCornTV staging in its own Compose project on the Pi's mounted USB disk, w
 
 ## Build the native ARM64 application image
 
-From the approved Git checkout, record the build version and archive the same
-revision. Transfer the archive and version to the Pi. Use a working directory on
-the mounted USB disk for the transferred archive and build inputs.
+Archive the approved Git revision and transfer the archive to a working
+directory on the Pi's mounted USB disk. The Pi build needs Git to read the
+archive's commit identity.
 
 ```sh
 revision=$(git rev-parse --verify HEAD)
-version=$(git describe --tags --always "$revision")
 git archive --format=tar --output=/path/to/popcorntv-release.tar "$revision"
-printf '%s\n' "$version"
 ```
 
-On the Pi, use the build script from the reviewed release. Give it the
-uncompressed Git archive and the version recorded above.
+On the Pi, run the build script from the reviewed release with the
+uncompressed Git archive.
 
 ```sh
-sh deploy/pi-staging/build-image.sh /path/to/popcorntv-release.tar "$version"
+sh deploy/pi-staging/build-image.sh /path/to/popcorntv-release.tar
 ```
 
-The build takes the source revision from the Git archive and bakes the version
-into `APP_VERSION`. It prints the immutable image ID after checking the Linux
-ARM64 platform, the revision label, and the baked value. Qualify that image ID
-before assigning it to `PCTV_STAGE_IMAGE`. Keep `APP_VERSION` in the image
-when preparing the runtime `app.env`.
+The build uses the archive's full commit for the revision label and its first
+12 characters for `APP_VERSION`. It prints the build invocation's immutable
+image ID after checking its Linux ARM64 platform, revision, and baked version.
+Qualify that image ID before assigning it to `PCTV_STAGE_IMAGE`. Omit
+`APP_VERSION` from the runtime `app.env` so the image supplies the version.
 
 After deployment, compare authenticated `/api/version` and the account-menu
-label with the recorded version. The public `/api/health` response remains the
+label with the 12-character archive commit prefix. The public `/api/health` response remains the
 health-only contract.
 
 ## Preflight and staging launch
