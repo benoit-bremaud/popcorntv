@@ -8,7 +8,7 @@
 # Dependabot bumps this tag + digest. Trivy cannot see a static binary: see SECURITY.md.
 FROM mwader/static-ffmpeg:9.0.2-1@sha256:f5d100184884eb3e82b0eb14bb5ebf98da99826ac824989720297fb9ef21c822 AS ffmpeg
 
-FROM node:22.23.4-trixie-slim@sha256:be1e2a3dc2c4fd68cdfadad2a696a280e0d2749098bee509230174d72fb768c6 AS build
+FROM node:26.13.1-trixie-slim@sha256:e6bedef217677b276c591795e169840edd9096dbf13f29df8ef8d1856b8820bc AS build
 # better-sqlite3 is compiled from source when no prebuilt binary matches: node-gyp needs
 # python3 + a C++ toolchain. Build stage only; the runtime image ships the .node binary.
 # hadolint ignore=DL3008
@@ -51,7 +51,7 @@ RUN --network=none node --input-type=module -e 'import Database from "better-sql
   && test -f /app/apps/web/dist/index.html \
   && test -f /app/apps/web/dist/404.html
 
-FROM node:22.23.4-trixie-slim@sha256:be1e2a3dc2c4fd68cdfadad2a696a280e0d2749098bee509230174d72fb768c6
+FROM node:26.13.1-trixie-slim@sha256:e6bedef217677b276c591795e169840edd9096dbf13f29df8ef8d1856b8820bc
 # `apt-get upgrade` (DL3005) is deliberate: the node base image lags Debian's security
 # updates (17 fixed HIGH/CRITICAL CVEs in perl, pcre2, gnutls, libcap on 2026-10-23) and
 # the weekly Trivy scan blocks on them; the upgrade is reproducible per base image digest.
