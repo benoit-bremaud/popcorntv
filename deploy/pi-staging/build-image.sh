@@ -2,13 +2,32 @@
 # Build an ARM64 staging artifact from the reviewed Git archive.
 set -eu
 
-if [ "$#" -ne 1 ]; then
-    printf '%s\n' 'Usage: sh deploy/pi-staging/build-image.sh <git-archive.tar>' >&2
+if [ "$#" -ne 2 ]; then
+    printf '%s\n' 'Usage: sh deploy/pi-staging/build-image.sh <git-archive.tar> <trusted-sha256>' >&2
     exit 2
 fi
 archive=$1
+expected_digest=$2
 
-if [ ! -f "$archive" ] || ! revision=$(git get-tar-commit-id < "$archive") ||
+if [ ! -f "$archive" ] ||
+    ! printf '%s\n' "$expected_digest" | LC_ALL=C grep -Eq '^[0-9a-f]{64}$'; then
+    printf '%s\n' 'pi-staging.build_refused:archive_digest_unconfirmed' >&2
+    exit 2
+fi
+
+# Verify and build the same private snapshot on the archive's filesystem.
+umask 077
+build_dir=$(mktemp -d "$(dirname -- "$archive")/.popcorntv-build.XXXXXXXX")
+trap 'rm -f -- "$build_dir/release.tar" "$build_dir/image.id"; rmdir -- "$build_dir"' EXIT
+snapshot="$build_dir/release.tar"
+cp -- "$archive" "$snapshot"
+digest=$(sha256sum < "$snapshot")
+if [ "${digest%% *}" != "$expected_digest" ]; then
+    printf '%s\n' 'pi-staging.build_refused:archive_digest_mismatch' >&2
+    exit 2
+fi
+
+if ! revision=$(git get-tar-commit-id < "$snapshot") ||
     ! printf '%s\n' "$revision" | LC_ALL=C grep -Eq '^[0-9a-f]{40}([0-9a-f]{24})?$'; then
     printf '%s\n' 'pi-staging.build_refused:archive_revision_unconfirmed' >&2
     exit 2
@@ -21,11 +40,9 @@ docker_local() {
     docker --host unix:///var/run/docker.sock "$@"
 }
 
-build_dir=$(mktemp -d)
-trap 'rm -f -- "$build_dir/image.id"; rmdir -- "$build_dir"' EXIT
 docker_local build --iidfile "$build_dir/image.id" --platform linux/arm64 \
     --label "org.opencontainers.image.revision=$revision" \
-    --build-arg "APP_VERSION=$version" --tag "$tag" - < "$archive" >&2
+    --build-arg "APP_VERSION=$version" --tag "$tag" - < "$snapshot" >&2
 
 image_id=$(cat "$build_dir/image.id")
 docker_local image inspect --format '{{json .}}' "$image_id" |

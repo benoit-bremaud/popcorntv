@@ -31,3 +31,13 @@ The Pi build derives its displayed version and image revision label from one rev
 - There are no pull-request workflows. The signed gate, SonarQube, and end-to-end tests run on the published head before merge.
 - `mise x -- just check` passed on the reviewed code with 1,654 tests across the workspace, infrastructure and dependency check suites. The Python suite reported 94.30% coverage. Semgrep reported zero findings and emitted a linked-worktree Git metadata warning.
 - Source review gate open. The publication commit adds this report.
+
+## Archive integrity follow-up
+
+The published review identified that the Git archive header can keep its commit
+after a payload change. The build now compares a private snapshot with the
+SHA-256 recorded on the approved checkout before invoking Docker. A regression
+changes the Dockerfile payload while preserving the archive header and verifies
+that the build stops before Docker. The 28 focused Pi tests and ShellCheck passed.
+The gate on the previous head was stopped to validate this correction on the
+publication revision.

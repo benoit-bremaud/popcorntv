@@ -36,22 +36,26 @@ Run PopCornTV staging in its own Compose project on the Pi's mounted USB disk, w
 ## Build the native ARM64 application image
 
 Archive the approved Git revision and transfer the archive to a working
-directory on the Pi's mounted USB disk. The Pi build needs Git to read the
-archive's commit identity.
+directory on the Pi's mounted USB disk. Record the SHA-256 on the approved
+checkout and carry that value to the Pi through the authenticated release
+handoff. The Pi build uses Git to read the archive's commit identity.
 
 ```sh
 revision=$(git rev-parse --verify HEAD)
 git archive --format=tar --output=/path/to/popcorntv-release.tar "$revision"
+sha256sum /path/to/popcorntv-release.tar
 ```
 
 On the Pi, run the build script from the reviewed release with the
-uncompressed Git archive.
+uncompressed Git archive and the trusted checksum recorded on the checkout. Set
+`archive_sha256` to the recorded 64-character value before running the command.
 
 ```sh
-sh deploy/pi-staging/build-image.sh /path/to/popcorntv-release.tar
+sh deploy/pi-staging/build-image.sh /path/to/popcorntv-release.tar "$archive_sha256"
 ```
 
-The build uses the archive's full commit for the revision label and its first
+The script verifies a private snapshot against that checksum before handing
+it to Docker. The build uses the archive's full commit for the revision label and its first
 12 characters for `APP_VERSION`. It prints the build invocation's immutable
 image ID after checking its Linux ARM64 platform, revision, and baked version.
 Qualify that image ID before assigning it to `PCTV_STAGE_IMAGE`. Omit

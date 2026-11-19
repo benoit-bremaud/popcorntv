@@ -74,10 +74,13 @@ if arguments[2:4] == ['image', 'inspect']:
             ['git', *args], cwd=self.root, text=True, timeout=5,
         ).strip()
 
-    def build(self, archive=None, extra=(), **observations):
+    def build(self, archive=None, checksum=None, extra=(), **observations):
         self.log.write_text('')
+        archive = archive or self.archive
+        if checksum is None:
+            checksum = hashlib.sha256(archive.read_bytes()).hexdigest()
         return subprocess.run(
-            ['sh', str(SOURCE), str(archive or self.archive), *extra],
+            ['sh', str(SOURCE), str(archive), checksum, *extra],
             cwd=self.root, env=dict(self.env, FIXTURE_IMAGE=json.dumps(self.image), **observations),
             capture_output=True, text=True, timeout=5, check=False,
         )
@@ -121,6 +124,27 @@ if arguments[2:4] == ['image', 'inspect']:
         self.assertEqual(result.returncode, 1)
         self.assertEqual(result.stdout, '')
         self.assertIn('artifact_version_unconfirmed', result.stderr)
+
+    def test_refuses_payload_changes_even_when_the_git_header_matches(self):
+        original = self.archive.read_bytes()
+        modified = self.root / 'modified release.tar'
+        modified.write_bytes(original.replace(b'FROM scratch', b'FROM changed', 1))
+        self.assertNotEqual(original, modified.read_bytes())
+        with modified.open('rb') as archive:
+            version = subprocess.check_output(
+                ['git', 'get-tar-commit-id'], stdin=archive, text=True, timeout=5,
+            ).strip()
+        self.assertEqual(version, self.revision)
+        result = self.build(archive=modified, checksum=hashlib.sha256(original).hexdigest())
+        self.assertEqual(result.returncode, 2)
+        self.assertIn('archive_digest_mismatch', result.stderr)
+        self.assertEqual(self.log.read_text(), '')
+
+    def test_refuses_a_malformed_expected_digest_before_build(self):
+        result = self.build(checksum='x' * 64)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn('archive_digest_unconfirmed', result.stderr)
+        self.assertEqual(self.log.read_text(), '')
 
     def test_refuses_an_archive_without_a_git_commit_before_build(self):
         invalid = self.root / 'invalid.tar'
