@@ -14,6 +14,9 @@ route says nothing about the build.
   the distance to the last tag once one exists). The server reads `APP_VERSION`, `dev` when
   unset, and refuses to start on a value outside `[0-9A-Za-z.+_-]` (64 characters at most,
   first character alphanumeric).
+- **Pi staging archive builds** derive `APP_VERSION` from the first 12 characters
+  of the commit embedded in the Git archive. The image label retains the full
+  commit. See the [Pi staging runbook](../../../deploy/pi-staging/README.md).
 - **R2** `GET /health` stays public and answers `{ "status": "ok" }` only (#92).
 - **R3** `GET /version` answers `{ "version": "<APP_VERSION>" }` to any signed-in caller and
   401 to anyone else (spec auth R1).
