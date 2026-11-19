@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.28
 # check=error=true
-FROM mcr.microsoft.com/dotnet/sdk:10.0.404-alpine3.24@sha256:0294f285d062afacc8b5f6d7febb0cd4ee879320e5585fa15f2f4ebf1feb9ba7 AS source
+FROM mcr.microsoft.com/dotnet/sdk:11.0.100-alpine3.24@sha256:52556c0fb9d0f609ae9aeab9efeeba96f4acc2f7038f7696f2235ccbdbb8e290 AS source
 WORKDIR /src
 ADD --checksum=sha256:e64fd88a9cc31c7737b049b606bf412f6e7d9042d1c0c50e17f3862f9506a4fc https://api.github.com/repos/Radarr/Radarr/tarball/af772b051ac27a0615c7f8b7f78622b6dc183be0 /tmp/radarr.tar.gz
 RUN tar -xzf /tmp/radarr.tar.gz --strip-components=1 -C /src
@@ -32,7 +32,7 @@ RUN --mount=type=secret,id=sixlabors,required=true \
     --logger 'trx;LogFileName=imagesharp.trx' --results-directory /tmp/regression \
     && grep -q '<Counters total="2" executed="2" passed="2" failed="0"' /tmp/regression/imagesharp.trx
 
-FROM node:22.23.4-trixie-slim@sha256:be1e2a3dc2c4fd68cdfadad2a696a280e0d2749098bee509230174d72fb768c6 AS frontend
+FROM node:26.13.1-trixie-slim@sha256:e6bedef217677b276c591795e169840edd9096dbf13f29df8ef8d1856b8820bc AS frontend
 WORKDIR /src
 COPY --from=source /src/ /src/
 RUN corepack enable && corepack prepare yarn@1.22.22 --activate \
