@@ -565,7 +565,7 @@ describe('DetailDialog audio track (spec audio-track)', () => {
     });
     const { user, api } = renderDetail(dual);
 
-    await user.selectOptions(await screen.findByRole('combobox'), 'fre (ac3)');
+    await user.selectOptions(await screen.findByRole('combobox'), 'Français (ac3)');
     await user.click(screen.getByRole('button', { name: '▶ Play' }));
 
     expect(api.start).toHaveBeenCalledWith({
@@ -631,7 +631,7 @@ describe('DetailDialog audio track (spec audio-track)', () => {
         [{ season: 1, episodes: [first, second] }],
       );
 
-      await user.selectOptions(await screen.findByRole('combobox'), 'eng (aac)');
+      await user.selectOptions(await screen.findByRole('combobox'), 'English (aac)');
       await user.click(screen.getByRole('button', { name: 'Play Ep 2, episode 2' }));
 
       expect(api.start).toHaveBeenCalledWith({
