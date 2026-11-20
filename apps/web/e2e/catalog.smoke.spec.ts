@@ -237,6 +237,7 @@ test('Back closes the detail dialog and a reload on its entry shows the catalog'
 test('the catalog, title dialog, administration and 404 fit at 320 px', async ({ page }) => {
   const viewportWidth = 320;
   const owner = { ...OWNER, username: 'qa-owner' };
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: viewportWidth, height: 740 });
   await openCatalog(page, undefined, owner);
   const expectFits = () =>
