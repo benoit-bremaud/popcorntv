@@ -101,6 +101,107 @@ describe('NotificationBell', () => {
     expect(screen.queryByRole('button', { name: 'Dune is now on Netflix' })).toBeNull();
   });
 
+  it('closes on Escape and restores focus from a notification to the bell', async () => {
+    const user = userEvent.setup();
+    const api = makeApi({ items: [note({ readAt: '2026-11-20T00:00:00Z' })], unread: 0 });
+    render(<NotificationBell profileId="p1" api={api} onOpen={vi.fn()} />);
+
+    const bell = screen.getByRole('button', { name: 'Notifications' });
+    await user.click(bell);
+    const item = await screen.findByRole('button', { name: 'Dune is now on Netflix' });
+    await user.tab();
+    expect(item).toHaveFocus();
+
+    await user.keyboard('{Escape}');
+
+    expect(bell).toHaveAttribute('aria-expanded', 'false');
+    expect(item).not.toBeVisible();
+    expect(bell).toHaveFocus();
+  });
+
+  it('closes on a pointer press outside without taking focus from the target', async () => {
+    const user = userEvent.setup();
+    const api = makeApi({ items: [], unread: 0 });
+    render(
+      <>
+        <NotificationBell profileId="p1" api={api} onOpen={vi.fn()} />
+        <button type="button">Outside</button>
+      </>,
+    );
+
+    const bell = screen.getByRole('button', { name: 'Notifications' });
+    await user.click(bell);
+    const outside = screen.getByRole('button', { name: 'Outside' });
+    await user.pointer({ keys: '[MouseLeft>]', target: outside });
+
+    expect(bell).toHaveAttribute('aria-expanded', 'false');
+    expect(outside).toHaveFocus();
+    await user.pointer('[/MouseLeft]');
+  });
+
+  it('dismisses on Escape without moving focus from an outside control', async () => {
+    const user = userEvent.setup();
+    const api = makeApi({ items: [], unread: 0 });
+    render(
+      <>
+        <NotificationBell profileId="p1" api={api} onOpen={vi.fn()} />
+        <button type="button">Outside</button>
+      </>,
+    );
+    const bell = screen.getByRole('button', { name: 'Notifications' });
+    const outside = screen.getByRole('button', { name: 'Outside' });
+    await user.click(bell);
+    await user.tab();
+    expect(outside).toHaveFocus();
+
+    await user.keyboard('{Escape}');
+
+    expect(bell).toHaveAttribute('aria-expanded', 'false');
+    expect(outside).toHaveFocus();
+  });
+
+  it('ignores Escape after the bell has opened and closed the panel', async () => {
+    const user = userEvent.setup();
+    const api = makeApi({ items: [], unread: 0 });
+    render(
+      <>
+        <NotificationBell profileId="p1" api={api} onOpen={vi.fn()} />
+        <button type="button">Outside</button>
+      </>,
+    );
+    const bell = screen.getByRole('button', { name: 'Notifications' });
+    await user.click(bell);
+    await user.click(bell);
+    // A leaked handler would move focus back to the bell from the document body.
+    bell.blur();
+    await user.keyboard('{Escape}');
+
+    expect(bell).toHaveAttribute('aria-expanded', 'false');
+    expect(document.body).toHaveFocus();
+  });
+
+  it('keeps the panel open and leaves focus in an open dialog on Escape', async () => {
+    const user = userEvent.setup();
+    const api = makeApi({ items: [], unread: 0 });
+    render(
+      <>
+        <NotificationBell profileId="p1" api={api} onOpen={vi.fn()} />
+        <dialog open>
+          <button type="button">Dialog action</button>
+        </dialog>
+      </>,
+    );
+
+    const bell = screen.getByRole('button', { name: 'Notifications' });
+    await user.click(bell);
+    const action = screen.getByRole('button', { name: 'Dialog action' });
+    action.focus();
+    await user.keyboard('{Escape}');
+
+    expect(bell).toHaveAttribute('aria-expanded', 'true');
+    expect(action).toHaveFocus();
+  });
+
   it('polls every five minutes and survives a failed poll', async () => {
     vi.useFakeTimers();
     const api = makeApi({ items: [], unread: 0 });
