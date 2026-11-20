@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AppNotification, NotificationList } from '@popcorntv/shared';
 import { loadNotifications, markNotificationsRead } from '../api.js';
 
@@ -41,6 +41,8 @@ export function NotificationBell({
 }: Props): React.JSX.Element {
   const [list, setList] = useState<NotificationList>({ items: [], unread: 0 });
   const [expanded, setExpanded] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const bellRef = useRef<HTMLButtonElement>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -56,6 +58,32 @@ export function NotificationBell({
     return () => clearInterval(timer);
   }, [refresh]);
 
+  useEffect(() => {
+    if (!expanded) return;
+    const root = rootRef.current;
+    if (!root) return;
+
+    function dismissOnEscape(event: KeyboardEvent): void {
+      if (event.key !== 'Escape' || event.isComposing) return;
+      // An open modal owns Escape before any panel behind it.
+      if (document.querySelector('dialog[open]')) return;
+      setExpanded(false);
+      bellRef.current?.focus();
+    }
+
+    const dismissOutside = (event: PointerEvent): void => {
+      if (event.target instanceof Node && root.contains(event.target)) return;
+      setExpanded(false);
+    };
+
+    document.addEventListener('keydown', dismissOnEscape);
+    document.addEventListener('pointerdown', dismissOutside);
+    return () => {
+      document.removeEventListener('keydown', dismissOnEscape);
+      document.removeEventListener('pointerdown', dismissOutside);
+    };
+  }, [expanded]);
+
   async function toggle(): Promise<void> {
     const opening = !expanded;
     setExpanded(opening);
@@ -65,8 +93,9 @@ export function NotificationBell({
   }
 
   return (
-    <div className="bell">
+    <div className="bell" ref={rootRef}>
       <button
+        ref={bellRef}
         type="button"
         className="bell__button"
         aria-expanded={expanded}

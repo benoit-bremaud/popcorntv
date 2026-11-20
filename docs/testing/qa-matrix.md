@@ -370,7 +370,7 @@ Source: [full pass of 2026-11-11](../architecture/qa/2026-11-11-full-pass-stagin
 | #118 confined FFmpeg input 1–4 | 2026-11-11 · 1088e1a · local staging · OK (avi, mov HLS; m4v, webm direct; seek and resume; avi seeks only within the transcoded part, ADR-0006) |
 | #184 where to watch | 2026-11-11 · BLOCKED (no TMDB key) |
 | #257 discover list freshness | 2026-11-11 · BLOCKED (no TMDB key) |
-| #277 wishlist notifications 5, 9 | 2026-11-11 · 1088e1a · local staging · 5 OK, 9 KO #295 (Escape / outside click); 1–4, 6–8 BLOCKED (no TMDB) |
+| #277 wishlist notifications 5, 9 | 2026-11-11 · 1088e1a · local staging · 5 OK, 9 KO #295 (fixed in component tests, re-verify Escape, focus and outside pointer press in staging); 1–4, 6–8 BLOCKED (no TMDB) |
 | #278 personal title link API 3–6 | 2026-11-11 · 1088e1a · local staging · OK (UI 1, 2, 7 BLOCKED: no TMDB) |
 | #170 first poster aligned with the title | 2026-11-11 · 1088e1a · local staging · KO #170 (still reproduces, screenshot added) |
 | #171 account trigger | 2026-11-11 · 1088e1a · local staging · KO #171 (still reproduces, screenshot added) |
