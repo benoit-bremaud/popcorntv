@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import type {
   Account,
   AuthStatus,
@@ -242,6 +242,16 @@ test('the catalog, title dialog, administration and 404 fit at 320 px', async ({
   const expectFits = () =>
     expect(page.locator('html')).toHaveJSProperty('scrollWidth', viewportWidth);
 
+  async function expectRegionFits(region: Locator): Promise<void> {
+    const bounds = await region.evaluate((element) => {
+      const { left, right } = element.getBoundingClientRect();
+      return { left, right, scrollWidth: element.scrollWidth, clientWidth: element.clientWidth };
+    });
+    expect(bounds.left).toBeGreaterThanOrEqual(0);
+    expect(bounds.right).toBeLessThanOrEqual(viewportWidth);
+    expect(bounds.scrollWidth).toBeLessThanOrEqual(bounds.clientWidth);
+  }
+
   await test.step('catalog', async () => {
     await expect(page.getByRole('heading', { name: 'Top rated' })).toBeVisible();
     await expectFits();
@@ -251,6 +261,7 @@ test('the catalog, title dialog, administration and 404 fit at 320 px', async ({
     await page.getByRole('button', { name: 'Heat', exact: true }).first().click();
     const dialog = page.getByRole('dialog', { name: 'Heat' });
     await expect(dialog).toBeVisible();
+    await expectRegionFits(dialog);
     await expectFits();
     await dialog.getByRole('button', { name: 'Close', exact: true }).click();
   });
@@ -276,12 +287,14 @@ test('the catalog, title dialog, administration and 404 fit at 320 px', async ({
     await expect(
       page.getByRole('list', { name: 'Accounts' }).getByText(owner.username),
     ).toBeVisible();
+    await expectRegionFits(page.getByRole('region', { name: 'Administration' }));
     await expectFits();
   });
 
   await test.step('404 page', async () => {
     await page.goto('/404.html');
     await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
+    await expectRegionFits(page.getByRole('main'));
     await expectFits();
   });
 });
