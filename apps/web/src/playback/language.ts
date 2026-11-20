@@ -22,7 +22,6 @@ const ISO_639_2_TO_1: Readonly<Record<string, string>> = {
   eus: 'eu',
   bel: 'be',
   ben: 'bn',
-  bih: 'bh',
   bis: 'bi',
   tib: 'bo',
   bod: 'bo',
@@ -206,9 +205,9 @@ const ISO_639_2_TO_1: Readonly<Record<string, string>> = {
 };
 
 /**
- * Returns a human-readable, localized name for an audio or subtitle language code
- * (e.g. `'fre'` -> `'Français'`, `'ger'` -> `'Deutsch'`), falling back to the raw code
- * if the language cannot be resolved. Returns null when code is null, undefined, or empty.
+ * Requests the track language's own name, such as `Français` for `fre`.
+ * Falls back to the trimmed code when no reliable name is available and returns
+ * null for missing or blank metadata so the caller can show a numbered label.
  */
 export function languageLabel(code: string | null | undefined): string | null {
   if (code === null || code === undefined) return null;
@@ -216,15 +215,14 @@ export function languageLabel(code: string | null | undefined): string | null {
   if (trimmed === '') return null;
 
   const lower = trimmed.toLowerCase();
-  if (lower === 'und') return trimmed;
+  // Intl may name undetermined tracks "root" and the Bihari group "Bhojpuri".
+  if (lower === 'und' || lower === 'bih' || lower === 'bh') return trimmed;
 
   const tag = ISO_639_2_TO_1[lower] ?? lower;
   try {
-    const displayNames = new Intl.DisplayNames([tag], { type: 'language' });
+    const displayNames = new Intl.DisplayNames([tag], { type: 'language', fallback: 'none' });
     const name = displayNames.of(tag);
-    if (!name || name.toLowerCase() === tag.toLowerCase()) {
-      return trimmed;
-    }
+    if (name === undefined) return trimmed;
     return name.charAt(0).toUpperCase() + name.slice(1);
   } catch {
     return trimmed;

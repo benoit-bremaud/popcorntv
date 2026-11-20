@@ -23,7 +23,8 @@ as WebVTT, in direct play and in HLS alike.
   seconds and drops the cues that ended before it, so the track matches an HLS timeline
   that starts at `offsetSec` (ADR-0007 §2, ADR-0009 §3). Direct play passes 0.
 - **R5** The web player adds one `<track kind="subtitles">` per offered track, labelled
-  by its language (`Track n` when unknown), none on by default.
+  with a readable language name, the code as fallback or `Track N` when missing.
+  None is enabled by default.
 - **R6** Done when an MKV with SRT plays with captions in direct play and in HLS (resumed
   too), and the pure helpers and the route have unit tests.
 

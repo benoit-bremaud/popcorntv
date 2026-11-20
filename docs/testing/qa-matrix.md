@@ -412,7 +412,10 @@ Replay on every Pi deploy:
    the slowest `/api` call (#257).
 3. Per library: unmatched titles and matched titles without a synopsis are counted and each
    one explained (#258, #259).
-4. Subtitle and audio menus read language names, not ISO codes (#260).
+4. Check that the audio select and native captions menu show `Français` for `fre` or `fra`
+   (#260). Check the raw fallback for `und` or an unrecognized code and the numbered label
+   when no code is present. In DevTools, confirm that choosing a different audio track
+   sends its numeric `audioIndex` when playback starts.
 5. Profile avatars are told apart at a glance (#261).
 
 ## Where to watch checks (#184, ADR-0029)

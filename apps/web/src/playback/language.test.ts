@@ -27,7 +27,10 @@ describe('languageLabel (issue #260)', () => {
 
   it('falls back to the code when the language is undetermined or unknown', () => {
     expect(languageLabel('und')).toBe('und');
+    expect(languageLabel('bih')).toBe('bih');
+    expect(languageLabel('bh')).toBe('bh');
     expect(languageLabel('qaa')).toBe('qaa');
+    expect(languageLabel('qaa-Latn-US')).toBe('qaa-Latn-US');
     expect(languageLabel('xyz123')).toBe('xyz123');
   });
 
