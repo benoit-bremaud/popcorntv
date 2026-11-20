@@ -179,7 +179,6 @@ const ISO_639_2_TO_1: Readonly<Record<string, string>> = {
   tat: 'tt',
   tel: 'te',
   tgk: 'tg',
-  tgl: 'tl',
   tha: 'th',
   tir: 'ti',
   ton: 'to',
@@ -187,7 +186,6 @@ const ISO_639_2_TO_1: Readonly<Record<string, string>> = {
   tso: 'ts',
   tuk: 'tk',
   tur: 'tr',
-  twi: 'tw',
   uig: 'ug',
   ukr: 'uk',
   urd: 'ur',
@@ -217,6 +215,9 @@ export function languageLabel(code: string | null | undefined): string | null {
   const lower = trimmed.toLowerCase();
   // Intl may name undetermined tracks "root" and the Bihari group "Bhojpuri".
   if (lower === 'und' || lower === 'bih' || lower === 'bh') return trimmed;
+  // Native locale data can conflate these languages with Filipino and Akan.
+  if (lower === 'tgl' || lower === 'tl') return 'Tagalog';
+  if (lower === 'twi' || lower === 'tw') return 'Twi';
 
   const tag = ISO_639_2_TO_1[lower] ?? lower;
   try {

@@ -25,6 +25,15 @@ describe('languageLabel (issue #260)', () => {
     expect(languageLabel('it')).toBe('Italiano');
   });
 
+  it('distinguishes Tagalog and Twi from the native locale aliases', () => {
+    expect(languageLabel('tgl')).toBe('Tagalog');
+    expect(languageLabel('tl')).toBe('Tagalog');
+    expect(languageLabel('fil')).toBe('Filipino');
+    expect(languageLabel('twi')).toBe('Twi');
+    expect(languageLabel('tw')).toBe('Twi');
+    expect(languageLabel('ak')).toBe('Akan');
+  });
+
   it('falls back to the code when the language is undetermined or unknown', () => {
     expect(languageLabel('und')).toBe('und');
     expect(languageLabel('bih')).toBe('bih');
