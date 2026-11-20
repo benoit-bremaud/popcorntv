@@ -103,9 +103,23 @@ for (const username of ['qa-owner', 'long-owner-name-without-spaces']) {
         expect(bounds.right).toBeLessThanOrEqual(viewportWidth);
         expect(bounds.width).toBeGreaterThanOrEqual(44);
         expect(bounds.height).toBeGreaterThanOrEqual(44);
+        await control.click({ trial: true });
       }
 
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewportWidth);
+
+      await account.click();
+      const panel = header.locator('.account-panel');
+      const signOut = panel.getByRole('button', { name: 'Sign out', exact: true });
+      await expect(signOut).toBeVisible();
+      const panelBounds = await panel.evaluate((element) => {
+        const { left, right } = element.getBoundingClientRect();
+        return { left, right };
+      });
+      expect(panelBounds.left).toBeGreaterThanOrEqual(0);
+      expect(panelBounds.right).toBeLessThanOrEqual(viewportWidth);
+      await signOut.click({ trial: true });
+      await account.click();
     }
   });
 }
