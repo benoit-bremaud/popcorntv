@@ -63,13 +63,16 @@ export function NotificationBell({
     const root = rootRef.current;
     if (!root) return;
 
-    function dismissOnEscape(event: KeyboardEvent): void {
+    const dismissOnEscape = (event: KeyboardEvent): void => {
       if (event.key !== 'Escape' || event.isComposing) return;
-      // An open modal owns Escape before any panel behind it.
+      // Modal dialogs handle Escape first, as in the account menu (ADR-0024).
       if (document.querySelector('dialog[open]')) return;
+      const target = event.target;
+      const restoreFocus =
+        target instanceof Node && (target === document.body || root.contains(target));
       setExpanded(false);
-      bellRef.current?.focus();
-    }
+      if (restoreFocus) bellRef.current?.focus();
+    };
 
     const dismissOutside = (event: PointerEvent): void => {
       if (event.target instanceof Node && root.contains(event.target)) return;

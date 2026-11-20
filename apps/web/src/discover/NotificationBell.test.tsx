@@ -139,7 +139,7 @@ describe('NotificationBell', () => {
     await user.pointer('[/MouseLeft]');
   });
 
-  it('leaves focus alone when Escape is pressed with the panel closed', async () => {
+  it('dismisses on Escape without moving focus from an outside control', async () => {
     const user = userEvent.setup();
     const api = makeApi({ items: [], unread: 0 });
     render(
@@ -148,18 +148,39 @@ describe('NotificationBell', () => {
         <button type="button">Outside</button>
       </>,
     );
+    const bell = screen.getByRole('button', { name: 'Notifications' });
     const outside = screen.getByRole('button', { name: 'Outside' });
-    await user.click(outside);
+    await user.click(bell);
+    await user.tab();
+    expect(outside).toHaveFocus();
+
     await user.keyboard('{Escape}');
 
-    expect(screen.getByRole('button', { name: 'Notifications' })).toHaveAttribute(
-      'aria-expanded',
-      'false',
-    );
+    expect(bell).toHaveAttribute('aria-expanded', 'false');
     expect(outside).toHaveFocus();
   });
 
-  it('leaves Escape to an open dialog above the panel', async () => {
+  it('ignores Escape after the bell has opened and closed the panel', async () => {
+    const user = userEvent.setup();
+    const api = makeApi({ items: [], unread: 0 });
+    render(
+      <>
+        <NotificationBell profileId="p1" api={api} onOpen={vi.fn()} />
+        <button type="button">Outside</button>
+      </>,
+    );
+    const bell = screen.getByRole('button', { name: 'Notifications' });
+    await user.click(bell);
+    await user.click(bell);
+    // A leaked handler would move focus back to the bell from the document body.
+    bell.blur();
+    await user.keyboard('{Escape}');
+
+    expect(bell).toHaveAttribute('aria-expanded', 'false');
+    expect(document.body).toHaveFocus();
+  });
+
+  it('keeps the panel open and leaves focus in an open dialog on Escape', async () => {
     const user = userEvent.setup();
     const api = makeApi({ items: [], unread: 0 });
     render(

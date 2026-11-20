@@ -68,6 +68,10 @@ behind a bell with an unread count.
   the profile is picked and every 5 minutes. Opening the panel lists the lines ("*Title* is
   now in your library" / "*Title* is now on *Provider*") and marks them read; a line opens the
   Discover title sheet, which already offers Play in my library and Where to watch.
+  Escape closes the panel and returns focus to the bell when focus was on the bell,
+  in the panel or on the page body. A focused control outside keeps focus. An open
+  modal handles Escape first. A pointer press outside the bell and panel closes it
+  with normal browser focus handling.
 - **R12** Nothing leaves the server: no Web Push, e-mail or third-party bot (ADR-0030, owner
   rule "everything in PopCornTV"). No stream is ever fetched or played (spec where-to-watch R8).
 
