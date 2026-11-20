@@ -53,7 +53,11 @@ const PROFILE = { id: 'default', name: 'Me', avatar: 'red' } satisfies Profile;
 const OWNER = { id: 'u1', username: 'owner', role: 'owner' } satisfies User;
 const EMPTY_NOTIFICATIONS: NotificationList = { items: [], unread: 0 };
 
-async function openCatalog(page: Page, notifications = EMPTY_NOTIFICATIONS): Promise<void> {
+async function openCatalog(
+  page: Page,
+  notifications = EMPTY_NOTIFICATIONS,
+  user: User = OWNER,
+): Promise<void> {
   // Registered first so it matches last: an unmocked API call fails fast
   // instead of reaching a live server on :3000.
   await page.route('**/api/**', (route) => route.abort());
@@ -61,7 +65,7 @@ async function openCatalog(page: Page, notifications = EMPTY_NOTIFICATIONS): Pro
   await page.route('**/api/libraries/lib-1/media', (route) => route.fulfill({ json: MEDIA }));
   // Since #10 the catalog opens for a profile: answer the picker and its progress load.
   await page.route('**/api/auth/status', (route) =>
-    route.fulfill({ json: { setupRequired: false, user: OWNER } satisfies AuthStatus }),
+    route.fulfill({ json: { setupRequired: false, user } satisfies AuthStatus }),
   );
   await page.route('**/api/profiles', (route) => route.fulfill({ json: [PROFILE] }));
   await page.route(`**/api/profiles/${PROFILE.id}/progress`, (route) =>
@@ -73,6 +77,51 @@ async function openCatalog(page: Page, notifications = EMPTY_NOTIFICATIONS): Pro
 
   await page.goto('/');
   await page.getByRole('button', { name: 'Me', exact: true }).click();
+}
+
+for (const username of ['qa-owner', 'long-owner-name-without-spaces']) {
+  test(`the signed-in header fits on narrow screens for ${username}`, async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 740 });
+    await openCatalog(page, undefined, { ...OWNER, username });
+
+    const header = page.getByRole('banner');
+    const profile = header.getByRole('button', { name: /Me.*switch profile/ });
+    const bell = header.getByRole('button', { name: 'Notifications', exact: true });
+    const account = header.locator('summary');
+    await expect(account).toContainText(username);
+    await expect(bell).toHaveAttribute('aria-expanded', 'false');
+
+    for (const viewportWidth of [320, 390]) {
+      await page.setViewportSize({ width: viewportWidth, height: 740 });
+      for (const control of [profile, bell, account]) {
+        await expect(control).toBeVisible();
+        const bounds = await control.evaluate((element) => {
+          const { left, right, width, height } = element.getBoundingClientRect();
+          return { left, right, width, height };
+        });
+        expect(bounds.left).toBeGreaterThanOrEqual(0);
+        expect(bounds.right).toBeLessThanOrEqual(viewportWidth);
+        expect(bounds.width).toBeGreaterThanOrEqual(44);
+        expect(bounds.height).toBeGreaterThanOrEqual(44);
+        await control.click({ trial: true });
+      }
+
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewportWidth);
+
+      await account.click();
+      const panel = header.locator('.account-panel');
+      const signOut = panel.getByRole('button', { name: 'Sign out', exact: true });
+      await expect(signOut).toBeVisible();
+      const panelBounds = await panel.evaluate((element) => {
+        const { left, right } = element.getBoundingClientRect();
+        return { left, right };
+      });
+      expect(panelBounds.left).toBeGreaterThanOrEqual(0);
+      expect(panelBounds.right).toBeLessThanOrEqual(viewportWidth);
+      await signOut.click({ trial: true });
+      await account.click();
+    }
+  });
 }
 
 const LONG_TITLE = `A newly available title: ${'LongTitle'.repeat(10)}`;
