@@ -377,7 +377,7 @@ Source: [full pass of 2026-11-11](../architecture/qa/2026-11-11-full-pass-stagin
 | Rate limits #72 (300 / min API, 3000 / min media) | 2026-11-11 · 1088e1a · local staging · OK (429 then recovery after the window, buckets independent) |
 | Lighthouse, sign-in page | 2026-11-11 · 1088e1a · local staging · OK (100 / 100 / 100 / SEO 90, #299) |
 | Username format hint on the invitation form | 2026-11-11 · 1088e1a · local staging · KO #298 |
-| Responsive 320 px | 2026-11-11 · 1088e1a · local staging · KO #296 (329 px scroll width) |
+| Responsive 320 px | 2026-11-11 · 1088e1a · local staging · KO #296 (329 px scroll width). 2026-11-20 · e02ee78 · local Chromium · OK for the catalog, title dialog, administration and 404 page. Pi staging retest pending. |
 | axe-core catalog | 2026-11-11 · 1088e1a · local staging · KO #297 (`landmark-unique`) |
 | Profile name control characters | 2026-11-11 · 1088e1a · local staging · KO #293 |
 | Mark watched with the backend down | 2026-11-11 · 1088e1a · local staging · KO #294 |
