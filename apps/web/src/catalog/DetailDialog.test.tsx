@@ -553,7 +553,7 @@ describe('DetailDialog action row (#172)', () => {
 });
 
 describe('DetailDialog audio track (spec audio-track)', () => {
-  it('should play the chosen track through HLS', async () => {
+  it('plays the chosen track through HLS when two codes share a display name', async () => {
     const dual = media({
       id: 'dual',
       title: 'Dual',
@@ -561,18 +561,22 @@ describe('DetailDialog audio track (spec audio-track)', () => {
       streams: [
         ...H264_AAC,
         { type: 'audio', codec: 'ac3', width: null, height: null, language: 'fre' },
+        { type: 'audio', codec: 'ac3', width: null, height: null, language: 'fra' },
       ],
     });
     const { user, api } = renderDetail(dual);
 
-    await user.selectOptions(await screen.findByRole('combobox'), 'fre (ac3)');
+    const audio = await screen.findByRole('combobox', { name: 'Audio' });
+    const french = within(audio).getAllByRole('option', { name: 'Français (ac3)' });
+    expect(french.map((option) => option.getAttribute('value'))).toEqual(['1', '2']);
+    await user.selectOptions(audio, '2');
     await user.click(screen.getByRole('button', { name: '▶ Play' }));
 
     expect(api.start).toHaveBeenCalledWith({
       mediaId: 'dual',
       directPlay: false,
       startSec: 0,
-      audioIndex: 1,
+      audioIndex: 2,
     });
   });
 
@@ -631,7 +635,7 @@ describe('DetailDialog audio track (spec audio-track)', () => {
         [{ season: 1, episodes: [first, second] }],
       );
 
-      await user.selectOptions(await screen.findByRole('combobox'), 'eng (aac)');
+      await user.selectOptions(await screen.findByRole('combobox'), 'English (aac)');
       await user.click(screen.getByRole('button', { name: 'Play Ep 2, episode 2' }));
 
       expect(api.start).toHaveBeenCalledWith({

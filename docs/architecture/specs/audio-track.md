@@ -16,7 +16,8 @@ The viewer picks the audio track (language) of a file with several before pressi
   is the first track (R3) and may still play directly.
 - **R3** FFmpeg maps `0:a:<audioIndex>` and encodes that track by its own codec (copied when
   HLS-safe, else stereo AAC); an index past the last track falls back to the first.
-- **R4** The detail dialog shows an **Audio** select (language, else "Track N", plus the
+- **R4** The detail dialog shows an **Audio** select (readable language name, with the
+  code as fallback and "Track N" when missing, plus the
   codec) when the title (a series: its first episode) has more than one track. Until the viewer
   picks a track, every file plays its first one (direct play kept). A pick applies to every
   Play of the dialog, Next episode included, matched by language on each file (the first

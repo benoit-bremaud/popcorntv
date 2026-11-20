@@ -13,6 +13,7 @@ import { TitleLink } from '../discover/TitleLink.js';
 import type { TitleLinkApi } from '../discover/TitleLink.js';
 import { WhereToWatch } from '../discover/WhereToWatch.js';
 import { browserCanPlay } from '../playback/can-play.js';
+import { languageLabel } from '../playback/language.js';
 import { PlayerDialog } from '../playback/PlayerDialog.js';
 import type { PlaybackApi } from '../playback/PlayerDialog.js';
 import { formatPosition, resumeAt } from '../playback/resume.js';
@@ -274,7 +275,7 @@ export function DetailDialog({
               >
                 {tracks.map((track) => (
                   <option key={track.index} value={track.index}>
-                    {track.language ?? `Track ${track.index + 1}`} ({track.codec})
+                    {languageLabel(track.language) ?? `Track ${track.index + 1}`} ({track.codec})
                   </option>
                 ))}
               </select>
