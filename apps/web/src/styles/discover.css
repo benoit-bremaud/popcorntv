@@ -163,6 +163,19 @@
   list-style: none;
 }
 
+@media (width < 40rem) {
+  /* Anchor to the header so the panel fits between its gutters on narrow screens. */
+  .bell {
+    position: static;
+  }
+
+  .bell__panel {
+    inset-block-start: 100%;
+    inset-inline: var(--space-4);
+    width: auto;
+  }
+}
+
 .bell__item {
   width: 100%;
   padding: var(--space-2);
@@ -171,6 +184,7 @@
   background: transparent;
   color: var(--color-text-muted);
   font: inherit;
+  overflow-wrap: anywhere;
   text-align: left;
   cursor: pointer;
 }

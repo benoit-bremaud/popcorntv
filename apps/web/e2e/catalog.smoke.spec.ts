@@ -1,5 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
-import type { AuthStatus, Library, Media, Profile, User } from '@popcorntv/shared';
+import type {
+  AuthStatus,
+  Library,
+  Media,
+  NotificationList,
+  Profile,
+  User,
+} from '@popcorntv/shared';
 
 // The API is mocked at the network layer: the smoke checks the built page, not the server.
 const LIBRARY = {
@@ -44,8 +51,9 @@ const MEDIA = TITLES.map(({ id, title, genre, voteAverage }, index) => ({
 
 const PROFILE = { id: 'default', name: 'Me', avatar: 'red' } satisfies Profile;
 const OWNER = { id: 'u1', username: 'owner', role: 'owner' } satisfies User;
+const EMPTY_NOTIFICATIONS: NotificationList = { items: [], unread: 0 };
 
-async function openCatalog(page: Page): Promise<void> {
+async function openCatalog(page: Page, notifications = EMPTY_NOTIFICATIONS): Promise<void> {
   // Registered first so it matches last: an unmocked API call fails fast
   // instead of reaching a live server on :3000.
   await page.route('**/api/**', (route) => route.abort());
@@ -59,9 +67,68 @@ async function openCatalog(page: Page): Promise<void> {
   await page.route(`**/api/profiles/${PROFILE.id}/progress`, (route) =>
     route.fulfill({ json: [] }),
   );
+  await page.route(`**/api/profiles/${PROFILE.id}/notifications`, (route) =>
+    route.fulfill({ json: notifications }),
+  );
 
   await page.goto('/');
   await page.getByRole('button', { name: 'Me', exact: true }).click();
+}
+
+const LONG_TITLE = `A newly available title: ${'LongTitle'.repeat(10)}`;
+const NOTIFICATIONS: NotificationList = {
+  items: [
+    {
+      id: 1,
+      kind: 'movie',
+      tmdbId: 1,
+      title: LONG_TITLE,
+      reason: 'library',
+      providerId: null,
+      providerName: null,
+      createdAt: '2026-11-20T00:00:00Z',
+      readAt: '2026-11-20T00:01:00Z',
+    },
+  ],
+  unread: 0,
+};
+
+for (const state of ['empty', 'populated'] as const) {
+  test(`the ${state} notification panel stays inside mobile and desktop viewports`, async ({
+    page,
+  }) => {
+    const populated = state === 'populated';
+    await page.setViewportSize({ width: 320, height: 844 });
+    await openCatalog(page, populated ? NOTIFICATIONS : undefined);
+    const bell = page.getByRole('button', { name: 'Notifications', exact: true });
+    await bell.click();
+
+    const panel = page.locator('#bell-panel');
+    const content = populated
+      ? panel.getByRole('button', { name: `${LONG_TITLE} is now in your library` })
+      : panel.getByText('Nothing new on your list.');
+    await expect(content).toBeVisible();
+
+    for (const width of [320, 390, 639, 640, 768, 1280]) {
+      await page.setViewportSize({ width, height: 844 });
+      const bounds = await panel.evaluate((element) => {
+        const { left, right } = element.getBoundingClientRect();
+        return { left, right, scrollWidth: element.scrollWidth, clientWidth: element.clientWidth };
+      });
+      expect(bounds.left, `left edge at ${width}px`).toBeGreaterThanOrEqual(0);
+      expect(bounds.right, `right edge at ${width}px`).toBeLessThanOrEqual(width);
+      expect(bounds.scrollWidth, `panel overflow at ${width}px`).toBeLessThanOrEqual(
+        bounds.clientWidth,
+      );
+      if (width >= 640) {
+        const bellRight = await bell.evaluate((element) => element.getBoundingClientRect().right);
+        expect(bounds.right, `bell alignment at ${width}px`).toBeCloseTo(bellRight);
+      }
+      expect(await content.evaluate((element) => element.scrollWidth)).toBeLessThanOrEqual(
+        await content.evaluate((element) => element.clientWidth),
+      );
+    }
+  });
 }
 
 test('the catalog grid renders from the API and opens a title', async ({ page }) => {
