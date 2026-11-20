@@ -51,11 +51,9 @@ const MEDIA = TITLES.map(({ id, title, genre, voteAverage }, index) => ({
 
 const PROFILE = { id: 'default', name: 'Me', avatar: 'red' } satisfies Profile;
 const OWNER = { id: 'u1', username: 'owner', role: 'owner' } satisfies User;
+const EMPTY_NOTIFICATIONS: NotificationList = { items: [], unread: 0 };
 
-async function openCatalog(
-  page: Page,
-  notifications: NotificationList = { items: [], unread: 0 },
-): Promise<void> {
+async function openCatalog(page: Page, notifications = EMPTY_NOTIFICATIONS): Promise<void> {
   // Registered first so it matches last: an unmocked API call fails fast
   // instead of reaching a live server on :3000.
   await page.route('**/api/**', (route) => route.abort());

@@ -11,3 +11,6 @@ The notification panel stays inside the header gutters on narrow screens.
   build. The two panel tests check both edges and text overflow at 320, 390, 639,
   640, 768 and 1280 px, including bell alignment on larger screens.
 - Pi staging verification: pending deployment.
+- Gate on `a7abf85`: SonarQube flagged the inline default fixture (S7737).
+  A named empty fixture avoids allocating an object for each call and preserves
+  the test behavior.
