@@ -163,8 +163,8 @@
   list-style: none;
 }
 
-@media (max-width: 40rem) {
-  /* Use the positioned header as the panel's containing block on narrow screens. */
+@media (width < 40rem) {
+  /* Anchor to the header so the panel fits between its gutters on narrow screens. */
   .bell {
     position: static;
   }

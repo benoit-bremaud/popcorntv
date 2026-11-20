@@ -8,6 +8,6 @@ The notification panel stays inside the header gutters on narrow screens.
 - Fix: position the narrow panel relative to the header and allow unbroken
   notification titles to wrap. The desktop panel remains anchored to the bell.
 - Browser evidence: all four Chromium catalog tests passed on the production web
-  build. The two panel tests check both edges and text overflow at 320, 390, 768
-  and 1280 px.
+  build. The two panel tests check both edges and text overflow at 320, 390, 639,
+  640, 768 and 1280 px, including bell alignment on larger screens.
 - Pi staging verification: pending deployment.

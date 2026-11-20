@@ -102,7 +102,8 @@ for (const state of ['empty', 'populated'] as const) {
     const populated = state === 'populated';
     await page.setViewportSize({ width: 320, height: 844 });
     await openCatalog(page, populated ? NOTIFICATIONS : undefined);
-    await page.getByRole('button', { name: 'Notifications', exact: true }).click();
+    const bell = page.getByRole('button', { name: 'Notifications', exact: true });
+    await bell.click();
 
     const panel = page.locator('#bell-panel');
     const content = populated
@@ -110,14 +111,21 @@ for (const state of ['empty', 'populated'] as const) {
       : panel.getByText('Nothing new on your list.');
     await expect(content).toBeVisible();
 
-    for (const width of [320, 390, 768, 1280]) {
+    for (const width of [320, 390, 639, 640, 768, 1280]) {
       await page.setViewportSize({ width, height: 844 });
       const bounds = await panel.evaluate((element) => {
         const { left, right } = element.getBoundingClientRect();
-        return { left, right };
+        return { left, right, scrollWidth: element.scrollWidth, clientWidth: element.clientWidth };
       });
       expect(bounds.left, `left edge at ${width}px`).toBeGreaterThanOrEqual(0);
       expect(bounds.right, `right edge at ${width}px`).toBeLessThanOrEqual(width);
+      expect(bounds.scrollWidth, `panel overflow at ${width}px`).toBeLessThanOrEqual(
+        bounds.clientWidth,
+      );
+      if (width >= 640) {
+        const bellRight = await bell.evaluate((element) => element.getBoundingClientRect().right);
+        expect(bounds.right, `bell alignment at ${width}px`).toBeCloseTo(bellRight);
+      }
       expect(await content.evaluate((element) => element.scrollWidth)).toBeLessThanOrEqual(
         await content.evaluate((element) => element.clientWidth),
       );
