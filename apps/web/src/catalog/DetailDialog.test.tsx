@@ -553,7 +553,7 @@ describe('DetailDialog action row (#172)', () => {
 });
 
 describe('DetailDialog audio track (spec audio-track)', () => {
-  it('plays the chosen track through HLS when two tracks share a display name', async () => {
+  it('plays the chosen track through HLS when two codes share a display name', async () => {
     const dual = media({
       id: 'dual',
       title: 'Dual',
