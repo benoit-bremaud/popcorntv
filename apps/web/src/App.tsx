@@ -122,7 +122,7 @@ export function App({
 
   return (
     <>
-      <header className="header">
+      <header className={view.kind === 'active' ? 'header header--active' : 'header'}>
         <h1 className="brand">PopCornTV</h1>
         {view.kind === 'active' && (
           <button

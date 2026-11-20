@@ -73,7 +73,7 @@
 
 .switch-profile {
   flex: 0 1 auto;
-  min-width: 0;
+  min-width: var(--touch-target);
 }
 
 .switch-name {
@@ -202,6 +202,28 @@
 .profiles .button,
 .switch-profile {
   min-height: var(--touch-target);
+}
+
+@media (width < 24rem) {
+  .header--active {
+    display: grid;
+    grid-template-columns: minmax(var(--touch-target), 1fr) auto minmax(var(--touch-target), 1fr);
+    gap: var(--space-2);
+  }
+
+  .header--active .brand {
+    grid-column: 1 / -1;
+  }
+
+  .header--active .switch-profile {
+    justify-self: start;
+    max-inline-size: 100%;
+  }
+
+  .header--active .account {
+    justify-self: end;
+    max-inline-size: 100%;
+  }
 }
 
 @media (max-width: 40rem) {
