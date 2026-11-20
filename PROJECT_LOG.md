@@ -4,6 +4,25 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-20 — #378 UI audit baseline and redesign backlog
+
+- Baseline UI audit of the whole web player at `e02ee78` (19 screens at 390 / 768 / 1440,
+  API mocked): 25 / 40 on eight scored dimensions, no Must, nine Should, five Nice, two
+  to confirm on local staging. Report and 12 screenshots:
+  `docs/architecture/qa/2026-11-20-ui-review-web.md`. Not run: the player, real artwork,
+  Firefox / WebKit, a touch device, a screen reader.
+- **Decisions** (owner, 2026-11-20): the front end is redesigned in full; the design is
+  drawn and tracked in the self-hosted Penpot, not Figma; two or three art directions are
+  explored (one evolves "velvet house") before one is chosen by MCDA. Plan in nine bricks,
+  owner validation at the end of each phase.
+- **Backlog** on Project #71: epic #401; bricks #378 (this one), #393 Penpot adoption,
+  #394 quick wins and visual baselines, #395 framing, #396 UX structure, #397 art
+  direction, #398 wireframes, #399 design system and mockups, #400 implementation;
+  findings 1–14 as #379–#392. Overlapping #170, #171, #261, #265, #297 go with the quick
+  wins; #243 and #303 stay independent.
+- An empty Penpot project "PopCornTV" exists on the local instance (2.19.3); its volumes
+  have no backup yet (#393).
+
 ## 2026-11-18 — Local discovery qualification (PR #351)
 
 - PR #351 on `feat/327-local-discovery` provisions private, initially empty Prowlarr
