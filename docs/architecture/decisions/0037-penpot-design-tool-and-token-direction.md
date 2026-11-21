@@ -2,8 +2,7 @@
 
 Record the outcome of the #393 spike: self-hosted Penpot is adopted for the front-end redesign (epic #401), driven through its official MCP server, with the CSS tokens as the single source of truth.
 
-- Status: proposed — decisions 1–2 accepted by the owner (2026-11-20, 2026-11-21); decisions 3–6
-  await owner validation on the PR of #393.
+- Status: accepted by the owner (decision 1 on 2026-11-20, decisions 2–6 on 2026-11-21).
 - Date: 2026-11-21.
 - Scope: #393 (phase 0b of epic #401). Design tooling on the owner's workstation only; no
   application code, no deployment.
@@ -53,7 +52,7 @@ is reachable from outside the machine.
    step: backup, bump, re-run the poster-card check (draw, bind a token, export).
 4. **Backup**: a dated database dump and assets archive at the end of every design brick and before
    every upgrade, kept on the workstation. Rejected for now: a daily timer (360 against 410).
-5. **MCP key**: regenerate it with a 90-day expiry and a descriptive name, the same lifetime as the
+5. **MCP key**: the owner regenerates it with a 90-day expiry and a descriptive name, the same lifetime as the
    local discovery credentials (ADR-0036). Rejected: keeping the key without expiry; disabling the
    MCP server between sessions.
 6. **ADR-0004**: its status becomes *accepted* — it describes the shipped interface and stays the

@@ -1,6 +1,6 @@
 # ADR-0004 — Catalog: "velvet house" palette, self-hosted Inter type scale, pure view-state
 
-- Status: proposed (owner validation of the weights requested on PR #5)
+- Status: accepted by the owner on 2026-11-21 ([ADR-0037](0037-penpot-design-tool-and-token-direction.md), decision 6); baseline until the redesign of epic #401 supersedes it
 - Date: 2026-10-23
 - Deciders: owner
 - Related: UC3 / UC4 ([spec](../specs/catalog-grid.md)), ADR-0001, ADR-0003, issue #5

@@ -14,8 +14,9 @@ context: merged PRs, decisions, tags, infra events. Not a release changelog — 
   `rem`, composed gradients, motion tokens or media-query variants.
 - **Decisions** ([ADR-0037](docs/architecture/decisions/0037-penpot-design-tool-and-token-direction.md)):
   the owner chose the official MCP server as the drawing method (2026-11-20) and `tokens.css` as
-  the token source, Penpot mirroring it (2026-11-21). Version pin, backup rhythm, MCP key expiry
-  and the status of ADR-0004 are proposed in the same record and await validation.
+  the token source, Penpot mirroring it (2026-11-21). On 2026-11-21 the owner also accepted: version pinned to 2.19.3,
+  a backup at the end of every design brick and before every upgrade, an MCP key regenerated with
+  a 90-day expiry (owner action, pending), and ADR-0004 moved to accepted as the baseline.
 - Follow-ups: #406 (unused `enable-prepl-server` flag), #407 (token mirror procedure, export
   limits).
 
