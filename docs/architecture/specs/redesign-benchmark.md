@@ -145,6 +145,27 @@ Avoid:
    trailers) [u] ([Firecore forum](https://community.firecore.com/t/trailers-are-unavailable/58290)).
 5. Skip prompts that need hidden server data the owner never generated (Jellyfin) [u].
 
+## 7. Sources added on 2026-11-23
+
+- Fire TV design guidelines: 5 % safe area, body text ≥ 14 sp (about 28 px at 1080p), every
+  element reachable with the D-pad [v]
+  ([Amazon](https://developer.amazon.com/docs/fire-tv/design-and-user-experience-guidelines.html)).
+- Android TV: `LEANBACK_LAUNCHER`, no touchscreen required, 320 × 180 banner, the TV app quality
+  checklist (D-pad, Back to home, WebView only, no browser launch) [v]
+  ([Android Developers](https://developer.android.com/docs/quality-guidelines/tv-app-quality));
+  a Trusted Web Activity needs Chrome, which many Android TVs lack, so a WebView shell fits better
+  (#417).
+- Designing for TV (Smashing Magazine, 2025): one focus at all times, few buttons on the remote,
+  shelves, body text from 24 px, text search is costly with a D-pad [v]
+  ([Smashing](https://smashingmagazine.com/2025/09/designing-tv-principles-patterns-practical-guidance/)).
+- Autoplay study (arXiv 2412.16040): 76 Netflix users in the US; turning autoplay off
+  significantly reduced daily watching time and session length [v, abstract]
+  ([arXiv](https://arxiv.org/abs/2412.16040)). Input for #413.
+- NN/g: about five users per qualitative test, three to four per group when audiences differ;
+  interviews ask about specific past events [v]
+  ([NN/g](https://www.nngroup.com/articles/ux-research-cheat-sheet/)). Basis of the discovery
+  interviews and #411.
+
 ## Gaps
 
 Plex official pages (403), Netflix and Apple detail-page layouts, preview delays and the default

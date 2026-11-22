@@ -124,3 +124,22 @@ provider finality, VPN retrieval or playability. The controller and real-contain
 local discovery infrastructure; #310–315 retain the remaining workflow. The first-listen
 authentication correction is in `bedfe9f`; global CI and merge remain pending owner
 workflow #315 before deployment.
+
+## Redesign (epic #401) — 2026-11-23
+
+Started by #395. Each row traces a brief goal, non-functional requirement or job story to the
+screens of the inventory (#396), the components of the system (#399) and the checks (#394,
+#400, #411, #412). Columns fill in as each phase is validated by the owner.
+
+| Source | Requirement | Screens (#396) | Components (#399) | Verification | Status |
+|---|---|---|---|---|---|
+| [Brief](../requirements/04-redesign-brief.md) G1, G2 | Craft quality ≥ 34 / 40, no Must | Every screen and the player | All | `ui-review` per screen (#400) | draft |
+| Brief G3, J6 | 1 activation from *Continue watching*, ≤ 2 from the hero | Home, detail | Hero, row, card | Task test (#411), measure (#412) | draft |
+| Brief G4, G5, NFR-11 | WCAG 2.2 AA, keyboard and remote complete, 44 px targets | Every screen and the player | All, focus system | axe, keyboard and remote pass, screen-reader smoke | draft |
+| Brief G6, NFR-15, D1, D6 | TV layout: 5 % safe margin, body ≥ 28 px at 1920 × 1080, D-pad reach | TV variants of every screen | Tokens, focus system | Remote pass on Android TV (#411, #417) | draft |
+| Brief G9, NFR-12, NFR-13 | Core Web Vitals and bundle budget | Home, detail | Build | Lighthouse trace, build budget check (#412) | draft |
+| NFR-14 | No third-party request at run time | Every screen | All | Network log per screen | draft |
+| [J1](../requirements/05-discovery-interviews.md), D6 | Phone remote paired with the TV | Phone remote screens | Remote panel | Task test (#411); feature in #418 | draft |
+| J3, D4 | Trailer on request only | Detail | Trailer button and states | Decided in #413 | draft |
+| J4, J8 | Children's profile, per-title owner override | Profile picker, detail | Profile badge, rating chip | Feature in #316 | draft |
+| J5, D5 | Reliable playback, in-player audio and subtitles | Player | Player controls, track panel | `ui-review` player, #415 | draft |
