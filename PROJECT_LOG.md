@@ -4,6 +4,23 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-23 — Gate unblocked, Penpot spike merged (PR #414, PR #408)
+
+- PR #414 (`a9e27d9`, closes #409): new upstream HIGH findings had turned `just gate` red on
+  every pull request. CVE-2026-124709 (OpenSSL QUIC server DoS, no Debian fix) is waived on
+  `libssl3t64` and `openssl-provider-legacy` until 2026-12-22 (only apt links the system libssl;
+  Node bundles its own OpenSSL); the deadline is tracked on #116. CVE-2026-86144 (libxml2, fixed
+  upstream) is cleared by repinning Prowlarr to `nightly-3.1.0.5792-ls31` and the Radarr runtime
+  base to `nightly-7.1.0.10947-ls36`; the Radarr 7.0.3 source build is unchanged. Owner decisions
+  2026-11-22: dedicated PR with a dated waiver, Prowlarr bump in the same PR, base repin over an
+  `apk upgrade`. Adversarial review in three rounds; gate green and attested on `21889f1`,
+  including the licensed Radarr rebuild and the real-container discovery journey.
+- PR #408 (`fd92e01`, closes #393): the Penpot spike below, gate green and attested on `6b62a2a`.
+- Gotchas: the attestation refuses an untracked file in the worktree (`/.claude/` now in
+  `.git/info/exclude`); a diff touching `DISCOVERY_PATHS` needs `SIXLABORS_LICENSE_FILE`, which
+  the `ci-runner` hook refuses, so that gate runs from the main session.
+- Follow-up: #410 (rebuilt Radarr reports the base `packageVersion`).
+
 ## 2026-11-22 — #395 redesign framing: brief, benchmark, player audit
 
 - Phase 1 of epic #401. Brief `docs/requirements/04-redesign-brief.md` (goals G1–G9 with
@@ -34,6 +51,21 @@ context: merged PRs, decisions, tags, infra events. Not a release changelog — 
 - **Phase 1 validation** (owner, 2026-11-23): brief accepted on the P1 interview, closing
   #395 (A 420 / B keep #395 open 390 / C wait for P2–P3 320); interviews P2 and P3 move to
   #420 and may amend the brief.
+## 2026-11-21 — Penpot adoption spike (#393)
+
+- Phase 0b of the redesign epic #401. On the local Penpot 2.19.3, the poster card and its five
+  states were drawn through the official MCP server, exported (PNG faithful; SVG depends on the
+  local font) and backed up (database dump and assets archive, restore tested on the 2026-11-20
+  backup). Only the frontend publishes a port, on loopback.
+- 26 of the 75 CSS tokens were mirrored in a Penpot set and bound to shapes; Penpot cannot hold
+  `rem`, composed gradients, motion tokens or media-query variants.
+- **Decisions** ([ADR-0037](docs/architecture/decisions/0037-penpot-design-tool-and-token-direction.md)):
+  the owner chose the official MCP server as the drawing method (2026-11-20) and `tokens.css` as
+  the token source, Penpot mirroring it (2026-11-21). On 2026-11-21 the owner also accepted: version pinned to 2.19.3,
+  a backup at the end of every design brick and before every upgrade, an MCP key regenerated with
+  a 90-day expiry (owner action, pending), and ADR-0004 moved to accepted as the baseline.
+- Follow-ups: #406 (unused `enable-prepl-server` flag), #407 (token mirror procedure, export
+  limits).
 
 ## 2026-11-18 — Local discovery qualification (PR #351)
 

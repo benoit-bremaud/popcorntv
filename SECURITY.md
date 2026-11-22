@@ -22,7 +22,7 @@ vulnerability). Do not open a public issue for a vulnerability.
 Accepted Trivy findings live in `.trivyignore.yaml`, each scoped (`paths`), time-boxed
 (`expired_at`) and justified (`statement`); OS packages are scoped by `purls`, as they have no
 file path. The current entries are unfixed HIGH CVEs in Debian 13 base packages outside the
-media path (#110). The image scan runs without `--ignore-unfixed` (audit SA-03), so a new
+media path (#110, #409). The image scan runs without `--ignore-unfixed` (audit SA-03), so a new
 unfixed CVE fails it until fixed or accepted here; the entries expire for a re-check (#116).
 
 FFmpeg and ffprobe are a static upstream build (`mwader/static-ffmpeg`, pinned by tag and

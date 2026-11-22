@@ -29,7 +29,7 @@ x-service: &service
 services:
   prowlarr:
     <<: *service
-    image: lscr.io/linuxserver/prowlarr:nightly-3.0.2.5775-ls29@sha256:8548e568b1a16456fd72e1374ad8aae69690af146ddf6255696f287455436704
+    image: lscr.io/linuxserver/prowlarr:nightly-3.1.0.5792-ls31@sha256:93db99069c77a5a294f65fb4ec3978af15e9f8e2b5bd868261dc22974f4def1e
     mem_limit: 256m
     volumes:
       - type: bind
