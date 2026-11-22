@@ -1,8 +1,10 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import type {
+  Account,
   AuthStatus,
   Library,
   Media,
+  MediaFolderList,
   NotificationList,
   Profile,
   User,
@@ -230,4 +232,70 @@ test('Back closes the detail dialog and a reload on its entry shows the catalog'
   await expect(page.getByRole('heading', { name: 'Top rated' })).toBeVisible();
   await expect(dialog).toBeHidden();
   await expect.poll(() => page.evaluate(() => history.state as unknown)).toBeNull();
+});
+
+test('the catalog, title dialog, administration and 404 fit at 320 px', async ({ page }) => {
+  const viewportWidth = 320;
+  const owner = { ...OWNER, username: 'qa-owner' };
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: viewportWidth, height: 740 });
+  await openCatalog(page, undefined, owner);
+  const expectFits = () =>
+    expect(page.locator('html')).toHaveJSProperty('scrollWidth', viewportWidth);
+
+  async function expectRegionFits(region: Locator): Promise<void> {
+    const bounds = await region.evaluate((element) => {
+      const { left, right } = element.getBoundingClientRect();
+      return { left, right, scrollWidth: element.scrollWidth, clientWidth: element.clientWidth };
+    });
+    expect(bounds.left).toBeGreaterThanOrEqual(0);
+    expect(bounds.right).toBeLessThanOrEqual(viewportWidth);
+    expect(bounds.scrollWidth).toBeLessThanOrEqual(bounds.clientWidth);
+  }
+
+  await test.step('catalog', async () => {
+    await expect(page.getByRole('heading', { name: 'Top rated' })).toBeVisible();
+    await expectFits();
+  });
+
+  await test.step('title dialog', async () => {
+    await page.getByRole('button', { name: 'Heat', exact: true }).first().click();
+    const dialog = page.getByRole('dialog', { name: 'Heat' });
+    await expect(dialog).toBeVisible();
+    await expectRegionFits(dialog);
+    await expectFits();
+    await dialog.getByRole('button', { name: 'Close', exact: true }).click();
+  });
+
+  await test.step('administration', async () => {
+    const account: Account = {
+      ...owner,
+      createdAt: '2026-11-20T00:00:00Z',
+      lastLoginAt: null,
+      activeSessions: 1,
+      resetPending: false,
+    };
+    await page.route('**/api/users', (route) => route.fulfill({ json: [account] }));
+    await page.route('**/api/invitations', (route) => route.fulfill({ json: [] }));
+    await page.route('**/api/auth/events', (route) => route.fulfill({ json: [] }));
+    await page.route('**/api/libraries/folders', (route) =>
+      route.fulfill({ json: { root: '/media', folders: [] } satisfies MediaFolderList }),
+    );
+    const summary = page.getByRole('banner').locator('summary');
+    await summary.click();
+    await page.getByRole('button', { name: 'Administration', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Administration' })).toBeVisible();
+    await expect(
+      page.getByRole('list', { name: 'Accounts' }).getByText(owner.username),
+    ).toBeVisible();
+    await expectRegionFits(page.getByRole('region', { name: 'Administration' }));
+    await expectFits();
+  });
+
+  await test.step('404 page', async () => {
+    await page.goto('/404.html');
+    await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
+    await expectRegionFits(page.getByRole('main'));
+    await expectFits();
+  });
 });
