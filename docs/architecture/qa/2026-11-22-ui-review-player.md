@@ -70,5 +70,5 @@ close button 44 × 44 at (1369, 12), *Next episode* 254 × 40 at (1155, 796). At
 ## Follow-up
 
 - Findings feed the redesign brief ([04-redesign-brief.md](../../requirements/04-redesign-brief.md)
-  D5) and the screen inventory (#396). Finding 1 is a defect on the shipped player; filing it as
-  its own issue is proposed in the #395 pull request.
+  D5) and the screen inventory (#396).
+- Findings 1 and 2 (defects on the shipped player): #415.

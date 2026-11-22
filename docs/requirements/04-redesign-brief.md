@@ -3,7 +3,8 @@
 What the front-end redesign (epic #401) must achieve, for whom, on which screens and with which
 inputs, measured by numbers the later phases can check.
 
-- Status: **proposed**, awaiting the owner's validation (#395, phase 1 of epic #401).
+- Status: **accepted** by the owner on 2026-11-22: D1 B, D2 A, D3 B; D4 and D5 stay open
+  (#395, phase 1 of epic #401).
 - Date: 2026-11-22.
 - Inputs: [vision](01-vision.md), [parity](03-plex-jellyfin-parity.md), the
   [benchmark](../architecture/specs/redesign-benchmark.md), the UI audit of 2026-11-20 (#378,
@@ -78,7 +79,7 @@ Chromium and Firefox; Safari / WebKit to confirm with the #394 baselines.
 ## 7. Decisions for the owner
 
 Each matrix: scores 0–5, weights sum to 100, total out of 500; the top score is the
-recommendation.
+recommendation; the owner's choice is recorded under each matrix.
 
 ### D1 — TV support level
 
@@ -95,7 +96,7 @@ recommendation.
 | Risk (TV browsers we cannot test in CI) | 20 | 2 | 4 | 5 |
 | **Total /500** | 100 | **325** | **420** | **340** |
 
-Recommendation: **B**. Sensitivity: A overtakes B only if "replace Jellyfin in the living room"
+Decision (owner, 2026-11-22): **B**. Sensitivity: A overtakes B only if "replace Jellyfin in the living room"
 weighs above about 67.
 
 ### D2 — Theme
@@ -112,7 +113,7 @@ weighs above about 67.
 | Matches the benchmark (all five are dark-first) | 15 | 5 | 3 | 3 |
 | **Total /500** | 100 | **460** | **325** | **325** |
 
-Recommendation: **A**. Sensitivity: B overtakes A only if accessibility weighs above about 66.
+Decision (owner, 2026-11-22): **A**. Sensitivity: B overtakes A only if accessibility weighs above about 66.
 
 ### D3 — Interface language
 
@@ -128,7 +129,7 @@ Recommendation: **A**. Sensitivity: B overtakes A only if accessibility weighs a
 | Open to other households later | 25 | 3 | 5 | 2 |
 | **Total /500** | 100 | **345** | **410** | **335** |
 
-Recommendation: **B**; mockups are drawn with the longer French strings. Sensitivity: A overtakes
+Decision (owner, 2026-11-22): **B**; mockups are drawn with the longer French strings. Sensitivity: A overtakes
 B only if cost weighs above about 38.
 
 ### D4 — Trailers from the selected poster (owner request 2026-11-22, #395 comment)

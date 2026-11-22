@@ -12,9 +12,9 @@ context: merged PRs, decisions, tags, infra events. Not a release changelog — 
   Jellyfin, Infuse; written findings and links only), player audit
   `docs/architecture/qa/2026-11-22-ui-review-player.md` (21 / 40, one Must: Space closes
   the player because focus opens on Close).
-- **Decisions** (owner, 2026-11-22): documents placed by MCDA (A 460 / B 440 / C 230).
-  Recommended in the brief, pending validation: D1 TV-ready responsive (420), D2 dark only
-  (460), D3 French and English (410). D4 trailers (owner request in the #395 comment) stays
+- **Decisions** (owner, 2026-11-22): documents placed by MCDA (A 460 / B 440 / C 230);
+  brief validated with D1 TV-ready responsive (420), D2 dark only (460), D3 French and
+  English per profile (410). D4 trailers (owner request in the #395 comment) stays
   open for its own ADR: TMDB trailers are YouTube / Vimeo, ADR-0029 keeps third-party
   streams out.
 
