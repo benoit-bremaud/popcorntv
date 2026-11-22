@@ -68,4 +68,8 @@ vulnerabilities:
     purls: [pkg:deb/debian/perl-base]
     expired_at: 2027-02-07
     statement: 'perl-base is needed by dpkg only; the app never runs Perl. Debian status fix_deferred. Re-check: #116.'
+  - id: CVE-2026-124709
+    purls: [pkg:deb/debian/libssl3t64, pkg:deb/debian/openssl-provider-legacy]
+    expired_at: 2026-12-22
+    statement: 'OpenSSL QUIC denial of service; the Node binary links its own OpenSSL and the app opens no QUIC endpoint. Debian status affected (#409). Re-check: #116.'
 misconfigurations: []
