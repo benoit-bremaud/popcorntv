@@ -4,6 +4,23 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-23 — Gate unblocked, Penpot spike merged (PR #414, PR #408)
+
+- PR #414 (`a9e27d9`, closes #409): new upstream HIGH findings had turned `just gate` red on
+  every pull request. CVE-2026-124709 (OpenSSL QUIC server DoS, no Debian fix) is waived on
+  `libssl3t64` and `openssl-provider-legacy` until 2026-12-22 (only apt links the system libssl;
+  Node bundles its own OpenSSL); the deadline is tracked on #116. CVE-2026-86144 (libxml2, fixed
+  upstream) is cleared by repinning Prowlarr to `nightly-3.1.0.5792-ls31` and the Radarr runtime
+  base to `nightly-7.1.0.10947-ls36`; the Radarr 7.0.3 source build is unchanged. Owner decisions
+  2026-11-22: dedicated PR with a dated waiver, Prowlarr bump in the same PR, base repin over an
+  `apk upgrade`. Adversarial review in three rounds; gate green and attested on `21889f1`,
+  including the licensed Radarr rebuild and the real-container discovery journey.
+- PR #408 (`fd92e01`, closes #393): the Penpot spike below, gate green and attested on `6b62a2a`.
+- Gotchas: the attestation refuses an untracked file in the worktree (`/.claude/` now in
+  `.git/info/exclude`); a diff touching `DISCOVERY_PATHS` needs `SIXLABORS_LICENSE_FILE`, which
+  the `ci-runner` hook refuses, so that gate runs from the main session.
+- Follow-up: #410 (rebuilt Radarr reports the base `packageVersion`).
+
 ## 2026-11-21 — Penpot adoption spike (#393)
 
 - Phase 0b of the redesign epic #401. On the local Penpot 2.19.3, the poster card and its five
