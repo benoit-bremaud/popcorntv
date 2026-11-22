@@ -39,7 +39,9 @@ RUN corepack enable && corepack prepare yarn@1.22.22 --activate \
     && yarn install --frozen-lockfile --non-interactive --network-timeout 120000 \
     && yarn run build --env production
 
-FROM lscr.io/linuxserver/radarr:nightly-7.0.3.10912-ls35@sha256:dd9df7c4fa6ca578f5463b4528cf7c4e729c35b006ab5307f71acd1961a84917 AS runtime
+# The base supplies only the init and OS packages; its own .NET app (and the HIGH findings in its
+# deps.json) is replaced below. Scan a base repin on the rebuilt image, never on the base alone.
+FROM lscr.io/linuxserver/radarr:nightly-7.1.0.10947-ls36@sha256:943aa63178b50eb7489f66a1e850fdb60601c35b644cc2e5b6186a493e046fd0 AS runtime
 # Preserve the vendor's init/native OS packages, replace its complete published app.
 RUN rm -rf /app/radarr/bin && mkdir -p /app/radarr/bin
 COPY --from=backend /out/ /app/radarr/bin/
