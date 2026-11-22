@@ -31,6 +31,9 @@ context: merged PRs, decisions, tags, infra events. Not a release changelog — 
   reverses the 2026-11-08 brainstorm order in #202. Filed #417 (Android TV shell), #418
   (phone remote), #419 (home-automation scene); J8 added to #316, J2 to #160, D6 to #202.
 - Traceability matrix: new *Redesign (epic #401)* section, all rows draft.
+- **Phase 1 validation** (owner, 2026-11-23): brief accepted on the P1 interview, closing
+  #395 (A 420 / B keep #395 open 390 / C wait for P2–P3 320); interviews P2 and P3 move to
+  #420 and may amend the brief.
 
 ## 2026-11-18 — Local discovery qualification (PR #351)
 

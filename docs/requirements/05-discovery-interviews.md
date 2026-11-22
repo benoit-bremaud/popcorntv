@@ -4,7 +4,7 @@ Interview guide and synthesis for the redesign's discovery (#395, epic #401): wh
 members are trying to get done when they watch at home, written as job stories that feed the
 [brief](04-redesign-brief.md) goals and the personas of #396.
 
-- Status: P1 done (2026-11-23); P2 and P3 pending.
+- Status: P1 done (2026-11-23); P2 and P3 pending (#420).
 - Participants: 3–4 household members or relatives, about 20 minutes each, one at a time.
 - Interviewer: the owner; P1 (the owner) interviewed in writing on 2026-11-23, with closed
   questions and free answers, plus two follow-up rounds.

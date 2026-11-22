@@ -3,9 +3,10 @@
 What the front-end redesign (epic #401) must achieve, for whom, on which screens and with which
 inputs, measured by numbers the later phases can check.
 
-- Status: **proposed** (#395, phase 1 of epic #401). Owner decisions: D1 B, D2 A, D3 B
-  (2026-11-22), D6 B (2026-11-23). Pending: P2 and P3 of the
-  [discovery interviews](05-discovery-interviews.md); D4 goes to #413, D5 to #396 / #399.
+- Status: **accepted** by the owner on 2026-11-23 (#395, phase 1 of epic #401), on the first
+  [discovery interview](05-discovery-interviews.md). Decisions: D1 B, D2 A, D3 B (2026-11-22),
+  D6 B (2026-11-23); D4 goes to #413, D5 to #396 / #399. Interviews P2 and P3 (#420) may
+  amend it with the owner's validation.
 - Date: 2026-11-22, updated 2026-11-23.
 - Inputs: [vision](01-vision.md), [parity](03-plex-jellyfin-parity.md), the
   [benchmark](../architecture/specs/redesign-benchmark.md), the UI audit of 2026-11-20 (#378,
@@ -232,5 +233,5 @@ third-party content (vision).
 ## 11. Validation
 
 The brief is done when the owner validates §§ 2, 4, 5 and 6, the decisions D1–D3 and D6, and the
-job stories of the discovery interviews (P1 done 2026-11-23); D4 (#413) and D5 stay open. The validation is logged in
+job stories of the discovery interviews (P1 done 2026-11-23; P2 and P3 in #420); D4 (#413) and D5 stay open. The validation is logged in
 `PROJECT_LOG.md`.
