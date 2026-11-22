@@ -4,6 +4,22 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-21 — Penpot adoption spike (#393)
+
+- Phase 0b of the redesign epic #401. On the local Penpot 2.19.3, the poster card and its five
+  states were drawn through the official MCP server, exported (PNG faithful; SVG depends on the
+  local font) and backed up (database dump and assets archive, restore tested on the 2026-11-20
+  backup). Only the frontend publishes a port, on loopback.
+- 26 of the 75 CSS tokens were mirrored in a Penpot set and bound to shapes; Penpot cannot hold
+  `rem`, composed gradients, motion tokens or media-query variants.
+- **Decisions** ([ADR-0037](docs/architecture/decisions/0037-penpot-design-tool-and-token-direction.md)):
+  the owner chose the official MCP server as the drawing method (2026-11-20) and `tokens.css` as
+  the token source, Penpot mirroring it (2026-11-21). On 2026-11-21 the owner also accepted: version pinned to 2.19.3,
+  a backup at the end of every design brick and before every upgrade, an MCP key regenerated with
+  a 90-day expiry (owner action, pending), and ADR-0004 moved to accepted as the baseline.
+- Follow-ups: #406 (unused `enable-prepl-server` flag), #407 (token mirror procedure, export
+  limits).
+
 ## 2026-11-18 — Local discovery qualification (PR #351)
 
 - PR #351 on `feat/327-local-discovery` provisions private, initially empty Prowlarr
