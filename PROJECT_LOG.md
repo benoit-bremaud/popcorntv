@@ -4,6 +4,20 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-22 — #395 redesign framing: brief, benchmark, player audit
+
+- Phase 1 of epic #401. Brief `docs/requirements/04-redesign-brief.md` (goals G1–G9 with
+  baselines and targets, devices including a TV browser, input modes, decisions D1–D5),
+  benchmark `docs/architecture/specs/redesign-benchmark.md` (Netflix, Apple TV, Plex,
+  Jellyfin, Infuse; written findings and links only), player audit
+  `docs/architecture/qa/2026-11-22-ui-review-player.md` (21 / 40, one Must: Space closes
+  the player because focus opens on Close).
+- **Decisions** (owner, 2026-11-22): documents placed by MCDA (A 460 / B 440 / C 230).
+  Recommended in the brief, pending validation: D1 TV-ready responsive (420), D2 dark only
+  (460), D3 French and English (410). D4 trailers (owner request in the #395 comment) stays
+  open for its own ADR: TMDB trailers are YouTube / Vimeo, ADR-0029 keeps third-party
+  streams out.
+
 ## 2026-11-18 — Local discovery qualification (PR #351)
 
 - PR #351 on `feat/327-local-discovery` provisions private, initially empty Prowlarr
