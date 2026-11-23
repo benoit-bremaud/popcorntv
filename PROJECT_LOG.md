@@ -21,6 +21,36 @@ context: merged PRs, decisions, tags, infra events. Not a release changelog — 
   0038 / 0039 because branch #315 holds ADR-0038; ADR-0041 totals corrected (B 425 → 410).
 - Follow-ups: #422, #423, #424, #425, #428, #429.
 
+## 2026-11-23 — `main` `0ea7da6` deployed to Pi staging (#427)
+
+- First deploy of a merged revision to the isolated `popcorntv-pi-staging` project; owner-run,
+  guided one command at a time. Before: `just gate` green and attested on `0ea7da6`; local
+  rehearsal `make staging-up` healthy, `make check-not-found` all ok, public-surface QA pass
+  (no Must or Should).
+- Build: Git archive SHA-256 `bab6960a…b72f584` verified on the Pi, native ARM64 image
+  `sha256:fbc41ec88e72…44651` (`build-image.sh` checks platform, revision, `APP_VERSION`),
+  Trivy 0.76.0 with `.trivyignore.yaml`: 0 HIGH or CRITICAL. `start.sh` passed the storage,
+  Caddyfile, Tailnet and image-identity guards; app and Caddy healthy.
+- It replaced the #315 trial image `a5ebc7e6`. That image was built from local, unpushed branches of epic #306; none of #310–#315 or #328 is merged (owner decision: deploy `main`, resume #306 in its own chat). Data kept.
+- Checks: HTTPS through the staging CA (`27:95:AF…8B:A3`), `/api/health` 200, not-found
+  matrix 27 / 27. API as `qa-owner`:
+  - `/version` is `0ea7da6962b8`.
+  - Direct play answers 206.
+  - HLS: playlist and a valid MPEG-TS first segment.
+  - Audio track switch and WebVTT subtitles work.
+  - Discover lists and watch providers (FR) answer.
+  - The title link refuses `javascript:`.
+  - Notifications, wishlist and owner routes answer, and a call after sign-out gets 401.
+  - UI in the owner's browser: track language names (#373), the notification panel closes on Escape and on an outside press (#375), subtitles show, no console error.
+  - Narrow widths were not replayed by hand; the gate's Playwright reflow test covers them.
+- Finding #426: Discover search took 16–36 s and the first trending call 7.5 s. Every TMDB
+  call, posters included, shares one server-wide queue (ADR-0003 § 5), so a search waits
+  behind the poster downloads. The Pi reaches TMDB in 0.6–1.4 s. Observation: direct play
+  starts about 11 s after Play on the Pi; the cause is not confirmed.
+- Pi cleanup: about 28 MB of finished #315 temporary folders and old transfer archives removed.
+  The #306 trial artefacts are kept for the #306 chat to sort: retrieval volume (21 GB),
+  offline scan (1.9 GB), images `a5ebc7e6`, `9655dcb1` and gluetun.
+
 ## 2026-11-23 — Gate unblocked, Penpot spike merged (PR #414, PR #408)
 
 - PR #414 (`a9e27d9`, closes #409): new upstream HIGH findings had turned `just gate` red on
