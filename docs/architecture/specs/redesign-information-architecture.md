@@ -3,7 +3,8 @@
 How the household groups and names what PopCornTV offers, found by an open card sort and checked
 by a task-based tree test before any drawing (#396, epic #401).
 
-- Status: **draft** — card sort kit ready; sessions, tree and tree test pending.
+- Status: **draft** — card sort kit ready; sessions, tree and tree test pending
+  in #429.
 - Date: 2026-11-23.
 - Inputs: [MoSCoW](../../requirements/07-redesign-moscow.md) (Must and Should rows),
   [personas](../../requirements/06-personas.md), [job stories](../../requirements/05-discovery-interviews.md#5-job-stories).

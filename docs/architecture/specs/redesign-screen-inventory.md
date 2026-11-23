@@ -4,7 +4,7 @@ Every screen of the redesigned front end with its states, surfaces and flows, so
 (#398), the design system (#399) and the implementation (#400) draw and build the same list.
 
 - Status: **content validated** by the owner on 2026-11-23 (#396); paths and the S06 / S07
-  grouping stay provisional until the tree test.
+  grouping stay provisional until the tree test (#429).
 - Date: 2026-11-23.
 - Inputs: the UI audit of 2026-11-20 (19 entries; report in PR #402, open), the
   [MoSCoW](../../requirements/07-redesign-moscow.md), the
