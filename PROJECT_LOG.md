@@ -21,6 +21,36 @@ context: merged PRs, decisions, tags, infra events. Not a release changelog — 
   the `ci-runner` hook refuses, so that gate runs from the main session.
 - Follow-up: #410 (rebuilt Radarr reports the base `packageVersion`).
 
+## 2026-11-22 — #395 redesign framing: brief, benchmark, player audit
+
+- Phase 1 of epic #401. Brief `docs/requirements/04-redesign-brief.md` (goals G1–G9 with
+  baselines and targets, devices including a TV browser, input modes, decisions D1–D5),
+  benchmark `docs/architecture/specs/redesign-benchmark.md` (Netflix, Apple TV, Plex,
+  Jellyfin, Infuse; written findings and links only), player audit
+  `docs/architecture/qa/2026-11-22-ui-review-player.md` (21 / 40, one Must: Space closes
+  the player because focus opens on Close).
+- **Decisions** (owner, 2026-11-22): documents placed by MCDA (A 460 / B 440 / C 230);
+  brief validated with D1 TV-ready responsive (420), D2 dark only (460), D3 French and
+  English per profile (410). D4 trailers (owner request in the #395 comment) stays
+  open for its own ADR: TMDB trailers are YouTube / Vimeo, ADR-0029 keeps third-party
+  streams out.
+- **2026-11-23, refined plan** (owner-validated, #395 / #401): Double Diamond with the
+  ISO 9241-210 loop, written owner validation per phase, NFRs in the brief, JTBD discovery
+  interviews, traceability started. Brief back to *proposed* until the interviews are done;
+  NFR-11–15 added (WCAG 2.2 AA, Core Web Vitals, 150 kB gzip initial JS against a 90.5 kB
+  baseline, no third-party request at run time, TV safe margin and 28 px body).
+- **Discovery interview P1** (owner, written, 2026-11-23): job stories J1–J8 in
+  `docs/requirements/05-discovery-interviews.md`; phone as remote is the top wish; choosing
+  takes 10–20 min; trailers on request only; children's profile with a per-title owner
+  override. P2 and P3 pending, run by the owner.
+- **Decision D6** (owner, 2026-11-23): thin Android TV app plus a phone remote paired
+  through the PopCornTV server, B 420 / D (B + Cast) 380 / C Cast 300 / A TV browser 295;
+  reverses the 2026-11-08 brainstorm order in #202. Filed #417 (Android TV shell), #418
+  (phone remote), #419 (home-automation scene); J8 added to #316, J2 to #160, D6 to #202.
+- Traceability matrix: new *Redesign (epic #401)* section, all rows draft.
+- **Phase 1 validation** (owner, 2026-11-23): brief accepted on the P1 interview, closing
+  #395 (A 420 / B keep #395 open 390 / C wait for P2–P3 320); interviews P2 and P3 move to
+  #420 and may amend the brief.
 ## 2026-11-21 — Penpot adoption spike (#393)
 
 - Phase 0b of the redesign epic #401. On the local Penpot 2.19.3, the poster card and its five
