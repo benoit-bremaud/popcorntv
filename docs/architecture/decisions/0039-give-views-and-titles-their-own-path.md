@@ -1,6 +1,6 @@
 # ADR-0039 — Give views and titles their own path
 
-- Status: proposed (#396, awaiting the owner's acceptance)
+- Status: accepted (owner, 2026-11-23, #396)
 - Date: 2026-11-23
 - Deciders: owner
 - Amends: ADR-0004 § 4 (view state only in a reducer), ADR-0024 (no URL per title)
@@ -53,7 +53,7 @@ it scores the same or lower on every criterion.
 
 ## Decision
 
-**B**, proposed.
+**B** (owner, 2026-11-23).
 
 - Paths are product state, not secrets: no token, no profile id in a path; invitation, reset and
   setup links keep the hash and are dropped from the address bar on open (#87).

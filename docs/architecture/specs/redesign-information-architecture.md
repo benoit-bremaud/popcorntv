@@ -133,5 +133,5 @@ triggers one revision of the tree and a re-test of that task.
 
 ## 6. Deep links
 
-Whether each title and view gets its own URL is decided in ADR-0039 (amends ADR-0004 § 4 and
-ADR-0024); the tree above is independent of that choice.
+Each view and title gets its own path ([ADR-0039](../decisions/0039-give-views-and-titles-their-own-path.md),
+accepted 2026-11-23); the path table follows the validated tree.

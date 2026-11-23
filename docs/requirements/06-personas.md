@@ -4,7 +4,7 @@ Three short personas for the front-end redesign (#396, epic #401), derived from 
 [discovery interviews](05-discovery-interviews.md) and the [vision](01-vision.md); they name who
 each screen, flow and priority of the redesign serves.
 
-- Status: **provisional** — only P1 is interviewed; P2 and P3 (#420) confirm or revise the
+- Status: **provisional, validated** by the owner on 2026-11-23 — only P1 is interviewed; P2 and P3 (#420) confirm or revise the
   personas, with the owner's validation.
 - Date: 2026-11-23.
 - Privacy: invented first names; no detail identifies a household member (same rules as the

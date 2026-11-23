@@ -3,7 +3,7 @@
 What the redesigned front end must, should and could cover, and what waits for later, so the
 inventory, the wireframes and the implementation (#396–#400, epic #401) work on the same list.
 
-- Status: **draft** — awaiting the owner's validation (#396).
+- Status: **validated** by the owner on 2026-11-23 (#396), Must share of 66 % accepted.
 - Date: 2026-11-23.
 - Inputs: [brief](04-redesign-brief.md) (§ 9 scope), [personas](06-personas.md),
   [job stories](05-discovery-interviews.md#5-job-stories), open issues of the backlog.
@@ -86,5 +86,4 @@ or under about 60 % of the total effort, so Should can absorb overruns.
 
 Must: 1 + 1 + 3 + 2 + 3 + 3 + 2 + 3 + 2 + 2 + 1 + 2 + 2 = **27**. Should: 3 + 1 + 1 + 2 + 1 + 1
 + 1 + 2 + 1 + 1 = **14**. Must share: 27 / 41 = **66 %** — above the DSDM 60 % guide; the
-owner either accepts it (the Musts are today's features, already built once) or moves M12 or
-M10 to Should.
+owner accepted it on 2026-11-23: the Musts are today's features, already built once.

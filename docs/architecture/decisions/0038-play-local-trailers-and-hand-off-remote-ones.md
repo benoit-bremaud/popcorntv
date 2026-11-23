@@ -1,6 +1,6 @@
 # ADR-0038 — Play local trailers, hand remote ones off to a personal device
 
-- Status: proposed (#413, awaiting the owner's acceptance)
+- Status: accepted (owner, 2026-11-23, #413)
 - Date: 2026-11-23
 - Deciders: owner
 - Related: [brief](../../requirements/04-redesign-brief.md) D4, J3, NFR-14, D6; ADR-0029,
@@ -68,7 +68,7 @@ which NFR-14 rules out.
 
 ## Decision
 
-**D**, proposed.
+**D** (owner, 2026-11-23).
 
 - **Local trailer**: a file in a `trailers/` folder next to the media or named
   `<title>-trailer.<ext>` is a trailer of that title; it plays in PopCornTV's player (direct play

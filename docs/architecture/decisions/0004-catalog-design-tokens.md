@@ -79,7 +79,8 @@ grid is the industry default and nothing in the brief argues otherwise.
 
 Points: A = 175+150+40+75 = 440 · B = 105+120+100+60 = 385 · C = 70+120+40+60 = 290.
 **A**; deep links come with a router when #7 adds a player route (the reducer then
-reads its initial state from the URL).
+reads its initial state from the URL). Amended by ADR-0039 (2026-11-23): own paths on the
+History API, no router library.
 
 ## 5. Revision v2 — gilding, night blue, violet, motion (owner, 2026-10-23)
 
