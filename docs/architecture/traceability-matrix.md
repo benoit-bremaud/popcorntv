@@ -129,17 +129,22 @@ workflow #315 before deployment.
 
 Started by #395. Each row traces a brief goal, non-functional requirement or job story to the
 screens of the inventory (#396), the components of the system (#399) and the checks (#394,
-#400, #411, #412). Columns fill in as each phase is validated by the owner.
+#400, #411, #412). Columns fill in as each phase is validated by the owner. UC34, REQ-38–42
+and ADR-0035 are reserved by #315 (branch `feat/315-playable-retrieval-trial`); the redesign starts at UC35.
 
 | Source | Requirement | Screens (#396) | Components (#399) | Verification | Status |
 |---|---|---|---|---|---|
-| [Brief](../requirements/04-redesign-brief.md) G1, G2 | Craft quality ≥ 34 / 40, no Must | Every screen and the player | All | `ui-review` per screen (#400) | draft |
-| Brief G3, J6 | 1 activation from *Continue watching*, ≤ 2 from the hero | Home, detail | Hero, row, card | Task test (#411), measure (#412) | draft |
-| Brief G4, G5, NFR-11 | WCAG 2.2 AA, keyboard and remote complete, 44 px targets | Every screen and the player | All, focus system | axe, keyboard and remote pass, screen-reader smoke | draft |
-| Brief G6, NFR-15, D1, D6 | TV layout: 5 % safe margin, body ≥ 28 px at 1920 × 1080, D-pad reach | TV variants of every screen | Tokens, focus system | Remote pass on Android TV (#411, #417) | draft |
-| Brief G9, NFR-12, NFR-13 | Core Web Vitals and bundle budget | Home, detail | Build | Lighthouse trace, build budget check (#412) | draft |
-| NFR-14 | No third-party request at run time | Every screen | All | Network log per screen | draft |
-| [J1](../requirements/05-discovery-interviews.md), D6 | Phone remote paired with the TV | Phone remote screens | Remote panel | Task test (#411); feature in #418 | draft |
-| J3, D4 | Trailer on request only | Detail | Trailer button and states | Decided in #413 | draft |
-| J4, J8 | Children's profile, per-title owner override | Profile picker, detail | Profile badge, rating chip | Feature in #316 | draft |
-| J5, D5 | Reliable playback, in-player audio and subtitles | Player | Player controls, track panel | `ui-review` player, #415 | draft |
+| [Brief](../requirements/04-redesign-brief.md) G1, G2 | Craft quality ≥ 34 / 40, no Must | S01–S19, R1–R3 ([inventory](specs/redesign-screen-inventory.md)) | All | `ui-review` per screen (#400) | draft |
+| Brief G3, J6 | 1 activation from *Continue watching*, ≤ 2 from the hero | S06, S09, S10; flow F3 | Hero, row, card | Task test (#411), measure (#412) | draft |
+| Brief G4, G5, NFR-11 | WCAG 2.2 AA, keyboard and remote complete, 44 px targets | All screens, states X4, X7; flows F1–F18 | All, focus system | axe, keyboard and remote pass, screen-reader smoke | draft |
+| Brief G6, NFR-15, D1, D6 | TV layout: 5 % safe margin, body ≥ 28 px at 1920 × 1080, D-pad reach | State X7 of every screen; S17, S18 | Tokens, focus system | Remote pass on Android TV (#411, #417) | draft |
+| Brief G9, NFR-12, NFR-13 | Core Web Vitals and bundle budget | S06, S09 | Build | Lighthouse trace, build budget check (#412) | draft |
+| NFR-14 | No third-party request at run time | All screens; S11 (ADR-0038) | All | Network log per screen | draft |
+| [J1](../requirements/05-discovery-interviews.md), D6 | Phone remote paired with the TV | S18, R1–R3; UC35, UC36; ACT-pair-phone-remote; flow F11 | Remote panel | Task test (#411); feature in #418 | draft |
+| J3, D4, [ADR-0038](decisions/0038-play-local-trailers-and-hand-off-remote-ones.md) | Trailer on request only: local in-app, remote handed off | S09, S11; UC37; flow F7 | Trailer button and states | Network log, remote pass (#411) | accepted 2026-11-23 |
+| J4, J8 | Children's profile, per-title owner override | S04, S06, S09; UC39; ACT-child-session; flow F13 | Profile badge, rating chip | Feature in #316 (per account, REQ-26, REQ-27) | draft |
+| J5, D5 | Reliable playback, in-player audio and subtitles | S10; ACT-play-and-resume; flow F6 | Player controls, track panel | `ui-review` player, #415; D5 in #399 | draft |
+| [ADR-0039](decisions/0039-give-views-and-titles-their-own-path.md) | One path per view and title | Paths in the [inventory](specs/redesign-screen-inventory.md) § 3 | Router module | Reload and Back tests (#400) | accepted 2026-11-23 |
+| [Personas](../requirements/06-personas.md), [MoSCoW](../requirements/07-redesign-moscow.md) | Who each screen serves; what is in scope | Inventory columns MoSCoW and Personas | — | Owner validation | validated 2026-11-23 |
+| [IA](specs/redesign-information-architecture.md) | Navigation tree from the card sort, checked by a tree test | S06, S07, S12, S16 grouping | Navigation | Tree test (§ 5) | draft |
+| UC38 | Connect a TV without typing | S17; flow F12 | Pairing code | Feature in #200, #417 | draft |
