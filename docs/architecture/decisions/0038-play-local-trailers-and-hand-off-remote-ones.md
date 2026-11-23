@@ -89,7 +89,7 @@ which NFR-14 rules out.
 - No third-party request from PopCornTV at run time; NFR-14 holds.
 - On the TV, a title without a local trailer costs the viewer a phone scan; the phone remote
   (#418) later makes it one press.
-- Server work outside the redesign, each with its own issue: trailer detection in the scanner,
-  the TMDB trailer key, and the trailer playback path.
+- Server work outside the redesign, tracked in #425: trailer detection in the scanner, the TMDB
+  trailer key, and the trailer playback path.
 - The ADR-0029 *Where to watch* links have the same TV problem (a new tab replaces the app in
-  the `WebView`); they get the same QR hand-off in their own issue.
+  the `WebView`); they get the same QR hand-off in #423.
