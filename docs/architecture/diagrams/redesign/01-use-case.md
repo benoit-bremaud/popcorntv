@@ -2,7 +2,7 @@
 
 > **Feature**: front-end redesign, epic #401 (#396) — [brief](../../../requirements/04-redesign-brief.md),
 > [personas](../../../requirements/06-personas.md), [screen inventory](../../specs/redesign-screen-inventory.md)
-> **Related ADRs**: ADR-0038, ADR-0039
+> **Related ADRs**: ADR-0040, ADR-0041
 
 ## Context
 
@@ -24,7 +24,7 @@ flowchart LR
     subgraph Watch ["Watch domain"]
       UC35(("UC35 Pair my phone with the TV"))
       UC36(("UC36 Control the TV from my phone"))
-      UC4(("UC4 Open a title's details"))
+      UC4(("UC4 Open a title"))
       UC37(("UC37 Watch a title's trailer"))
     end
     subgraph Access ["Access domain"]
@@ -38,19 +38,19 @@ flowchart LR
   Viewer --- UC38
   Owner --- UC39
   Owner -. "specializes" .-> Viewer
-  UC36 -. "«include»" .-> UC35
-  UC37 -. "«extend» (title details)" .-> UC4
+  UC37 -. "«extend» [trailer requested] at Trailer" .-> UC4
   UC37 --- TMDB
 ```
 
 ## Notes
 
 - **UC35** — the Viewer pairs a phone with the TV app through the PopCornTV server (D6); the
-  feature is #418. Pairing is a precondition of UC36, hence «include».
+  feature is #418. Precondition of UC36: UC35 done (no «include»: pairing happens once, not at every use).
 - **UC36** — browse, pick, play / pause, ±10 s, seek, volume, audio and subtitles, arrows / OK /
-  Back from the phone (J1). It drives UC3, UC4 and UC5 on the TV through ADR-0039 paths.
-- **UC37** — extends UC4 at the *Trailer* button: a local trailer plays in PopCornTV's player, a
-  remote one is handed to a personal device (ADR-0038). TMDB gives the trailer key to the
+  Back from the phone (J1). It drives UC3, UC4 and UC5 on the TV through ADR-0041 paths.
+- **UC37** — extends UC4 at the extension point *Trailer* (the button), on the condition
+  *trailer requested*: a local trailer plays in PopCornTV's player, a
+  remote one is handed to a personal device (ADR-0040). TMDB gives the trailer key to the
   server only.
 - **UC38** — signs the TV app in without typing a password (#200, #417).
 - **UC39** — the Owner allows one title above a child account's rating (J8). Restrictions apply

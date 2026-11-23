@@ -1,10 +1,10 @@
-# ADR-0038 — Play local trailers, hand remote ones off to a personal device
+# ADR-0040 — Play local trailers, hand remote ones off to a personal device
 
 - Status: accepted (owner, 2026-11-23, #413)
 - Date: 2026-11-23
 - Deciders: owner
 - Related: [brief](../../requirements/04-redesign-brief.md) D4, J3, NFR-14, D6; ADR-0029,
-  ADR-0006; [benchmark](../specs/redesign-benchmark.md) § 1; issues #413, #417, #418, epic #401
+  ADR-0005, ADR-0006; [benchmark](../specs/redesign-benchmark.md) § 1; issues #413, #417, #418, epic #401
 
 ## Context
 
@@ -15,8 +15,8 @@ choice:
 - **Sources.** TMDB lists trailers as YouTube or Vimeo videos. ADR-0029 keeps every third-party
   stream out of PopCornTV, and NFR-14 forbids any run-time request to a host other than the
   PopCornTV server. Plex and Jellyfin also read local trailers next to the media (`trailers/`
-  folder, `-trailer` suffix); Jellyfin's remote YouTube trailers break when YouTube changes
-  (benchmark § 1).
+  folder, `-trailer` suffix); Jellyfin's remote YouTube trailers are reported to break when YouTube changes
+  (benchmark § 1, unverified).
 - **Privacy-enhanced embeds are not private.** YouTube's privacy-enhanced mode
   (`youtube-nocookie.com`) only promises that the view does not personalise YouTube or its ads;
   it still needs YouTube hosts allowed, a `Referer` sent to YouTube, and YouTube's terms
@@ -52,19 +52,22 @@ sound unasked (brief G7).
 
 | Criterion | Weight | A Link | B Embed | C Local only | D Local + hand-off | E None |
 |---|---:|---|---|---|---|---|
-| Privacy, NFR-14 and ADR-0029 | 25 | 4 — leaves the app on a click | 1 — YouTube hosts inside the app | 5 | 5 — the remote video never loads in PopCornTV | 5 |
+| Privacy, NFR-14 and ADR-0029 | 25 | 2 — on the TV the link loads YouTube inside the app's `WebView` | 1 — YouTube hosts inside the app | 5 | 5 — the remote video never loads in PopCornTV, TV included | 5 |
 | Works on every D6 surface (TV `WebView`, phone remote, laptop) | 20 | 1 — replaces the app on the TV; browser launch forbidden | 3 — plays in a `WebView`, depends on YouTube's embed rules | 5 | 4 — QR on the TV, link elsewhere | 5 |
 | Viewer experience (J3: decide without leaving the choice) | 20 | 2 — leaves the choice | 5 | 4 — in-app, preview on focus possible | 4 — in-app when local, one step out otherwise | 0 |
 | Availability per title | 15 | 5 — most TMDB titles | 5 | 1 — only files the owner adds | 5 | 0 |
 | Cost and breakage | 20 | 5 | 2 — CSP, notice, embed changes | 3 — scanner and player reuse | 2 — local, QR and link | 5 |
-| **Total /500** | 100 | **335** | **300** | **380** | **400** | **325** |
+| **Total /500** | 100 | **285** | **300** | **380** | **400** | **325** |
 
-Points: A = 100 + 20 + 40 + 75 + 100 · B = 25 + 60 + 100 + 75 + 40 · C = 125 + 100 + 80 + 15 + 60 ·
+Points: A = 50 + 20 + 40 + 75 + 100 · B = 25 + 60 + 100 + 75 + 40 · C = 125 + 100 + 80 + 15 + 60 ·
 D = 125 + 80 + 80 + 75 + 40 · E = 125 + 100 + 0 + 0 + 100.
 
 Sensitivity: C overtakes D only if availability weighs under about 10 (the trailer would then
 exist only for the few titles with a local file); B ties D only if privacy weighs nothing,
-which NFR-14 rules out.
+which NFR-14 rules out. D's privacy lead over A rests on the TV, where D never loads
+YouTube; on a laptop or phone D behaves like A. D leads C by 20, on surfaces and cost only.
+Rescoring A's privacy from 4 to 2 after the review (2026-11-23) lowers A from 335 to 285 and
+leaves the ranking unchanged.
 
 ## Decision
 
@@ -75,14 +78,19 @@ which NFR-14 rules out.
   or HLS, ADR-0005 / ADR-0006), muted until the viewer turns the sound on, never chained to the
   film.
 - **Remote trailer**: the server reads the official trailer key from TMDB (server egress only, as
-  today) and answers a URL pinned to `https://www.youtube.com/watch?v=` or `https://vimeo.com/`.
+  today) and answers a URL pinned to `https://www.youtube.com/watch?v=` or `https://vimeo.com/`. The key is accepted only if it
+  matches `^[A-Za-z0-9_-]{11}$` (YouTube) or `^\d{1,12}$` (Vimeo); otherwise the title has no
+  remote trailer.
   The web app shows it as a link on a laptop or phone (`rel="noopener noreferrer"`, new tab) and
-  as a locally generated QR code on the TV; *Open on my phone* is added with #418.
+  as a locally generated QR code on the TV; *Open on my phone* is added with #418. The web app knows it runs on the TV from a flag the
+  #417 shell injects, never from the user agent alone.
+- **Child account**: no remote trailer hand-off (link or QR code) until #316 decides the
+  restrictions; local trailers follow the account's rating like the title itself.
 - **On request only**: the *Trailer* button in the detail view is the entry point. A muted
   preview on focus or hover is a per-profile setting, **off by default**, for local trailers only,
   and never under `prefers-reduced-motion`.
 - **States to draw** (#398, #399): no trailer, local available, remote available, loading,
-  playing, error, QR shown, reduced motion.
+  playing, error, QR shown, reduced motion, child account (no hand-off).
 
 ## Consequences
 

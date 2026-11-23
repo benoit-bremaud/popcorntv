@@ -19,13 +19,13 @@ Incremental glossary for adaptive wishlist design (#307), signed local gates (#3
 | Notification store | Existing private persisted notices extended with exact target/generation deduplication. | Adaptive wishlist specification §2–7 |
 | Override | The owner's allowance of one title above a child account's rating, for that account only. | J8, #316 |
 | Owner | Existing administrative role; viewer interest alone does not grant acquisition permission. | Adaptive wishlist specification §2–7 |
-| Pairing | Linking a phone remote or a TV app to the viewer's account through the PopCornTV server, with a short-lived code. | ADR-0039, #418, #200 |
+| Pairing | Linking a phone remote or a TV app to the viewer's account through the PopCornTV server, with a short-lived code. | Brief D6, #418, #200 |
 | Persona | A short, evidence-tagged portrait of a household user the redesign serves (Alex, Léa, Monique). | Personas (#396) |
 | Phone remote | A PopCornTV web screen on a phone that browses, picks and controls what the paired TV app shows. | Brief D6, #418 |
 | Playback boundary | Authorized reader/session responsibilities for complete or verified partial media. | Adaptive wishlist specification §2–7 |
 | Playback lease | Session-bound pin preventing cache replacement or eviction while content is consumed. | Adaptive wishlist specification §2–7 |
-| Preparation coordinator | Proposed responsibility for due work, recovery reconciliation and persisted transitions. | Adaptive wishlist specification §2–7 |
 | Preparation | Persisted lifecycle for one movie or episode target, shared by interested profiles. | Adaptive wishlist specification §2–7 |
+| Preparation coordinator | Proposed responsibility for due work, recovery reconciliation and persisted transitions. | Adaptive wishlist specification §2–7 |
 | Prowlarr | Service centralizing configured indexers and synchronizing their settings to applications such as Radarr. | Implemented #327 topology, REQ-36 |
 | Radarr | Movie-service search executor proposed for the future PopcornTV cadence; not the authority for local playability. | Implemented #327 topology, REQ-36 |
 | Readiness policy | Pure decision from verified coverage, metadata, conservative throughput and resource evidence. | Adaptive wishlist specification §2–7 |
@@ -34,9 +34,9 @@ Incremental glossary for adaptive wishlist design (#307), signed local gates (#3
 | Recovery boundary | Injected interface for the selected backend protocol, with a deterministic test double. | Adaptive wishlist specification §2–7 |
 | Source candidate | Publication/content identity satisfying the accepted language, quality and format constraints. | Adaptive wishlist specification §2–7 |
 | SSH signer | Existing or dedicated protected signing identity, authorized only through the trusted main-branch public signer file. | Accepted local gate design, REQ-31 |
-| Trailer | A title's promotional video: a local file played in PopCornTV, or a remote video handed off to a personal device. | ADR-0038 |
+| Trailer | A title's promotional video: a local file played in PopCornTV, or a remote video handed off to a personal device. | ADR-0040 |
 | TV app | The thin Android TV application that shows the PopCornTV web app in a WebView. | Brief D6, #417 |
 | Verified coverage | Byte/time regions confirmed readable by the recovery backend, not inferred from filesystem length. | Adaptive wishlist specification §2–7 |
 | Viewer | Signed-in household user acting through an owned profile. | Adaptive wishlist specification §2–7 |
-| Wishlist interest | A profile subscription to a movie/series title; distinct from a shared episode/movie preparation. | Adaptive wishlist specification §2–7 |
 | Wishlist | Existing authenticated personal title interests and their private repository/API. | Adaptive wishlist specification §2–7 |
+| Wishlist interest | A profile subscription to a movie/series title; distinct from a shared episode/movie preparation. | Adaptive wishlist specification §2–7 |

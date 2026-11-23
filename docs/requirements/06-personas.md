@@ -45,9 +45,8 @@ each screen, flow and priority of the redesign serves.
 
 ## Léa, the young viewer
 
-- **Who**: child aged about 8–13, reads short labels; younger siblings (6–7) recognise posters
-  and are read to.
-- **Context**: the living-room TV after school or at the weekend, often alone.
+- **Who**: child, 6–13, reads short labels or is read to.
+- **Context**: the living-room TV.
 - **Inputs**: the physical TV remote (arrows, OK, Back); no phone, no keyboard.
 - **Goals**: find and start her show on her own; resume where she stopped (J6); stop at a clear
   end, no episode chaining (J4).

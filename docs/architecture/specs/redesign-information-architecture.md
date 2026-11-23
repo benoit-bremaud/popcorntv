@@ -12,10 +12,26 @@ by a task-based tree test before any drawing (#396, epic #401).
 
 | Step | What | Who | Output |
 |---|---|---|---|
-| 1 | Open card sort on paper (owner decision 2026-11-23, option A 460 / 500) | Household participants; the owner facilitates and does not sort | Groups and names per participant |
+| 1 | Open card sort on paper (owner decision 2026-11-23, option A 460 / 500, matrix below) | Household participants; the owner facilitates and does not sort | Groups and names per participant |
 | 2 | Synthesis: groups seen in at least two sorts, names most often given, cards that wander | Analyst | Candidate tree (§ 4) |
 | 3 | Tree test, text only, no visuals | Participants other than the sorters when possible | Success and directness per task (§ 5) |
 | 4 | Revise the tree once if needed, re-test the failed tasks | Same as step 3 | Validated tree |
+
+Card sort protocol, owner decision 2026-11-23:
+
+| Criterion | Weight | A Paper, owner facilitates | B Paper, owner sorts too | C Penpot for adults, paper for children |
+|---|---:|---|---|---|
+| Validity (no designer anchoring) | 30 | 5 — the owner does not sort | 3 — the owner's sort stays, even analysed apart | 4 |
+| Easy for the household, children included | 30 | 5 — paper for all | 5 | 3 — two media, Penpot to learn |
+| Local and private | 15 | 5 | 5 | 5 |
+| Transcription effort | 15 | 3 — photos to transcribe | 3 | 4 |
+| Owner's time | 10 | 4 | 3 — one more session | 2 — two kits to prepare |
+| **Total /500** | 100 | **460** | **390** | **365** |
+
+Points: A = 150 + 150 + 75 + 45 + 40 · B = 90 + 150 + 75 + 45 + 30 · C = 120 + 90 + 75 + 60 + 20.
+Sensitivity: the owner's view is already captured by interview P1 and the MoSCoW, so B only adds
+bias; B never overtakes A while validity weighs anything, and C overtakes A only if transcription
+effort outweighs ease for the household.
 
 Sample: the household gives at most a handful of people, so every reading is **qualitative**
 (stable similarity statistics need about 15 sorters). The decision rules below are written before
@@ -126,13 +142,30 @@ Pending the sessions.
 
 ## 5. Tree test
 
-Pending the candidate tree. About 10 tasks covering home, playback, discovery, profiles, phone
-remote and administration, worded without the tree's labels. Each task records **success** (the
+Run on the candidate tree, text only. The tasks cover home, playback, discovery, profiles, phone
+remote and administration, and are worded without the tree's labels. Each task records **success** (the
 participant ends on a correct node) and **directness** (no backtracking) separately. Rule: a
 task failed by two or more participants, or by every participant when only one takes it,
 triggers one revision of the tree and a re-test of that task.
 
+### Tasks
+
+Worded without the tree's labels; read aloud in French. Correct nodes are set once the tree exists. A child takes the oral subset only.
+
+| # | Task | Read aloud (fr) | Area | Flow | Child (oral) |
+|---|---|---|---|---|---|
+| T1 | Go back to the film you stopped last night | Reprends le film que tu as arrêté hier soir | Home | F3 | Yes |
+| T2 | Find every film with an actor you like | Trouve tous les films où joue un acteur que tu aimes | Search | F5 | No |
+| T3 | Turn on French subtitles during a film | Mets les sous-titres en français pendant un film | Player | F6 | Yes |
+| T4 | Watch a film's trailer before deciding | Regarde la bande-annonce d'un film avant de te décider | Title | F7 | Yes |
+| T5 | Keep a film you do not own for later | Garde de côté pour plus tard un film que tu n'as pas | Discover | F8 | No |
+| T6 | Find which streaming service has a series you do not own | Trouve sur quelle plateforme on peut voir une série que tu n'as pas | Discover | F9 | No |
+| T7 | A film you were waiting for has arrived: where do you see it? | Un film que tu attendais est arrivé : où le vois-tu ? | Notifications | F10 | No |
+| T8 | Someone new joins the household: make them their own space | Quelqu'un de nouveau arrive à la maison : fais-lui sa propre place | Profiles | F19 | No |
+| T9 | Start a film on the TV from your phone | Lance un film sur la télé depuis ton téléphone | Remote | F11 | No |
+| T10 | Make a new folder of films appear in the app (owner role) | Fais apparaître un nouveau dossier de films dans l'appli | Administration | F14 | No |
+
 ## 6. Deep links
 
-Each view and title gets its own path ([ADR-0039](../decisions/0039-give-views-and-titles-their-own-path.md),
+Each view and title gets its own path ([ADR-0041](../decisions/0041-give-views-and-titles-their-own-path.md),
 accepted 2026-11-23); the path table follows the validated tree.

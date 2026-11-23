@@ -67,8 +67,8 @@ docs/architecture/
 | [0034](decisions/0034-verify-pieces-before-progressive-playback.md) | Verify pieces before progressive playback | accepted — bounded construction, source diversity retained |
 | [0036](decisions/0036-local-discovery-topology-and-gate-scope.md) | Local discovery topology and gate scope | accepted |
 | [0037](decisions/0037-penpot-design-tool-and-token-direction.md) | Penpot as the design tool, `tokens.css` as the token source | accepted |
-| [0038](decisions/0038-play-local-trailers-and-hand-off-remote-ones.md) | Play local trailers, hand remote ones off to a personal device | accepted |
-| [0039](decisions/0039-give-views-and-titles-their-own-path.md) | Give views and titles their own path | accepted |
+| [0040](decisions/0040-play-local-trailers-and-hand-off-remote-ones.md) | Play local trailers, hand remote ones off to a personal device | accepted |
+| [0041](decisions/0041-give-views-and-titles-their-own-path.md) | Give views and titles their own path | accepted |
 
 ## Specifications and QA
 

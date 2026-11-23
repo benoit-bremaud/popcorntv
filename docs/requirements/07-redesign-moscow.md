@@ -44,7 +44,7 @@ or under about 60 % of the total effort, so Should can absorb overruns.
 |---|---|---|---|---|---|
 | S1 | Phone remote screens: pair, browse and pick, control playback (drawn here; feature in #418) | Alex | J1 | #418 | L |
 | S2 | TV sign-in without typing: pair the TV with a code (drawn here; feature in #200) | Léa, Monique | J4 | #200, #417 | S |
-| S3 | Trailer on request from the detail view, per ADR-0038 | Alex | J3 | #413 | S |
+| S3 | Trailer on request from the detail view, per ADR-0040 | Alex | J3 | #413, #425 | S |
 | S4 | Discover: trending and popular lists, search beyond the library, wishlist | Alex | J2 | — | M |
 | S5 | Where to watch and my providers; personal title link | Alex | J2 | — | S |
 | S6 | Notifications (wishlist titles that became available) | Alex | — | #386 | S |
@@ -57,7 +57,7 @@ or under about 60 % of the total effort, so Should can absorb overruns.
 
 | ID | Item | Personas | Job / goal | Issue |
 |---|---|---|---|---|
-| C1 | Preview on focus or hover, muted, off by default (only with local trailers, ADR-0038) | Alex | J3 | #413 |
+| C1 | Preview on focus or hover, muted, off by default (only with local trailers, ADR-0040) | Alex | J3 | #413 |
 | C2 | Suggestions row from viewing history, filtered by mood or running time | Alex | J2 | #160 |
 | C3 | Child account badge, rating chip and a per-title owner override control | Alex, Léa | J4, J8 | #316 |
 | C4 | Fit or fill the video to the screen | All | J5 | #124 |

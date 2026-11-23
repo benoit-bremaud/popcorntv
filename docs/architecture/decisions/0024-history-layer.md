@@ -1,6 +1,6 @@
 # ADR-0024 — Modal layers as history entries
 
-- Status: accepted (brick #169, owner approval 2026-11-08); amended by ADR-0039 (each layer entry
+- Status: accepted (brick #169, owner approval 2026-11-08); amended by ADR-0041 (each layer entry
   gains a path; a reload lands where the viewer was, without playback)
 - Date: 2026-11-08
 - Deciders: owner

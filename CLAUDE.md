@@ -160,9 +160,9 @@ the `OneLinePerRequest` log controller, `event: "<domain>.<action>"` on every do
 by default, signed-in `GET /version`, `/health` answers `{ status }` only, shown in the
 account menu); #169 Back closes layers (spec `docs/architecture/specs/history-back.md`,
 ADR-0024: `useHistoryLayer` pushes `{ pctvLayer }` per open `<dialog>`, `popstate` closes it,
-a button / Escape close goes back, a hand-off reuses the entry, a reload leaves it); #177 real 404 (ADR-0025, spec deploy-homelab R3a: no
+a button / Escape close goes back, a hand-off reuses the entry, a reload leaves it; amended by ADR-0041, own paths per view and title); #177 real 404 (ADR-0025, spec deploy-homelab R3a: no
 `index.html` fallback in Caddy, `handle_errors 404` → static `404.html` (second Vite entry)
-with the `(popcorntv_headers)` snippet, raw-path `/api` misses answer JSON,
+with the `(popcorntv_headers)` snippet, amended by ADR-0041 (Caddy rule revisited in #400), raw-path `/api` misses answer JSON,
 `make check-not-found` replays the matrix).
 #176 duplicate titles (spec `docs/architecture/specs/duplicate-titles.md`, ADR-0026: pure
 `titleKey` / `collapseCopies` in the web catalog, one card per title across libraries, the

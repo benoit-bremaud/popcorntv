@@ -11,7 +11,8 @@ Discover title sheet instead of leaving PopCornTV.
 
 - **R1** Opening a layer (detail dialog, player, title sheet) adds one history entry whose
   state is `{ pctvLayer: n }`, `n` its depth: 1 above the catalog, 2 for the player opened
-  from the detail dialog. The URL does not change.
+  from the detail dialog. The URL does not change (amended by ADR-0041: each view and title
+  gains its own path).
 - **R2** Back closes the top layer through its own `close` path (position saved, HLS
   session ended, focus returned), never the page. Back from the player closes the player
   only; a second Back closes the detail dialog. A Back over several entries at once closes
@@ -27,7 +28,8 @@ Discover title sheet instead of leaving PopCornTV.
   detail dialog it opens reuses the sheet's entry (`replaceState`), so Back from it returns
   to the catalog, not to an empty entry. If the title cannot be opened, the entry stays
   and the next Back does nothing visible (one press, accepted).
-- **R6** A reload on a layer entry shows the catalog: at start, `history.go(-n)` leaves it.
+- **R6** A reload on a layer entry shows the catalog: at start, `history.go(-n)` leaves it
+  (amended by ADR-0041: a reload reopens the title sheet, never playback).
 
 - **Known limit** A sign-out (401) while a layer is open unmounts it without a close: its
   entries stay and one Back press after the next sign-in may do nothing visible.

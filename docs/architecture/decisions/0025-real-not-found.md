@@ -1,6 +1,7 @@
 # ADR-0025 — Real 404 for unknown paths, answered by Caddy
 
-- Status: accepted (brick #177, owner approval 2026-11-08)
+- Status: accepted (brick #177, owner approval 2026-11-08); amended by ADR-0041 (app paths
+  answer `index.html`; the Caddy rule is revisited in #400)
 - Date: 2026-11-08
 - Deciders: owner
 - Related: spec [deploy-homelab](../specs/deploy-homelab.md) R3a, ADR-0013, ADR-0024,

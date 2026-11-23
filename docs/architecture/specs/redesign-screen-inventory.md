@@ -3,13 +3,13 @@
 Every screen of the redesigned front end with its states, surfaces and flows, so the wireframes
 (#398), the design system (#399) and the implementation (#400) draw and build the same list.
 
-- Status: **draft** — awaiting the tree test (paths and grouping may move) and the owner's
-  validation (#396).
+- Status: **content validated** by the owner on 2026-11-23 (#396); paths and the S06 / S07
+  grouping stay provisional until the tree test.
 - Date: 2026-11-23.
 - Inputs: the UI audit of 2026-11-20 (19 entries; report in PR #402, open), the
   [MoSCoW](../../requirements/07-redesign-moscow.md), the
   [personas](../../requirements/06-personas.md), the
-  [use cases](../diagrams/redesign/01-use-case.md), ADR-0038, ADR-0039.
+  [use cases](../diagrams/redesign/01-use-case.md), ADR-0040, ADR-0041.
 
 ## 1. From the audit's 19 entries to screens
 
@@ -35,7 +35,7 @@ Every screen is drawn and tested in these states unless the table says *n/a*:
 
 ## 3. Screens
 
-Path: ADR-0039, provisional until the validated tree. Surface: W web (phone, tablet, laptop),
+Path: ADR-0041, provisional until the validated tree. Surface: W web (phone, tablet, laptop),
 T TV app (D6), P phone remote.
 
 | ID | Screen | Path | Surface | Specific states | MoSCoW | Personas |
@@ -50,7 +50,7 @@ T TV app (D6), P phone remote.
 | S08 | Search | `/search?q=` | W, T, P | Empty query, results, no result, people results | M7 | Alex, Monique |
 | S09 | Title details (film, series) | `/title/:kind/:id` | W, T, P | Several copies, audio and subtitle choice, watched, seasons and episodes, trailer states (§ 4), where to watch, own link, owner override control (C3), not in library | M5 | All |
 | S10 | Player | `/play/:mediaId` | W, T | Starting, playing, paused, controls hidden, track panel, buffering, error, end screen, next episode offer, child end without chaining | M6, S9 | All |
-| S11 | Trailer | inside S09 | W, T | Local playing, remote link (W), remote QR (T), none, error | S3 | Alex |
+| S11 | Trailer | inside S09 | W, T | Local playing, remote link (W), remote QR (T), none, error, child account: no remote link or QR (until #316) | S3 | Alex |
 | S12 | Discover | `/discover` | W, T | Lists, search, TMDB unavailable, TMDB not configured (owner) | S4 | Alex |
 | S13 | Discover title sheet | `/discover/:kind/:id` | W, T | Wished, available in my library, where to watch, my providers | S4, S5 | Alex |
 | S14 | Notifications panel | panel | W, T | None, unread, read | S6 | Alex |
@@ -63,10 +63,11 @@ T TV app (D6), P phone remote.
 | R3 | Remote — control | `/remote/control` | P | Playing, paused, tracks, D-pad mode, TV offline | S1 | Alex |
 | S19 | Not found | any unknown path | W | Server 404 page (ADR-0025) and in-app fallback to Home | M11 | All |
 
-## 4. Trailer states (ADR-0038)
+## 4. Trailer states (ADR-0040)
 
 No trailer · local available · remote available · loading · playing (muted until the viewer
-turns the sound on) · error · QR shown (TV) · reduced motion (no preview on focus). The preview
+turns the sound on) · error · QR shown (TV) · reduced motion (no preview on focus) · child account (no
+remote link or QR until #316). The preview
 on focus is optional, off by default, local trailers only.
 
 ## 5. Flows
@@ -94,6 +95,7 @@ prototype test (#411) samples from.
 | F16 | Owner revokes a device | S16 | auth |
 | F17 | Sign out | S15 → S01 | auth |
 | F18 | Leave a dead link | S19 → S06 | ADR-0025 |
+| F19 | Add a profile | S04 → S05 | UC (profiles) |
 
 ## 6. Open points
 
