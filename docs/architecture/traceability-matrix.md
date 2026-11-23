@@ -136,7 +136,7 @@ ADR-0035 and ADR-0038 are reserved by #315 (branch `feat/315-playable-retrieval-
 |---|---|---|---|---|---|
 | [Brief](../requirements/04-redesign-brief.md) G1, G2 | Craft quality ≥ 34 / 40, no Must | S01–S19, R1–R3 ([inventory](specs/redesign-screen-inventory.md)) | All | `ui-review` per screen (#400) | draft |
 | Brief G3, J6 | 1 activation from *Continue watching*, ≤ 2 from the hero | S06, S09, S10; flow F3 | Hero, row, card | Task test (#411), measure (#412) | draft |
-| Brief G4, G5, NFR-11 | WCAG 2.2 AA, keyboard and remote complete, 44 px targets | All screens, states X4, X7; flows F1–F18 | All, focus system | axe, keyboard and remote pass, screen-reader smoke | draft |
+| Brief G4, G5, NFR-11 | WCAG 2.2 AA, keyboard and remote complete, 44 px targets | All screens, states X4, X7; flows F1–F19 | All, focus system | axe, keyboard and remote pass, screen-reader smoke | draft |
 | Brief G6, NFR-15, D1, D6 | TV layout: 5 % safe margin, body ≥ 28 px at 1920 × 1080, D-pad reach | State X7 of every screen; S17, S18 | Tokens, focus system | Remote pass on Android TV (#411, #417) | draft |
 | Brief G9, NFR-12, NFR-13 | Core Web Vitals and bundle budget | S06, S09 | Build | Lighthouse trace, build budget check (#412) | draft |
 | NFR-14 | No third-party request at run time | All screens; S11 (ADR-0040) | All | Network log per screen | draft |

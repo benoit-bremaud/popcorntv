@@ -65,7 +65,8 @@ D = 125 + 80 + 80 + 75 + 40 · E = 125 + 100 + 0 + 0 + 100.
 Sensitivity: C overtakes D only if availability weighs under about 10 (the trailer would then
 exist only for the few titles with a local file); B ties D only if privacy weighs nothing,
 which NFR-14 rules out. D's privacy lead over A rests on the TV, where D never loads
-YouTube; on a laptop or phone D behaves like A. D leads C by 20, on surfaces and cost only.
+YouTube; on a laptop or phone D behaves like A. D leads C by 20 on availability alone (+60); C leads on surfaces and cost (+20
+each).
 Rescoring A's privacy from 4 to 2 after the review (2026-11-23) lowers A from 335 to 285 and
 leaves the ranking unchanged.
 

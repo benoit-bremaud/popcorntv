@@ -5,7 +5,7 @@ inputs, measured by numbers the later phases can check.
 
 - Status: **accepted** by the owner on 2026-11-23 (#395, phase 1 of epic #401), on the first
   [discovery interview](05-discovery-interviews.md). Decisions: D1 B, D2 A, D3 B (2026-11-22),
-  D6 B (2026-11-23); D4 goes to #413, D5 to #396 / #399. Interviews P2 and P3 (#420) may
+  D6 B (2026-11-23), D4 D (ADR-0040, 2026-11-23); D5 to #396 / #399. Interviews P2 and P3 (#420) may
   amend it with the owner's validation.
 - Date: 2026-11-22, updated 2026-11-23.
 - Inputs: [vision](01-vision.md), [parity](03-plex-jellyfin-parity.md), the
@@ -160,8 +160,8 @@ viewer can watch its trailer, in the spirit of Netflix and Apple TV previews. Be
 on top, muted, with a per-profile or motion switch.
 
 Constraint (settled by ADR-0040): TMDB lists trailers as YouTube or Vimeo videos, and ADR-0029
-keeps every third-party stream out of PopCornTV. An ADR settles it before any code, with at least
-these options:
+keeps every third-party stream out of PopCornTV. ADR-0040 weighed at least these
+options:
 
 - link: the *Trailer* button opens the video page in a new tab (the ADR-0029 pattern);
 - embed: a `youtube-nocookie.com` player in the sheet, on an explicit click only (privacy notice,
