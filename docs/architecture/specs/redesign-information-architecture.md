@@ -49,75 +49,76 @@ are deleted once the synthesis is validated.
 6. Transcribe, per participant: pile name → card numbers; then delete the photo after the
    synthesis.
 
-Print the cards below on paper, one per card, number on the back.
+Print the French text of the cards below, one per card, the number in a corner. The household
+is French-speaking (brief D3): the sessions run in French.
 
 ### Adult cards (35)
 
 Content and objects only; tasks belong to the tree test. Wording avoids today's screen labels.
 
-| # | Card |
-|---|---|
-| 1 | The film I stopped halfway |
-| 2 | Films I own, A to Z |
-| 3 | Series I own and their seasons |
-| 4 | Documentaries I own |
-| 5 | Films by genre (comedy, thriller…) |
-| 6 | Best-rated titles I own |
-| 7 | Titles I have already seen |
-| 8 | Synopsis, cast and rating of a title |
-| 9 | Trailer of a title |
-| 10 | Episodes of a season |
-| 11 | Audio language of a film |
-| 12 | Subtitles of a film |
-| 13 | The other copy of the same film (another quality) |
-| 14 | Next episode |
-| 15 | Titles everyone is watching right now (not in my library) |
-| 16 | Popular series this month |
-| 17 | Titles I would like to watch one day |
-| 18 | A wished title has arrived in my library |
-| 19 | Which streaming service has this title |
-| 20 | The streaming services I subscribe to |
-| 21 | My own web link for a title |
-| 22 | Search by title or actor |
-| 23 | Who is watching (my profile) |
-| 24 | Add a profile for a family member |
-| 25 | A child's account and what it may watch |
-| 26 | Interface language |
-| 27 | My phone as the remote |
-| 28 | Connect the TV to my account |
-| 29 | Media folders on the server |
-| 30 | Scan the folders for new files |
-| 31 | Invite a relative |
-| 32 | Accounts and their devices |
-| 33 | Sign-in history |
-| 34 | App version |
-| 35 | Sign out |
+| # | Card | Printed text (fr) |
+|---|---|---|
+| 1 | The film I stopped halfway | Le film arrêté en plein milieu |
+| 2 | Films I own, A to Z | Mes films, de A à Z |
+| 3 | Series I own and their seasons | Mes séries et leurs saisons |
+| 4 | Documentaries I own | Mes documentaires |
+| 5 | Films by genre (comedy, thriller…) | Les films par genre (comédie, thriller…) |
+| 6 | Best-rated titles I own | Mes titres les mieux notés |
+| 7 | Titles I have already seen | Les titres que j'ai déjà vus |
+| 8 | Synopsis, cast and rating of a title | Résumé, acteurs et note d'un titre |
+| 9 | Trailer of a title | Bande-annonce d'un titre |
+| 10 | Episodes of a season | Les épisodes d'une saison |
+| 11 | Audio language of a film | Langue audio d'un film |
+| 12 | Subtitles of a film | Sous-titres d'un film |
+| 13 | The other copy of the same film (another quality) | L'autre copie du même film (autre qualité) |
+| 14 | Next episode | Épisode suivant |
+| 15 | Titles everyone is watching right now (not in my library) | Ce que tout le monde regarde en ce moment (hors de ma bibliothèque) |
+| 16 | Popular series this month | Les séries populaires du mois |
+| 17 | Titles I would like to watch one day | Les titres que j'aimerais voir un jour |
+| 18 | A wished title has arrived in my library | Un titre souhaité est arrivé dans ma bibliothèque |
+| 19 | Which streaming service has this title | Sur quelle plateforme de streaming est ce titre |
+| 20 | The streaming services I subscribe to | Les plateformes auxquelles je suis abonné |
+| 21 | My own web link for a title | Mon propre lien web pour un titre |
+| 22 | Search by title or actor | Chercher un titre ou un acteur |
+| 23 | Who is watching (my profile) | Qui regarde (mon profil) |
+| 24 | Add a profile for a family member | Ajouter un profil pour un membre de la famille |
+| 25 | A child's account and what it may watch | Le compte d'un enfant et ce qu'il peut regarder |
+| 26 | Interface language | Langue de l'interface |
+| 27 | My phone as the remote | Mon téléphone comme télécommande |
+| 28 | Connect the TV to my account | Connecter la TV à mon compte |
+| 29 | Media folders on the server | Les dossiers de vidéos sur le serveur |
+| 30 | Scan the folders for new files | Rechercher les nouveaux fichiers dans les dossiers |
+| 31 | Invite a relative | Inviter un proche |
+| 32 | Accounts and their devices | Les comptes et leurs appareils |
+| 33 | Sign-in history | L'historique des connexions |
+| 34 | App version | Version de l'application |
+| 35 | Sign out | Se déconnecter |
 
 ### Child cards (18, pictures with a short label, read aloud)
 
 For a child aged 8–13. Each card shows a poster or a simple pictogram and two to four words.
 Children under 8 do not sort; they take part in the tree test orally (§ 5).
 
-| # | Card | Picture |
-|---|---|---|
-| K1 | My show I stopped | Poster with a progress bar |
-| K2 | Cartoons | Animated film poster |
-| K3 | Films | Film poster |
-| K4 | Series | Series poster with "S1" |
-| K5 | Next episode | Arrow over a poster |
-| K6 | Watch the trailer | Small screen with a play sign |
-| K7 | What the film is about | Poster with lines of text |
-| K8 | Already seen | Poster with a tick |
-| K9 | Search | Magnifying glass |
-| K10 | My profile picture | Round avatar |
-| K11 | Change profile | Two avatars |
-| K12 | French or English | Two speech bubbles, "FR" and "EN" |
-| K13 | Subtitles | Speech bubble with lines |
-| K14 | New films | Star badge on a poster |
-| K15 | My favourite list | Heart over posters |
-| K16 | Remote on the phone | Phone with arrows |
-| K17 | The end | Curtain closing |
-| K18 | Go back | Arrow pointing left |
+| # | Card | Printed text (fr) | Picture |
+|---|---|---|---|
+| K1 | My show I stopped | Ma série arrêtée | Poster with a progress bar |
+| K2 | Cartoons | Dessins animés | Animated film poster |
+| K3 | Films | Films | Film poster |
+| K4 | Series | Séries | Series poster with "S1" |
+| K5 | Next episode | Épisode suivant | Arrow over a poster |
+| K6 | Watch the trailer | Voir la bande-annonce | Small screen with a play sign |
+| K7 | What the film is about | L'histoire du film | Poster with lines of text |
+| K8 | Already seen | Déjà vu | Poster with a tick |
+| K9 | Search | Chercher | Magnifying glass |
+| K10 | My profile picture | Mon image de profil | Round avatar |
+| K11 | Change profile | Changer de profil | Two avatars |
+| K12 | French or English | Français ou anglais | Two speech bubbles, "FR" and "EN" |
+| K13 | Subtitles | Sous-titres | Speech bubble with lines |
+| K14 | New films | Nouveaux films | Star badge on a poster |
+| K15 | My favourite list | Ma liste préférée | Heart over posters |
+| K16 | Remote on the phone | La télécommande sur le téléphone | Phone with arrows |
+| K17 | The end | C'est fini | Curtain closing |
+| K18 | Go back | Revenir | Arrow pointing left |
 
 ## 4. Results and candidate tree
 
