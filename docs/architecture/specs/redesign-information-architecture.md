@@ -1,0 +1,137 @@
+# Redesign — information architecture
+
+How the household groups and names what PopCornTV offers, found by an open card sort and checked
+by a task-based tree test before any drawing (#396, epic #401).
+
+- Status: **draft** — card sort kit ready; sessions, tree and tree test pending.
+- Date: 2026-11-23.
+- Inputs: [MoSCoW](../../requirements/07-redesign-moscow.md) (Must and Should rows),
+  [personas](../../requirements/06-personas.md), [job stories](../../requirements/05-discovery-interviews.md#5-job-stories).
+
+## 1. Method
+
+| Step | What | Who | Output |
+|---|---|---|---|
+| 1 | Open card sort on paper (owner decision 2026-11-23, option A 460 / 500) | Household participants; the owner facilitates and does not sort | Groups and names per participant |
+| 2 | Synthesis: groups seen in at least two sorts, names most often given, cards that wander | Analyst | Candidate tree (§ 4) |
+| 3 | Tree test, text only, no visuals | Participants other than the sorters when possible | Success and directness per task (§ 5) |
+| 4 | Revise the tree once if needed, re-test the failed tasks | Same as step 3 | Validated tree |
+
+Sample: the household gives at most a handful of people, so every reading is **qualitative**
+(stable similarity statistics need about 15 sorters). The decision rules below are written before
+the sessions.
+
+| Participants besides the owner | Card sort | Tree test | Limitation recorded |
+|---|---|---|---|
+| 4 or more | 2 people | 2 other people | None |
+| 3 | 2 people | The third, plus one sorter ≥ 1 week later | Partial reuse |
+| 2 | Both | Both, ≥ 1 week later, tree labels differ from card text | Success overestimated |
+| 1 | That person | The same, plus the #420 participants when available | Weak signal; tree provisional until #420 |
+
+## 2. Privacy
+
+Same rules as the [interviews](../../requirements/05-discovery-interviews.md#1-privacy).
+Participants are `CS1`, `CS2`… (card sort) and `TT1`, `TT2`… (tree test), with an age band only;
+a child is recorded as "child, 6–7" or "child, 8–13" with the parent's consent noted, never a
+name. Photos of the paper sorts and the raw notes stay with the owner, are never committed, and
+are deleted once the synthesis is validated.
+
+## 3. Card sort kit
+
+### Protocol (about 15 minutes)
+
+1. Script: *"Here are cards about the home video app. Put together the cards that go together for
+   you, as many piles as you like. Then give each pile a name. There is no right answer."*
+2. Shuffle the cards; hand them over face up.
+3. Do not explain a card. If asked, answer *"what would you guess?"* and note the question.
+4. When the piles are done, the participant writes a name on a blank card for each pile.
+5. Photograph the table; note the cards the participant hesitated over or put aside.
+6. Transcribe, per participant: pile name → card numbers; then delete the photo after the
+   synthesis.
+
+Print the cards below on paper, one per card, number on the back.
+
+### Adult cards (35)
+
+Content and objects only; tasks belong to the tree test. Wording avoids today's screen labels.
+
+| # | Card |
+|---|---|
+| 1 | The film I stopped halfway |
+| 2 | Films I own, A to Z |
+| 3 | Series I own and their seasons |
+| 4 | Documentaries I own |
+| 5 | Films by genre (comedy, thriller…) |
+| 6 | Best-rated titles I own |
+| 7 | Titles I have already seen |
+| 8 | Synopsis, cast and rating of a title |
+| 9 | Trailer of a title |
+| 10 | Episodes of a season |
+| 11 | Audio language of a film |
+| 12 | Subtitles of a film |
+| 13 | The other copy of the same film (another quality) |
+| 14 | Next episode |
+| 15 | Titles everyone is watching right now (not in my library) |
+| 16 | Popular series this month |
+| 17 | Titles I would like to watch one day |
+| 18 | A wished title has arrived in my library |
+| 19 | Which streaming service has this title |
+| 20 | The streaming services I subscribe to |
+| 21 | My own web link for a title |
+| 22 | Search by title or actor |
+| 23 | Who is watching (my profile) |
+| 24 | Add a profile for a family member |
+| 25 | A child's account and what it may watch |
+| 26 | Interface language |
+| 27 | My phone as the remote |
+| 28 | Connect the TV to my account |
+| 29 | Media folders on the server |
+| 30 | Scan the folders for new files |
+| 31 | Invite a relative |
+| 32 | Accounts and their devices |
+| 33 | Sign-in history |
+| 34 | App version |
+| 35 | Sign out |
+
+### Child cards (18, pictures with a short label, read aloud)
+
+For a child aged 8–13. Each card shows a poster or a simple pictogram and two to four words.
+Children under 8 do not sort; they take part in the tree test orally (§ 5).
+
+| # | Card | Picture |
+|---|---|---|
+| K1 | My show I stopped | Poster with a progress bar |
+| K2 | Cartoons | Animated film poster |
+| K3 | Films | Film poster |
+| K4 | Series | Series poster with "S1" |
+| K5 | Next episode | Arrow over a poster |
+| K6 | Watch the trailer | Small screen with a play sign |
+| K7 | What the film is about | Poster with lines of text |
+| K8 | Already seen | Poster with a tick |
+| K9 | Search | Magnifying glass |
+| K10 | My profile picture | Round avatar |
+| K11 | Change profile | Two avatars |
+| K12 | French or English | Two speech bubbles, "FR" and "EN" |
+| K13 | Subtitles | Speech bubble with lines |
+| K14 | New films | Star badge on a poster |
+| K15 | My favourite list | Heart over posters |
+| K16 | Remote on the phone | Phone with arrows |
+| K17 | The end | Curtain closing |
+| K18 | Go back | Arrow pointing left |
+
+## 4. Results and candidate tree
+
+Pending the sessions.
+
+## 5. Tree test
+
+Pending the candidate tree. About 10 tasks covering home, playback, discovery, profiles, phone
+remote and administration, worded without the tree's labels. Each task records **success** (the
+participant ends on a correct node) and **directness** (no backtracking) separately. Rule: a
+task failed by two or more participants, or by every participant when only one takes it,
+triggers one revision of the tree and a re-test of that task.
+
+## 6. Deep links
+
+Whether each title and view gets its own URL is decided in ADR-0039 (amends ADR-0004 § 4 and
+ADR-0024); the tree above is independent of that choice.
