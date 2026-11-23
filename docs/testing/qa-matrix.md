@@ -152,7 +152,8 @@ Replay on every pass that touches a dialog (spec history-back, ADR-0024):
 3. Close a dialog by its button or Escape, then Back: nothing reopens and the app stays
    only if there was an entry before it (no dead Back press).
 4. Double Back fast from the player: both layers close, the position is saved.
-5. Open a title, reload: the catalog shows, no dialog; Back does not reopen one.
+5. Open a title, reload: the catalog shows, no dialog; Back does not reopen one (amended by
+   ADR-0041: flips to reopening the title sheet in #400).
 6. Discover → title sheet → Back closes the sheet; "Play in my library" → Back from the
    detail returns to the catalog in one press.
 7. Close then reopen a title at once: the new dialog stays open.

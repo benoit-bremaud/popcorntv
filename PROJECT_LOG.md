@@ -4,6 +4,23 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-23 — #396 redesign UX structure: personas, scope, flows, screen inventory
+
+- Phase 2 of epic #401, branch `docs/396-ux-personas-flows-inventory`. Personas
+  `docs/requirements/06-personas.md` (owner interviewed, child, occasional relative; evidence
+  levels; age band only), MoSCoW `07-redesign-moscow.md`, use cases UC35–UC39 and four activity
+  diagrams in `diagrams/redesign/`, screen inventory `specs/redesign-screen-inventory.md` (S01–S19,
+  phone remote R1–R3, cross-cutting states X1–X8, flows F1–F19), information architecture spec
+  with the card sort kit and tree test tasks.
+- **Decisions** (owner, 2026-11-23): plan v3; personas provisional until #420; Must share 66 %
+  accepted; ADR-0040 trailers, option D local first and remote handed off (400 / 500, closes
+  #413); ADR-0041 own paths per view and title (410 / 500), amending ADR-0004 § 4, ADR-0024 and
+  ADR-0025; card sort protocol A on paper (460 / 500); card sort and tree test a week apart;
+  inventory content validated; PR now, household research split into #429.
+- Adversarial review in four rounds (round 1: 4 Must, 12 Should). ADRs renumbered from
+  0038 / 0039 because branch #315 holds ADR-0038; ADR-0041 totals corrected (B 425 → 410).
+- Follow-ups: #422, #423, #424, #425, #428, #429.
+
 ## 2026-11-23 — Gate unblocked, Penpot spike merged (PR #414, PR #408)
 
 - PR #414 (`a9e27d9`, closes #409): new upstream HIGH findings had turned `just gate` red on

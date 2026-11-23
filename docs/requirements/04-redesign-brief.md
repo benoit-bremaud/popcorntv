@@ -5,7 +5,7 @@ inputs, measured by numbers the later phases can check.
 
 - Status: **accepted** by the owner on 2026-11-23 (#395, phase 1 of epic #401), on the first
   [discovery interview](05-discovery-interviews.md). Decisions: D1 B, D2 A, D3 B (2026-11-22),
-  D6 B (2026-11-23); D4 goes to #413, D5 to #396 / #399. Interviews P2 and P3 (#420) may
+  D6 B (2026-11-23), D4 D (ADR-0040, 2026-11-23); D5 to #396 / #399. Interviews P2 and P3 (#420) may
   amend it with the owner's validation.
 - Date: 2026-11-22, updated 2026-11-23.
 - Inputs: [vision](01-vision.md), [parity](03-plex-jellyfin-parity.md), the
@@ -152,16 +152,16 @@ B only if cost weighs above about 38.
 
 ### D4 — Trailers from the selected poster (owner request 2026-11-22, #395 comment)
 
-Decided in #413. The P1 interview asks for trailers **on request only**, no autoplay (J3).
+Decided by ADR-0040 (#413, 2026-11-23): local trailers in-app, remote ones handed off. The P1 interview asks for trailers **on request only**, no autoplay (J3).
 
 Requirement: when a title is selected — hover, keyboard or remote focus, or the detail sheet — the
 viewer can watch its trailer, in the spirit of Netflix and Apple TV previews. Benchmark: the
 *Trailer* button in the detail view is the common baseline; previews on hover or focus are a layer
 on top, muted, with a per-profile or motion switch.
 
-Constraint, **not decided here**: TMDB lists trailers as YouTube or Vimeo videos, and ADR-0029
-keeps every third-party stream out of PopCornTV. An ADR settles it before any code, with at least
-these options:
+Constraint (settled by ADR-0040): TMDB lists trailers as YouTube or Vimeo videos, and ADR-0029
+keeps every third-party stream out of PopCornTV. ADR-0040 weighed at least these
+options:
 
 - link: the *Trailer* button opens the video page in a new tab (the ADR-0029 pattern);
 - embed: a `youtube-nocookie.com` player in the sheet, on an explicit click only (privacy notice,
@@ -171,8 +171,8 @@ these options:
 - a combination: local first, link as the fallback.
 
 Criteria for that ADR: privacy and ADR-0029, viewer experience, availability per title, cost,
-breakage risk. Design phases draw the *Trailer* button and its states (none, loading, playing,
-error, reduced motion) in every option; the preview on focus is drawn as optional.
+breakage risk. Design phases draw the *Trailer* button and its states (ADR-0040 § Decision); the preview on
+focus is drawn as optional.
 
 ### D5 — Player controls
 
@@ -233,5 +233,5 @@ third-party content (vision).
 ## 11. Validation
 
 The brief is done when the owner validates §§ 2, 4, 5 and 6, the decisions D1–D3 and D6, and the
-job stories of the discovery interviews (P1 done 2026-11-23; P2 and P3 in #420); D4 (#413) and D5 stay open. The validation is logged in
+job stories of the discovery interviews (P1 done 2026-11-23; P2 and P3 in #420); D4 is decided by ADR-0040; D5 stays open. The validation is logged in
 `PROJECT_LOG.md`.

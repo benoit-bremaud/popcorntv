@@ -13,7 +13,8 @@
   same-origin`, `Permissions-Policy`, `nosniff` and `no-referrer` (#46, spec auth §5).
 - **R3** The web build and the API come from the same image tag; hashed assets are cached
   for good and kept 30 days after an upgrade, `index.html` is revalidated.
-- **R3a** Only real files and `/` (the SPA has no client routes: layers live in the history
+- **R3a** (Amended by ADR-0041: app paths will answer `index.html`; the Caddy rule is
+  revisited in #400.) Only real files and `/` (the SPA has no client routes: layers live in the history
   state, ADR-0024, links in the hash) are served. Any other path answers `404` with the
   static `404.html` page linking home, never `index.html` with a `200`; a path whose raw
   form starts with `/api` answers `404 {"error":"not_found"}` JSON even when its encoded
