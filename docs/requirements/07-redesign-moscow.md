@@ -74,7 +74,7 @@ or under about 60 % of the total effort, so Should can absorb overruns.
 | W4 | Phone remote pairing and command channel | Server feature, own spec | #418 |
 | W5 | Home-automation scene | Outside the player | #419 |
 | W6 | Google Cast and AirPlay | Third-party SDK, D6 kept it out | #202 |
-| W7 | Switching audio during playback | New HLS session on the server | to file |
+| W7 | Switching audio during playback | New HLS session on the server | #424 |
 | W8 | In cinemas rows and release tracking | Own epic | #195 |
 | W9 | Request a title through Seerr | Own design branch | #128 |
 | W10 | Light theme | D2 A, dark only | — |
