@@ -79,8 +79,9 @@ warning  = need · R / 8 > cap                    → sheet shows "playback may 
   waits with a bounded deadline (REQ-18, REQ-19 kept).
 - **Failure** (REQ-56, option B): the buffer keeps playing; at its end the player pauses with
   "source unavailable", retries with backoff, resumes by itself and offers Retry. The VPN kill
-  switch (ADR-0035, #328) forbids any egress outside the VPN; a missing VPN is a failure, never a
-  fallback.
+  switch ([ADR-0035](../decisions/0035-share-retrieval-vpn-namespace.md),
+  [VPN retrieval spec](nordvpn-retrieval.md), #328) forbids any egress outside the VPN; a missing
+  VPN is a failure, never a fallback.
 
 ## 5. Priorities and quotas (REQ-57)
 
@@ -101,7 +102,8 @@ over quota is queued and the sheet says so; it is never dropped silently.
 - Deletion and favourite trim: [activity](../diagrams/on-demand-retrieval/07-activity-deletion.md),
   run by the serial timer every 15 min and at start-up (restart never skips an overdue deletion).
 - Files under `MEDIA_ROOT` are out of reach: the cache lives under its own root (`RETRIEVAL_DIR`,
-  planned), confined like the other paths.
+  planned), confined like the other paths, on the dedicated filesystem of #328 whose controller
+  refuses a mount that shares a tree with `MEDIA_ROOT`.
 
 ## 7. Version pick (ADR-0046)
 
@@ -128,9 +130,10 @@ retrieval. Any change goes through ADR-0044.
 
 ## 10. Reuse of the unmerged #306 branches
 
-The branches of #310–#315 and #328 are not merged and are not touched by this conception. Each
+The branches of #310–#315 are not merged and are not touched by this conception. Each
 re-planned issue states what it may reuse after review: the verified-read cache of #311
-(`23b66eb`), the VPN namespace of #328, the source search of #310. The daily preparation of every
+(`23b66eb`), the source search of #310. The VPN namespace of #328 was ported and merged first
+(empty installation and controller; migration and saved-transfer tooling dropped). The daily preparation of every
 wish (#310, #314 A) is dropped.
 
 ## Code map
