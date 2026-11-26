@@ -55,7 +55,9 @@ Options:
 
 - **A**: a fixed value in GiB set in the administration (100 GiB by default).
 - **B**: 50 % of the volume's free space, recomputed continuously.
-- **C**: min(owner value, free space − 15 % of the volume), owner value 100 GiB by default.
+- **C**: min(owner value, cache usage + free space − 15 % of the volume), owner value 100 GiB by
+  default. The cache usage is added because its bytes already lower the free space: the rule keeps
+  15 % of the volume free.
 
 | # | Criterion | Weight | A | B | C |
 |---|---|---|---|---|---|
@@ -91,4 +93,4 @@ evicted. See the [disk pressure activity](../diagrams/on-demand-retrieval/07-act
 
 - One pure function `startBufferTarget` in `packages/shared`, tested with deterministic traces.
 - The ceiling is recomputed before each reservation; the free space is read from the cache volume
-  only.
+  only. Example: 100 GiB volume, 40 GiB cached, 60 GiB free → min(100, 40 + 60 − 15) = 85 GiB.

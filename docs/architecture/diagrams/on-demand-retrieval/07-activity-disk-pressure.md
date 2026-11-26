@@ -13,7 +13,7 @@ Runs before every reservation (prefetch, rest of the file, favourite third).
 title: act — Disk pressure (ACT-disk-pressure)
 ---
 flowchart TD
-  Start(["reservation of N bytes"]) --> A1["ceiling = min(owner value, free − 15 % of volume)"]
+  Start(["reservation of N bytes"]) --> A1["ceiling = min(owner value, used + free − 15 % of volume)"]
   A1 --> D1{"used + N ≤ ceiling?"}
   D1 -- "yes" --> A9["reserve N bytes"] --> Done(["done"])
   D1 -- "no" --> D2{"unplayed prefetch left?"}

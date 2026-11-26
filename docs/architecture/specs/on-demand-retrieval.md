@@ -91,8 +91,9 @@ over quota is queued and the sheet says so; it is never dropped silently.
 
 ## 6. Cache ceiling and deletion (ADR-0044, ADR-0045)
 
-- Ceiling = min(owner value, free space of the cache volume − 15 % of the volume), owner value
-  100 GiB by default; recomputed before every reservation.
+- Ceiling = min(owner value, cache usage + free space of the cache volume − 15 % of the volume),
+  owner value 100 GiB by default; recomputed before every reservation. The cache usage is added
+  because its bytes already lower the reported free space: 15 % of the volume always stays free.
 - Eviction under pressure: [activity](../diagrams/on-demand-retrieval/07-activity-disk-pressure.md).
 - Deletion and favourite trim: [activity](../diagrams/on-demand-retrieval/07-activity-deletion.md),
   run by the serial timer every 15 min and at start-up (restart never skips an overdue deletion).

@@ -41,7 +41,8 @@ stateDiagram-v2
   Idle --> Deleted: eviction [not favourite, oldest t_play] / delete file
   Idle --> FavouriteThird: sweep [favourite and now − t_play ≥ 48 h] / trim to first third
   FavouriteThird --> Playing: play [lease granted] / retrieve the rest
-  FavouriteThird --> Idle: last favourite removed / t_play unchanged
+  FavouriteThird --> Idle: last favourite removed [played before] / t_play unchanged
+  FavouriteThird --> Deleted: last favourite removed [never played] / delete file
   Deleted --> [*]
 ```
 
@@ -55,4 +56,5 @@ stateDiagram-v2
 - An event not listed for a state is rejected without effect; the sweep also runs at start-up so a
   restart never skips an overdue deletion.
 - Removing the last favourite from `favouriteThird` goes to `idle` with the old `t_play`: the 48 h
-  rule then deletes it at the next sweep if the delay has passed.
+  rule then deletes it at the next sweep if the delay has passed. A third that was never played
+  has no `t_play`: it is deleted at once.

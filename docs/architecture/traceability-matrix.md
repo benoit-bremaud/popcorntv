@@ -164,7 +164,7 @@ automated cases use synthetic or local fixtures (NFR-17).
 | REQ-49 early click priority | UC40; SEQ-prefetch-and-play | ADR-0043 | T-49: early Play outranks every prefetch; sheet stays until first frame | 1 | accepted design |
 | REQ-50 progressive playback, stop on close, seek | UC40; SEQ-prefetch-and-play; stm Retrieved file | ADR-0034, ADR-0043 | T-50: only verified pieces served; close stops retrieval and keeps bytes; seek reorders | 1 | accepted design |
 | REQ-51 48 h deletion | UC40; ACT-deletion; stm Retrieved file | ADR-0045 | T-51: finished and abandoned → deleted at 48 h; lease blocks; `MEDIA_ROOT` untouched | 1 | accepted design |
-| REQ-53 ceiling and eviction | ACT-disk-pressure | ADR-0044 | T-53: ceiling = min(value, free − 15 %); eviction order; lease and favourite never evicted; refusal message | 1 | accepted design |
+| REQ-53 ceiling and eviction | ACT-disk-pressure | ADR-0044 | T-53: ceiling = min(value, used + free − 15 %); eviction order; lease and favourite never evicted; refusal message | 1 | accepted design |
 | REQ-54 version pick and degraded choice | UC43 | ADR-0046 | T-54: verdict reasons; fastest conforming; degraded only on choice; external French subtitles | 1 | accepted design |
 | REQ-55 source acceptance | UC40; DFD | ADR-0046, ADR-0028 | T-55: any non-video, non-subtitle file rejects the source; every file probed confined | 1 | accepted design |
 | REQ-56 failure pause and resume | UC40; SEQ-prefetch-and-play | ADR-0043 | T-56: source loss → buffer plays, pause, auto-resume, Retry; no egress without VPN | 1 | accepted design |

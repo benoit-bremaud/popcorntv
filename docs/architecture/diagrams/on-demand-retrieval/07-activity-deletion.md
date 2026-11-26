@@ -34,4 +34,5 @@ flowchart TD
   verified pieces.
 - An abandoned playback counts as a playback: the 48 h start at the last lease release.
 - Deletion removes the generation's files and its rows except the anonymous statistics.
-- A title never played but marked favourite keeps its first third (REQ-52).
+- A title never played but marked favourite keeps its first third (REQ-52). When its last favourite
+  mark is removed, that third is deleted at once, outside the sweep: it has no `t_play`.
