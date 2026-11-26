@@ -1,6 +1,6 @@
 # ADR-0047 — Notify through the bell, Web Push and e-mail, chosen per profile
 
-- Status: accepted (owner framing 2026-11-23, #434; weights to validate in the #434 PR)
+- Status: accepted (owner framing 2026-11-23, #434; weights validated by the owner on 2026-11-26)
 - Date: 2026-11-24
 - Deciders: owner
 - Related: REQ-45, REQ-59, NFR-18, [data flow](../diagrams/on-demand-retrieval/06-data-flow.md); ADR-0030 (bell)

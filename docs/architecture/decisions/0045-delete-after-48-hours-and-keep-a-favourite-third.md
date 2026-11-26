@@ -1,6 +1,6 @@
 # ADR-0045 — Delete 48 h after the last playback, keep the first third of a favourite
 
-- Status: accepted (owner framing 2026-11-23, #434; weights to validate in the #434 PR)
+- Status: accepted (owner framing 2026-11-23, #434; weights validated by the owner on 2026-11-26)
 - Date: 2026-11-24
 - Deciders: owner
 - Related: REQ-46, REQ-51, REQ-52, [deletion activity](../diagrams/on-demand-retrieval/07-activity-deletion.md),

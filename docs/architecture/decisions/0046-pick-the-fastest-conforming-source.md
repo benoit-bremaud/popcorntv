@@ -1,6 +1,6 @@
 # ADR-0046 — Pick the fastest conforming source, play a degraded one only by choice
 
-- Status: accepted (owner framing 2026-11-23, #434; weights to validate in the #434 PR)
+- Status: accepted (owner framing 2026-11-23, #434; weights validated by the owner on 2026-11-26)
 - Date: 2026-11-24
 - Deciders: owner
 - Related: REQ-54, REQ-55, [spec](../specs/on-demand-retrieval.md) § 7; ADR-0028, ADR-0034, ADR-0043; issue #186
