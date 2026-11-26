@@ -46,4 +46,5 @@ Incremental glossary for adaptive wishlist design (#307), signed local gates (#3
 | Global ceiling | min(owner value, cache usage + free space − 15 % of the volume): the most the retrieval cache may hold. | REQ-53, ADR-0044 |
 | Prefetch | Retrieval of the start buffer triggered by opening a title's sheet; purged 6 h after the last opening if unplayed. | REQ-46, ADR-0043 |
 | Retrieved title | A title retrieved on demand into the retrieval cache, shared by profiles, with its own lifecycle. | On-demand retrieval spec § 2 |
+| Sliding window | Under a full cache with nothing to evict, a playback releases its own played pieces behind a 30 s back buffer. | REQ-53, ADR-0044 |
 | Start buffer | The verified contiguous span from the start position that lets playback run without a stall, floor 30 s, capped per title. | REQ-47, ADR-0044 |

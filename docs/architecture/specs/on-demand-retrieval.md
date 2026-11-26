@@ -95,6 +95,9 @@ over quota is queued and the sheet says so; it is never dropped silently.
   owner value 100 GiB by default; recomputed before every reservation. The cache usage is added
   because its bytes already lower the reported free space: 15 % of the volume always stays free.
 - Eviction under pressure: [activity](../diagrams/on-demand-retrieval/07-activity-disk-pressure.md).
+  A playback with nothing left to evict keeps a sliding window: it releases its own played pieces
+  behind a 30 s back buffer, never a favourite third; if that frees nothing, it pauses with a
+  message. The ceiling is never exceeded.
 - Deletion and favourite trim: [activity](../diagrams/on-demand-retrieval/07-activity-deletion.md),
   run by the serial timer every 15 min and at start-up (restart never skips an overdue deletion).
 - Files under `MEDIA_ROOT` are out of reach: the cache lives under its own root (`RETRIEVAL_DIR`,

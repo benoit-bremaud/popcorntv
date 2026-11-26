@@ -1,6 +1,6 @@
 # ADR-0044 — Size the start buffer from speed and bitrate, cap the cache below the free space
 
-- Status: accepted (owner, 2026-11-24, #434)
+- Status: accepted (owner, 2026-11-24, #434; decision 3 on 2026-11-26)
 - Date: 2026-11-24
 - Deciders: owner
 - Related: [spec](../specs/on-demand-retrieval.md) § 3 and § 6, REQ-47, REQ-53, NFR-16; ADR-0043
@@ -88,6 +88,39 @@ drop-in, at the risk of filling the disk.
 Unplayed prefetches (oldest sheet opening first), then titles awaiting their 48 h (oldest last
 playback first), then refuse new prefetches. Favourite thirds and titles being played are never
 evicted. See the [disk pressure activity](../diagrams/on-demand-retrieval/07-activity-disk-pressure.md).
+
+## Decision 3 — playback under a full cache (owner, 2026-11-26)
+
+The cache is at its ceiling, nothing is evictable, and a playback needs the rest of its file.
+
+Options:
+
+- **A**: sliding window: release the pieces of the played title behind a 30 s back buffer, never a
+  favourite third; pause with a message if that frees nothing.
+- **B**: pause or refuse the playback with a "no space for now" message.
+- **C**: exceed the ceiling into the 15 % reserve down to a floor, then B.
+
+| # | Criterion | Weight | A | B | C |
+|---|---|---|---|---|---|
+| 1 | Playback without interruption | 30 | **5** E: playback continues | **1** E: playback stops | **4** E: continues down to the floor |
+| 2 | Never fill the shared USB disk | 30 | **5** E: ceiling kept | **5** E: ceiling kept | **2** E: reserve consumed |
+| 3 | Simplicity and testability | 20 | **2** E: piece release, backward seek retrieves again | **5** E: one refusal | **4** E: a second bound |
+| 4 | Honesty to the viewer | 20 | **4** E: slower backward seek, announced | **4** E: clear message | **3** E: silent until the floor |
+|   | **Σ** | **100** | | | |
+
+| Points | A | B | C |
+|---|---:|---:|---:|
+| 1 (30) | 150 | 30 | 120 |
+| 2 (30) | 150 | 150 | 60 |
+| 3 (20) | 40 | 100 | 80 |
+| 4 (20) | 80 | 80 | 60 |
+| **Total / 500** | **420** 🏆 | **360** | **320** |
+
+Sensitivity: doubling simplicity (20 → 40, others × 60/80) gives B 395, A 365: B would lead. The
+owner validated the weights on 2026-11-26.
+
+**Decision: A.** Fallback **B** (360/500): pause with the message. Activation cost: turn the window
+off; drop-in, and already the last step of A.
 
 ## Consequences
 

@@ -73,7 +73,7 @@ Diagram and descriptions: [01-use-case](../architecture/diagrams/on-demand-retri
 |---|---|
 | REQ-51 | A retrieved title that is not a favourite is deleted 48 h after its last playback, whether it was finished or abandoned. Files under `MEDIA_ROOT` (the owner's own library) are never touched. A title being played is never deleted. |
 | REQ-52 | Favourites are per profile. A title stays a favourite while at least one profile has it. On disk a favourite keeps only the first third of its file: adding a favourite retrieves that third at once; after a playback it is trimmed back to the first third 48 h after the last playback (ADR-0045). Removing the last favourite mark applies REQ-51; a third that was never played is deleted at once. |
-| REQ-53 | The retrieval cache never exceeds min(owner value, cache usage + free space − 15 % of the volume), owner value 100 GiB by default. Under pressure: first the unplayed prefetches (oldest first), then the titles awaiting their 48 h (oldest last playback first), then new prefetches are refused with a clear message. Favourite thirds and titles being played are never evicted (ADR-0044). |
+| REQ-53 | The retrieval cache never exceeds min(owner value, cache usage + free space − 15 % of the volume), owner value 100 GiB by default. Under pressure: first the unplayed prefetches (oldest first), then the titles awaiting their 48 h (oldest last playback first), then new prefetches are refused with a clear message. Favourite thirds and titles being played are never evicted. A playback with nothing left to evict releases the parts of its own title already played (never a favourite third); if that frees nothing, it pauses with a clear message (ADR-0044). |
 
 ### Quality and sources
 
