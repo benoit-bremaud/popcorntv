@@ -93,6 +93,7 @@ def check():
         ['pnpm', 'typecheck'], ['pnpm', 'lint'], ['pnpm', 'format:check'],
         ['python3', 'scripts/test-local-ci.py'],
         ['uv', 'sync', '--locked', '--group', 'ci'],
+        ['just', 'retrieval-check'],
         ['uv', 'run', '--frozen', '--group', 'ci', 'ruff', 'check', *PYTHON_SOURCES],
         ['uv', 'run', '--frozen', '--group', 'ci', 'ruff', 'format', '--check', *PYTHON_SOURCES],
         ['uv', 'run', '--frozen', '--group', 'ci', 'mypy', *PYTHON_SOURCES],

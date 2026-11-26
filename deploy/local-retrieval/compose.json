@@ -1,0 +1,172 @@
+{
+  "name": "popcorntv-retrieval",
+  "services": {
+    "gluetun": {
+      "image": "sha256:1d2c6d22e99e230e09e02768736fc4aa985594a148f6ca851f85364f60fce535",
+      "user": "0:0",
+      "read_only": true,
+      "cap_drop": ["ALL"],
+      "cap_add": ["NET_ADMIN", "DAC_OVERRIDE"],
+      "security_opt": ["no-new-privileges:true"],
+      "mem_limit": "256m",
+      "cpus": 0.5,
+      "pids_limit": 64,
+      "restart": "no",
+      "stop_grace_period": "20s",
+      "sysctls": {
+        "net.ipv6.conf.all.disable_ipv6": "1"
+      },
+      "tmpfs": [
+        "/tmp:rw,nosuid,nodev,noexec,size=32m",
+        "/run:rw,nosuid,nodev,noexec,size=4m",
+        "/gluetun:rw,nosuid,nodev,noexec,size=28m"
+      ],
+      "environment": {
+        "VPN_SERVICE_PROVIDER": "custom",
+        "VPN_TYPE": "wireguard",
+        "WIREGUARD_IMPLEMENTATION": "kernelspace",
+        "VPN_INTERFACE": "tun0",
+        "PUID": "0",
+        "PGID": "0",
+        "LOG_LEVEL": "error",
+        "DNS_KEEP_NAMESERVER": "off",
+        "DNS_ADDRESS": "127.0.0.1",
+        "DNS_UPSTREAM_RESOLVER_TYPE": "DoT",
+        "DNS_UPSTREAM_RESOLVERS": "cloudflare",
+        "DNS_UPSTREAM_IPV6": "off",
+        "BLOCK_MALICIOUS": "off",
+        "VERSION_INFORMATION": "off",
+        "PUBLICIP_ENABLED": "false",
+        "HTTP_CONTROL_SERVER_ADDRESS": "127.0.0.1:8000",
+        "PPROF_ENABLED": "no",
+        "PPROF_BLOCK_PROFILE_RATE": "0",
+        "PPROF_MUTEX_PROFILE_RATE": "0",
+        "PPROF_HTTP_SERVER_ADDRESS": "127.0.0.1:6060"
+      },
+      "healthcheck": {
+        "test": ["CMD", "/gluetun-entrypoint", "healthcheck"],
+        "interval": "5s",
+        "timeout": "3s",
+        "retries": 12,
+        "start_period": "10s"
+      },
+      "networks": ["egress"],
+      "dns": ["127.0.0.1"],
+      "volumes": [
+        {
+          "type": "bind",
+          "source": "${RETRIEVAL_ROOT:?initialize first}/wg0.conf",
+          "target": "/gluetun/wireguard/wg0.conf",
+          "read_only": true,
+          "bind": {
+            "create_host_path": false
+          }
+        },
+        {
+          "type": "bind",
+          "source": "${RETRIEVAL_ROOT:?}/resolv.conf",
+          "target": "/etc/resolv.conf",
+          "read_only": false,
+          "bind": {
+            "create_host_path": false
+          }
+        }
+      ],
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "10m",
+          "max-file": "3"
+        }
+      },
+      "entrypoint": ["/gluetun-entrypoint"],
+      "command": []
+    },
+    "client": {
+      "image": "lscr.io/linuxserver/qbittorrent:5.3.0_v2.1.2-ls487@sha256:3d4c4545d51a690a0df15a2ff99038823a88a9822df8e794526447b9afbd7384",
+      "user": "${RETRIEVAL_UID:?}:${RETRIEVAL_GID:?}",
+      "network_mode": "service:gluetun",
+      "depends_on": {
+        "gluetun": {
+          "condition": "service_healthy"
+        }
+      },
+      "read_only": true,
+      "cap_drop": ["ALL"],
+      "security_opt": ["no-new-privileges:true"],
+      "mem_limit": "768m",
+      "cpus": 1,
+      "pids_limit": 128,
+      "restart": "no",
+      "stop_grace_period": "20s",
+      "tmpfs": [
+        "/tmp:rw,nosuid,nodev,noexec,size=32m,uid=${RETRIEVAL_UID},gid=${RETRIEVAL_GID}",
+        "/run:rw,nosuid,nodev,exec,size=32m,uid=${RETRIEVAL_UID},gid=${RETRIEVAL_GID}"
+      ],
+      "environment": {
+        "S6_READ_ONLY_ROOT": "1",
+        "WEBUI_PORT": "8080",
+        "TORRENTING_PORT": "6881",
+        "TZ": "Etc/UTC",
+        "UMASK": "077"
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "curl",
+          "--fail",
+          "--silent",
+          "--output",
+          "/dev/null",
+          "http://127.0.0.1:8080/"
+        ],
+        "interval": "5s",
+        "timeout": "3s",
+        "retries": 12,
+        "start_period": "10s"
+      },
+      "volumes": [
+        {
+          "type": "bind",
+          "source": "${RETRIEVAL_ROOT:?}/config",
+          "target": "/config",
+          "bind": {
+            "create_host_path": false
+          }
+        },
+        {
+          "type": "bind",
+          "source": "${RETRIEVAL_ROOT:?}/downloads",
+          "target": "/data",
+          "bind": {
+            "create_host_path": false
+          }
+        },
+        {
+          "type": "bind",
+          "source": "${RETRIEVAL_ROOT:?}/resolv.conf",
+          "target": "/etc/resolv.conf",
+          "read_only": true,
+          "bind": {
+            "create_host_path": false
+          }
+        }
+      ],
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "10m",
+          "max-file": "3"
+        }
+      },
+      "entrypoint": ["/init"],
+      "command": []
+    }
+  },
+  "networks": {
+    "egress": {
+      "driver": "bridge",
+      "enable_ipv6": false
+    }
+  }
+}
