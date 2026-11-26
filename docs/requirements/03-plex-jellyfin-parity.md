@@ -3,8 +3,9 @@
 What PopCornTV still lacks to replace the homelab Jellyfin for a household, ranked by a
 weighted decision matrix (MCDA), with the next-brick order (issue #62, 2026-11-07).
 
-Scope stays the vision's: the owner's own files only. Download, indexer and request
-sources are never integrated; Seerr setup is the owner's own job (#128 only links to it).
+Scope stays the vision's: the owner's own files, plus single titles retrieved on demand
+(epic #306, [08-on-demand-retrieval.md](08-on-demand-retrieval.md)). Library acquisition and
+request tools are not integrated; Seerr setup is the owner's own job (#128 only links to it).
 
 ## Status on 2026-11-07
 

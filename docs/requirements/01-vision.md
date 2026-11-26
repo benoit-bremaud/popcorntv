@@ -13,13 +13,18 @@ PopCornTV is a self-hosted media server with a web player. It scans the owner's 
 folders, enriches them with metadata, and lets each household member browse and watch
 from a browser — on the LAN first, over the internet later.
 
-It serves **the owner's own files only**. No content source, no indexer, no download
-feature is ever part of the product.
+It serves **the owner's own files**, plus titles it retrieves **on demand** for the
+household: a title is retrieved when someone opens its sheet, plays progressively and leaves
+the disk 48 h after its last playback (epic #306 as redefined on 2026-11-23,
+[08-on-demand-retrieval.md](08-on-demand-retrieval.md)). Retrieval goes through the VPN only,
+accepts video and subtitle files only, and never touches the owner's library folders. No
+other content source, no bulk download and no third-party stream is part of the product.
 
 Other tools on the same server (e.g. Radarr / Sonarr / Lidarr organising folders, Seerr
 for requests) may **coexist**: whatever lands in a library folder is picked up by the
 next scan. PopCornTV never calls them (owner decision 2026-10-23, MCDA in the #5 chat:
-coexistence 450 / read-only integration 380 / full integration 170).
+coexistence 450 / read-only integration 380 / full integration 170). On-demand retrieval
+(#306) uses its own bounded source adapter and cache; it does not drive these tools.
 
 ## Borrowed strengths
 

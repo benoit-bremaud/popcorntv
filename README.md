@@ -5,7 +5,10 @@ Self-hosted media server and web player, built from scratch. Takes the best of J
 and cast) and Netflix (row-based browsing, resume playback, next episode, one profile per
 person) — and nothing else.
 
-PopCornTV serves **your own media files**. It ships no content source.
+PopCornTV serves **your own media files**. It can also retrieve a single title on demand
+when someone opens its sheet, play it while it arrives and delete it 48 h after the last
+playback (epic #306, in conception: [requirements](docs/requirements/08-on-demand-retrieval.md)).
+Retrieval runs through a VPN only and never touches your library folders.
 
 ## Status
 

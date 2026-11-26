@@ -8,7 +8,11 @@ to PopCornTV.
 
 A self-hosted media server + web player built from scratch, taking the best of Jellyfin
 (free, self-hosted), Plex (automatic metadata) and Netflix (browsing and playback UX). It
-serves the owner's own media files only — no content source is ever integrated.
+serves the owner's own media files, plus single titles retrieved on demand (epic #306,
+redefined 2026-11-23: prefetch when a sheet opens, progressive playback, deletion 48 h after the
+last playback, favourites keep the first third; VPN only, video and subtitle files only, never
+inside `MEDIA_ROOT`; requirements `docs/requirements/08-on-demand-retrieval.md`, spec
+`docs/architecture/specs/on-demand-retrieval.md`, ADR-0043–0047).
 
 ## Working method
 

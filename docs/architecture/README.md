@@ -5,6 +5,8 @@ decision records. The conception is the source of truth; code conforms to it.
 
 ## Adaptive wishlist study (#307)
 
+Partly replaced on 2026-11-24 by the [on-demand retrieval](specs/on-demand-retrieval.md) conception (#434).
+
 Draft, not accepted or implemented: [specification](specs/adaptive-wishlist-lifecycle.md),
 [analysis use cases](diagrams/adaptive-wishlist/01-use-case.md),
 [lifecycle](diagrams/adaptive-wishlist/05-state-preparation.md),
@@ -52,7 +54,8 @@ docs/architecture/
 
 | Feature    | Diagrams                                | Status  |
 | ---------- | --------------------------------------- | ------- |
-| `adaptive-wishlist` | [spec](specs/adaptive-wishlist-lifecycle.md), [diagrams](diagrams/adaptive-wishlist) | lifecycle documented; recovery contract accepted; runtime implementation pending |
+| `adaptive-wishlist` | [spec](specs/adaptive-wishlist-lifecycle.md), [diagrams](diagrams/adaptive-wishlist) | partly replaced by `on-demand-retrieval` (#434); recovery contract (ADR-0034) kept |
+| `on-demand-retrieval` | [requirements](../requirements/08-on-demand-retrieval.md), [spec](specs/on-demand-retrieval.md), [diagrams](diagrams/on-demand-retrieval) | conception accepted (#434); slice 1 (films) next |
 | `local-discovery` | [spec](specs/local-discovery-topology.md), [diagrams](diagrams/local-discovery) | local implementation (#327): empty services, no source configured; merge and exact-head qualification tracked in PR #351 |
 | `playback` | [diagrams/playback](diagrams/playback)  | design  |
 | `redesign` | [inventory](specs/redesign-screen-inventory.md), [information architecture](specs/redesign-information-architecture.md), [diagrams](diagrams/redesign) | design (epic #401, #396) |
@@ -69,6 +72,11 @@ docs/architecture/
 | [0037](decisions/0037-penpot-design-tool-and-token-direction.md) | Penpot as the design tool, `tokens.css` as the token source | accepted |
 | [0040](decisions/0040-play-local-trailers-and-hand-off-remote-ones.md) | Play local trailers, hand remote ones off to a personal device | accepted |
 | [0041](decisions/0041-give-views-and-titles-their-own-path.md) | Give views and titles their own path | accepted |
+| [0043](decisions/0043-start-playback-from-a-sheet-prefetch.md) | Start playback from a sheet prefetch (revises ADR-0034) | accepted |
+| [0044](decisions/0044-size-the-start-buffer-and-cap-the-cache.md) | Size the start buffer from speed and bitrate, cap the cache below the free space | accepted |
+| [0045](decisions/0045-delete-after-48-hours-and-keep-a-favourite-third.md) | Delete 48 h after the last playback, keep the first third of a favourite | accepted |
+| [0046](decisions/0046-pick-the-fastest-conforming-source.md) | Pick the fastest conforming source, play a degraded one only by choice | accepted |
+| [0047](decisions/0047-notify-through-bell-push-and-e-mail.md) | Notify through the bell, Web Push and e-mail, chosen per profile | accepted |
 
 ## Specifications and QA
 
