@@ -69,6 +69,8 @@ class Docker:
                 elif self.failure != "same-generation":
                     self.rows = self.pair("b" * 64, "d" * 64)
                     self.killed = False
+                    if self.failure == "recovery-stopped":
+                        self.rows[1]["State"]["Running"] = False
                 else:
                     self.rows[0]["State"]["Running"] = True
                     self.killed = False
@@ -318,6 +320,47 @@ def test_failed_or_unobserved_fault_never_qualifies_and_attempts_bounded_rollbac
     assert len([args for args in docker.calls if args[:2] == ["docker", "kill"]]) <= 1
 
 
+def test_stopped_client_before_the_fault_refuses_without_any_kill(
+    installation: tuple[Path, Path],
+) -> None:
+    docker = Docker()
+    docker.rows[1]["State"]["Running"] = False
+    report = fault.campaign(
+        *installation, execute=docker.execute, clock=docker.clock, sleep=docker.sleep
+    )
+    assert report["passed"] is False
+    assert report["reason"] == "fault_pair_not_running"
+    assert report["fault_attempted"] is False
+    assert not any(args[:2] == ["docker", "kill"] for args in docker.calls)
+
+
+def test_recreated_pair_that_is_not_running_stays_failed_and_is_stopped(
+    installation: tuple[Path, Path],
+) -> None:
+    docker = Docker()
+    docker.failure = "recovery-stopped"
+    report = fault.campaign(
+        *installation, execute=docker.execute, clock=docker.clock, sleep=docker.sleep
+    )
+    assert report["passed"] is False
+    assert report["recovered"] is False
+    assert report["reason"] == "fault_recovery_unconfirmed"
+    assert report["rollback_stopped"] is True
+    assert all(row["State"]["Running"] is False for row in docker.rows)
+
+
+def test_damaged_probe_targets_refuse_before_any_probe_command(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    def forbidden(args: list[str], timeout: float) -> subprocess.CompletedProcess[str]:
+        pytest.fail("a probe ran without reviewed targets")
+
+    monkeypatch.setattr(fault.runtime, "PROBE_FILE", tmp_path / "absent.json")
+    commands = fault.Commands(60.0, lambda: 0.0, forbidden)
+    with pytest.raises(Refusal, match="probe_targets_invalid"):
+        fault.probes("c" * 64, commands, 30.0, connected=True)
+
+
 @pytest.mark.parametrize("failure", ["stop-fails", "stop-no-op"])
 def test_unconfirmed_rollback_stays_failed_and_still_attempts_gateway(
     installation: tuple[Path, Path], failure: str
@@ -410,6 +453,37 @@ def test_active_cli_without_storage_refuses_before_campaign(
 ) -> None:
     monkeypatch.setattr(sys, "argv", ["retrieval_fault.py", "--execute"])
     assert fault.main() == 1
+
+
+@pytest.mark.parametrize("passed", [True, False])
+def test_active_cli_reports_the_campaign_with_its_exact_source(
+    passed: bool,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[Path, Path]] = []
+
+    def git(args: list[str], **kwargs: object) -> str:
+        assert args[0] == "git"
+        return "" if args[1] == "status" else "f" * 40
+
+    def approved(mount: Path, scope: Path) -> dict[str, object]:
+        calls.append((mount, scope))
+        return {"passed": passed}
+
+    monkeypatch.setattr(subprocess, "check_output", git)
+    monkeypatch.setattr(fault, "campaign", approved)
+    monkeypatch.setattr(
+        sys, "argv", ["retrieval_fault.py", "--execute", "--storage", str(tmp_path)]
+    )
+    result = fault.main()
+    assert result == (0 if passed else 1)
+    assert calls == [(tmp_path, fault.runtime.ROOT / fault.SCOPE)]
+    assert json.loads(capsys.readouterr().out) == {
+        "passed": passed,
+        "source_commit": "f" * 40,
+    }
 
 
 def test_termination_handler_enters_categorical_rollback_path() -> None:

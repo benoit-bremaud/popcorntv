@@ -45,9 +45,9 @@ ROOT = Path(__file__).resolve().parent.parent
 COMPOSE = ROOT / "deploy/local-retrieval/compose.json"
 LOGGER = logging.getLogger("retrieval")
 # Fixed public observation targets, kept beside the Compose model as reviewed data.
-PROBES: dict[str, str] = json.loads(
-    (ROOT / "deploy/local-retrieval/probes.json").read_text()
-)
+PROBE_FILE = ROOT / "deploy/local-retrieval/probes.json"
+TRACE_PROBES = ("trace_ipv4", "trace_ipv6")
+PROBE_KEYS = {*TRACE_PROBES, "resolver_ipv4"}
 PROJECT_PREFIX = "pctv-retrieval-"
 OWNER_LABEL = "org.popcorntv.retrieval"
 PROJECT_LABEL = "com.docker.compose.project"
@@ -75,6 +75,26 @@ def native_retrieval_images() -> dict[str, str]:
     if architecture in ("x86_64", "amd64"):
         return {}
     raise Refusal("retrieval_architecture_unqualified")
+
+
+def probe_targets() -> dict[str, str]:
+    """Read the reviewed observation targets only when a probe is about to run.
+
+    Loading lazily keeps ``stop`` and ``init`` usable when the file is damaged; a
+    missing, malformed or widened file is one categorical refusal, never a traceback.
+    """
+    try:
+        targets = json.loads(PROBE_FILE.read_text())
+    except (OSError, ValueError):
+        raise Refusal("probe_targets_invalid") from None
+    if (
+        not isinstance(targets, dict)
+        or set(targets) != PROBE_KEYS
+        or not all(isinstance(value, str) for value in targets.values())
+        or not all(targets[key].startswith("https://") for key in TRACE_PROBES)
+    ):
+        raise Refusal("probe_targets_invalid")
+    return targets
 
 
 def command(arguments: list[str], data: str | None = None) -> str:
@@ -819,7 +839,7 @@ def verify_anonymous_denied(client: str) -> None:
 
 def verify_egress(client: str) -> None:
     """Require the client's public address to differ from the host's own."""
-    endpoint = PROBES["trace_ipv4"]
+    endpoint = probe_targets()["trace_ipv4"]
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     with opener.open(endpoint, timeout=8) as response:
         baseline = trace_address(response.read(8193).decode())

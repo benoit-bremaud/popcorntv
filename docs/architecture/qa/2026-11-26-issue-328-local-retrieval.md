@@ -11,7 +11,7 @@ This record summarises the evidence behind the empty VPN-only retrieval installa
 
 | Check | Result |
 |---|---|
-| `mise x -- just retrieval-check` (ruff, mypy strict on the five sources, pytest) | 328 passed, 92.35 % combined coverage |
+| `mise x -- just retrieval-check` (ruff, mypy strict on the five sources, pytest) | 347 passed, 93.11 % combined coverage |
 | `python3 scripts/test-local-ci.py` (gate runner self-test) | passed |
 | Real tunnel, real VPN file, Docker services | not started: owner-run only (NFR-17) |
 

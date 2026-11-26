@@ -677,7 +677,7 @@ real VPN file or tunnel is owner-run.
 
 | Case | Evidence | Remaining boundary |
 |---|---|---|
-| E328-01 | Component suite: 328 passed, 92.35 % coverage (controller, configuration, storage, fault executors) | Not a runtime proof |
+| E328-01 | Component suite: 347 passed, 93.11 % coverage (controller, configuration, storage, fault executors) | Not a runtime proof |
 | E328-02 | November runs: connected start, restart, namespace identity, zero host ports, anonymous API denied, no secret in logs | Not repeated on this head; owner-run |
 | E328-03 | November runs: IPv4/DNS/IPv6 denied during gateway stop, abrupt exit (F01) and endpoint interruption (F02), positive controls before and after | Tunnel-only failure, outside packet observation |
 | E328-04 | Hard quota: dedicated ext4/XFS mount `nodev,nosuid,noexec`, 100 GiB ceiling, 2 GiB reserve, `ENOSPC` fixture (F03, November) | Admission reservations arrive with #311 |

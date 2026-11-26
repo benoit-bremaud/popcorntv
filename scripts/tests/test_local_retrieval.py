@@ -1237,6 +1237,96 @@ def test_ownership_proof_refuses_inconsistent_inspection_before_mutation(
     assert lifecycle_backend["mutated"] == []
 
 
+@pytest.mark.parametrize("repeated", ["name", "id"])
+def test_ownership_proof_refuses_a_repeated_name_or_id(repeated: str) -> None:
+    identity = "a" * 16
+    project = "pctv-retrieval-" + identity
+    rows = [
+        {
+            "Id": identifier,
+            "Name": "/" + project + "-" + role,
+            "Config": {"Labels": {"org.popcorntv.retrieval": identity}},
+            "State": {"Running": True},
+        }
+        for role, identifier in (("client", "c" * 64), ("gluetun", "a" * 64))
+    ]
+    names = "\n".join(str(row["Name"]).lstrip("/") for row in rows)
+    if repeated == "name":
+        rows[1] = dict(rows[0])
+    else:
+        rows[1]["Id"] = rows[0]["Id"]
+
+    def reader(arguments: list[str]) -> str:
+        return names if arguments[1] == "ps" else json.dumps(rows)
+
+    with pytest.raises(Refusal, match="container_ownership"):
+        runtime.inspect_owned(identity, reader=reader)
+
+
+def test_reviewed_probe_targets_are_accepted() -> None:
+    assert runtime.probe_targets() == {
+        "trace_ipv4": "https://1.1.1.1/cdn-cgi/trace",
+        "resolver_ipv4": "1.1.1.1",
+        "trace_ipv6": "https://[2606:4700:4700::1111]/cdn-cgi/trace",
+    }
+
+
+PROBE_TARGETS = {
+    "trace_ipv4": "https://192.0.2.1/trace",
+    "resolver_ipv4": "192.0.2.1",
+    "trace_ipv6": "https://[2001:db8::1]/trace",
+}
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        None,
+        "{",
+        "[]",
+        json.dumps({**PROBE_TARGETS, "extra": "192.0.2.2"}),
+        json.dumps({"trace_ipv4": PROBE_TARGETS["trace_ipv4"]}),
+        json.dumps({**PROBE_TARGETS, "resolver_ipv4": 1}),
+        json.dumps({**PROBE_TARGETS, "trace_ipv4": "http://192.0.2.1/trace"}),
+        json.dumps({**PROBE_TARGETS, "trace_ipv6": "file:///etc/hostname"}),
+    ],
+)
+def test_damaged_probe_targets_are_one_categorical_refusal(
+    content: str | None, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    target = tmp_path / "probes.json"
+    if content is not None:
+        target.write_text(content)
+    monkeypatch.setattr(runtime, "PROBE_FILE", target)
+    with pytest.raises(Refusal, match="probe_targets_invalid"):
+        runtime.probe_targets()
+
+
+def test_damaged_probe_targets_refuse_egress_check_without_any_request(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def forbidden(*args: object, **kwargs: object) -> None:
+        pytest.fail("egress was probed without reviewed targets")
+
+    monkeypatch.setattr(runtime, "PROBE_FILE", tmp_path / "absent.json")
+    monkeypatch.setattr(runtime.urllib.request, "build_opener", forbidden)
+    monkeypatch.setattr(subprocess, "run", forbidden)
+    with pytest.raises(Refusal, match="probe_targets_invalid"):
+        runtime.verify_egress("c" * 64)
+
+
+def test_stop_stays_usable_with_damaged_probe_targets(
+    initialized: Path,
+    lifecycle_backend: dict[str, object],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(runtime, "PROBE_FILE", tmp_path / "absent.json")
+    identity = str(runtime.installation(initialized)["identity"])
+    runtime.stop(initialized, identity)
+    assert lifecycle_backend["mutated"] == ["c" * 64, "a" * 64]
+
+
 def test_name_replacement_during_stop_never_targets_the_replacement(
     initialized: Path,
     lifecycle_backend: dict[str, object],

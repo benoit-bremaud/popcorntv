@@ -160,6 +160,7 @@ class F02Docker(Docker):
         self.closed = False
         self.operations: list[str] = []
         self.status_count = 0
+        self.ready_polls: list[list[str]] = []
         for row in self.rows:
             row["State"]["StartedAt"] = "2026-11-18T05:00:00Z"
 
@@ -181,7 +182,10 @@ class F02Docker(Docker):
         if "f02-rule" in args:
             name = args[args.index("f02-rule") + 1]
             if name == "ready":
-                return subprocess.CompletedProcess(args, 0 if self.armed else 1, "", "")
+                self.ready_polls.append(args)
+                late = self.scenario == "slow-arm" and len(self.ready_polls) < 3
+                ready = self.armed and not late
+                return subprocess.CompletedProcess(args, 0 if ready else 1, "", "")
             self.operations.append(name)
             if name == "arm":
                 self.armed = True
@@ -253,6 +257,29 @@ def test_campaign_requires_three_drops_removal_and_same_generation(
         1,
     ]
     assert not any(args[:2] == ["docker", "stop"] for args in docker.calls)
+
+
+def test_campaign_waits_for_the_armed_trial_before_inserting_the_rule(
+    campaign_storage: tuple[Path, Path],
+) -> None:
+    docker = F02Docker("slow-arm")
+    naps: list[tuple[float, list[str]]] = []
+
+    def sleep(seconds: float) -> None:
+        naps.append((seconds, list(docker.operations)))
+        docker.sleep(seconds)
+
+    report = campaign(
+        *campaign_storage, execute=docker.execute, clock=docker.clock, sleep=sleep
+    )
+    assert report["passed"] is True
+    assert docker.operations[:2] == ["arm", "insert"]
+    assert [nap for nap in naps if nap[1] == ["arm"]] == [(0.1, ["arm"])] * 2
+    assert len(docker.ready_polls) == 3
+    for poll in docker.ready_polls:
+        assert poll[:5] == ["docker", "exec", "a" * 64, "/bin/sh", "-c"]
+        assert poll[poll.index("f02-rule") + 1] == "ready"
+        assert "-d" not in poll
 
 
 @pytest.mark.parametrize(

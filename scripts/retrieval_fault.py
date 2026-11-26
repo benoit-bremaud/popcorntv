@@ -159,6 +159,7 @@ def probes(
     require_dns_timeout: bool = False,
 ) -> None:
     """Use the same bounded IPv4/DNS probes before/during/after; IPv6 stays disabled."""
+    targets = runtime.probe_targets()
     curl = [
         "docker",
         "exec",
@@ -173,7 +174,7 @@ def probes(
         "--output",
         "/dev/null",
     ]
-    ipv4 = commands.call([*curl, runtime.PROBES["trace_ipv4"]], 4, until)
+    ipv4 = commands.call([*curl, targets["trace_ipv4"]], 4, until)
     dns = commands.call(
         [
             "docker",
@@ -187,12 +188,12 @@ def probes(
             "/bin/busybox",
             "nslookup",
             "example.com",
-            runtime.PROBES["resolver_ipv4"],
+            targets["resolver_ipv4"],
         ],
         4,
         until,
     )
-    ipv6 = commands.call([*curl, "--ipv6", runtime.PROBES["trace_ipv6"]], 4, until)
+    ipv6 = commands.call([*curl, "--ipv6", targets["trace_ipv6"]], 4, until)
     disabled = commands.need(
         ["docker", "exec", client, "cat", "/proc/sys/net/ipv6/conf/all/disable_ipv6"],
         5,
