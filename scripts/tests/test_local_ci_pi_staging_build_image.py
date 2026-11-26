@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import subprocess
 import tempfile
+import time
 import unittest
 
 
@@ -97,7 +98,9 @@ if arguments[2:4] == ['image', 'inspect']:
                 {
                     'args': [*daemon, 'build', '--iidfile', '<build-id-file>', '--platform', 'linux/arm64',
                              '--label', f'org.opencontainers.image.revision={self.revision}',
-                             '--build-arg', f'APP_VERSION={self.version}', '--tag', tag, '-'],
+                             '--build-arg', f'APP_VERSION={self.version}',
+                             '--build-arg', 'APT_UPGRADE_DATE=' + time.strftime('%Y-%m-%d', time.gmtime()),
+                             '--tag', tag, '-'],
                     'archive': hashlib.sha256(self.archive.read_bytes()).hexdigest(),
                 },
                 {'args': [*daemon, 'image', 'inspect', '--format', '{{json .}}', IMAGE_ID]},

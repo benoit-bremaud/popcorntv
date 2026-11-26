@@ -54,7 +54,7 @@ RUN --network=none node --input-type=module -e 'import Database from "better-sql
 FROM node:22.23.4-trixie-slim@sha256:be1e2a3dc2c4fd68cdfadad2a696a280e0d2749098bee509230174d72fb768c6
 # `apt-get upgrade` (DL3005) is deliberate: the node base image lags Debian's security
 # updates (17 fixed HIGH/CRITICAL CVEs in perl, pcre2, gnutls, libcap on 2026-10-23) and
-# the weekly Trivy scan blocks on them; the upgrade is reproducible per base image digest.
+# the weekly Trivy scan blocks on them; the upgrade follows the base image digest and the Debian archive of the build day.
 # Keep while the base can lag Debian security (it did on bookworm on 2026-10-23 and
 # 2026-11-06; trixie digest be1e2a3d had nothing to upgrade on 2026-11-07); re-check on
 # each base bump.

@@ -49,7 +49,7 @@ as alternatives, not claimed to be identical engines. No hosted jobs are added o
 | `ci/verify` build | `pnpm build` | Frozen TypeScript/Vite and package build configs | Every gate |
 | `docker-security/hadolint` | `make lint-docker` | Hadolint 2.15.1, digest in Makefile; `.hadolint.yaml`, Dockerfile | Docker path filter below, otherwise explicit not-applicable |
 | `docker-security/config` | `make scan-docker-config` | Trivy 0.76.0, digest in Makefile; Dockerfile and existing ignore config | Same Docker filter |
-| `docker-security/image` | `docker build --pull -t popcorntv:<sha> .`, then `make scan-docker-image IMAGE=popcorntv:<sha> TRIVY_EXIT=1` | Same Trivy pin and `.trivyignore.yaml`; retain machine-readable report | Same Docker filter |
+| `docker-security/image` | `docker build --pull --build-arg APT_UPGRADE_DATE=<UTC date> -t popcorntv:gate-<sha> .`, then `make scan-docker-image IMAGE=popcorntv:gate-<sha>` | Same Trivy pin and `.trivyignore.yaml`; retain machine-readable report | Same Docker filter |
 | `gitleaks/scan` | `gitleaks git --redact` | Local pin 8.30.1; full history, existing ignore configuration | Every check; replaces hosted action, not an asserted bundled-version match |
 | `codeql/analyze` | CI-only engine, removed hosted job; local Semgrep alternatives remain mandatory | Existing hosted codeql-bundle-v2.27.3; JavaScript/TypeScript. Semgrep CE 1.181.0 pinned image, `p/javascript`, `p/typescript`, `p/nodejs`, metrics off | Application source, excluding generated/build/env paths |
 | `dependency-review` | CI-only service, removed hosted job; local `osv-scanner` lockfile scan | Hosted action v5.0.0; local OSV 2.7.1 against pnpm-lock.yaml | Every check; advisory data requires reachable service/cache and failure is explicit |
