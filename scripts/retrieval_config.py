@@ -227,7 +227,8 @@ def reject_media_root(path: Path, media_root: str | None) -> None:
     The retrieval cache never shares a tree with ``MEDIA_ROOT``: deletion and
     trimming of retrieved files must be unable to reach the owner's own media.
     The check fails closed: an unset, empty or relative value is refused, because
-    the library is then unknown. A host without a library declares ``none``.
+    the library is then unknown, and so is a path that is not an existing
+    directory (a mistyped value). A host without a library declares ``none``.
     """
     if media_root == NO_LIBRARY:
         return
@@ -237,6 +238,8 @@ def reject_media_root(path: Path, media_root: str | None) -> None:
     mount = path.resolve()
     if mount == library or library in mount.parents or mount in library.parents:
         raise Refusal("storage_inside_media_root")
+    if not library.is_dir():
+        raise Refusal("media_root_not_a_directory")
 
 
 def write_private(path: Path, value: str) -> None:

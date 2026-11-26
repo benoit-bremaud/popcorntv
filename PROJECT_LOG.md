@@ -16,9 +16,10 @@ context: merged PRs, decisions, tags, infra events. Not a release changelog — 
   retrieval-*` recipes, `retrieval-check` in `just check`; spec `nordvpn-retrieval`, ADR-0035, two
   diagrams, QA cases and record, glossary and traceability rows.
 - Changed against the November code: storage ceiling 20 → 100 GiB with `--size-gib` (ADR-0044);
-  a mount sharing a tree with `MEDIA_ROOT` is refused; ARM64 image pins selected by architecture.
+  a mount sharing a tree with `MEDIA_ROOT` is refused, and so is an undeclared or mistyped
+  `MEDIA_ROOT` (`none` = host without a library); ARM64 image pins selected by architecture.
   Dropped: `migrate`, saved-transfer state, the F04 trial observation.
-- Evidence: 320 component tests, coverage above 90 %; the November runtime runs (connected start,
+- Evidence: 328 component tests, coverage above 90 %; the November runtime runs (connected start,
   F01, F02, F03) are historical and were not repeated on this head
   (`docs/architecture/qa/2026-11-26-issue-328-local-retrieval.md`).
 - Owner-run, pending: connected start of this head, tunnel-only failure, staging replay of E328-02/03,

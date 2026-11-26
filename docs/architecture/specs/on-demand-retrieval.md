@@ -132,7 +132,7 @@ retrieval. Any change goes through ADR-0044.
 
 The branches of #310–#315 are not merged and are not touched by this conception. Each
 re-planned issue states what it may reuse after review: the verified-read cache of #311
-(`23b66eb`), the source search of #310. The VPN namespace of #328 was ported and merged first
+(`23b66eb`), the source search of #310. The VPN namespace of #328 is ported first
 (empty installation and controller; migration and saved-transfer tooling dropped). The daily preparation of every
 wish (#310, #314 A) is dropped.
 

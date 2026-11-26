@@ -731,6 +731,25 @@ def test_cli_stops_owned_services_despite_damaged_runtime_files(
 
 
 @pytest.mark.parametrize("operation", ["start", "status", "stop"])
+def test_cli_without_a_declared_library_stops_owned_services(
+    initialized: Path,
+    docker_observations: dict[str, object],
+    monkeypatch: pytest.MonkeyPatch,
+    operation: str,
+) -> None:
+    monkeypatch.delenv("MEDIA_ROOT")
+    monkeypatch.setattr(
+        sys, "argv", ["retrieval", operation, "--storage", str(initialized.parent)]
+    )
+
+    assert runtime.main() == (0 if operation == "stop" else 1)
+
+    calls = docker_observations["calls"]
+    lifecycle = [call for call in calls if call[:2] == ["docker", "stop"]]
+    assert [call[-1] for call in lifecycle] == ["c" * 64, "a" * 64]
+
+
+@pytest.mark.parametrize("operation", ["start", "status", "stop"])
 @pytest.mark.parametrize(
     "expiry", ["2000-01-01T00:00:00+00:00", "2099-01-01T00:00:00", "invalid"]
 )
@@ -1421,5 +1440,7 @@ def test_undeclared_library_refuses_before_any_write_but_never_the_stop_identity
 def test_unrelated_library_keeps_the_installation_usable(
     initialized: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    monkeypatch.setenv("MEDIA_ROOT", str(tmp_path / "mount-library"))
+    library = tmp_path / "mount-library"
+    library.mkdir()
+    monkeypatch.setenv("MEDIA_ROOT", str(library))
     assert runtime.installation(initialized)["version"] == 2

@@ -13,6 +13,8 @@ owner, never by an agent (NFR-17).
 
 - qBittorrent: release `5.3.0_v2.1.2-ls487`, manifest
   `sha256:3d4c4545d51a690a0df15a2ff99038823a88a9822df8e794526447b9afbd7384`.
+  The Compose pins are selected per architecture by the controller, so Dependabot does not
+  watch them: refresh this pin by hand, with a new scan.
 - Gluetun: stable source commit `3d1e20c5551e9cae1f9d938dc7b7214a6987f27e`,
   version `v3.41.3-popcorntv.2` (image tag `popcorntv-gluetun:v3.41.3-pctv.2`). Its checked-in Go manifests patch the vulnerable
   dependencies; Go 1.27.4 and supported Alpine 3.24 are pinned in the Dockerfile.
@@ -90,11 +92,13 @@ mise x -- just retrieval-status /absolute/path/to/new-storage/mount
 mise x -- just retrieval-stop /absolute/path/to/new-storage/mount
 ```
 
-Export `MEDIA_ROOT` (absolute path of the library) in the shell that runs the provisioner
+Export `MEDIA_ROOT` (absolute host path of the library) in the shell that runs the provisioner
 and these commands: provisioning, initialization, start and status refuse a mount equal to,
 containing or inside it (`storage_inside_media_root`). The check fails closed: an unset,
-empty or relative value is refused (`media_root_undeclared`). On a host without a library,
-export `MEDIA_ROOT=none`. Stop never needs the variable.
+empty or relative value is refused (`media_root_undeclared`), and so is a path that is not an
+existing directory (`media_root_not_a_directory`). A refused start or status also stops the
+owned services. On a host without a library, export `MEDIA_ROOT=none`. Stop never needs the
+variable.
 
 Only the `retrieval` directory below that exact mount is writable to the client. File
 and directory ownership, mount identity/capacity/options, the 2 GiB free reserve and

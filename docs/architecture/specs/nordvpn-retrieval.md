@@ -150,7 +150,8 @@ The retrieval mount never shares a tree with the owner's library: initialization
 status refuse a mount equal to, containing or inside `MEDIA_ROOT` (`storage_inside_media_root`),
 after resolving symbolic links. The provisioner applies the same check before it creates the image. Both read
 `MEDIA_ROOT` from their environment and fail closed: an unset, empty or relative value is
-refused (`media_root_undeclared`); a host without a library declares `MEDIA_ROOT=none`.
+refused (`media_root_undeclared`), a path that is not an existing directory too
+(`media_root_not_a_directory`, a mistyped value); a host without a library declares `MEDIA_ROOT=none`.
 Emergency stop skips this check, like the free reserve. Nothing but the `retrieval` directory of that mount is writable to the client.
 
 This installation stays empty: startup refuses persisted `BT_backup` content and

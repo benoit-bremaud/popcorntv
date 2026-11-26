@@ -677,11 +677,11 @@ real VPN file or tunnel is owner-run.
 
 | Case | Evidence | Remaining boundary |
 |---|---|---|
-| E328-01 | Component suite: 320 passed, 91.73 % coverage (controller, configuration, storage, fault executors) | Not a runtime proof |
+| E328-01 | Component suite: 328 passed, 91.75 % coverage (controller, configuration, storage, fault executors) | Not a runtime proof |
 | E328-02 | November runs: connected start, restart, namespace identity, zero host ports, anonymous API denied, no secret in logs | Not repeated on this head; owner-run |
 | E328-03 | November runs: IPv4/DNS/IPv6 denied during gateway stop, abrupt exit (F01) and endpoint interruption (F02), positive controls before and after | Tunnel-only failure, outside packet observation |
 | E328-04 | Hard quota: dedicated ext4/XFS mount `nodev,nosuid,noexec`, 100 GiB ceiling, 2 GiB reserve, `ENOSPC` fixture (F03, November) | Admission reservations arrive with #311 |
-| E328-05 | Mount equal to, containing or inside `MEDIA_ROOT` refused (`storage_inside_media_root`); unset, empty or relative variable refused (`media_root_undeclared`), by the provisioner too | Subtle: a host without a library must declare `MEDIA_ROOT=none`; stop never needs the variable |
+| E328-05 | Mount equal to, containing or inside `MEDIA_ROOT` refused (`storage_inside_media_root`); unset, empty or relative variable refused (`media_root_undeclared`), a mistyped or missing directory too (`media_root_not_a_directory`), by the provisioner too | Subtle: a host without a library must declare `MEDIA_ROOT=none`; stop never needs the variable |
 | E328-06 | Image of 3–100 GiB accepted, 2 or 101 GiB refused; host needs the size plus 2 GiB free | Subtle: boundary at exactly the reserve |
 | E328-07 | AMD64 and ARM64 pins selected by host architecture; other architecture or platform-mismatched image refused | ARM64 runtime not qualified |
 | E328-08 | Manifest of another version, changed filesystem UUID or persisted `BT_backup` refused; no migration command | Subtle: an old installation needs new storage, never an in-place upgrade |

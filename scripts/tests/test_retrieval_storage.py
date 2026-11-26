@@ -209,6 +209,34 @@ def test_destination_sharing_a_tree_with_the_library_creates_nothing(
     assert not target.exists()
 
 
+def test_destination_beside_an_existing_library_is_created(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    library = tmp_path / "library"
+    library.mkdir()
+    monkeypatch.setattr(provisioner, "MAX_STORAGE", 65536)
+    monkeypatch.setattr(
+        shutil,
+        "disk_usage",
+        lambda path: shutil._ntuple_diskusage(MAX_STORAGE * 2, 0, MAX_STORAGE * 2),
+    )
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *args, **kwargs: subprocess.CompletedProcess(args, 0, "", ""),
+    )
+    target = tmp_path / "new"
+    create_storage(target, media_root=str(library))
+    assert (target / "mount").is_dir()
+
+
+def test_mistyped_library_creates_nothing(tmp_path: Path) -> None:
+    target = tmp_path / "new"
+    with pytest.raises(Refusal, match="media_root_not_a_directory"):
+        create_storage(target, media_root=str(tmp_path / "medai-typo"))
+    assert not target.exists()
+
+
 def test_command_line_without_a_declared_library_writes_nothing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

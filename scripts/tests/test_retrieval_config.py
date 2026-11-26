@@ -305,11 +305,23 @@ def test_host_declared_without_a_library_accepts_any_mount() -> None:
 
 
 @pytest.mark.parametrize(
-    "library",
-    ["/srv/media", "/srv/retrieval/mount2", "/srv/retrieval/mount-library"],
+    "library", ["media", "retrieval/mount2", "retrieval/mount-library"]
 )
-def test_library_outside_the_mount_tree_is_accepted(library: str) -> None:
-    reject_media_root(Path("/srv/retrieval/mount"), library)
+def test_library_outside_the_mount_tree_is_accepted(
+    tmp_path: Path, library: str
+) -> None:
+    (tmp_path / library).mkdir(parents=True)
+    reject_media_root(tmp_path / "retrieval/mount", str(tmp_path / library))
+
+
+@pytest.mark.parametrize("name", ["medai-typo", "media ", "media/file.mkv"])
+def test_library_that_is_not_an_existing_directory_is_refused(
+    tmp_path: Path, name: str
+) -> None:
+    (tmp_path / "media").mkdir()
+    (tmp_path / "media/file.mkv").write_bytes(b"")
+    with pytest.raises(Refusal, match="media_root_not_a_directory"):
+        reject_media_root(tmp_path / "retrieval/mount", str(tmp_path / name))
 
 
 @pytest.mark.parametrize(
