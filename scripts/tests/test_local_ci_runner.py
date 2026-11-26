@@ -100,6 +100,9 @@ sys.exit(1 if os.environ.get('CI_TEST_FAIL_TOOL')==name or (os.environ.get('CI_T
         self.assertIn('--test-coverage-lines=90', dependency_tests)
         self.assertIn('--test-coverage-branches=80', dependency_tests)
         self.assertIn('--test-coverage-functions=90', dependency_tests)
+        # The day's date renews the cached `apt-get upgrade` layer of the scanned image (#444).
+        build = next(c for c in commands if c[:2] == ['docker', 'build'])
+        self.assertRegex(build[build.index('--build-arg') + 1], r'^APT_UPGRADE_DATE=\d{4}-\d{2}-\d{2}$')
         reports = list((self.repo / '.git/local-ci-runs').glob('*/result'))
         self.assertEqual(len(reports), 1)
         self.assertEqual(reports[0].read_text(), 'success\n')

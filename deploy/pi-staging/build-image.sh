@@ -42,7 +42,8 @@ docker_local() {
 
 docker_local build --iidfile "$build_dir/image.id" --platform linux/arm64 \
     --label "org.opencontainers.image.revision=$revision" \
-    --build-arg "APP_VERSION=$version" --tag "$tag" - < "$snapshot" >&2
+    --build-arg "APP_VERSION=$version" \
+    --build-arg "APT_UPGRADE_DATE=$(date -u +%F)" --tag "$tag" - < "$snapshot" >&2
 
 image_id=$(cat "$build_dir/image.id")
 docker_local image inspect --format '{{json .}}' "$image_id" |

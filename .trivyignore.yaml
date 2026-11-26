@@ -1,7 +1,7 @@
 # Accepted Trivy findings. Every entry needs a scope (`paths`, or `purls` for OS packages,
 # which have no file path), `expired_at` and `statement`.
 #
-# #110, #409: unfixed HIGH CVEs in Debian 13 base packages of the runtime image. None is in the
+# #110, #409, #444: unfixed HIGH CVEs in Debian 13 base packages of the runtime image. None is in the
 # media path (FFmpeg is a static upstream build, see Dockerfile); the container runs one
 # non-root Node process and never calls these tools on untrusted input. Debian has no fix
 # yet (status affected / fix_deferred). The image scan runs without --ignore-unfixed, so
@@ -72,4 +72,8 @@ vulnerabilities:
     purls: [pkg:deb/debian/libssl3t64, pkg:deb/debian/openssl-provider-legacy]
     expired_at: 2026-12-22
     statement: 'OpenSSL QUIC server denial of service; only apt links the system libssl, Node bundles its own OpenSSL and the app opens no QUIC endpoint. Debian status affected (#409). Re-check: #116.'
+  - id: CVE-2026-107494
+    purls: [pkg:deb/debian/libssl3t64, pkg:deb/debian/openssl-provider-legacy]
+    expired_at: 2026-12-22
+    statement: 'OpenSSL denial of service by unbounded QUIC frame queueing; only apt links the system libssl, Node bundles its own OpenSSL and the app opens no QUIC endpoint. Debian status affected (#444). Re-check: #116.'
 misconfigurations: []
