@@ -231,7 +231,10 @@ def gate(base):
                 ['pnpm', '--filter', '@popcorntv/web', 'exec', 'playwright', 'test', '--config=playwright.local-ci.config.ts'],
                 ['make', 'lint-docker'], ['make', 'scan-docker-config'],
                 ['make', 'scan-source-security'],
-                ['docker', 'build', '--pull', '-t', 'popcorntv:gate-' + head, '.'],
+                # The date renews the cached `apt-get upgrade` layer once a day (#444).
+                ['docker', 'build', '--pull', '--build-arg',
+                 'APT_UPGRADE_DATE=' + time.strftime('%Y-%m-%d', time.gmtime()),
+                 '-t', 'popcorntv:gate-' + head, '.'],
                 ['make', 'scan-docker-image', 'IMAGE=popcorntv:gate-' + head],
                 ['make', 'gate-sbom', 'IMAGE=popcorntv:gate-' + head],
             ):
