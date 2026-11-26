@@ -568,6 +568,11 @@ def qualify_images(root: Path, identity: str) -> None:
     LOGGER.info("retrieval.images_qualified")
 
 
+def client_url(path: str) -> str:
+    """Return the curl config line targeting one client API path on container loopback."""
+    return 'url = "' + CLIENT_API + path + '"\n'
+
+
 def authenticate(root: Path, identity: str) -> dict[str, object]:
     """Authenticate over container loopback, keeping password/cookies in process stdin only."""
     client = PROJECT_PREFIX + identity + "-client"
@@ -592,9 +597,7 @@ def authenticate(root: Path, identity: str) -> dict[str, object]:
     referer = 'header = "Referer: ' + CLIENT_API + '/"\n'
     response = command(
         common,
-        'url = "'
-        + CLIENT_API
-        + '/api/v2/auth/login"\n'
+        client_url("/api/v2/auth/login")
         + referer
         + 'dump-header = "-"\ndata = "'
         + body
@@ -610,7 +613,7 @@ def authenticate(root: Path, identity: str) -> dict[str, object]:
     cookie = 'cookie = "' + cookies[0] + '"\n'
     preferences = command(
         common,
-        'url = "' + CLIENT_API + '/api/v2/app/preferences"\n' + referer + cookie,
+        client_url("/api/v2/app/preferences") + referer + cookie,
     )
     value = json.loads(preferences)
     if not isinstance(value, dict):
@@ -623,7 +626,7 @@ def authenticate(root: Path, identity: str) -> dict[str, object]:
         raise Refusal("client_tunnel_binding")
     torrents = command(
         common,
-        'url = "' + CLIENT_API + '/api/v2/torrents/info"\n' + referer + cookie,
+        client_url("/api/v2/torrents/info") + referer + cookie,
     )
     if json.loads(torrents) != []:
         raise Refusal("client_queue_not_empty")
@@ -677,16 +680,19 @@ def tmpfs_policy(value: str) -> frozenset[str]:
     return frozenset(options)
 
 
+def tmpfs_entry(item: str) -> tuple[str, str]:
+    """Split one planned ``path:options`` tmpfs entry; a malformed one raises."""
+    path, options = item.split(":", 1)
+    return path, options
+
+
 def verify_filesystem_policy(
     actual: dict[str, object], expected: dict[str, object]
 ) -> None:
     """Reject extra volumes and changed bind roots or tmpfs budgets without any I/O."""
     container = json.loads(json.dumps(actual))
     planned = json.loads(json.dumps(expected))
-    planned_tmpfs = {
-        path: options
-        for path, options in (item.split(":", 1) for item in planned["tmpfs"])
-    }
+    planned_tmpfs = dict(map(tmpfs_entry, planned["tmpfs"]))
     observed_tmpfs = container["HostConfig"].get("Tmpfs")
     if not isinstance(observed_tmpfs, dict) or not all(
         isinstance(path, str) and isinstance(options, str)
