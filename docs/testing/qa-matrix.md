@@ -27,7 +27,8 @@ recorded staging SHA; local gate and historical Pi results remain separate.
 | #309 persistent preparation request contract | STG-20 | NOT TESTED — no acquisition/readiness claim from persistence alone |
 | Input sweep, past defects and exploration | STG-21–23 | NOT TESTED — replay both staging baselines and all applicable ledger sections |
 | #327 separate discovery infrastructure | Discovery annex in the checklist | NOT TESTED on staging — only if explicitly included in that topology |
-| #315 A complete-file acquisition trial | Separate milestone acceptance | BLOCKED until #328/#310/#311/#314 A are integrated and real-service writes separately authorized |
+| #328 VPN-only retrieval infrastructure | STG-328-09–11 | NOT TESTED on staging — owner-run, see the #328 section below |
+| #315 A complete-file acquisition trial | Separate milestone acceptance | BLOCKED until #310/#311/#314 A are integrated and real-service writes separately authorized |
 | Progressive readiness, child acquisition policy, second backend | #312/#313/#314 B/#316/#325 | No current delivery claim; reassess applicability at the deployed SHA |
 
 Security execution additionally requires the confirmed read-only scope and test
@@ -666,3 +667,25 @@ explicitly deferred; the previous complete L1 failure is not retroactively green
 The final XML-refusal case passed separately in 0.25 seconds. Independent
 adversarial verification of `16327d2` reports Must 0 / Should 0; no new aggregate
 94-case execution, global gate or deployment is inferred from that review.
+
+## Local VPN retrieval infrastructure — #328, 2026-11-26
+
+These rows record component and historical infrastructure acceptance, not a deployed-product
+QA pass. See [the QA record](../architecture/qa/2026-11-26-issue-328-local-retrieval.md) and
+[the designed cases](../architecture/qa/cases/328-nordvpn-retrieval.md). Every run with the
+real VPN file or tunnel is owner-run.
+
+| Case | Evidence | Remaining boundary |
+|---|---|---|
+| E328-01 | Component suite: 306 passed, 91.62 % coverage (controller, configuration, storage, fault executors) | Not a runtime proof |
+| E328-02 | November runs: connected start, restart, namespace identity, zero host ports, anonymous API denied, no secret in logs | Not repeated on this head; owner-run |
+| E328-03 | November runs: IPv4/DNS/IPv6 denied during gateway stop, abrupt exit (F01) and endpoint interruption (F02), positive controls before and after | Tunnel-only failure, outside packet observation |
+| E328-04 | Hard quota: dedicated ext4/XFS mount `nodev,nosuid,noexec`, 100 GiB ceiling, 2 GiB reserve, `ENOSPC` fixture (F03, November) | Admission reservations arrive with #311 |
+| E328-05 | Mount equal to, containing or inside `MEDIA_ROOT` refused (`storage_inside_media_root`); unset variable performs no check | Subtle: export `MEDIA_ROOT` in the operator shell, else nothing is compared |
+| E328-06 | Image of 3–100 GiB accepted, 2 or 101 GiB refused; host needs the size plus 2 GiB free | Subtle: boundary at exactly the reserve |
+| E328-07 | AMD64 and ARM64 pins selected by host architecture; other architecture or platform-mismatched image refused | ARM64 runtime not qualified |
+| E328-08 | Manifest of another version, changed filesystem UUID or persisted `BT_backup` refused; no migration command | Subtle: an old installation needs new storage, never an in-place upgrade |
+| E328-09 | Expired 90-day credential metadata refuses start and status; explicit stop still works | Rotation journey owner-run |
+
+Accessibility, responsive layout and browser navigation are not applicable to these
+infrastructure-only rows.

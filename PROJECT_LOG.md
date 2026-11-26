@@ -4,6 +4,26 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-26 — #328 VPN-only retrieval infrastructure
+
+- Branch `feat/328-isolate-retrieval-behind-vpn`; closes #328. First brick of slice 1 of epic #306.
+- **Decision** (owner, 2026-11-26): targeted port of the unpublished November branches, 380 / 500
+  against a rewrite and a full merge; plan P2 (port plus the F01 / F02 fault executors), 430 / 500.
+  The three old local branches are left untouched.
+- Delivered: `deploy/local-retrieval/` (Gluetun rebuilt from source, pinned qBittorrent in its
+  namespace, no host port), controller `scripts/local_retrieval.py`, `retrieval_config.py`,
+  `create_retrieval_storage.py`, fault executors `retrieval_fault.py` / `retrieval_f02.py`, `just
+  retrieval-*` recipes, `retrieval-check` in `just check`; spec `nordvpn-retrieval`, ADR-0035, two
+  diagrams, QA cases and record, glossary and traceability rows.
+- Changed against the November code: storage ceiling 20 → 100 GiB with `--size-gib` (ADR-0044);
+  a mount sharing a tree with `MEDIA_ROOT` is refused; ARM64 image pins selected by architecture.
+  Dropped: `migrate`, saved-transfer state, the F04 trial observation.
+- Evidence: 306 component tests, coverage above 90 %; the November runtime runs (connected start,
+  F01, F02, F03) are historical and were not repeated on this head
+  (`docs/architecture/qa/2026-11-26-issue-328-local-retrieval.md`).
+- Owner-run, pending: connected start of this head, tunnel-only failure, staging STG-328-09–11,
+  ARM64 runtime. No agent uses the real VPN file or tunnel; no Pi action.
+
 ## 2026-11-26 — #434 epic #306 redefined as on-demand progressive retrieval (#436)
 
 - Conception only, branch `docs/434-on-demand-retrieval-conception`; closes #434 and #350. No
