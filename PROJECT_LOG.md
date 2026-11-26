@@ -4,6 +4,44 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-26 — #434 epic #306 redefined as on-demand progressive retrieval (#436)
+
+- Conception only, branch `docs/434-on-demand-retrieval-conception`; closes #434 and #350. No
+  implementation code; branches #310–#315 and #328 untouched.
+- Delivered: requirements `docs/requirements/08-on-demand-retrieval.md`, spec
+  `docs/architecture/specs/on-demand-retrieval.md`, seven diagrams in
+  `diagrams/on-demand-retrieval/`, ADR-0043 to ADR-0047, glossary and traceability rows.
+- **Decisions** (owner, 2026-11-23 to 2026-11-26): prefetch when a sheet opens and progressive
+  playback (ADR-0043); start buffer option C and cache ceiling option C,
+  `min(owner value, cache usage + free space − 15 % of the volume)` (ADR-0044); playback under a
+  full cache uses a sliding window, 420 / 500 against 360 and 320: the played title frees its own
+  segments behind a 30 s back buffer, never a favourite third, and pauses with a message when
+  nothing can be freed (ADR-0044 decision 3); deletion 48 h after the last playback, favourites
+  keep the first third, a never-played third is deleted when the last favourite mark goes
+  (ADR-0045); fastest conforming source (ADR-0046); bell, push and e-mail notifications
+  (ADR-0047).
+- Gate rules: automated tests use synthetic or local fixtures only; real-source retrieval on
+  staging is owner-run.
+- Review: three hosted review comments (ceiling counted the cache twice, ceiling bypass during
+  playback, no deletion time for a never-played favourite) fixed in `418921e` and `e92408f`,
+  answered inline.
+
+## 2026-11-26 — #444 image scan cleared (#448, `a1c5cfa`)
+
+- The gate's Trivy image scan blocked every merge on two Debian findings.
+  CVE-2026-124851 (libzstd1) was fixed in Debian but the cached `apt-get upgrade` layer never
+  saw it: new build argument `APT_UPGRADE_DATE` renews that layer once per day (gate,
+  `make staging-up`, homelab build command, Pi `build-image.sh`).
+- **Decision** (owner, 2026-11-26): dedicated PR first, 410 / 500; CVE-2026-107494 (OpenSSL, no
+  fixed package) waived in `.trivyignore.yaml`, scoped to `libssl3t64` and
+  `openssl-provider-legacy`, expiring 2026-12-22, re-check in #116.
+- Adversarial review in two rounds (round 1: 1 Must, 4 Should, fixed in `60e5983`). `just gate`
+  green and attested on `60e5983`: SonarQube passed, image scan 0 finding.
+- Process slip: merged before the one hosted review comment had its inline reply; answered
+  after the merge, fix tracked in #449. Follow-ups: #449, #450.
+- Gate gotcha confirmed: a diff in `DISCOVERY_PATHS` needs `SIXLABORS_LICENSE_FILE`, which the
+  `ci-runner` hook refuses; that gate runs from the main session in the background.
+
 ## 2026-11-23 — #396 redesign UX structure: personas, scope, flows, screen inventory
 
 - Phase 2 of epic #401, branch `docs/396-ux-personas-flows-inventory`. Personas

@@ -46,9 +46,12 @@ flowchart LR
 ```
 
 Everything upstream of the library, Tdarr apart, is acquisition. The vision
-([01-vision.md](01-vision.md) § Product) keeps it out of the product: no content source, no
-indexer, no download feature, and PopCornTV never calls these tools (owner decision
-2026-10-23, MCDA coexistence 450 / read-only integration 380 / full integration 170).
+([01-vision.md](01-vision.md) § Product) keeps bulk acquisition out of the product and
+PopCornTV never calls these tools (owner decision 2026-10-23, MCDA coexistence 450 /
+read-only integration 380 / full integration 170). Since 2026-11-23 the product retrieves
+single titles on demand through its own VPN-confined adapter, into its own bounded cache
+([08-on-demand-retrieval.md](08-on-demand-retrieval.md), epic #306); that cache never feeds
+the library folders below.
 Whatever lands in a library folder is picked up by the next scan. Scans are manual today:
 the only trigger is the owner-only `POST /libraries/:id/scan` (library-scan spec), there is
 no scheduler or watcher, and after #18 no non-cookie token lets a cron job call it. Every
@@ -68,7 +71,7 @@ decision below inherits that limit; see Consequences.
 | Tunarr | Kept | None | Reads Plex, Jellyfin, Emby or local files. Plex stays, nothing to do. |
 | Uptime Kuma | Kept | Probe on `/api/health` through Caddy | Zero code; `/health` stays public after #18 (auth spec § 4.3). Checklist of #60. |
 | Grafana | Kept | None | Server metrics. No application metrics need today (YAGNI). |
-| Prowlarr, autobrr, qBittorrent, SABnzbd | Kept | Never | Acquisition chain, excluded by the vision. |
+| Prowlarr, autobrr, qBittorrent, SABnzbd | Kept | Never for the homelab chain | Library acquisition stays outside the product; on-demand retrieval (#306) runs its own isolated instances (ADR-0034, ADR-0036, ADR-0043). |
 | Lidarr | Kept | Never | Music is out of scope. |
 
 ## Decisions (MCDA, 2026-11-05)

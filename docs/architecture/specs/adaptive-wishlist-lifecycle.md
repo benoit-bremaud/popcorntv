@@ -2,6 +2,12 @@
 
 Design draft for [#307](https://github.com/benoit-bremaud/popcorntv/issues/307), first brick of epic [#306](https://github.com/benoit-bremaud/popcorntv/issues/306).
 
+> **Partly replaced on 2026-11-24 (#434).** The background preparation of every wish is replaced
+> by on-demand progressive retrieval: [requirements](../../requirements/08-on-demand-retrieval.md)
+> (§ Replaced items maps UC32, UC33, REQ-11, 15, 17, 20, 21, 22, 24, 25 to their successors),
+> [spec](on-demand-retrieval.md), [ADR-0043](../decisions/0043-start-playback-from-a-sheet-prefetch.md).
+> The other requirements of this file stay valid. Read the rest as history.
+
 **Status:** owner goals confirmed in conversation; this design and its open decisions await owner review. No recovery runtime implementation, deployment or backend feasibility is claimed. Existing application tests and local CI have now passed; see the #307 QA report.
 
 ## 1. Evidence and scope

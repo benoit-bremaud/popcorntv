@@ -148,3 +148,35 @@ ADR-0035 and ADR-0038 are reserved by #315 (branch `feat/315-playable-retrieval-
 | [Personas](../requirements/06-personas.md), [MoSCoW](../requirements/07-redesign-moscow.md) | Who each screen serves; what is in scope | Inventory columns MoSCoW and Personas | — | Owner validation | validated 2026-11-23 |
 | [IA](specs/redesign-information-architecture.md) | Navigation tree from the card sort, checked by a tree test | S06, S07, S12, S16 grouping | Navigation | Tree test (§ 5) | draft |
 | UC38 | Connect a TV without typing | S17; flow F12 | Pairing code | Feature in #200, #417 | draft |
+
+## On-demand retrieval (epic #306 redefined, #434) — 2026-11-24
+
+Replaces UC32, UC33, REQ-11, 15, 17, 20, 21, 22, 24 and 25 above
+([§ Replaced items](../requirements/08-on-demand-retrieval.md#replaced-items)); the other #307
+rows stay. Test IDs are design cases for the implementation issues, not executed results. All
+automated cases use synthetic or local fixtures (NFR-17).
+
+| Requirement | Use case, diagram | Decision | Test design | Slice | Status |
+|---|---|---|---|---|---|
+| REQ-46 prefetch on sheet, 6 h purge | UC40; SEQ-prefetch-and-play; stm Retrieved file; ACT-deletion | ADR-0043 | T-46: open twice → one retrieval; unplayed 6 h → purged; restart runs the overdue purge | 1 | accepted design |
+| REQ-47 start buffer | UC40; SEQ-prefetch-and-play | ADR-0044 | T-47: traces fast, slow, equal, unknown, VBR; floor 30 s; cap and warning | 1 | accepted design |
+| REQ-48 filling Play button | UC40 | ADR-0043 | T-48: fill follows verified bytes; progress exposed to assistive technologies | 1 | accepted design |
+| REQ-49 early click priority | UC40; SEQ-prefetch-and-play | ADR-0043 | T-49: early Play outranks every prefetch; sheet stays until first frame | 1 | accepted design |
+| REQ-50 progressive playback, stop on close, seek | UC40; SEQ-prefetch-and-play; stm Retrieved file | ADR-0034, ADR-0043 | T-50: only verified pieces served; close stops retrieval and keeps bytes; seek reorders | 1 | accepted design |
+| REQ-51 48 h deletion | UC40; ACT-deletion; stm Retrieved file | ADR-0045 | T-51: finished and abandoned → deleted at 48 h; lease blocks; `MEDIA_ROOT` untouched | 1 | accepted design |
+| REQ-53 ceiling and eviction | ACT-disk-pressure | ADR-0044 | T-53: ceiling = min(value, used + free − 15 %); eviction order; lease and favourite never evicted; refusal message; sliding window releases played pieces, pause when none | 1 | accepted design |
+| REQ-54 version pick and degraded choice | UC43 | ADR-0046 | T-54: verdict reasons; fastest conforming; degraded only on choice; external French subtitles | 1 | accepted design |
+| REQ-55 source acceptance | UC40; DFD | ADR-0046, ADR-0028 | T-55: any non-video, non-subtitle file rejects the source; every file probed confined | 1 | accepted design |
+| REQ-56 failure pause and resume | UC40; SEQ-prefetch-and-play | ADR-0043 | T-56: source loss → buffer plays, pause, auto-resume, Retry; no egress without VPN | 1 | accepted design |
+| REQ-57 priorities and quotas | UC40 | ADR-0043 | T-57: playback before prefetch; account limits; queued not dropped | 1 | accepted design |
+| REQ-58 adults only, Tailscale same rules | UC40 | — | T-58: child account refused until #316 | 1 | accepted design |
+| REQ-64 series | UC40 | ADR-0043 | T-64: next episode prefetch, per-episode deletion, countdown switch | 2 | accepted design |
+| REQ-43–45 « À venir » and source notices | UC41 | ADR-0047 | T-43: only no-source titles; T-44: 6 h / daily / weekly cadence; T-45: one notice per profile, degraded said | 3 | accepted design |
+| REQ-52 favourites first third | UC42; ACT-deletion; stm Retrieved file | ADR-0045 | T-52: add → third retrieved; trim 48 h after playback; kept while one profile has it | 3 | accepted design |
+| REQ-59 channels | UC45; DFD | ADR-0047 | T-59: per-profile channels, digest, quiet hours delay push; no history in payload | 3 | accepted design |
+| REQ-60, REQ-61 admin and statistics | UC44 | — | T-60: cancel activity; T-61: anonymous statistics, 90-day detail, monthly aggregates | 4 | accepted design |
+| REQ-62, REQ-63, REQ-65 badges, search, phone | UC40 | — | Wireframes #398, #426, #417, #418 | redesign | accepted design |
+| NFR-16 start targets | UC40 | ADR-0044 | Owner-run staging measurement | 1 | to measure |
+| NFR-17 synthetic fixtures only | all | — | Gate review | all | accepted design |
+| NFR-18 egress and privacy | DFD | ADR-0047 | T-NFR-18: network test, no profile data to sources or channels | 1, 3 | accepted design |
+| NFR-19 retention | UC44 | — | T-NFR-19: retention sweep | 4 | accepted design |

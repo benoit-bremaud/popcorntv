@@ -3,6 +3,9 @@
 Use a bounded qBittorrent adapter for initial construction, preserving multiple indexers and future retrieval engines.
 
 - Status: accepted by the owner on 2026-11-13; option A, proposed weights and bounded contract validated.
+  Partly superseded by [ADR-0043](0043-start-playback-from-a-sheet-prefetch.md) (2026-11-24): the
+  "complete file first" milestone and the background readiness model are replaced; the engine,
+  the verified-read contract and the source diversity below stay.
 - Date: 2026-11-13.
 - Scope: #308 research conclusion and constraints for #311–#313; no production activation.
 - Evidence: [combined player](../qa/2026-11-12-issue-308-combined.md),
