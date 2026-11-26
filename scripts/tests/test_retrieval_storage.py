@@ -56,7 +56,8 @@ def test_new_image_is_exclusive_private_and_allocated_before_format(
 
     def allocate(descriptor: int, offset: int, length: int) -> None:
         assert os.fstat(descriptor).st_mode & 0o777 == 0o600
-        assert offset == 0 and length == 65536
+        assert offset == 0
+        assert length == 65536
         original_allocate(descriptor, offset, length)
         events.append("allocated")
 

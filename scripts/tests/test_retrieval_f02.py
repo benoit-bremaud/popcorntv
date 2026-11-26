@@ -95,8 +95,9 @@ def test_unproved_target_refuses_with_categorical_error(
             )
         return subprocess.CompletedProcess(args, 0, OBSERVATIONS[command], "")
 
+    commands = Commands(60, lambda: 0, execute)
     with pytest.raises(Refusal) as error:
-        observe_target(root, GATEWAY, Commands(60, lambda: 0, execute), 30)
+        observe_target(root, GATEWAY, commands, 30)
     assert str(error.value) == reason
 
 
@@ -104,8 +105,9 @@ def test_missing_private_config_starts_no_process(tmp_path: Path) -> None:
     def execute(args: list[str], timeout: float) -> subprocess.CompletedProcess[str]:
         pytest.fail("invalid config reached Docker")
 
+    commands = Commands(60, lambda: 0, execute)
     with pytest.raises(Refusal, match="^f02_peer_config_unavailable$"):
-        observe_target(tmp_path, GATEWAY, Commands(60, lambda: 0, execute), 30)
+        observe_target(tmp_path, GATEWAY, commands, 30)
 
 
 @pytest.fixture
@@ -176,15 +178,16 @@ class F02Docker(Docker):
                     args, 127, "", "private provider detail"
                 )
             return subprocess.CompletedProcess(args, 0, value, "")
-        if tail[:2] == ("test", "-f"):
-            return subprocess.CompletedProcess(args, 0 if self.armed else 1, "", "")
         if "f02-rule" in args:
             name = args[args.index("f02-rule") + 1]
+            if name == "ready":
+                return subprocess.CompletedProcess(args, 0 if self.armed else 1, "", "")
             self.operations.append(name)
             if name == "arm":
                 self.armed = True
             elif name == "insert":
-                assert self.armed and not self.closed
+                assert self.armed
+                assert not self.closed
                 self.rule = True
                 if self.scenario in {"lost-insert-response", "lost-and-close-failed"}:
                     raise Refusal("fault_process_timeout")
@@ -231,8 +234,10 @@ def test_campaign_requires_three_drops_removal_and_same_generation(
         clock=docker.clock,
         sleep=docker.sleep,
     )
-    assert report["passed"] is True and report["recovered"] is True
-    assert report["rule_removed"] is True and docker.status_count == 2
+    assert report["passed"] is True
+    assert report["recovered"] is True
+    assert report["rule_removed"] is True
+    assert docker.status_count == 2
     assert docker.operations == [
         "arm",
         "insert",
@@ -277,13 +282,15 @@ def test_campaign_stops_owned_pair_on_failed_evidence(
         clock=docker.clock,
         sleep=docker.sleep,
     )
-    assert report["passed"] is False and report["recovered"] is False
+    assert report["passed"] is False
+    assert report["recovered"] is False
     assert report["reason"] == reason
     assert len(report["denial_samples"]) == samples
     close_failed = scenario in {"close-failed", "lost-and-close-failed"}
     assert report["rule_removed"] is not close_failed
     assert ("cleanup_reason" in report) is close_failed
-    assert report["rollback_stopped"] is True and docker.operations[-1] == "close"
+    assert report["rollback_stopped"] is True
+    assert docker.operations[-1] == "close"
     assert all(not row["State"]["Running"] for row in docker.rows)
 
 
@@ -297,9 +304,11 @@ def test_campaign_refuses_missing_observer_before_rule_arm(
         clock=docker.clock,
         sleep=docker.sleep,
     )
-    assert report["passed"] is False and report["attempted"] is False
+    assert report["passed"] is False
+    assert report["attempted"] is False
     assert report["reason"] == "f02_peer_observation_unavailable"
-    assert docker.operations == [] and "rollback_stopped" not in report
+    assert docker.operations == []
+    assert "rollback_stopped" not in report
 
 
 def test_other_card_scope_refuses_before_docker(
@@ -312,7 +321,8 @@ def test_other_card_scope_refuses_before_docker(
         campaign(
             mount, scope, execute=docker.execute, clock=docker.clock, sleep=docker.sleep
         )
-    assert docker.calls == [] and docker.operations == []
+    assert docker.calls == []
+    assert docker.operations == []
 
 
 def test_cli_plan_does_not_touch_docker_or_scope(
@@ -351,12 +361,14 @@ def test_cli_requires_clean_source_and_keeps_exact_source_in_report(
     )
     result = retrieval_f02.main()
     if dirty:
-        assert result == 1 and calls == []
+        assert result == 1
+        assert calls == []
         assert (
             capsys.readouterr().err.strip() == "retrieval.f02_refused_before_campaign"
         )
     else:
-        assert result == 0 and calls == [
+        assert result == 0
+        assert calls == [
             retrieval_f02.runtime.ROOT / "data/local-retrieval/fault-scope.json"
         ]
         assert json.loads(capsys.readouterr().out)["source_commit"] == "f" * 40
@@ -372,9 +384,11 @@ def test_preflight_generation_change_refuses_before_arming(
         clock=docker.clock,
         sleep=docker.sleep,
     )
-    assert report["passed"] is False and report["attempted"] is False
+    assert report["passed"] is False
+    assert report["attempted"] is False
     assert report["reason"] == "f02_preflight_generation_changed"
-    assert docker.status_count == 1 and docker.operations == []
+    assert docker.status_count == 1
+    assert docker.operations == []
     assert not any(args[:2] == ["docker", "stop"] for args in docker.calls)
 
 
@@ -396,7 +410,8 @@ def test_marked_peer_uses_marked_route_without_fallback(
     commands = Commands(60, lambda: 0, execute)
     if device == "eth0":
         target = observe_target(root, GATEWAY, commands, 30)
-        assert target.mark == "0x10" and target.interface == "eth0"
+        assert target.mark == "0x10"
+        assert target.interface == "eth0"
     else:
         with pytest.raises(Refusal, match="^f02_endpoint_route_unconfirmed$"):
             observe_target(root, GATEWAY, commands, 30)

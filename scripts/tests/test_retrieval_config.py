@@ -72,8 +72,9 @@ def test_adaptation_preserves_keys_but_removes_dns_and_ipv6(wireguard: str) -> N
 )
 def test_unsafe_config_is_categorical(wireguard: str, before: str, after: str) -> None:
     secret_canary = "untrusted"
+    unsafe = wireguard.replace(before, after)
     with pytest.raises(Refusal) as captured:
-        wireguard_text(wireguard.replace(before, after))
+        wireguard_text(unsafe)
     assert secret_canary not in str(captured.value)
     assert "PrivateKey" not in str(captured.value)
 
@@ -229,13 +230,9 @@ def test_storage_refuses_unbounded_or_shared_mount(
     value: str,
 ) -> None:
     mount_record[key] = value
+    mounted = json.dumps({"filesystems": [mount_record]})
     with pytest.raises(Refusal):
-        storage_from_mount(
-            Path("/dedicated"),
-            json.dumps({"filesystems": [mount_record]}),
-            MAX_STORAGE,
-            FREE_RESERVE,
-        )
+        storage_from_mount(Path("/dedicated"), mounted, MAX_STORAGE, FREE_RESERVE)
 
 
 @pytest.mark.parametrize(
@@ -251,13 +248,9 @@ def test_storage_refuses_capacity_or_reserve_boundary(
     capacity: int,
     free: int,
 ) -> None:
+    mounted = json.dumps({"filesystems": [mount_record]})
     with pytest.raises(Refusal):
-        storage_from_mount(
-            Path("/dedicated"),
-            json.dumps({"filesystems": [mount_record]}),
-            capacity,
-            free,
-        )
+        storage_from_mount(Path("/dedicated"), mounted, capacity, free)
 
 
 @pytest.mark.parametrize(
@@ -285,13 +278,9 @@ def test_storage_requires_persistent_nonzero_uuid(
     mount_record: dict[str, object], identity: object
 ) -> None:
     mount_record["uuid"] = identity
+    mounted = json.dumps({"filesystems": [mount_record]})
     with pytest.raises(Refusal):
-        storage_from_mount(
-            Path("/dedicated"),
-            json.dumps({"filesystems": [mount_record]}),
-            MAX_STORAGE,
-            FREE_RESERVE,
-        )
+        storage_from_mount(Path("/dedicated"), mounted, MAX_STORAGE, FREE_RESERVE)
 
 
 @pytest.mark.parametrize("media_root", [None, "", "media", "./media", "None", " "])

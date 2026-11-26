@@ -23,6 +23,7 @@ from retrieval_fault import (
     ROLLBACK_RESERVE,
     SCOPE,
     WINDOW,
+    Card,
     Commands,
     Process,
     controller,
@@ -59,7 +60,7 @@ def observe_target(
     """
     config = WireGuardParser(interpolation=None)
     try:
-        config.read_string(wireguard_text(private_file(root / "wg0.conf")))
+        config.read_string(wireguard_text(private_file(root / runtime.WIREGUARD_FILE)))
         peer = config["Peer"]
         address_text, port_text = peer["Endpoint"].rsplit(":", 1)
         address = ipaddress.IPv4Address(address_text)
@@ -164,7 +165,7 @@ class RuleTrial:
     def packets(self, commands: Commands, until: float) -> int:
         """Read the counter of the exact, still-open trial rule."""
         output = commands.need(self.arguments("observe"), 5, until).strip()
-        if not re.fullmatch(r"[0-9]{1,20}", output):
+        if not re.fullmatch(r"\d{1,20}", output, re.ASCII):
             raise Refusal("f02_rule_counter_unconfirmed")
         return int(output)
 
@@ -205,6 +206,106 @@ def approved_scope(path: Path, identity: str, now: datetime) -> None:
         raise Refusal("f02_scope_invalid") from None
 
 
+def preflight_target(card: Card, pair: RunningPair) -> PeerTarget:
+    """Re-prove the installation, the pair and the peer before any rule is armed."""
+    if runtime.installation_manifest(card.root)["identity"] != card.identity:
+        raise Refusal("f02_installation_changed")
+    if running_pair(card.identity, card.commands, card.normal_end) != pair:
+        raise Refusal("f02_preflight_generation_changed")
+    target = observe_target(card.root, pair.gateway, card.commands, card.normal_end)
+    probes(pair.client, card.commands, card.normal_end, connected=True)
+    if card.normal_end - card.clock() < RULE_LIFETIME + 65:
+        raise Refusal("f02_recovery_budget_insufficient")
+    return target
+
+
+def observe_drops(
+    card: Card,
+    pair: RunningPair,
+    target: PeerTarget,
+    trial: RuleTrial,
+    samples: list[dict[str, object]],
+    rule_start: float,
+) -> None:
+    """Insert the rule and require three denial batches with a growing counter."""
+    observation_end = rule_start + SAMPLE_WINDOW
+    card.commands.need(trial.arguments("insert"), 5, observation_end)
+    card.report["phase"] = "observation"
+    previous = trial.packets(card.commands, observation_end)
+    for _ in range(3):
+        if running_pair(card.identity, card.commands, observation_end) != pair:
+            raise Refusal("f02_generation_changed")
+        if (
+            observe_target(card.root, pair.gateway, card.commands, observation_end)
+            != target
+        ):
+            raise Refusal("f02_target_changed")
+        probes(
+            pair.client,
+            card.commands,
+            observation_end,
+            connected=False,
+            require_dns_timeout=True,
+        )
+        current = trial.packets(card.commands, observation_end)
+        if current <= previous:
+            raise Refusal("f02_no_observed_packet_drop")
+        samples.append(
+            {
+                "seconds": round(card.clock() - rule_start, 3),
+                "packet_counter_delta": current - previous,
+            }
+        )
+        previous = current
+
+
+def close_rule(card: Card, trial: RuleTrial, observation_failed: bool) -> None:
+    """Remove the trial rule; an unconfirmed removal never hides the first failure."""
+    try:
+        card.commands.need(trial.arguments("close"), 16, card.commands.end)
+    except (Refusal, OSError, KeyboardInterrupt):
+        card.report["cleanup_reason"] = "f02_rule_removal_unconfirmed"
+        if not observation_failed:
+            raise
+    else:
+        card.report["rule_removed"] = True
+
+
+def interrupt_endpoint(
+    card: Card,
+    pair: RunningPair,
+    target: PeerTarget,
+    script: str,
+    samples: list[dict[str, object]],
+) -> None:
+    """Arm the self-expiring trial, drop the endpoint traffic, then close the rule."""
+    rule_start = card.clock()
+    cutoff = datetime.now(UTC) + timedelta(seconds=RULE_LIFETIME)
+    trial = RuleTrial(
+        pair.gateway,
+        target,
+        "pctv-f02-" + uuid.uuid4().hex,
+        cutoff.strftime("%Y-%m-%dT%H:%M:%S"),
+        script,
+    )
+    observation_end = rule_start + SAMPLE_WINDOW
+    card.report["phase"] = "arming"
+    card.commands.need(trial.arguments("arm"), 4, observation_end)
+    ready_end = min(observation_end, card.clock() + 3)
+    while card.commands.call(trial.arguments("ready"), 2, ready_end).returncode != 0:
+        card.sleep(0.1)
+    observation_failed = False
+    try:
+        # Mark uncertainty before sending the mutation: a timed-out request may still act.
+        card.report.update(phase="insertion", attempted=True)
+        observe_drops(card, pair, target, trial, samples, rule_start)
+    except BaseException:
+        observation_failed = True
+        raise
+    finally:
+        close_rule(card, trial, observation_failed)
+
+
 def campaign(
     mount: Path,
     scope: Path,
@@ -222,100 +323,25 @@ def campaign(
     started = clock()
     commands = Commands(started + WINDOW, clock, execute)
     normal_end = commands.end - ROLLBACK_RESERVE
+    samples: list[dict[str, object]] = []
     report: dict[str, object] = {
         "card": CARD,
         "started_at": started_at.isoformat(),
         "passed": False,
         "phase": "preflight",
         "attempted": False,
-        "denial_samples": [],
+        "denial_samples": samples,
         "rule_removed": False,
         "recovered": False,
     }
-    samples: list[dict[str, object]] = []
-    report["denial_samples"] = samples
-    attempted = False
+    card = Card(mount, identity, commands, normal_end, clock, sleep, report)
     try:
         with runtime.locked(root):
             pair = running_pair(identity, commands, normal_end)
         controller("status", mount, commands, normal_end)
         with runtime.locked(root):
-            if runtime.installation_manifest(root)["identity"] != identity:
-                raise Refusal("f02_installation_changed")
-            if running_pair(identity, commands, normal_end) != pair:
-                raise Refusal("f02_preflight_generation_changed")
-            target = observe_target(root, pair.gateway, commands, normal_end)
-            probes(pair.client, commands, normal_end, connected=True)
-            if normal_end - clock() < RULE_LIFETIME + 65:
-                raise Refusal("f02_recovery_budget_insufficient")
-            rule_start = clock()
-            cutoff = datetime.now(UTC) + timedelta(seconds=RULE_LIFETIME)
-            trial = RuleTrial(
-                pair.gateway,
-                target,
-                "pctv-f02-" + uuid.uuid4().hex,
-                cutoff.strftime("%Y-%m-%dT%H:%M:%S"),
-                script,
-            )
-            observation_end = rule_start + SAMPLE_WINDOW
-            report["phase"] = "arming"
-            commands.need(trial.arguments("arm"), 4, observation_end)
-            ready = [
-                "docker",
-                "exec",
-                pair.gateway,
-                "test",
-                "-f",
-                f"/tmp/{trial.tag}/ready",
-            ]
-            ready_end = min(observation_end, clock() + 3)
-            while commands.call(ready, 2, ready_end).returncode != 0:
-                sleep(0.1)
-            observation_failed = False
-            try:
-                attempted = True
-                report.update(phase="insertion", attempted=True)
-                commands.need(trial.arguments("insert"), 5, observation_end)
-                report["phase"] = "observation"
-                previous = trial.packets(commands, observation_end)
-                for _ in range(3):
-                    if running_pair(identity, commands, observation_end) != pair:
-                        raise Refusal("f02_generation_changed")
-                    if (
-                        observe_target(root, pair.gateway, commands, observation_end)
-                        != target
-                    ):
-                        raise Refusal("f02_target_changed")
-                    probes(
-                        pair.client,
-                        commands,
-                        observation_end,
-                        connected=False,
-                        require_dns_timeout=True,
-                    )
-                    current = trial.packets(commands, observation_end)
-                    if current <= previous:
-                        raise Refusal("f02_no_observed_packet_drop")
-                    samples.append(
-                        {
-                            "seconds": round(clock() - rule_start, 3),
-                            "packet_counter_delta": current - previous,
-                        }
-                    )
-                    previous = current
-            except BaseException:
-                observation_failed = True
-                raise
-            finally:
-                if attempted:
-                    try:
-                        commands.need(trial.arguments("close"), 16, commands.end)
-                    except (Refusal, OSError, KeyboardInterrupt):
-                        report["cleanup_reason"] = "f02_rule_removal_unconfirmed"
-                        if not observation_failed:
-                            raise
-                    else:
-                        report["rule_removed"] = True
+            target = preflight_target(card, pair)
+            interrupt_endpoint(card, pair, target, script, samples)
             report["phase"] = "recovery"
             if running_pair(identity, commands, normal_end) != pair:
                 raise Refusal("f02_generation_changed")
@@ -337,7 +363,7 @@ def campaign(
         report["reason"] = (
             str(exc) if isinstance(exc, Refusal) else "f02_observation_unavailable"
         )
-        if attempted:
+        if report["attempted"]:
             report["rollback_stopped"] = emergency_stop(root, identity, commands)
     report["elapsed_seconds"] = round(clock() - started, 3)
     return report

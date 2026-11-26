@@ -173,7 +173,7 @@ def probes(
         "--output",
         "/dev/null",
     ]
-    ipv4 = commands.call([*curl, "https://1.1.1.1/cdn-cgi/trace"], 4, until)
+    ipv4 = commands.call([*curl, runtime.PROBES["trace_ipv4"]], 4, until)
     dns = commands.call(
         [
             "docker",
@@ -187,14 +187,12 @@ def probes(
             "/bin/busybox",
             "nslookup",
             "example.com",
-            "1.1.1.1",
+            runtime.PROBES["resolver_ipv4"],
         ],
         4,
         until,
     )
-    ipv6 = commands.call(
-        [*curl, "--ipv6", "https://[2606:4700:4700::1111]/cdn-cgi/trace"], 4, until
-    )
+    ipv6 = commands.call([*curl, "--ipv6", runtime.PROBES["trace_ipv6"]], 4, until)
     disabled = commands.need(
         ["docker", "exec", client, "cat", "/proc/sys/net/ipv6/conf/all/disable_ipv6"],
         5,
@@ -259,6 +257,99 @@ def emergency_stop(root: Path, identity: str, commands: Commands) -> bool:
     return confirmed
 
 
+@dataclass
+class Card:
+    """Carry one campaign's identity, shared budget and report between its phases."""
+
+    mount: Path
+    identity: str
+    commands: Commands
+    normal_end: float
+    clock: Callable[[], float]
+    sleep: Callable[[float], None]
+    report: dict[str, object]
+
+    @property
+    def root(self) -> Path:
+        """Return the owned installation directory of the campaign."""
+        return self.mount / "retrieval"
+
+
+def running_ids(card: Card, reason: str) -> tuple[str, str]:
+    """Return the client and gateway IDs of the proven pair, both running."""
+    rows = json.loads(json.dumps(owned(card.identity, card.commands, card.normal_end)))
+    if set(rows) != {"client", "gluetun"} or not all(
+        item["State"]["Running"] is True for item in rows.values()
+    ):
+        raise Refusal(reason)
+    return rows["client"]["Id"], rows["gluetun"]["Id"]
+
+
+def observe_denial(
+    card: Card, client: str, gateway: str, original_namespace: str, fault_started: float
+) -> None:
+    """Sample three times that the client stays alive, in place and denied."""
+    fault_end = min(card.normal_end, fault_started + 30)
+    for sample in range(3):
+        delay = fault_started + sample * 5 - card.clock()
+        if delay > 0:
+            if card.clock() + delay >= fault_end:
+                raise Refusal("fault_budget_exhausted")
+            card.sleep(delay)
+        current = json.loads(json.dumps(owned(card.identity, card.commands, fault_end)))
+        if (
+            current["gluetun"]["Id"] != gateway
+            or current["gluetun"]["State"]["Running"] is not False
+            or current["client"]["Id"] != client
+            or current["client"]["State"]["Running"] is not True
+            or namespace(client, card.commands, fault_end) != original_namespace
+        ):
+            raise Refusal("fault_state_not_observed")
+        card.report["fault_observed"] = True
+        probes(client, card.commands, fault_end, connected=False)
+        card.report["denial_samples"] = sample + 1
+    card.report["fault_observation_seconds"] = round(card.clock() - fault_started, 3)
+
+
+def inject_fault(card: Card) -> tuple[str, str]:
+    """Kill the proven gateway once, under the lock, and observe the denial."""
+    with runtime.locked(card.root):
+        if runtime.installation_manifest(card.root)["identity"] != card.identity:
+            raise Refusal("fault_installation_changed")
+        client, gateway = running_ids(card, "fault_pair_not_running")
+        original_namespace = namespace(client, card.commands, card.normal_end)
+        probes(client, card.commands, card.normal_end, connected=True)
+        if card.normal_end - card.clock() < 170:
+            raise Refusal("fault_recovery_budget_insufficient")
+        # Mark uncertainty before sending the mutation: a timed-out request may still act.
+        card.report["fault_attempted"] = True
+        card.commands.need(
+            ["docker", "kill", "--signal", "KILL", gateway], 5, card.normal_end
+        )
+        observe_denial(card, client, gateway, original_namespace, card.clock())
+    return client, gateway
+
+
+def confirm_recovery(card: Card, client: str, gateway: str) -> None:
+    """Require a recreated, running and connected pair after the owned restart."""
+    with runtime.locked(card.root):
+        recovered_client, recovered_gateway = running_ids(
+            card, "fault_recovery_unconfirmed"
+        )
+        if recovered_client == client or recovered_gateway == gateway:
+            raise Refusal("fault_recovery_not_recreated")
+        probes(recovered_client, card.commands, card.normal_end, connected=True)
+
+
+def failure_reason(error: BaseException) -> str:
+    """Reduce a campaign failure to its fixed category."""
+    if isinstance(error, Refusal):
+        return str(error)
+    if isinstance(error, KeyboardInterrupt):
+        return "fault_interrupted"
+    return "fault_observation_unavailable"
+
+
 def campaign(
     mount: Path,
     scope: Path,
@@ -282,65 +373,14 @@ def campaign(
         "denial_samples": 0,
         "recovered": False,
     }
-    attempted = False
-    fault_started: float | None = None
+    card = Card(mount, identity, commands, normal_end, clock, sleep, report)
     started = commands.end - WINDOW
     report["started_at"] = datetime.now(UTC).isoformat()
     try:
         controller("status", mount, commands, normal_end)
-        with runtime.locked(root):
-            if runtime.installation_manifest(root)["identity"] != identity:
-                raise Refusal("fault_installation_changed")
-            rows = json.loads(json.dumps(owned(identity, commands, normal_end)))
-            if set(rows) != {"client", "gluetun"} or not all(
-                item["State"]["Running"] is True for item in rows.values()
-            ):
-                raise Refusal("fault_pair_not_running")
-            client, gateway = rows["client"]["Id"], rows["gluetun"]["Id"]
-            original_namespace = namespace(client, commands, normal_end)
-            probes(client, commands, normal_end, connected=True)
-            if normal_end - clock() < 170:
-                raise Refusal("fault_recovery_budget_insufficient")
-            # Mark uncertainty before sending the mutation: a timed-out request may still act.
-            attempted = True
-            report["fault_attempted"] = True
-            commands.need(
-                ["docker", "kill", "--signal", "KILL", gateway], 5, normal_end
-            )
-            fault_started = clock()
-            fault_end = min(normal_end, fault_started + 30)
-            for sample in range(3):
-                delay = fault_started + sample * 5 - clock()
-                if delay > 0:
-                    if clock() + delay >= fault_end:
-                        raise Refusal("fault_budget_exhausted")
-                    sleep(delay)
-                current = json.loads(json.dumps(owned(identity, commands, fault_end)))
-                if (
-                    current["gluetun"]["Id"] != gateway
-                    or current["gluetun"]["State"]["Running"] is not False
-                    or current["client"]["Id"] != client
-                    or current["client"]["State"]["Running"] is not True
-                    or namespace(client, commands, fault_end) != original_namespace
-                ):
-                    raise Refusal("fault_state_not_observed")
-                report["fault_observed"] = True
-                probes(client, commands, fault_end, connected=False)
-                report["denial_samples"] = sample + 1
-            report["fault_observation_seconds"] = round(clock() - fault_started, 3)
+        client, gateway = inject_fault(card)
         controller("start", mount, commands, normal_end)
-        with runtime.locked(root):
-            recovered = json.loads(json.dumps(owned(identity, commands, normal_end)))
-            if set(recovered) != {"client", "gluetun"} or not all(
-                item["State"]["Running"] is True for item in recovered.values()
-            ):
-                raise Refusal("fault_recovery_unconfirmed")
-            if (
-                recovered["client"]["Id"] == client
-                or recovered["gluetun"]["Id"] == gateway
-            ):
-                raise Refusal("fault_recovery_not_recreated")
-            probes(recovered["client"]["Id"], commands, normal_end, connected=True)
+        confirm_recovery(card, client, gateway)
         report.update(passed=True, recovered=True)
     except (
         Refusal,
@@ -351,14 +391,8 @@ def campaign(
         AttributeError,
         KeyboardInterrupt,
     ) as error:
-        report["reason"] = (
-            str(error)
-            if isinstance(error, Refusal)
-            else "fault_interrupted"
-            if isinstance(error, KeyboardInterrupt)
-            else "fault_observation_unavailable"
-        )
-        if attempted:
+        report["reason"] = failure_reason(error)
+        if report["fault_attempted"]:
             report["rollback_stopped"] = emergency_stop(root, identity, commands)
     report["elapsed_seconds"] = round(clock() - started, 3)
     return report
@@ -367,6 +401,37 @@ def campaign(
 def interrupted(signum: int, frame: object) -> None:
     """Make termination enter the existing rollback path rather than abandon a fault."""
     raise Refusal("fault_interrupted")
+
+
+def guarded_campaign(storage: Path | None) -> dict[str, object] | None:
+    """Run the card from a clean source tree; None means refused before the campaign."""
+    try:
+        if storage is None:
+            raise Refusal("fault_storage_required")
+        status = subprocess.check_output(
+            ["git", "status", "--porcelain"], cwd=runtime.ROOT, text=True, timeout=5
+        )
+        if status.strip():
+            raise Refusal("fault_clean_source_required")
+        source = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=runtime.ROOT, text=True, timeout=5
+        ).strip()
+        previous = signal.signal(signal.SIGTERM, interrupted)
+        try:
+            report = campaign(storage, runtime.ROOT / SCOPE)
+        finally:
+            signal.signal(signal.SIGTERM, previous)
+        report["source_commit"] = source
+        return report
+    except (
+        Refusal,
+        OSError,
+        ValueError,
+        KeyError,
+        TypeError,
+        subprocess.SubprocessError,
+    ):
+        return None
 
 
 def main() -> int:
@@ -390,35 +455,13 @@ def main() -> int:
             )
         )
         return 0
-    try:
-        if args.storage is None:
-            raise Refusal("fault_storage_required")
-        status = subprocess.check_output(
-            ["git", "status", "--porcelain"], cwd=runtime.ROOT, text=True, timeout=5
-        )
-        if status.strip():
-            raise Refusal("fault_clean_source_required")
-        source = subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], cwd=runtime.ROOT, text=True, timeout=5
-        ).strip()
-        previous = signal.signal(signal.SIGTERM, interrupted)
-        try:
-            report = campaign(args.storage, runtime.ROOT / SCOPE)
-        finally:
-            signal.signal(signal.SIGTERM, previous)
-        report["source_commit"] = source
-        print(json.dumps(report))
-        return 0 if report["passed"] else 1
-    except (
-        Refusal,
-        OSError,
-        ValueError,
-        KeyError,
-        TypeError,
-        subprocess.SubprocessError,
-    ):
+    report = guarded_campaign(args.storage)
+    if report is None:
+        # The traceback is deliberately not logged: diagnostics stay categorical.
         LOGGER.error("retrieval.fault_refused_before_campaign")
         return 1
+    print(json.dumps(report))
+    return 0 if report["passed"] else 1
 
 
 if __name__ == "__main__":

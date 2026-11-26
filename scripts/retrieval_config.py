@@ -21,6 +21,7 @@ MAX_STORAGE = 100 * GIB
 FREE_RESERVE = 2 * GIB
 # Explicit ``MEDIA_ROOT`` value of a host that holds no library.
 NO_LIBRARY = "none"
+FULL_IPV4 = "0.0.0.0/0"
 
 
 class Refusal(RuntimeError):
@@ -61,6 +62,15 @@ def private_file(path: Path, limit: int = 16384) -> str:
     return content.decode("utf-8")
 
 
+def full_tunnel_routes(allowed: str) -> None:
+    """Require the full IPv4 default route and nothing beyond the two defaults."""
+    routes = {ipaddress.ip_network(value.strip()) for value in allowed.split(",")}
+    if ipaddress.ip_network(FULL_IPV4) not in routes:
+        raise Refusal("wireguard_full_ipv4_required")
+    if routes - {ipaddress.ip_network(FULL_IPV4), ipaddress.ip_network("::/0")}:
+        raise Refusal("wireguard_extra_routes")
+
+
 def wireguard_text(source: str, endpoint_address: str | None = None) -> str:
     """Return allowlisted numeric-endpoint WireGuard text, omitting source DNS.
 
@@ -85,17 +95,7 @@ def wireguard_text(source: str, endpoint_address: str | None = None) -> str:
                 raise Refusal("wireguard_key")
         for interface_address in config["Interface"]["Address"].split(","):
             ipaddress.ip_interface(interface_address.strip())
-        routes = {
-            ipaddress.ip_network(value.strip())
-            for value in config["Peer"]["AllowedIPs"].split(",")
-        }
-        if ipaddress.ip_network("0.0.0.0/0") not in routes:
-            raise Refusal("wireguard_full_ipv4_required")
-        if routes - {
-            ipaddress.ip_network("0.0.0.0/0"),
-            ipaddress.ip_network("::/0"),
-        }:
-            raise Refusal("wireguard_extra_routes")
+        full_tunnel_routes(config["Peer"]["AllowedIPs"])
         endpoint, port = config["Peer"]["Endpoint"].rsplit(":", 1)
         address = ipaddress.IPv4Address(endpoint_address or endpoint)
         if not address.is_global or not 1 <= int(port) <= 65535:
@@ -106,11 +106,11 @@ def wireguard_text(source: str, endpoint_address: str | None = None) -> str:
         config.remove_option("Interface", "DNS")
         config["Peer"]["Endpoint"] = f"{address}:{int(port)}"
         # IPv6 is deliberately unsupported in the first installation.
-        config["Peer"]["AllowedIPs"] = "0.0.0.0/0"
+        config["Peer"]["AllowedIPs"] = FULL_IPV4
         output = io.StringIO()
         config.write(output)
         return output.getvalue()
-    except (configparser.Error, ValueError, KeyError, UnicodeError):
+    except (configparser.Error, ValueError, KeyError):
         raise Refusal("wireguard_invalid") from None
 
 

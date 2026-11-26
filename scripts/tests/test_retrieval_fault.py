@@ -327,7 +327,8 @@ def test_unconfirmed_rollback_stays_failed_and_still_attempts_gateway(
     report = fault.campaign(
         *installation, execute=docker.execute, clock=docker.clock, sleep=docker.sleep
     )
-    assert report["passed"] is False and report["rollback_stopped"] is False
+    assert report["passed"] is False
+    assert report["rollback_stopped"] is False
     stops = [args[-1] for args in docker.calls if args[:2] == ["docker", "stop"]]
     assert stops == ["c" * 64, "a" * 64]
 
@@ -430,7 +431,8 @@ def test_slow_preflight_never_injects_without_recovery_budget(
     report = fault.campaign(
         *installation, execute=execute, clock=docker.clock, sleep=docker.sleep
     )
-    assert report["passed"] is False and report["fault_attempted"] is False
+    assert report["passed"] is False
+    assert report["fault_attempted"] is False
     assert report["reason"] == "fault_recovery_budget_insufficient"
     assert not any(args[:2] == ["docker", "kill"] for args in docker.calls)
 
@@ -495,8 +497,9 @@ def test_process_unavailable_is_categorical_not_raw_output() -> None:
     ) -> subprocess.CompletedProcess[str]:
         raise OSError("FAKE-PROVIDER-CANARY")
 
+    commands = fault.Commands(10, lambda: 0, unavailable)
     with pytest.raises(Refusal, match="fault_process_unavailable") as error:
-        fault.Commands(10, lambda: 0, unavailable).need(["fixture"], 5, 10)
+        commands.need(["fixture"], 5, 10)
     assert "FAKE-PROVIDER-CANARY" not in str(error.value)
 
 

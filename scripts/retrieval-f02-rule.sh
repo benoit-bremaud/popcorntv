@@ -62,6 +62,9 @@ case "$operation" in
         sleep "$seconds"
         close_trial
         ;;
+    ready)
+        [ -f "$state/ready" ]
+        ;;
     insert)
         [ -f "$state/ready" ] || exit 4
         lock_trial

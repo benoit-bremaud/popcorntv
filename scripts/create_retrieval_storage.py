@@ -81,6 +81,21 @@ def create_storage(
     logging.getLogger("retrieval").info("retrieval.storage_prepared_mount_pending")
 
 
+def refusal(directory: Path, size_gib: int | None) -> str | None:
+    """Create the storage and return its categorical refusal, if any."""
+    try:
+        create_storage(
+            directory,
+            media_root=os.environ.get("MEDIA_ROOT"),
+            size=None if size_gib is None else size_gib * GIB,
+        )
+    except Refusal as error:
+        return str(error)
+    except (OSError, subprocess.TimeoutExpired):
+        return "storage_io"
+    return None
+
+
 def main() -> int:
     """Prepare storage only after explicit invocation, reporting categorical failures."""
     logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -88,17 +103,11 @@ def main() -> int:
     parser.add_argument("directory", type=Path)
     parser.add_argument("--size-gib", type=int)
     args = parser.parse_args()
-    try:
-        create_storage(
-            args.directory,
-            media_root=os.environ.get("MEDIA_ROOT"),
-            size=None if args.size_gib is None else args.size_gib * GIB,
-        )
+    reason = refusal(args.directory, args.size_gib)
+    if reason is None:
         return 0
-    except Refusal as error:
-        LOGGER.error("retrieval.refused reason=%s", error)
-    except (OSError, subprocess.TimeoutExpired):
-        LOGGER.error("retrieval.refused reason=storage_io")
+    # The traceback is deliberately not logged: diagnostics stay categorical.
+    LOGGER.error("retrieval.refused reason=%s", reason)
     return 1
 
 

@@ -130,8 +130,11 @@ def test_compose_model_confines_client_and_keeps_values_out_of_model(
     )
     client, gateway = model["services"]["client"], model["services"]["gluetun"]
     assert client["network_mode"] == "service:gluetun"
-    assert "networks" not in client and "ports" not in client and "ports" not in gateway
-    assert client["cap_drop"] == ["ALL"] and "cap_add" not in client
+    assert "networks" not in client
+    assert "ports" not in client
+    assert "ports" not in gateway
+    assert client["cap_drop"] == ["ALL"]
+    assert "cap_add" not in client
     assert not client["user"].startswith("0:")
     text = json.dumps(model)
     assert (initialized / "password").read_text() not in text
@@ -215,8 +218,9 @@ def test_stop_attempts_gateway_after_client_failure_and_keeps_state(
         return previous_run(arguments, **kwargs)
 
     monkeypatch.setattr(subprocess, "run", run)
+    identity = str(runtime.installation(initialized)["identity"])
     with pytest.raises(Refusal, match="stop_unconfirmed"):
-        runtime.stop(initialized, str(runtime.installation(initialized)["identity"]))
+        runtime.stop(initialized, identity)
     stops = [
         call for call in docker_observations["calls"] if call[:2] == ["docker", "stop"]
     ]
@@ -1154,8 +1158,9 @@ def test_foreign_compose_member_is_never_stopped(
     lifecycle_backend["containers"][0]["Config"]["Labels"].pop(
         "org.popcorntv.retrieval"
     )
+    identity = str(runtime.installation(initialized)["identity"])
     with pytest.raises(Refusal):
-        runtime.stop(initialized, str(runtime.installation(initialized)["identity"]))
+        runtime.stop(initialized, identity)
     assert lifecycle_backend["mutated"] == []
     assert all(
         item["State"]["Running"] is True for item in lifecycle_backend["containers"]
@@ -1166,8 +1171,9 @@ def test_stop_success_without_stopped_state_is_refused(
     initialized: Path, lifecycle_backend: dict[str, object]
 ) -> None:
     lifecycle_backend["silent_stop"] = True
+    identity = str(runtime.installation(initialized)["identity"])
     with pytest.raises(Refusal, match="stop_unconfirmed"):
-        runtime.stop(initialized, str(runtime.installation(initialized)["identity"]))
+        runtime.stop(initialized, identity)
     assert lifecycle_backend["mutated"] == ["c" * 64, "a" * 64]
 
 
@@ -1191,10 +1197,9 @@ def test_remove_uses_only_proven_stopped_ids_without_force_or_volume_deletion(
 def test_remove_refuses_running_containers_without_mutation(
     initialized: Path, lifecycle_backend: dict[str, object]
 ) -> None:
+    identity = str(runtime.installation(initialized)["identity"])
     with pytest.raises(Refusal, match="removal_requires_stopped_services"):
-        runtime.remove_stopped(
-            initialized, str(runtime.installation(initialized)["identity"])
-        )
+        runtime.remove_stopped(initialized, identity)
     assert lifecycle_backend["mutated"] == []
 
 
@@ -1204,10 +1209,9 @@ def test_remove_refuses_foreign_compose_member_without_mutation(
     lifecycle_backend["containers"][0]["Config"]["Labels"].pop(
         "org.popcorntv.retrieval"
     )
+    identity = str(runtime.installation(initialized)["identity"])
     with pytest.raises(Refusal):
-        runtime.remove_stopped(
-            initialized, str(runtime.installation(initialized)["identity"])
-        )
+        runtime.remove_stopped(initialized, identity)
     assert lifecycle_backend["mutated"] == []
 
 
@@ -1227,8 +1231,9 @@ def test_ownership_proof_refuses_inconsistent_inspection_before_mutation(
             "service": "com.docker.compose.service",
         }[field]
         item["Config"]["Labels"][key] = "foreign"
+    identity = str(runtime.installation(initialized)["identity"])
     with pytest.raises(Refusal):
-        runtime.stop(initialized, str(runtime.installation(initialized)["identity"]))
+        runtime.stop(initialized, identity)
     assert lifecycle_backend["mutated"] == []
 
 
@@ -1245,8 +1250,9 @@ def test_name_replacement_during_stop_never_targets_the_replacement(
         return previous_run(arguments, **kwargs)
 
     monkeypatch.setattr(subprocess, "run", run)
+    identity = str(runtime.installation(initialized)["identity"])
     with pytest.raises(Refusal, match="stop_unconfirmed"):
-        runtime.stop(initialized, str(runtime.installation(initialized)["identity"]))
+        runtime.stop(initialized, identity)
     assert "f" * 64 not in lifecycle_backend["mutated"]
     assert lifecycle_backend["containers"][0]["State"]["Running"] is True
     assert lifecycle_backend["containers"][1]["State"]["Running"] is False
