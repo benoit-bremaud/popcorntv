@@ -61,7 +61,8 @@ staging-up: ## Build HEAD's production image and start local staging (needs .env
 	@test -f .env.staging || { echo "copy .env.staging.example to .env.staging first"; exit 2; }
 	@mkdir -p media
 	git archive --format=tar HEAD | docker build --label org.opencontainers.image.revision=$$(git rev-parse HEAD) \
-		--build-arg APP_VERSION=$$(git describe --tags --always HEAD) -t $(STAGING_TAG) -
+		--build-arg APP_VERSION=$$(git describe --tags --always HEAD) \
+		--build-arg APT_UPGRADE_DATE=$$(date -u +%F) -t $(STAGING_TAG) -
 	$(STAGING_COMPOSE) up -d --wait
 
 check-not-found: ## Replay the not-found matrix (#177) against local staging

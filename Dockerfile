@@ -58,8 +58,12 @@ FROM node:22.23.4-trixie-slim@sha256:be1e2a3dc2c4fd68cdfadad2a696a280e0d2749098b
 # Keep while the base can lag Debian security (it did on bookworm on 2026-10-23 and
 # 2026-11-06; trixie digest be1e2a3d had nothing to upgrade on 2026-11-07); re-check on
 # each base bump.
+# APT_UPGRADE_DATE busts this layer's cache: the gate passes the day's date, so a Debian fix
+# published after the layer was first built still reaches the scanned image (#444).
+ARG APT_UPGRADE_DATE=unset
 # hadolint ignore=DL3008,DL3005
-RUN apt-get update \
+RUN echo "apt upgrade layer of ${APT_UPGRADE_DATE}" \
+  && apt-get update \
   && apt-get upgrade -y --no-install-recommends \
   && apt-get install -y --no-install-recommends tini \
   && rm -rf /var/lib/apt/lists/* \
