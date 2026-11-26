@@ -11,13 +11,13 @@ This record summarises the evidence behind the empty VPN-only retrieval installa
 
 | Check | Result |
 |---|---|
-| `mise x -- just retrieval-check` (ruff, mypy strict on the five sources, pytest) | 306 passed, 91.62 % combined coverage |
+| `mise x -- just retrieval-check` (ruff, mypy strict on the five sources, pytest) | 320 passed, 91.73 % combined coverage |
 | `python3 scripts/test-local-ci.py` (gate runner self-test) | passed |
 | Real tunnel, real VPN file, Docker services | not started: owner-run only (NFR-17) |
 
 The automated suite uses synthetic WireGuard text, fake Docker output and disposable
 directories only. It adds, against the November code: the 100 GiB ceiling and `--size-gib`,
-the `MEDIA_ROOT` refusal, the ARM64 image pins and the refusal of the removed operations.
+the fail-closed `MEDIA_ROOT` refusal (controller and provisioner), the ARM64 image pins and the refusal of the removed operations.
 
 ## Historical runtime evidence — November 2026
 
@@ -41,5 +41,5 @@ are not a claim about its exact head.
 | Connected start, status and stop of this branch's head on the workstation | NOT TESTED |
 | Tunnel-only failure with the gateway container alive; outside packet observation | NOT TESTED |
 | Transfer identity and bytes under restart (needs #311 and #437) | NOT APPLICABLE to the empty slice |
-| Staging STG-328-09 / 10 / 11 | NOT TESTED |
+| Staging replay of the connected start and failure rows (E328-02/03) | NOT TESTED |
 | ARM64 runtime on the Pi (owner decision required) | NOT TESTED |

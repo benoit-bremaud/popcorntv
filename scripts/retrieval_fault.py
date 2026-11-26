@@ -23,6 +23,9 @@ WINDOW = 300
 ROLLBACK_RESERVE = 60
 PROCESS_CLEANUP_RESERVE = 2.0
 LOGGER = logging.getLogger("retrieval.fault")
+# Owner-written private fault scope, under the ignored data tree: never the pentest
+# campaign scope of docs/security/, and never authored by the executor.
+SCOPE = Path("data/local-retrieval/fault-scope.json")
 Process = Callable[[list[str], float], subprocess.CompletedProcess[str]]
 
 
@@ -400,7 +403,7 @@ def main() -> int:
         ).strip()
         previous = signal.signal(signal.SIGTERM, interrupted)
         try:
-            report = campaign(args.storage, runtime.ROOT / "docs/security/scope.yaml")
+            report = campaign(args.storage, runtime.ROOT / SCOPE)
         finally:
             signal.signal(signal.SIGTERM, previous)
         report["source_commit"] = source

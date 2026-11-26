@@ -212,7 +212,7 @@ and a pinned qBittorrent sharing its network namespace, kill switch, no host por
 `scripts/local_retrieval.py` (init / start / status / stop, categorical refusals, manifest v2 keyed by
 filesystem UUID, 90-day credentials, AMD64 and ARM64 pins); dedicated ext4/XFS mount
 `nodev,nosuid,noexec`, 100 GiB at most (`scripts/create_retrieval_storage.py --size-gib`), 2 GiB
-reserve, refused when it shares a tree with `MEDIA_ROOT`; empty client, nothing retrieved; owner-run
+reserve, refused when it shares a tree with `MEDIA_ROOT` or when `MEDIA_ROOT` is undeclared (`none` = no library); empty client, nothing retrieved; owner-run
 fault executors F01 / F02; the real VPN file and tunnel are never used by an agent or the gate).
 
 Server layout (flat, component diagram 03): `src/library/` holds the pure `name-parser`

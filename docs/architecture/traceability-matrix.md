@@ -189,12 +189,12 @@ is added. Secrets cross only protected mounts, not application payloads.
 
 | Source and requirement | Realization | Components and deployment | Tests | Status |
 |---|---|---|---|---|
-| #328 → REQ-38; REQ-56, NFR-18 (egress) | SEQ-start-retrieval; UC34 | Retrieval controller, Gluetun, qBittorrent; local deployment | TC-02–05/09 | implemented; AMD64 local acceptance, staging pending |
-| #328 → REQ-39 | SEQ-start-retrieval; UC34 | Retrieval controller, protected file mounts, authenticated client | TC-01/02/07 | implemented; AMD64 local acceptance, staging pending |
-| #328 → REQ-40; REQ-51 (`MEDIA_ROOT` untouched) | Hard quota, process limits, `MEDIA_ROOT` refusal | Retrieval controller, dedicated filesystem; local deployment | TC-08/09/11 | implemented; AMD64 local acceptance, staging pending |
+| #328 → REQ-38; REQ-56, NFR-18 (egress) | SEQ-start-retrieval; UC34 | Retrieval controller, Gluetun, qBittorrent; local deployment | TC-02–05/09 | implemented; component-tested, runtime acceptance owner-run and pending |
+| #328 → REQ-39 | SEQ-start-retrieval; UC34 | Retrieval controller, protected file mounts, authenticated client | TC-01/02/07 | implemented; component-tested, runtime acceptance owner-run and pending |
+| #328 → REQ-40; REQ-51 (`MEDIA_ROOT` untouched) | Hard quota, process limits, `MEDIA_ROOT` refusal | Retrieval controller, dedicated filesystem; local deployment | TC-08/09/11 | implemented; component-tested, runtime acceptance owner-run and pending |
 | #328 → REQ-41 | SEQ-start-retrieval; UC34 failure and recovery | Retrieval controller, gateway/client namespace lifecycle | TC-03–06/10 | implemented; tunnel-only failure and transfer recovery pending |
 | #328 → REQ-42 | UC34 integration boundary | Empty client, later cache and scheduler bricks (#311, #437) | TC-06/10 | implemented empty boundary |
-| NFR-17 | Synthetic or local fixtures only | `just retrieval-check`, `retrieval-contract` | TC-12 | automated in the gate |
+| NFR-17 | Synthetic or local fixtures only | `just retrieval-check` (gate); `just retrieval-contract` (local Docker, outside the gate) | TC-01–12 component level | `retrieval-check` automated in the gate |
 
 Sequence: [SEQ-start-retrieval](diagrams/nordvpn-retrieval/02-sequence-start-retrieval.md).
 Deployment: [local](diagrams/nordvpn-retrieval/08-deployment-local.md). No class, state or

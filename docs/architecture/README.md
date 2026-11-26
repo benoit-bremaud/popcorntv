@@ -57,7 +57,7 @@ docs/architecture/
 | `adaptive-wishlist` | [spec](specs/adaptive-wishlist-lifecycle.md), [diagrams](diagrams/adaptive-wishlist) | partly replaced by `on-demand-retrieval` (#434); recovery contract (ADR-0034) kept |
 | `on-demand-retrieval` | [requirements](../requirements/08-on-demand-retrieval.md), [spec](specs/on-demand-retrieval.md), [diagrams](diagrams/on-demand-retrieval) | conception accepted (#434); slice 1 (films) next |
 | `local-discovery` | [spec](specs/local-discovery-topology.md), [diagrams](diagrams/local-discovery) | local implementation (#327): empty services, no source configured; merge and exact-head qualification tracked in PR #351 |
-| `nordvpn-retrieval` | [spec](specs/nordvpn-retrieval.md), [diagrams](diagrams/nordvpn-retrieval), [cases](qa/cases/328-nordvpn-retrieval.md) | implemented (#328): empty VPN-only client, AMD64 local acceptance; staging owner-run |
+| `nordvpn-retrieval` | [spec](specs/nordvpn-retrieval.md), [diagrams](diagrams/nordvpn-retrieval), [cases](qa/cases/328-nordvpn-retrieval.md) | implemented (#328): empty VPN-only client, component-tested; runtime acceptance of this head owner-run and pending |
 | `playback` | [diagrams/playback](diagrams/playback)  | design  |
 | `redesign` | [inventory](specs/redesign-screen-inventory.md), [information architecture](specs/redesign-information-architecture.md), [diagrams](diagrams/redesign) | design (epic #401, #396) |
 

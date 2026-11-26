@@ -357,7 +357,7 @@ def test_cli_requires_clean_source_and_keeps_exact_source_in_report(
         )
     else:
         assert result == 0 and calls == [
-            retrieval_f02.runtime.ROOT / "docs/security/scope.yaml"
+            retrieval_f02.runtime.ROOT / "data/local-retrieval/fault-scope.json"
         ]
         assert json.loads(capsys.readouterr().out)["source_commit"] == "f" * 40
 

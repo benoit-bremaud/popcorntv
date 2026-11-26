@@ -1400,6 +1400,24 @@ def test_library_misplacement_never_blocks_the_emergency_stop_identity(
     assert runtime.installation(initialized, require_reserve=False)["version"] == 2
 
 
+@pytest.mark.parametrize("media_root", [None, "", "media"])
+def test_undeclared_library_refuses_before_any_write_but_never_the_stop_identity(
+    initialized: Path, monkeypatch: pytest.MonkeyPatch, media_root: str | None
+) -> None:
+    mount = initialized.parent
+    before = sorted(path.name for path in initialized.iterdir())
+    if media_root is None:
+        monkeypatch.delenv("MEDIA_ROOT")
+    else:
+        monkeypatch.setenv("MEDIA_ROOT", media_root)
+    with pytest.raises(Refusal, match="media_root_undeclared"):
+        runtime.installation(initialized)
+    with pytest.raises(Refusal, match="media_root_undeclared"):
+        runtime.initialize(mount, mount.parent / "source")
+    assert sorted(path.name for path in initialized.iterdir()) == before
+    assert runtime.installation(initialized, require_reserve=False)["version"] == 2
+
+
 def test_unrelated_library_keeps_the_installation_usable(
     initialized: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

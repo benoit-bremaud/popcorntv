@@ -11,12 +11,20 @@ import subprocess
 import sys
 from pathlib import Path
 
-from retrieval_config import FREE_RESERVE, GIB, MAX_STORAGE, Refusal
+from retrieval_config import (
+    FREE_RESERVE,
+    GIB,
+    MAX_STORAGE,
+    Refusal,
+    reject_media_root,
+)
 
 LOGGER = logging.getLogger("retrieval")
 
 
-def create_storage(directory: Path, *, size: int | None = None) -> None:
+def create_storage(
+    directory: Path, *, media_root: str | None, size: int | None = None
+) -> None:
     """Reserve a fresh bounded ext4 image without changing privileges.
 
     An exclusive directory and file prevent formatting existing data. Allocate real
@@ -24,6 +32,7 @@ def create_storage(directory: Path, *, size: int | None = None) -> None:
     Failure preserves owned partial state for diagnosis, never deletes another file.
     Mounting and changing ownership of the filesystem root are separate operator actions.
     Without an explicit size the image takes the whole accepted ceiling.
+    The destination never shares a tree with the declared library (``media_root``).
     """
     if size is None:
         size = MAX_STORAGE
@@ -31,6 +40,7 @@ def create_storage(directory: Path, *, size: int | None = None) -> None:
         raise Refusal("storage_image_size_out_of_bounds")
     if directory.absolute() != directory.resolve() or "$" in str(directory):
         raise Refusal("storage_destination_unsafe")
+    reject_media_root(directory, media_root)
     if directory.exists() or directory.is_symlink():
         raise Refusal("storage_destination_exists")
     if shutil.disk_usage(directory.parent).free < size + FREE_RESERVE:
@@ -81,6 +91,7 @@ def main() -> int:
     try:
         create_storage(
             args.directory,
+            media_root=os.environ.get("MEDIA_ROOT"),
             size=None if args.size_gib is None else args.size_gib * GIB,
         )
         return 0

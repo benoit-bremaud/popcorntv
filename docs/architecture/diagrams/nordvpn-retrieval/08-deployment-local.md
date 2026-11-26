@@ -3,7 +3,7 @@
 This local view makes the sole public egress path and separate storage boundary explicit.
 
 > **Feature:** #328 · **Source:** [Specification](../../specs/nordvpn-retrieval.md)
-> **Realises:** REQ-38–42 · **Status:** implemented (#328); AMD64 local operation verified, staging pending
+> **Realises:** REQ-38–42 · **Status:** implemented (#328); component-tested, runtime acceptance owner-run and pending on this head
 
 ## Diagram
 

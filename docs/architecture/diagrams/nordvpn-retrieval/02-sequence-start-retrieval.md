@@ -4,7 +4,7 @@ This design-level sequence shows UC34 startup and refusal before exposing admini
 
 > **Feature:** #328 · **Source:** [Specification](../../specs/nordvpn-retrieval.md)
 > **Realises:** UC34, REQ-38–42 · **Interaction:** SEQ-start-retrieval
-> **See also:** [Deployment](08-deployment-local.md) · **Status:** implemented (#328); AMD64 local acceptance passed, staging pending
+> **See also:** [Deployment](08-deployment-local.md) · **Status:** implemented (#328); component-tested, runtime acceptance owner-run and pending on this head
 
 ```mermaid
 sequenceDiagram

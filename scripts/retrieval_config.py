@@ -19,6 +19,8 @@ from uuid import UUID
 GIB = 1024**3
 MAX_STORAGE = 100 * GIB
 FREE_RESERVE = 2 * GIB
+# Explicit ``MEDIA_ROOT`` value of a host that holds no library.
+NO_LIBRARY = "none"
 
 
 class Refusal(RuntimeError):
@@ -220,14 +222,17 @@ def storage_from_mount(
 
 
 def reject_media_root(path: Path, media_root: str | None) -> None:
-    """Refuse a retrieval mount that contains, or sits inside, the owner's library.
+    """Refuse a retrieval path that contains, or sits inside, the owner's library.
 
     The retrieval cache never shares a tree with ``MEDIA_ROOT``: deletion and
     trimming of retrieved files must be unable to reach the owner's own media.
-    An unset or empty value means no library is declared on this host.
+    The check fails closed: an unset, empty or relative value is refused, because
+    the library is then unknown. A host without a library declares ``none``.
     """
-    if not media_root:
+    if media_root == NO_LIBRARY:
         return
+    if not media_root or not Path(media_root).is_absolute():
+        raise Refusal("media_root_undeclared")
     library = Path(media_root).resolve()
     mount = path.resolve()
     if mount == library or library in mount.parents or mount in library.parents:

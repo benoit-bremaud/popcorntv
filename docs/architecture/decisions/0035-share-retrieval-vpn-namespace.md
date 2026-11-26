@@ -39,4 +39,4 @@ Epic #306 was redefined on 2026-11-23 as on-demand progressive retrieval. This d
 stands unchanged: the shared namespace and its kill switch are the retrieval egress that
 REQ-56 and NFR-18 rely on, and the dedicated filesystem holds the cache capped by ADR-0044
 (100 GiB by default, the provisioner's ceiling). The controller refuses a retrieval mount
-that shares a tree with `MEDIA_ROOT`.
+that shares a tree with `MEDIA_ROOT`, and fails closed when the library is not declared.

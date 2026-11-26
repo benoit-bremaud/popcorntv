@@ -4,6 +4,7 @@ FROM golang:1.27.4-alpine3.24@sha256:0a5f7fe796599ff487605987432e7619ae45beeb2fb
 WORKDIR /src
 ADD --checksum=sha256:8349498e14b9b5ae7cba3bd2547d1d45bb15f3195713778272b71542aebf5f3d https://api.github.com/repos/qdm12/gluetun/tarball/v3.41.3 /tmp/gluetun.tar.gz
 RUN tar -xzf /tmp/gluetun.tar.gz --strip-components=1 -C /src
+# Checked-in manifests replace upstream's to raise vulnerable modules; -mod=readonly pins them.
 COPY deploy/local-retrieval/gluetun/go.mod deploy/local-retrieval/gluetun/go.sum ./
 ENV CGO_ENABLED=0 GOMAXPROCS=2 GOTOOLCHAIN=local
 RUN --mount=type=cache,target=/go/pkg/mod \
@@ -29,6 +30,7 @@ RUN apk upgrade --no-cache && \
     wireguard-tools-wg=1.0.20260223-r0 && \
     ln -s /usr/sbin/openvpn /usr/sbin/openvpn2.6 && mkdir /gluetun
 COPY --from=build /out/gluetun-entrypoint /gluetun-entrypoint
+# Root is required for the tunnel interface and firewall (ADR-0035, waiver re-check #456).
 # hadolint ignore=DL3002
 USER 0:0
 HEALTHCHECK --interval=5s --timeout=3s --start-period=10s --retries=12 CMD ["/gluetun-entrypoint", "healthcheck"]

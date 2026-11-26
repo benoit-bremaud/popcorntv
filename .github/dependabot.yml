@@ -75,10 +75,3 @@ updates:
         patterns: ['*']
     commit-message:
       prefix: chore(docker)
-
-  - package-ecosystem: docker-compose
-    directory: /deploy/local-retrieval
-    schedule:
-      interval: weekly
-    commit-message:
-      prefix: chore(docker)

@@ -18,10 +18,10 @@ context: merged PRs, decisions, tags, infra events. Not a release changelog — 
 - Changed against the November code: storage ceiling 20 → 100 GiB with `--size-gib` (ADR-0044);
   a mount sharing a tree with `MEDIA_ROOT` is refused; ARM64 image pins selected by architecture.
   Dropped: `migrate`, saved-transfer state, the F04 trial observation.
-- Evidence: 306 component tests, coverage above 90 %; the November runtime runs (connected start,
+- Evidence: 320 component tests, coverage above 90 %; the November runtime runs (connected start,
   F01, F02, F03) are historical and were not repeated on this head
   (`docs/architecture/qa/2026-11-26-issue-328-local-retrieval.md`).
-- Owner-run, pending: connected start of this head, tunnel-only failure, staging STG-328-09–11,
+- Owner-run, pending: connected start of this head, tunnel-only failure, staging replay of E328-02/03,
   ARM64 runtime. No agent uses the real VPN file or tunnel; no Pi action.
 
 ## 2026-11-26 — #434 epic #306 redefined as on-demand progressive retrieval (#436)

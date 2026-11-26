@@ -45,7 +45,7 @@ REQ-34–37 belong to #327. REQ-38–42 and UC34 are defined here; REQ-43 onward
 |---|---|---|
 | REQ-38 | qBittorrent shares only Gluetun's namespace; no host fallback, extra client network, privileged client or Docker socket | Inspect effective namespace/network and capabilities; connected positive controls succeed and out-of-tunnel canaries receive zero client payloads in every failure case |
 | REQ-39 | Configuration and authenticated administration remain private from first listen | Refuse unsafe permissions, symlinks and foreign state; no anonymous API access; no secret in environment, command arguments, rendered Compose, logs or evidence |
-| REQ-40 | Persistent retrieval has enforceable storage and process bounds, outside the owner's library | Start refuses a missing hard quota and a mount that contains, or sits inside, `MEDIA_ROOT`; exhaustion cannot write into the library or exceed the dedicated volume |
+| REQ-40 | Persistent retrieval has enforceable storage and process bounds, outside the owner's library | Start refuses a missing hard quota, an undeclared `MEDIA_ROOT` and a mount that contains, or sits inside, it; exhaustion cannot write into the library or exceed the dedicated volume |
 | REQ-41 | Tunnel loss and gateway replacement preserve isolation and state | Startup without VPN, controlled stop, process termination, packet blackhole, restart and recreation all deny bypass; recovery rechecks non-host egress before admission |
 | REQ-42 | Retrieval infrastructure remains distinct from acquisition and playback | No automatic download submission, import, scheduling, library mount or ready notification; repeated reconciliation identifies the same persisted synthetic transfer |
 
@@ -137,8 +137,8 @@ Initial estimates for owner validation: client 1 CPU/768 MiB/128 PIDs; gateway
 0.5 CPU/256 MiB/64 PIDs; 64 MiB bounded tmpfs each; three 10 MiB rotated log files
 per service. No performance result is implied by these limits.
 
-Use a dedicated quota-backed retrieval filesystem: at most 100 GiB (the default cache
-ceiling of ADR-0044) and a 2 GiB free-space reserve. The provisioner creates the whole
+Use a dedicated quota-backed retrieval filesystem: at most 100 GiB (the provisioning ceiling of #328, sized
+for the default cache ceiling of ADR-0044) and a 2 GiB free-space reserve. The provisioner creates the whole
 ceiling unless the operator passes a smaller `--size-gib`. The hard ceiling includes client
 working files; Docker log/tmp budgets are separate and bounded; client config is stored on
 the same filesystem. A normal bind directory and a Docker named volume do not prove a quota.
@@ -148,10 +148,10 @@ authorization in this document. Fixtures use a much smaller disposable volume.
 
 The retrieval mount never shares a tree with the owner's library: initialization, start and
 status refuse a mount equal to, containing or inside `MEDIA_ROOT` (`storage_inside_media_root`),
-after resolving symbolic links. The check reads `MEDIA_ROOT` from the controller's
-environment; an unset value means no library is declared on that host, so the operator
-exports it when both run on one machine. Emergency stop skips this check, like the free
-reserve. Nothing but the `retrieval` directory of that mount is writable to the client.
+after resolving symbolic links. The provisioner applies the same check before it creates the image. Both read
+`MEDIA_ROOT` from their environment and fail closed: an unset, empty or relative value is
+refused (`media_root_undeclared`); a host without a library declares `MEDIA_ROOT=none`.
+Emergency stop skips this check, like the free reserve. Nothing but the `retrieval` directory of that mount is writable to the client.
 
 This installation stays empty: startup refuses persisted `BT_backup` content and
 authenticated verification requires an empty torrent list. Admission (declared size,
@@ -251,7 +251,7 @@ Two owner-run executors replay the bounded fault experiments on the empty instal
 `scripts/retrieval_fault.py` (R328-F01, one abrupt owned gateway exit) and
 `scripts/retrieval_f02.py` with `scripts/retrieval-f02-rule.sh` (R328-F02, interruption of
 the owned VPN endpoint only). Both default to a no-action plan. Active execution requires
-clean committed source, a private owner-confirmed exact-card scope and an explicit execution
+clean committed source, a private owner-confirmed exact-card scope (`data/local-retrieval/fault-scope.json`, git-ignored) and an explicit execution
 flag; no scope is authored or widened by the executor, and an agent never runs them.
 Each campaign reuses production ownership validation with a bounded process reader, freezes
 the owned IDs, observes three negative samples between positive controls, then attempts one

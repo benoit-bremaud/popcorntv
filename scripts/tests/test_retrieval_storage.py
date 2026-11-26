@@ -21,7 +21,7 @@ def test_existing_storage_is_never_formatted(
     valuable = target / "retrieval.ext4"
     valuable.write_bytes(b"foreign-data")
     with pytest.raises(Refusal, match="storage_destination_exists"):
-        create_storage(target)
+        create_storage(target, media_root="none")
     assert valuable.read_bytes() == b"foreign-data"
 
 
@@ -37,7 +37,7 @@ def test_insufficient_host_reserve_refuses_before_mutation(
     )
     target = tmp_path / "new"
     with pytest.raises(Refusal, match="host_storage_reserve"):
-        create_storage(target)
+        create_storage(target, media_root="none")
     assert not target.exists()
 
 
@@ -74,7 +74,7 @@ def test_new_image_is_exclusive_private_and_allocated_before_format(
     monkeypatch.setattr(os, "posix_fallocate", allocate)
     monkeypatch.setattr(subprocess, "run", run)
     target = tmp_path / "new"
-    create_storage(target)
+    create_storage(target, media_root="none")
     assert target.stat().st_mode & 0o777 == 0o700
     assert (target / "mount").is_dir()
     assert events == ["allocated", "formatted", "allocated"]
@@ -98,7 +98,7 @@ def test_format_failure_preserves_partial_owned_image(
     )
     target = tmp_path / "new"
     with pytest.raises(Refusal, match="storage_format_failed"):
-        create_storage(target)
+        create_storage(target, media_root="none")
     assert (target / "retrieval.ext4").exists()
     assert not (target / "mount").exists()
 
@@ -109,7 +109,7 @@ def test_real_format_retains_reserved_blocks(
     size = 64 * 1024**2
     monkeypatch.setattr(provisioner, "MAX_STORAGE", size)
     target = tmp_path / "real-format"
-    create_storage(target)
+    create_storage(target, media_root="none")
     image = target / "retrieval.ext4"
     assert image.stat().st_size == size
     assert image.stat().st_blocks * 512 >= size
@@ -138,7 +138,7 @@ def test_post_format_allocation_failure_preserves_image_without_ready_mount(
     target = tmp_path / "partial"
 
     with pytest.raises(OSError, match="controlled post-format allocation failure"):
-        create_storage(target)
+        create_storage(target, media_root="none")
 
     assert attempts == 2
     assert (target / "retrieval.ext4").stat().st_size == 65536
@@ -155,17 +155,20 @@ def test_command_line_passes_the_requested_image_size(
     arguments: list[str],
     expected: int | None,
 ) -> None:
-    seen: list[tuple[Path, int | None]] = []
+    seen: list[tuple[Path, str | None, int | None]] = []
+    monkeypatch.setenv("MEDIA_ROOT", "/srv/media")
     monkeypatch.setattr(
         provisioner,
         "create_storage",
-        lambda directory, *, size=None: seen.append((directory, size)),
+        lambda directory, *, media_root, size=None: seen.append(
+            (directory, media_root, size)
+        ),
     )
     monkeypatch.setattr(
         "sys.argv", ["create_retrieval_storage.py", str(tmp_path / "new"), *arguments]
     )
     assert provisioner.main() == 0
-    assert seen == [(tmp_path / "new", expected)]
+    assert seen == [(tmp_path / "new", "/srv/media", expected)]
 
 
 @pytest.mark.parametrize("size_gib", ["2", "101", "0", "-1"])
@@ -175,6 +178,44 @@ def test_command_line_size_outside_the_bounds_writes_nothing(
     target = tmp_path / "new"
     monkeypatch.setattr(
         "sys.argv", ["create_retrieval_storage.py", str(target), "--size-gib", size_gib]
+    )
+    assert provisioner.main() == 1
+    assert not target.exists()
+
+
+@pytest.mark.parametrize(
+    ("relation", "reason"),
+    [
+        ("same", "storage_inside_media_root"),
+        ("library_inside", "storage_inside_media_root"),
+        ("destination_inside", "storage_inside_media_root"),
+        ("undeclared", "media_root_undeclared"),
+        ("empty", "media_root_undeclared"),
+    ],
+)
+def test_destination_sharing_a_tree_with_the_library_creates_nothing(
+    tmp_path: Path, relation: str, reason: str
+) -> None:
+    target = tmp_path / "new"
+    library = {
+        "same": str(target),
+        "library_inside": str(target / "films"),
+        "destination_inside": str(tmp_path),
+        "undeclared": None,
+        "empty": "",
+    }[relation]
+    with pytest.raises(Refusal, match=reason):
+        create_storage(target, media_root=library)
+    assert not target.exists()
+
+
+def test_command_line_without_a_declared_library_writes_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    target = tmp_path / "new"
+    monkeypatch.delenv("MEDIA_ROOT")
+    monkeypatch.setattr(
+        "sys.argv", ["create_retrieval_storage.py", str(target), "--size-gib", "3"]
     )
     assert provisioner.main() == 1
     assert not target.exists()

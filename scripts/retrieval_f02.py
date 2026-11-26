@@ -21,6 +21,7 @@ import local_retrieval as runtime
 from retrieval_config import Refusal, WireGuardParser, private_file, wireguard_text
 from retrieval_fault import (
     ROLLBACK_RESERVE,
+    SCOPE,
     WINDOW,
     Commands,
     Process,
@@ -375,7 +376,7 @@ def main() -> int:
         source = git("rev-parse", "HEAD")
         previous = signal.signal(signal.SIGTERM, interrupted)
         try:
-            report = campaign(args.storage, runtime.ROOT / "docs/security/scope.yaml")
+            report = campaign(args.storage, runtime.ROOT / SCOPE)
         finally:
             signal.signal(signal.SIGTERM, previous)
         report["source_commit"] = source

@@ -20,7 +20,7 @@ real tunnel or disk-quota evidence.
 | TC-08 | REQ-40 | Verified quota, missing quota, one-byte boundary, concurrent reservation, quota exhaustion and low free space | Actual enforced ceiling, no write outside retrieval root, no library mount, no eviction, new admission refused |
 | TC-09 | REQ-38/40 | Inspect effective UID/capabilities/rootfs/networks/ports/limits; mutate each expected property | Runtime refuses drift, no independent client network, bounded resources, current image scans and immutable pins |
 | TC-10 | REQ-41/42 | Repeated start/status/stop, foreign resource names, cleanup timeout, failed ownership check | Only owned resources changed, all removals attempted, failure retained and private state preserved |
-| TC-11 | REQ-40, REQ-51 | Mount outside, equal to, containing and inside `MEDIA_ROOT`; unset and empty variable; image of 3, 100 and 101 GiB, 2 GiB and non-integer size; host without the size plus reserve | `storage_inside_media_root` before any Docker call, explicit stop still usable; `storage_image_size_out_of_bounds`; nothing created on refusal |
+| TC-11 | REQ-40, REQ-51 | Mount outside, equal to, containing and inside `MEDIA_ROOT`; unset, empty and relative variable, explicit `none`; image of 3, 100 and 101 GiB, 2 GiB and non-integer size; host without the size plus reserve | `storage_inside_media_root` or `media_root_undeclared` before any Docker call or image creation, explicit stop still usable; `storage_image_size_out_of_bounds`; nothing created on refusal |
 | TC-12 | REQ-38, NFR-17 | AMD64, ARM64 and another host architecture; image of the other platform; removed operations (`migrate`, saved-transfer preflight) on the command line | Architecture-specific pins selected, `retrieval_architecture_unqualified` and `retrieval_image_platform` refusals, usage error for a removed operation; fixtures only, no network |
 
 Live tests require reviewed images, the owner-selected local secret path and an approved owned
@@ -48,7 +48,7 @@ the November 2026 measurements on the earlier branches, not repeated on this hea
 | TC-08 | Bounded mounted filesystem, physical reservation, R328-F03 reserve and `ENOSPC` (November) | #311 admission reservations |
 | TC-09 | Image scans, namespace, DNS/IPv6 and effective limits (November); component drift refusals | Broader runtime drift acceptance |
 | TC-10 | Ordered stop/recreation (November); component cleanup failures | Real daemon cleanup failure injection |
-| TC-11 | Component tests on this branch | Owner-run start with `MEDIA_ROOT` exported |
+| TC-11 | Component tests on this branch | Owner-run start with `MEDIA_ROOT` declared |
 | TC-12 | Component tests on this branch | ARM64 runtime qualification |
 
 ## Component regressions kept from November

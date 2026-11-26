@@ -294,9 +294,14 @@ def test_storage_requires_persistent_nonzero_uuid(
         )
 
 
-@pytest.mark.parametrize("media_root", [None, ""])
-def test_no_declared_library_accepts_any_mount(media_root: str | None) -> None:
-    reject_media_root(Path("/srv/retrieval/mount"), media_root)
+@pytest.mark.parametrize("media_root", [None, "", "media", "./media", "None", " "])
+def test_undeclared_or_relative_library_is_refused(media_root: str | None) -> None:
+    with pytest.raises(Refusal, match="media_root_undeclared"):
+        reject_media_root(Path("/srv/retrieval/mount"), media_root)
+
+
+def test_host_declared_without_a_library_accepts_any_mount() -> None:
+    reject_media_root(Path("/srv/retrieval/mount"), "none")
 
 
 @pytest.mark.parametrize(

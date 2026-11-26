@@ -14,7 +14,7 @@ owner, never by an agent (NFR-17).
 - qBittorrent: release `5.3.0_v2.1.2-ls487`, manifest
   `sha256:3d4c4545d51a690a0df15a2ff99038823a88a9822df8e794526447b9afbd7384`.
 - Gluetun: stable source commit `3d1e20c5551e9cae1f9d938dc7b7214a6987f27e`,
-  version `v3.41.3-popcorntv.2`. Its checked-in Go manifests patch the vulnerable
+  version `v3.41.3-popcorntv.2` (image tag `popcorntv-gluetun:v3.41.3-pctv.2`). Its checked-in Go manifests patch the vulnerable
   dependencies; Go 1.27.4 and supported Alpine 3.24 are pinned in the Dockerfile.
 - Tested local Gluetun Docker image ID:
   `sha256:1d2c6d22e99e230e09e02768736fc4aa985594a148f6ca851f85364f60fce535`.
@@ -67,7 +67,8 @@ provisioner exclusively creates a 100 GiB ext4 image (the default cache ceiling 
 ADR-0044), or a smaller one with `--size-gib N` (3 to 100), and refuses any existing
 destination. It reserves actual host blocks before and after formatting, disables mkfs
 discard and checks the measured allocation. The host needs the image size plus 2 GiB free
-at creation. The directory must not share a tree with `MEDIA_ROOT`.
+at creation. The directory must not share a tree with `MEDIA_ROOT`; the provisioner checks it
+before creating anything (see below).
 It never mounts a filesystem, modifies fstab, replaces a disk or prunes another resource.
 
 ```sh
@@ -89,10 +90,11 @@ mise x -- just retrieval-status /absolute/path/to/new-storage/mount
 mise x -- just retrieval-stop /absolute/path/to/new-storage/mount
 ```
 
-Export `MEDIA_ROOT` in the shell that runs these commands when the library lives on the
-same host: initialization, start and status then refuse a mount equal to, containing or
-inside it (`storage_inside_media_root`). Without the variable the controller cannot know
-the library and performs no such check.
+Export `MEDIA_ROOT` (absolute path of the library) in the shell that runs the provisioner
+and these commands: provisioning, initialization, start and status refuse a mount equal to,
+containing or inside it (`storage_inside_media_root`). The check fails closed: an unset,
+empty or relative value is refused (`media_root_undeclared`). On a host without a library,
+export `MEDIA_ROOT=none`. Stop never needs the variable.
 
 Only the `retrieval` directory below that exact mount is writable to the client. File
 and directory ownership, mount identity/capacity/options, the 2 GiB free reserve and
@@ -106,7 +108,9 @@ the empty queue, actual namespace identity, DNS, IPv6, resources and non-host eg
 Credentials/cookies stay in private files or process stdin and are not printed.
 New installations record the operator credential name and a timezone-aware 90-day expiry
 in private `credential.json`. Missing, malformed or expired metadata refuses start/status
-and attempts an owned ordered stop. There is no automatic renewal or password replacement.
+and attempts an owned ordered stop. There is no automatic renewal or in-place password replacement yet (#453): after expiry,
+initialize a new installation on new storage. Both services use `restart: "no"` on purpose:
+only the controller starts them, after its proofs, so a reboot never brings the client up unverified.
 An installation without this metadata, or with another manifest version, is refused:
 there is no migration command; initialize a new installation on new storage.
 Stop remains available without the credential file. A failed status proof also stops the
@@ -173,7 +177,7 @@ suite exercises missing/foreign labels on network-disabled, never-started fixtur
 `mise x -- just retrieval-fault-plan` prints only the bounded R328-F01 plan (abrupt owned
 gateway exit); `mise x -- just retrieval-fault-f02-plan` prints the R328-F02 plan
 (interruption of the owned VPN endpoint). The active recipes `retrieval-fault-f01` and
-`retrieval-fault-f02` are for the owner only. Each requires clean committed source, a private owner-confirmed exact-card scope and a separate
+`retrieval-fault-f02` are for the owner only. Each requires clean committed source, a private owner-confirmed exact-card scope (`data/local-retrieval/fault-scope.json`, git-ignored) and a separate
 go for that run; the command does not grant permission or create the scope. Default planning
 and unit tests perform no live fault. The 300-second budget includes a 60-second emergency
 stop reserve, and failed/uncertain recovery remains red. No retry, transfer, host-route or

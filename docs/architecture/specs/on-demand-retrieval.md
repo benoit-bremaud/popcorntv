@@ -103,7 +103,7 @@ over quota is queued and the sheet says so; it is never dropped silently.
   run by the serial timer every 15 min and at start-up (restart never skips an overdue deletion).
 - Files under `MEDIA_ROOT` are out of reach: the cache lives under its own root (`RETRIEVAL_DIR`,
   planned), confined like the other paths, on the dedicated filesystem of #328 whose controller
-  refuses a mount that shares a tree with `MEDIA_ROOT`.
+  refuses a mount that shares a tree with `MEDIA_ROOT` or an undeclared library.
 
 ## 7. Version pick (ADR-0046)
 
