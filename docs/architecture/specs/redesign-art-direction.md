@@ -3,8 +3,8 @@
 Three candidate looks for the redesigned front end, drawn as style tiles in Penpot, compared by a
 household preference test and an MCDA, so one direction can be recorded in ADR-0042.
 
-- Status: **directions validated** by the owner on 2026-11-23 (#397); tiles to draw, preference
-  test and MCDA pending.
+- Status: **directions validated** by the owner on 2026-11-23 (#397); tiles and boards drawn
+  2026-11-26 (§ 5); preference test and MCDA pending.
 - Date: 2026-11-23.
 - Scope: epic #401, phase 3. Feeds the wireframes (#398) and the design system (#399).
 - Inputs: the [brief](../../requirements/04-redesign-brief.md) (D1 TV-ready responsive, D2 dark
@@ -12,7 +12,7 @@ household preference test and an MCDA, so one direction can be recorded in ADR-0
   [benchmark](redesign-benchmark.md), the [personas](../../requirements/06-personas.md), the
   [screen inventory](redesign-screen-inventory.md), ADR-0004 (current look), ADR-0037 (Penpot).
 - Rules: written references and links only, no third-party image in this repository; contrast
-  values below are estimates, measured again on the Penpot tiles before the ADR.
+  values below are measured on the Penpot tiles (WCAG 2.2 relative luminance).
 
 ## 1. Fixed for every tile
 
@@ -36,12 +36,12 @@ household preference test and an MCDA, so one direction can be recorded in ADR-0
 ### A — Velvet house, refined
 
 - **Idea**: the cinema hall — seat-velvet red marks the action, gold hairlines frame the focus.
-- **Colour**: ground `#0e0b0d` warm black; surface `#1c1418`; ink `#f3ece6` (≈ 17:1); muted ink
-  `#a89ea0`; red fill `#b3122e` for the one primary action (white text ≈ 6.9:1); gold
-  `#c9a24a` for focus and stars (≈ 8:1). Navy and violet of ADR-0004 v2 are dropped: one accent
+- **Colour**: ground `#0e0b0d` warm black; surface `#1c1418`; ink `#f3ece6` (16.7:1); muted ink
+  `#a89ea0` (7.5:1); red fill `#b3122e` for the one primary action (white text 6.9:1); gold
+  `#c9a24a` for focus and stars (8.2:1). Navy and violet of ADR-0004 v2 are dropped: one accent
   and one focus colour.
 - **Type**: Inter only (OFL, already self-hosted); titles bold with tight tracking; TV scale
-  display 64 / title 48 / body 28 px, phone 32 / 28 / 16 px.
+  display 72 / title 48 / body 28 / meta 24 px, phone 32 / 24 / 16 / 13 px.
 - **Icons**: Lucide (ISC), 1.5 px stroke.
 - **Image**: backdrop dimmed under a black veil from the left edge; square-ish posters, 4 px
   radius.
@@ -53,13 +53,13 @@ household preference test and an MCDA, so one direction can be recorded in ADR-0
 
 - **Idea**: the projector beam is the focus — the chosen poster is lit, the rest stays in the
   dark.
-- **Colour**: ground `#0b0d10` cold black; surface `#161a20`; beam ink `#f4efe4` (≈ 18:1); muted
-  ink `#8f96a3` (≈ 6.4:1); amber fill `#f2a93b` for the primary action (dark text ≈ 10:1).
+- **Colour**: ground `#0b0d10` cold black; surface `#161a20`; beam ink `#f4efe4` (17:1); muted
+  ink `#8f96a3` (6.5:1); amber fill `#f2a93b` for the primary action (dark text 9.3:1).
 - **Type**: Barlow Condensed (OFL) for titles and buttons, Inter for body; the condensed face
-  keeps long French titles on one line of a TV row; TV display 72 / title 56 / body 28 px, phone
-  36 / 32 / 16 px.
+  keeps long French titles on one line of a TV row; TV display 88 / title 56 / body 28 / meta 24 px,
+  phone 40 / 28 / 16 / 13 px.
 - **Icons**: Tabler outline (MIT), 2 px stroke, square caps.
-- **Image**: unfocused posters dimmed to 60 % brightness; the backdrop cross-fades to the focused
+- **Image**: unfocused posters dimmed to 55 % brightness; the backdrop cross-fades to the focused
   title; 2 px radius.
 - **Focus and motion**: the focused poster brightens and grows 1.08 with a 2 px beam-white ring,
   220 ms; reduced motion: brightness change only, no scale.
@@ -70,10 +70,10 @@ household preference test and an MCDA, so one direction can be recorded in ADR-0
 
 - **Idea**: the family sofa — big soft posters and round shapes, readable by a child from across
   the room.
-- **Colour**: ground `#121a2e` night blue; surface `#1c2640`; ink `#f5efe8` (≈ 15:1); muted ink
-  `#a9b3cc`; coral fill `#ff7a5c` for the primary action (night-blue text ≈ 6.7:1); butter
-  yellow `#ffd36e` for focus (≈ 11:1).
-- **Type**: Nunito (OFL), rounded; TV display 64 / title 52 / body 30 px, phone 32 / 30 / 17 px.
+- **Colour**: ground `#121a2e` night blue; surface `#1c2640`; ink `#f5efe8` (15.2:1); muted ink
+  `#a9b3cc` (8.3:1); coral fill `#ff7a5c` for the primary action (night-blue text 6.8:1); butter
+  yellow `#ffd36e` for focus (12.2:1).
+- **Type**: Nunito (OFL), rounded; TV display 72 / title 52 / body 30 / meta 24 px, phone 34 / 26 / 17 / 14 px.
 - **Icons**: Phosphor bold (MIT), rounded ends.
 - **Image**: posters with 14 px radius; backdrop under a night-blue veil; pill buttons.
 - **Focus and motion**: card grows 1.10 with a 5 px butter ring and a soft spring, 260 ms;
@@ -109,11 +109,30 @@ more criterion then.
 
 Sensitivity: B and C tie; more weight on identity favours B, more on the child favours C.
 
-## 5. Next steps
+## 5. The drawn tiles
 
-1. Draw the three tiles and their four boards in Penpot (project PopCornTV), export one PNG per
-   board to `docs/design/style-tiles/`, back up Penpot.
-2. Household preference test at the card-sort session (#429): each person picks one tile and
+Drawn in Penpot, file *02 · Art direction*, one page per direction; 15 boards exported to
+[`docs/design/style-tiles/`](../../design/style-tiles/) (256-colour PNG). Content is fictional:
+invented French titles, persona names only, no artwork.
+
+| Board | A — Velvet house | B — Projection booth | C — Evening living room |
+|---|---|---|---|
+| Style tile | [tile](../../design/style-tiles/a-velvet-house-tile.png) | [tile](../../design/style-tiles/b-projection-booth-tile.png) | [tile](../../design/style-tiles/c-evening-living-room-tile.png) |
+| Home hero, TV 1920 | [home](../../design/style-tiles/a-velvet-house-home-tv.png) | [home](../../design/style-tiles/b-projection-booth-home-tv.png) | [home](../../design/style-tiles/c-evening-living-room-home-tv.png) |
+| Player controls, TV 1920 | [player](../../design/style-tiles/a-velvet-house-player-tv.png) | [player](../../design/style-tiles/b-projection-booth-player-tv.png) | [player](../../design/style-tiles/c-evening-living-room-player-tv.png) |
+| *Qui regarde ?*, TV 1920 | [profiles](../../design/style-tiles/a-velvet-house-profiles-tv.png) | [profiles](../../design/style-tiles/b-projection-booth-profiles-tv.png) | [profiles](../../design/style-tiles/c-evening-living-room-profiles-tv.png) |
+| Home row, phone 390 | [phone](../../design/style-tiles/a-velvet-house-home-phone.png) | [phone](../../design/style-tiles/b-projection-booth-home-phone.png) | [phone](../../design/style-tiles/c-evening-living-room-home-phone.png) |
+
+Every TV board shows the 5 % safe area as a dashed guide. Observations from drawing:
+
+- **B** holds the longest French title on one TV line; its uppercase labels need about 15 % more
+  button width than Inter.
+- **C** Nunito is the widest face: the subtitle cue and the nav needed more room.
+- **A** is the quietest; its gold focus ring reads well on the red button but is thin at 3 m.
+
+## 6. Next steps
+
+1. Household preference test at the card-sort session (#429): each person picks one tile and
    gives three words why; results recorded by age band only.
-3. Owner validates the MCDA weights; score; ADR-0042 records the direction and supersedes
+2. Owner validates the MCDA weights; score; ADR-0042 records the direction and supersedes
    ADR-0004's look. Tokens move to `tokens.css` in #399.
