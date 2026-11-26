@@ -129,8 +129,8 @@ workflow #315 before deployment.
 
 Started by #395. Each row traces a brief goal, non-functional requirement or job story to the
 screens of the inventory (#396), the components of the system (#399) and the checks (#394,
-#400, #411, #412). Columns fill in as each phase is validated by the owner. UC34, REQ-38–42,
-ADR-0035 and ADR-0038 are reserved by #315 (branch `feat/315-playable-retrieval-trial`); the redesign starts at UC35.
+#400, #411, #412). Columns fill in as each phase is validated by the owner. UC34, REQ-38–42 and
+ADR-0035 belong to #328 (below); ADR-0038 is reserved by #315 (branch `feat/315-playable-retrieval-trial`); the redesign starts at UC35.
 
 | Source | Requirement | Screens (#396) | Components (#399) | Verification | Status |
 |---|---|---|---|---|---|
@@ -180,3 +180,22 @@ automated cases use synthetic or local fixtures (NFR-17).
 | NFR-17 synthetic fixtures only | all | — | Gate review | all | accepted design |
 | NFR-18 egress and privacy | DFD | ADR-0047 | T-NFR-18: network test, no profile data to sources or channels | 1, 3 | accepted design |
 | NFR-19 retention | UC44 | — | T-NFR-19: retention sweep | 4 | accepted design |
+
+## Persistent VPN retrieval — #328, 2026-11-26
+
+UC34 and REQ-38–42 are defined in [the contract](specs/nordvpn-retrieval.md); test IDs refer
+to the [designed cases](qa/cases/328-nordvpn-retrieval.md). No application class or data model
+is added. Secrets cross only protected mounts, not application payloads.
+
+| Source and requirement | Realization | Components and deployment | Tests | Status |
+|---|---|---|---|---|
+| #328 → REQ-38; REQ-56, NFR-18 (egress) | SEQ-start-retrieval; UC34 | Retrieval controller, Gluetun, qBittorrent; local deployment | TC-02–05/09 | implemented; component-tested, runtime acceptance owner-run and pending |
+| #328 → REQ-39 | SEQ-start-retrieval; UC34 | Retrieval controller, protected file mounts, authenticated client | TC-01/02/07 | implemented; component-tested, runtime acceptance owner-run and pending |
+| #328 → REQ-40; REQ-51 (`MEDIA_ROOT` untouched) | Hard quota, process limits, `MEDIA_ROOT` refusal | Retrieval controller, dedicated filesystem; local deployment | TC-08/09/11 | implemented; component-tested, runtime acceptance owner-run and pending |
+| #328 → REQ-41 | SEQ-start-retrieval; UC34 failure and recovery | Retrieval controller, gateway/client namespace lifecycle | TC-03–06/10 | implemented; tunnel-only failure and transfer recovery pending |
+| #328 → REQ-42 | UC34 integration boundary | Empty client, later cache and scheduler bricks (#311, #437) | TC-06/10 | implemented empty boundary |
+| NFR-17 | Synthetic or local fixtures only | `just retrieval-check` (gate); `just retrieval-contract` (local Docker, outside the gate) | TC-01–12 component level | `retrieval-check` automated in the gate |
+
+Sequence: [SEQ-start-retrieval](diagrams/nordvpn-retrieval/02-sequence-start-retrieval.md).
+Deployment: [local](diagrams/nordvpn-retrieval/08-deployment-local.md). No class, state or
+activity diagram is needed for this infrastructure slice.

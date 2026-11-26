@@ -48,3 +48,12 @@ Incremental glossary for adaptive wishlist design (#307), signed local gates (#3
 | Retrieved title | A title retrieved on demand into the retrieval cache, shared by profiles, with its own lifecycle. | On-demand retrieval spec § 2 |
 | Sliding window | Under a full cache with nothing to evict, a playback releases its own played pieces behind a 30 s back buffer. | REQ-53, ADR-0044 |
 | Start buffer | The verified contiguous span from the start position that lets playback run without a stall, floor 30 s, capped per title. | REQ-47, ADR-0044 |
+
+## Local VPN retrieval terms (#328)
+
+| Term | Meaning | Authority |
+|---|---|---|
+| Retrieval controller | Local operator tool validating and managing the owned gateway and client. | [VPN retrieval spec](specs/nordvpn-retrieval.md), UC34 |
+| VPN namespace | Dedicated network namespace shared by Gluetun and qBittorrent, with tunnel-only public egress. | REQ-38, ADR-0035 |
+| Hard retrieval quota | Filesystem-enforced maximum allocation (100 GiB at most), separate from the cache ceiling and from application settings. | REQ-40 |
+| Egress canary | Owned endpoint observing attempted bypass traffic, bracketed by successful positive controls. | #328 designed cases |

@@ -57,6 +57,7 @@ docs/architecture/
 | `adaptive-wishlist` | [spec](specs/adaptive-wishlist-lifecycle.md), [diagrams](diagrams/adaptive-wishlist) | partly replaced by `on-demand-retrieval` (#434); recovery contract (ADR-0034) kept |
 | `on-demand-retrieval` | [requirements](../requirements/08-on-demand-retrieval.md), [spec](specs/on-demand-retrieval.md), [diagrams](diagrams/on-demand-retrieval) | conception accepted (#434); slice 1 (films) next |
 | `local-discovery` | [spec](specs/local-discovery-topology.md), [diagrams](diagrams/local-discovery) | local implementation (#327): empty services, no source configured; merge and exact-head qualification tracked in PR #351 |
+| `nordvpn-retrieval` | [spec](specs/nordvpn-retrieval.md), [diagrams](diagrams/nordvpn-retrieval), [cases](qa/cases/328-nordvpn-retrieval.md) | implemented (#328): empty VPN-only client, component-tested; runtime acceptance of this head owner-run and pending |
 | `playback` | [diagrams/playback](diagrams/playback)  | design  |
 | `redesign` | [inventory](specs/redesign-screen-inventory.md), [information architecture](specs/redesign-information-architecture.md), [diagrams](diagrams/redesign) | design (epic #401, #396) |
 
@@ -68,6 +69,7 @@ docs/architecture/
 | [0002](decisions/0002-file-naming-parser.md) | File-naming parser: own regex parser | accepted |
 | [0033](decisions/0033-elaborate-adaptive-playback-risks-before-construction.md) | Elaborate adaptive playback risks before construction | proposed |
 | [0034](decisions/0034-verify-pieces-before-progressive-playback.md) | Verify pieces before progressive playback | accepted — bounded construction, source diversity retained |
+| [0035](decisions/0035-share-retrieval-vpn-namespace.md) | Share the retrieval client's dedicated VPN namespace | accepted |
 | [0036](decisions/0036-local-discovery-topology-and-gate-scope.md) | Local discovery topology and gate scope | accepted |
 | [0037](decisions/0037-penpot-design-tool-and-token-direction.md) | Penpot as the design tool, `tokens.css` as the token source | accepted |
 | [0040](decisions/0040-play-local-trailers-and-hand-off-remote-ones.md) | Play local trailers, hand remote ones off to a personal device | accepted |

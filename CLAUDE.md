@@ -76,12 +76,16 @@ spacing / typography, tests with every feature (Vitest unit, Playwright e2e late
   `make staging-logs` · `make staging-down` (keeps data) · `make staging-reset`.
 - Run product QA on the independent [Pi staging deployment](deploy/pi-staging/README.md).
   Use the [FULL staging checklist](docs/testing/qa-full-staging-checklist.md).
-- `make lint-docker` (the three Dockerfiles) · `make scan-docker-config` ·
+- `make lint-docker` (the four Dockerfiles) · `make scan-docker-config` ·
   `make scan-docker-image IMAGE=…`.
 - `mise x -- just setup` — pinned tools, including the Python infra toolchain (uv, `uv.lock`,
   ruff, mypy strict, pytest). `mise x -- just fast | check | gate` — local signed gate
   (`scripts/local-ci.py`, spec `docs/architecture/specs/local-gate-operation.md`);
   `mise x -- just merge <n>` is the only merge path.
+- `mise x -- just retrieval-check` (component suite, in the gate) · `retrieval-contract` (Docker
+  inspect semantics). Owner-run only, with the real VPN file: `retrieval-build`, `retrieval-init
+  /abs/storage /abs/wireguard.conf`, `retrieval-start | retrieval-status | retrieval-stop /abs/storage`,
+  `retrieval-fault-f01 | retrieval-fault-f02` (`deploy/local-retrieval/README.md`).
 - `mise x -- just discovery-build /abs/sixlabors.lic` then `mise x -- just discovery-init |
   discovery-start | discovery-status | discovery-stop` — empty local Prowlarr / Radarr on loopback
   (`deploy/local-discovery/README.md`).
@@ -202,6 +206,14 @@ from source; applications on an internal network with no host port, the two admi
 stops the owned services); no source configured, nothing retrieved; the gate rebuilds and replays
 the real-container journey only for a diff touching `DISCOVERY_PATHS`, or when forced with
 `LOCAL_CI_DISCOVERY=1`).
+#328 VPN-only retrieval infrastructure (epic #306; spec `docs/architecture/specs/nordvpn-retrieval.md`,
+ADR-0035: separate Compose project `deploy/local-retrieval/` — Gluetun rebuilt from source (WireGuard)
+and a pinned qBittorrent sharing its network namespace, kill switch, no host port; Python controller
+`scripts/local_retrieval.py` (init / start / status / stop, categorical refusals, manifest v2 keyed by
+filesystem UUID, 90-day credentials, AMD64 and ARM64 pins); dedicated ext4/XFS mount
+`nodev,nosuid,noexec`, 100 GiB at most (`scripts/create_retrieval_storage.py --size-gib`), 2 GiB
+reserve, refused when it shares a tree with `MEDIA_ROOT` or when `MEDIA_ROOT` is undeclared (`none` = no library); empty client, nothing retrieved; owner-run
+fault executors F01 / F02; the real VPN file and tunnel are never used by an agent or the gate).
 
 Server layout (flat, component diagram 03): `src/library/` holds the pure `name-parser`
 and `path-guard`, the `ffprobe` runner (only process egress), the `folder-lister` (one-level `readdir` of `MEDIA_ROOT`), the `scanner`, the pure `identity` (carry-over keys, ADR-0018), the `scheduler` (interval rescans, ADR-0016), the per-library

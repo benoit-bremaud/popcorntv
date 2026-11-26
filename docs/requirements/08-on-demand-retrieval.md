@@ -11,8 +11,9 @@ when someone shows interest in it, starts as fast as possible and leaves the dis
 - Contract: [on-demand retrieval spec](../architecture/specs/on-demand-retrieval.md);
   diagrams in [`diagrams/on-demand-retrieval/`](../architecture/diagrams/on-demand-retrieval/);
   decisions ADR-0043 to ADR-0047.
-- Identifiers: REQ-43 onwards and NFR-16 onwards (REQ-38–42 and UC34 are reserved by #315,
-  UC35–39 by the redesign).
+- Identifiers: REQ-43 onwards and NFR-16 onwards (REQ-38–42 and UC34 belong to the VPN
+  retrieval infrastructure of #328, [spec](../architecture/specs/nordvpn-retrieval.md);
+  UC35–39 to the redesign).
 
 ## Why
 
@@ -25,8 +26,7 @@ a favourite.
 - **Viewer**: a signed-in adult account with a profile. Children are out of scope until #316.
 - **Guest**: a viewer from another household, under a quota.
 - **Owner**: configures limits and channels, supervises activity and statistics.
-- **Source**: an external retrieval source reached through the VPN only (ADR-0034, ADR-0035 on
-  the #315 branch).
+- **Source**: an external retrieval source reached through the VPN only (ADR-0034, ADR-0035).
 
 ## Use cases
 

@@ -1,0 +1,6 @@
+**
+!deploy/
+!deploy/local-retrieval/
+!deploy/local-retrieval/gluetun/
+!deploy/local-retrieval/gluetun/go.mod
+!deploy/local-retrieval/gluetun/go.sum

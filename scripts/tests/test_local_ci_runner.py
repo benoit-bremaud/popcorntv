@@ -54,7 +54,7 @@ if name=='pnpm' and 'playwright' in sys.argv:
  status='failed' if os.environ.get('CI_TEST_BROWSER_EXPECTED_FAIL') else 'passed'
  Path(os.environ['PLAYWRIGHT_JSON_OUTPUT_NAME']).write_text(json.dumps({'stats':{'expected':1,'skipped':skipped},'errors':[],
  'suites':[{'specs':[{'tests':[{'expectedStatus':status,'results':[{'status':status}]}]}]}]}))
-sys.exit(1 if os.environ.get('CI_TEST_FAIL_TOOL')==name or (os.environ.get('CI_TEST_FAIL_DEPENDENCIES') and name=='node' and 'scripts/check-dependencies.mjs' in sys.argv) else 0)
+sys.exit(1 if os.environ.get('CI_TEST_FAIL_TOOL')==name or (os.environ.get('CI_TEST_FAIL_DEPENDENCIES') and name=='node' and 'scripts/check-dependencies.mjs' in sys.argv) or (os.environ.get('CI_TEST_FAIL_DISCOVERY') and name=='just' and 'discovery-build' in sys.argv) else 0)
 ''')
             path.chmod(0o755)
         for folder, package in (('packages/shared', '@popcorntv/shared'), ('apps/server', '@popcorntv/server'),
@@ -171,7 +171,7 @@ sys.exit(1 if os.environ.get('CI_TEST_FAIL_TOOL')==name or (os.environ.get('CI_T
 
     def test_failed_discovery_step_is_never_recorded_as_run(self):
         self.discovery_branch()
-        self.run_recipe('gate', good=False, CI_TEST_FAIL_TOOL='just')
+        self.run_recipe('gate', good=False, CI_TEST_FAIL_DISCOVERY='1')
         self.assertEqual(self.fixture.latest(), 'failure')
         report = next((self.repo / '.git/local-ci-runs').glob('*/discovery'))
         self.assertEqual(report.read_text(), 'scheduled\n')
@@ -191,6 +191,12 @@ sys.exit(1 if os.environ.get('CI_TEST_FAIL_TOOL')==name or (os.environ.get('CI_T
         self.run_recipe('gate', good=False, CI_TEST_FAIL_DEPENDENCIES='1')
         self.assertEqual(self.fixture.latest(), 'failure')
         self.assertIn('docker', self.log.read_text())
+        self.assertNotIn('sonar.qualitygate.wait', self.log.read_text())
+
+    def test_failed_retrieval_checks_never_attest(self):
+        self.run_recipe('gate', good=False, CI_TEST_FAIL_TOOL='just')
+        self.assertEqual(self.fixture.latest(), 'failure')
+        self.assertIn('retrieval-check', self.log.read_text())
         self.assertNotIn('sonar.qualitygate.wait', self.log.read_text())
 
     def test_failed_python_tool_never_attests(self):

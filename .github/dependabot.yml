@@ -1,5 +1,5 @@
 # Dependency updates: pnpm workspace, Python (uv), pinned GitHub Actions, Docker base images
-# (application and local discovery), compose images.
+# (application, local discovery and retrieval), compose images.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -64,3 +64,14 @@ updates:
     commit-message:
       prefix: chore(deps)
       prefix-development: chore(deps-dev)
+
+  - package-ecosystem: docker
+    directory: /deploy/local-retrieval
+    schedule:
+      interval: weekly
+    groups:
+      docker-bases:
+        applies-to: version-updates
+        patterns: ['*']
+    commit-message:
+      prefix: chore(docker)

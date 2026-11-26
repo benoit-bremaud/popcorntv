@@ -9,8 +9,8 @@
 Only the goals the redesign adds. The goals that exist today stay in their own domain diagrams
 and are not redrawn: [playback](../playback/01-use-case.md) (UC1–UC10),
 [catalog](../catalog/01-use-case.md) (UC3, UC4, UC22, UC24, UC26–UC30),
-[auth](../auth/01-use-case.md) (UC15 and the account goals). UC31 and UC34 are reserved by
-other branches (#128, #315), so the new goals start at UC35. The TV and the phone are devices,
+[auth](../auth/01-use-case.md) (UC15 and the account goals). UC31 is reserved by #128 and
+UC34 belongs to #328, so the new goals start at UC35. The TV and the phone are devices,
 not actors: the same Viewer uses them.
 
 ## Diagram

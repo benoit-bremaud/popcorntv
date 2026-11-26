@@ -76,4 +76,10 @@ vulnerabilities:
     purls: [pkg:deb/debian/libssl3t64, pkg:deb/debian/openssl-provider-legacy]
     expired_at: 2026-12-22
     statement: 'OpenSSL denial of service by unbounded QUIC frame queueing; only apt links the system libssl, Node bundles its own OpenSSL and the app opens no QUIC endpoint. Debian status affected (#444). Re-check: #116.'
-misconfigurations: []
+# #328: the VPN gateway keeps root with NET_ADMIN to manage the kernel WireGuard interface and the
+# firewall (ADR-0035); the client sharing its namespace is non-root with every capability dropped.
+misconfigurations:
+  - id: DS-0002
+    paths: [deploy/local-retrieval/gluetun.Dockerfile]
+    expired_at: 2027-05-26
+    statement: 'Gluetun needs root with NET_ADMIN for the WireGuard interface and the firewall; no host port, read-only root filesystem, non-root client. Re-check: #456.'
