@@ -49,19 +49,35 @@ HTTP protocol failures during startup verification now refuse readiness and stop
 
 | Step | Status |
 |---|---|
-| Tests and coverage | L1 passed on `502a799`; repeat as required for the published head |
+| Tests and coverage | L1 passed again on published `69a8a82`: 2,017 tests |
 | Whole-project documentation coverage | Deferred to pre-merge qualification |
-| SonarQube | Deferred to the published-head L2 gate |
+| SonarQube | Not reached: discovery image scan blocked L2 |
 | Secrets | L1 scan and manual implementation diff inspection passed |
-| Production build and browser smoke | Deferred to the published-head L2 gate |
-| Signed attestation | Not created; branch not published |
+| Production build and browser smoke | Not reached: discovery image scan blocked L2 |
+| Signed attestation | Not created: L2 failed |
 | Deployment | Not performed |
 
-L1 passed; this record does not authorize a merge. The report-only follow-up requires review verification before publication, and the exact published head requires the signed gate before merge.
+L1 passed; L2 is red and does not authorize a merge. The exact published head requires the signed gate before merge.
+
+## Pre-merge attempts on `69a8a82`
+
+- First run: L1 passed, then refused the discovery rebuild because the license-file environment variable was absent. Retained run: `20261127T103146Z-69a8a82ed6ab0c5cba4eccf10605c776a3ced94e-876491`.
+- Licensed run: L1 passed; discovery images rebuilt with the existing BuildKit secret mechanism, using cached layers and cached ImageSharp regression results. The runtime test then refused startup when the Prowlarr image scan failed. Retained run: `20261127T104020Z-69a8a82ed6ab0c5cba4eccf10605c776a3ced94e-938941`.
+- Blocking findings: six HIGH libxml2 advisories, installed `2.13.9-r3`, all corrected by `2.13.9-r5`. The existing rebuilt Radarr image has the same findings. No scanner rule or waiver was changed.
+- The next official Prowlarr nightly image, `3.1.0.5797-ls32`, was also scanned and retains all six findings.
+- Non-deployed experiments upgrading only libxml2 to `2.13.9-r5` passed the same image scanner with zero HIGH/CRITICAL findings on both Prowlarr and Radarr. Radarr retains `USER 1000:1000`. These experiments are scan evidence only; runtime qualification and repository integration remain pending.
+- Local ignored scan records: `.trivy/459-prowlarr-candidate.json`, `.trivy/459-prowlarr-patched.json`, `.trivy/459-radarr-baseline.json`, `.trivy/459-radarr-patched.json`.
+
+## Isolated local browser check
+
+- Real development frontend and API on loopback, separate disposable database and empty media root, no TMDB key, no discovery/retrieval integration.
+- Chrome: owner setup through the API, sign-in through the UI, profile selection, empty catalog and administration entry passed with a fictional test account.
+- Observed API calls returned 200; no console errors or warnings were observed.
+- This is not production-build acceptance, a video playback test or Raspberry Pi validation. The L2 production-browser smoke was not reached.
 
 ## Must have
 
-None.
+Resolve the external discovery-image scan failure and re-run the complete signed gate before merging. No implementation-review finding remains in the HTTP protocol correction.
 
 ## Should have
 
