@@ -6,7 +6,7 @@ help: ## List targets
 # Hadolint runs from its official image pinned by digest — single source of truth
 # for local runs and CI (the workflow calls this target). Bump tag + digest together.
 HADOLINT_IMAGE := ghcr.io/hadolint/hadolint:v2.15.1@sha256:32dac94127fd60b7b7e3fbfc65e1383b9b5e25c9bfd7b8536de7a539fe68a12d
-HADOLINT_FILES ?= Dockerfile deploy/local-discovery/radarr.Dockerfile deploy/local-discovery/ingress.Dockerfile deploy/local-retrieval/gluetun.Dockerfile
+HADOLINT_FILES ?= Dockerfile deploy/local-discovery/prowlarr.Dockerfile deploy/local-discovery/radarr.Dockerfile deploy/local-discovery/ingress.Dockerfile deploy/local-retrieval/gluetun.Dockerfile
 
 # The Hadolint image has no ENTRYPOINT (only CMD ["/bin/hadolint", "-"]), so
 # the `hadolint ...` arguments below replace that CMD — they are not appended.

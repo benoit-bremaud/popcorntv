@@ -25,10 +25,10 @@ gate base="origin/main":
 merge pr:
     python3 scripts/local-ci.py merge {{quote(pr)}}
 
-# Build the corrected Radarr snapshot using a private, external license file.
+# Build corrected discovery images using a private, external Radarr license file.
 discovery-build license:
     test -f {{quote(license)}}
-    SIXLABORS_LICENSE_FILE={{quote(license)}} docker buildx bake --allow=fs.read={{quote(license)}} -f deploy/local-discovery/docker-bake.hcl radarr ingress radarr-regression
+    SIXLABORS_LICENSE_FILE={{quote(license)}} docker buildx bake --allow=fs.read={{quote(license)}} -f deploy/local-discovery/docker-bake.hcl prowlarr radarr ingress radarr-regression
 
 # Initialize private local state; never configures an external source.
 discovery-init:

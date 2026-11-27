@@ -539,8 +539,7 @@ def controller(
             calls.append(arguments)
             if "--images" in arguments:
                 return (
-                    "lscr.io/linuxserver/prowlarr:1.0@sha256:"
-                    + "a" * 64
+                    discovery.PROWLARR_TAG
                     + "\n"
                     + discovery.RADARR_TAG
                     + "\n"
@@ -548,16 +547,20 @@ def controller(
                 )
             if arguments[:3] == ["docker", "image", "inspect"]:
                 ingress = arguments[3] == discovery.CADDY_IMAGE
+                prowlarr = arguments[3] == discovery.PROWLARR_TAG
                 return json.dumps(
                     [
                         {
-                            "Id": "sha256:" + ("c" if ingress else "b") * 64,
+                            "Id": "sha256:"
+                            + ("c" if ingress else "a" if prowlarr else "b") * 64,
                             "Config": {
                                 "Labels": {
                                     "org.opencontainers.image.revision": discovery.CADDY_REVISION
                                     if ingress
                                     else discovery.RADARR_REVISION,
                                     "io.popcorntv.radarr.imagesharp": "3.2.0",
+                                    "org.opencontainers.image.base.digest": discovery.PROWLARR_BASE,
+                                    "io.popcorntv.libxml2": discovery.LIBXML2_VERSION,
                                 }
                             },
                         }
@@ -1063,12 +1066,68 @@ def test_unverified_rebuild_provenance_never_starts(
     assert not any("up" in call for call in calls)
 
 
+@pytest.mark.parametrize(
+    "image,label,value",
+    [
+        (discovery.PROWLARR_TAG, "org.opencontainers.image.base.digest", None),
+        (
+            discovery.PROWLARR_TAG,
+            "org.opencontainers.image.base.digest",
+            "sha256:" + "0" * 64,
+        ),
+        (discovery.PROWLARR_TAG, "io.popcorntv.libxml2", None),
+        (discovery.PROWLARR_TAG, "io.popcorntv.libxml2", "2.13.9-r3"),
+        (discovery.RADARR_TAG, "io.popcorntv.libxml2", None),
+        (discovery.RADARR_TAG, "io.popcorntv.libxml2", "2.13.9-r3"),
+    ],
+)
+def test_unverified_native_package_provenance_never_starts(
+    installation: discovery.Installation,
+    controller: tuple[dict[str, FakeArr], list[list[str]]],
+    monkeypatch: pytest.MonkeyPatch,
+    image: str,
+    label: str,
+    value: str | None,
+) -> None:
+    _models, calls = controller
+    original = discovery.command
+
+    def altered_inventory(
+        arguments: list[str], *, env: dict[str, str] | None = None
+    ) -> str:
+        result = original(arguments, env=env)
+        if arguments == ["docker", "image", "inspect", image]:
+            rows = json.loads(result)
+            labels = rows[0]["Config"]["Labels"]
+            if value is None:
+                labels.pop(label)
+            else:
+                labels[label] = value
+            return json.dumps(rows)
+        return result
+
+    monkeypatch.setattr(discovery, "command", altered_inventory)
+
+    with pytest.raises(discovery.DiscoveryError, match="provenance not verified"):
+        discovery.start(installation)
+
+    assert not any("up" in call for call in calls)
+
+
+@pytest.mark.parametrize(
+    "service,letter", [("PROWLARR", "a"), ("RADARR", "b"), ("INGRESS", "c")]
+)
+@pytest.mark.parametrize("rollback", [False, True])
 def test_every_start_uses_the_exact_image_identity_that_passed_scan(
     installation: discovery.Installation,
     controller: tuple[dict[str, FakeArr], list[list[str]]],
     monkeypatch: pytest.MonkeyPatch,
+    service: str,
+    letter: str,
+    rollback: bool,
 ) -> None:
-    _models, calls = controller
+    models, calls = controller
+    models["prowlarr"].bad_login = rollback
     original = discovery.command
     deployed: list[str] = []
 
@@ -1077,12 +1136,17 @@ def test_every_start_uses_the_exact_image_identity_that_passed_scan(
     ) -> str:
         if arguments[:2] == ["docker", "compose"] and "up" in arguments:
             assert env is not None
-            deployed.append(env["DISCOVERY_RADARR_IMAGE"])
+            deployed.append(env["DISCOVERY_" + service + "_IMAGE"])
         return original(arguments, env=env)
 
     monkeypatch.setattr(discovery, "command", record_identity)
-    discovery.start(installation)
-    identity = "sha256:" + "b" * 64
+    if rollback:
+        with pytest.raises(discovery.DiscoveryError):
+            discovery.start(installation)
+        assert any("--force-recreate" in call for call in calls)
+    else:
+        discovery.start(installation)
+    identity = "sha256:" + letter * 64
     assert deployed == [identity, identity]
     assert any("IMAGE=" + identity in call for call in calls)
 

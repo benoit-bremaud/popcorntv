@@ -45,7 +45,12 @@ DEFAULT_STATE = ROOT / "data/local-discovery"
 MAX_RESPONSE = 512 * 1024
 LOGGER = logging.getLogger("popcorntv.discovery")
 COMMAND_TIMEOUT = 180
-RADARR_TAG = "popcorntv-radarr:af772b0-imagesharp3.2.0"
+RADARR_TAG = "popcorntv-radarr:af772b0-imagesharp3.2.0-libxml2r5"
+PROWLARR_TAG = "popcorntv-prowlarr:3.1.0.5792-libxml2r5"
+PROWLARR_BASE = (
+    "sha256:93db99069c77a5a294f65fb4ec3978af15e9f8e2b5bd868261dc22974f4def1e"
+)
+LIBXML2_VERSION = "2.13.9-r5"
 CADDY_IMAGE = "popcorntv-discovery-ingress:7ce9f08"
 CADDY_REVISION = "7ce9f0823762109fc67911f95f6af1a697345ab7"
 RADARR_REVISION = "af772b051ac27a0615c7f8b7f78622b6dc183be0"
@@ -151,6 +156,7 @@ class Installation:
                 "DISCOVERY_SUBNET": str(self.subnet),
                 "DISCOVERY_UID": str(self.uid),
                 "DISCOVERY_GID": str(self.gid),
+                "DISCOVERY_PROWLARR_IMAGE": PROWLARR_TAG,
                 "DISCOVERY_RADARR_IMAGE": RADARR_TAG,
                 "DISCOVERY_INGRESS_IP": str(self.subnet[6]),
                 "DISCOVERY_INGRESS_IMAGE": CADDY_IMAGE,
@@ -586,6 +592,7 @@ def compose(
     arguments: list[str],
     *,
     published: bool = False,
+    prowlarr_image: str | None = None,
     radarr_image: str | None = None,
     ingress_image: str | None = None,
 ) -> str:
@@ -611,6 +618,8 @@ def compose(
         environment["DISCOVERY_INGRESS_IMAGE"] = ingress_image
     if radarr_image is not None:
         environment["DISCOVERY_RADARR_IMAGE"] = radarr_image
+    if prowlarr_image is not None:
+        environment["DISCOVERY_PROWLARR_IMAGE"] = prowlarr_image
     return command([*prefix, *arguments], env=environment)
 
 
@@ -835,7 +844,13 @@ def check_ports(
                 ) from error
 
 
-def rebuilt_image_identity(image: str, name: str, revision: str) -> str:
+def rebuilt_image_identity(
+    image: str,
+    name: str,
+    revision: str,
+    *,
+    revision_label: str = "org.opencontainers.image.revision",
+) -> str:
     """Require one immutable image with the expected source and compatibility labels."""
     decoded: object = json.loads(command(["docker", "image", "inspect", image]))
     if not isinstance(decoded, list) or len(decoded) != 1:
@@ -846,7 +861,11 @@ def rebuilt_image_identity(image: str, name: str, revision: str) -> str:
     if (
         not isinstance(identity, str)
         or not re.fullmatch(r"sha256:[a-f0-9]{64}", identity)
-        or labels.get("org.opencontainers.image.revision") != revision
+        or labels.get(revision_label) != revision
+        or (
+            name in ("Radarr", "Prowlarr")
+            and labels.get("io.popcorntv.libxml2") != LIBXML2_VERSION
+        )
         or (
             name == "Radarr" and labels.get("io.popcorntv.radarr.imagesharp") != "3.2.0"
         )
@@ -878,12 +897,13 @@ def scan_discovery_image(image: str, name: str, digest: str) -> None:
         raise
 
 
-def verify_images(installation: Installation) -> tuple[str, str]:
-    """Scan the immutable local Radarr identity and pinned upstream Prowlarr before up."""
+def verify_images(installation: Installation) -> tuple[str, str, str]:
+    """Validate and scan local images; return Prowlarr, Radarr and ingress IDs."""
     images = compose(installation, ["config", "--images"]).splitlines()
     names: set[str] = set()
     radarr_id = ""
     ingress_id = ""
+    prowlarr_id = ""
     for image in images:
         if image == RADARR_TAG and "radarr" not in names:
             radarr_id = rebuilt_image_identity(image, "Radarr", RADARR_REVISION)
@@ -891,21 +911,27 @@ def verify_images(installation: Installation) -> tuple[str, str]:
         elif image == CADDY_IMAGE and "ingress" not in names:
             ingress_id = rebuilt_image_identity(image, "ingress", CADDY_REVISION)
             name, digest, image = "ingress", ingress_id[7:], ingress_id
-        else:
-            match = re.fullmatch(
-                r"lscr\.io/linuxserver/(prowlarr):[\w.-]+@sha256:([a-f0-9]{64})",
+        elif image == PROWLARR_TAG and "prowlarr" not in names:
+            prowlarr_id = rebuilt_image_identity(
                 image,
+                "Prowlarr",
+                PROWLARR_BASE,
+                revision_label="org.opencontainers.image.base.digest",
             )
-            if match is None or match[1] in names:
-                raise DiscoveryError("unexpected or unpinned discovery image")
-            name, digest = match[1], match[2]
+            name, digest, image = "prowlarr", prowlarr_id[7:], prowlarr_id
+        else:
+            raise DiscoveryError("unexpected or unpinned discovery image")
         names.add(name)
         scan_discovery_image(image, name, digest)
-    if names != {service.name for service in SERVICES} | {"ingress"} or not radarr_id:
+    if (
+        names != {service.name for service in SERVICES} | {"ingress"}
+        or not radarr_id
+        or not prowlarr_id
+    ):
         raise DiscoveryError("required discovery image missing")
     if not ingress_id:
         raise DiscoveryError("required ingress image missing")
-    return radarr_id, ingress_id
+    return prowlarr_id, radarr_id, ingress_id
 
 
 def verify_initialization_denial(installation: Installation) -> None:
@@ -1128,7 +1154,7 @@ def start(installation: Installation, *, publish: bool = True) -> None:
         try:
             require_first_listen_auth(installation)
             prepare_ingress(installation)
-            radarr_image, ingress_image = verify_images(installation)
+            prowlarr_image, radarr_image, ingress_image = verify_images(installation)
             if publish:
                 check_ports(
                     owned_host_ports(owned_containers(installation)),
@@ -1148,6 +1174,7 @@ def start(installation: Installation, *, publish: bool = True) -> None:
             compose(
                 installation,
                 ["up", "-d", "--wait", "--wait-timeout", "120"],
+                prowlarr_image=prowlarr_image,
                 radarr_image=radarr_image,
                 ingress_image=ingress_image,
             )
@@ -1176,6 +1203,7 @@ def start(installation: Installation, *, publish: bool = True) -> None:
                     installation,
                     ["up", "-d", "--wait", "--wait-timeout", "120"],
                     published=True,
+                    prowlarr_image=prowlarr_image,
                     radarr_image=radarr_image,
                     ingress_image=ingress_image,
                 )
@@ -1193,6 +1221,7 @@ def start(installation: Installation, *, publish: bool = True) -> None:
                 compose(
                     installation,
                     ["up", "-d", "--force-recreate", "--wait", "--wait-timeout", "120"],
+                    prowlarr_image=prowlarr_image,
                     radarr_image=radarr_image,
                     ingress_image=ingress_image,
                 )

@@ -1,6 +1,6 @@
 # Empty local discovery services
 
-This separate installation provisions authenticated Prowlarr and a corrected Radarr build without indexers, download clients, media mounts or external searches.
+This separate installation provisions authenticated, locally patched Prowlarr and Radarr images without indexers, download clients, media mounts or external searches.
 
 ## Build prerequisites
 
@@ -17,12 +17,18 @@ mise x -- just discovery-build /absolute/path/to/sixlabors.lic
 ```
 
 Bake pins the official source archive, compiler and runtime bases. The build
-replaces the entire published application, compiles the dynamically loaded Linux
+replaces Radarr's entire published application, compiles the dynamically loaded Linux
 component, omits the disabled updater, and builds the UI from the same source revision. The
 license is a required BuildKit secret, absent from build context and final image.
 The custom assembly version/configuration identifies this local build; it is not
 an upstream stable release. Source and base pins do not promise byte-identical
 builds across future package-registry changes; scan the actual image every time.
+
+Both application images upgrade only the native `libxml2` package to `2.13.9-r5`
+to clear the six HIGH findings discovered in #464. Prowlarr keeps the reviewed upstream
+application and digest-pinned base; Radarr keeps its existing source rebuild. This narrow
+package correction adds no scanner waiver. Both images default to user `1000:1000`;
+Compose still selects the operator's numeric UID/GID for the installation.
 
 ## Lifecycle
 
@@ -44,11 +50,12 @@ design, rotate by moving the stopped state directory aside and running
 `discovery-init` then `discovery-start` again. Preserve the state directory when
 stopping; do not reset another installation or delete an owner's configuration.
 
-Startup scans all three images with the existing blocking HIGH/CRITICAL policy. Radarr
-is resolved to its local immutable image ID, checked for expected source/patch
-metadata, scanned by ID and started by that same ID, avoiding a mutable tag race.
-The rebuilt Caddy proxy follows the same immutable-ID rule. No automatic registry
-pull is permitted for either custom image.
+Startup scans all three images with the existing blocking HIGH/CRITICAL policy. Prowlarr
+and Radarr are resolved to local immutable image IDs, checked for expected base/source
+and patch metadata, scanned by ID and started by those same IDs, avoiding mutable tag
+races. The rebuilt Caddy proxy follows the same immutable-ID rule. No automatic registry
+pull is permitted for any custom image. Rebuild through `discovery-build` before startup;
+the older unpatched local Radarr tag is not accepted as the corrected build.
 
 Forms authentication is required from the first listen, including private bootstrap.
 Bootstrap first runs without published ports, verifies empty configuration and

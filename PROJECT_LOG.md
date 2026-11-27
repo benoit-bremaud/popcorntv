@@ -4,6 +4,24 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
+## 2026-11-27 — #464 discovery libxml2 correction (PR #465)
+
+- Branch `fix/464-discovery-libxml2`: fixes six HIGH native-package findings that blocked
+  PR #463 before discovery startup. Prowlarr gets a narrow derived image; rebuilt Radarr
+  gets the same `libxml2=2.13.9-r5` correction. Application revisions and base pins stay
+  unchanged; no new scanner waiver. All three local images are validated, scanned and
+  started by immutable ID, including rollback, with no automatic registry pull.
+- Owner decision: separate prerequisite (465/500), over extending #459 (390) or waiting
+  upstream (260). The next official Prowlarr nightly and stable candidates still carried
+  the six findings. Actual corrected images scanned with zero HIGH/CRITICAL findings.
+- Qualification on `ac9f688`: complete gate and verified signed attestation, 2,025 L1 tests,
+  fresh real-container bootstrap/restart/isolation, 7 API-stubbed Chromium smoke cases,
+  SonarQube PASSED and application/discovery scans passed. Documentation presence is
+  94.37%; discovery code coverage is 94.34%. Cached ImageSharp regression layers are not
+  presented as a fresh execution. Evidence: `docs/architecture/qa/2026-11-27-issue-464-discovery-libxml2.md`.
+- No deployment or real retrieval. #459 remains separate and must be rebased and qualified
+  after this prerequisite; the final evidence-only head retains its own gate requirement.
+
 ## 2026-11-26 — #328 VPN-only retrieval infrastructure
 
 - Branch `feat/328-isolate-retrieval-behind-vpn`; closes #328. First brick of slice 1 of epic #306.

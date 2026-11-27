@@ -426,10 +426,13 @@ def test_real_private_bootstrap_restart_and_network_isolation() -> None:
         }
         # Observe first listen before account provisioning, then a real rejected setup request.
         discovery.prepare_ingress(installation)
-        radarr_image, ingress_image = discovery.verify_images(installation)
+        prowlarr_image, radarr_image, ingress_image = discovery.verify_images(
+            installation
+        )
         discovery.compose(
             installation,
             ["up", "-d", "--wait", "--wait-timeout", "120"],
+            prowlarr_image=prowlarr_image,
             radarr_image=radarr_image,
             ingress_image=ingress_image,
         )
