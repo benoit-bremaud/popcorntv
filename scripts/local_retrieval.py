@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import fcntl
 import hashlib
+import http.client
 import ipaddress
 import json
 import logging
@@ -893,7 +894,7 @@ def verify(root: Path, identity: str) -> None:
         verify_anonymous_denied(prefix + "client")
         verify_egress(prefix + "client")
         LOGGER.info("retrieval.connected_verified_acquisition_disabled")
-    except (ValueError, KeyError, TypeError, OSError):
+    except (ValueError, KeyError, TypeError, OSError, http.client.HTTPException):
         raise Refusal("verification_unavailable") from None
 
 

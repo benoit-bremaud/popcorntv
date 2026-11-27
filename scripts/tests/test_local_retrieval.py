@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import http.client
 import json
 import os
 import subprocess
@@ -566,6 +567,57 @@ def test_start_failure_stops_client_before_gateway_and_preserves_state(
         runtime.start(initialized, identity)
     stops = [call for call in docker_observations["calls"] if "stop" in call]
     assert [call[-1] for call in stops][-2:] == ["c" * 64, "a" * 64]
+    assert (initialized / "password").exists()
+
+
+@pytest.mark.parametrize(
+    "failure,stage",
+    [
+        (http.client.HTTPException("synthetic protocol failure"), "open"),
+        (http.client.BadStatusLine("synthetic invalid status"), "open"),
+        (http.client.IncompleteRead(b"synthetic partial body", 100), "read"),
+    ],
+    ids=["protocol-error", "bad-status-line", "incomplete-body"],
+)
+def test_baseline_protocol_failure_refuses_start_and_stops_client_before_gateway(
+    initialized: Path,
+    docker_observations: dict[str, object],
+    monkeypatch: pytest.MonkeyPatch,
+    failure: http.client.HTTPException,
+    stage: str,
+) -> None:
+    class Response:
+        def __enter__(self) -> Self:
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            pass
+
+        def read(self, limit: int) -> bytes:
+            raise failure
+
+    def open_response(*args: object, **kwargs: object) -> Response:
+        if stage == "open":
+            raise failure
+        return Response()
+
+    monkeypatch.setattr(
+        runtime.urllib.request,
+        "build_opener",
+        lambda *args: SimpleNamespace(open=open_response),
+    )
+    identity = str(runtime.installation(initialized)["identity"])
+
+    with pytest.raises(Refusal, match="^verification_unavailable$"):
+        runtime.start(initialized, identity)
+
+    calls = docker_observations["calls"]
+    assert any(call[:2] == ["docker", "compose"] and "up" in call for call in calls)
+    stops = [call[-1] for call in calls if call[:2] == ["docker", "stop"]]
+    assert stops == ["c" * 64, "a" * 64, "c" * 64, "a" * 64]
+    assert all(
+        not item["State"]["Running"] for item in docker_observations["containers"]
+    )
     assert (initialized / "password").exists()
 
 
