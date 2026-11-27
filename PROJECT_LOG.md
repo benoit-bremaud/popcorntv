@@ -4,7 +4,22 @@ Chronological operational logbook (newest first). Complements `git log` with the
 context: merged PRs, decisions, tags, infra events. Not a release changelog — that is
 `CHANGELOG.md`. Entries before 2026-10-24 #27 use the former name, Popcorno.
 
-## 2026-11-27 — #464 discovery libxml2 correction (PR #465)
+## 2026-11-27 — #459 retrieval protocol failure cleanup (PR #463)
+
+- Branch `fix/459-stop-retrieval-protocol-error`: translates HTTP protocol exceptions
+  from the host egress baseline into `verification_unavailable`, activating the existing
+  client-before-gateway shutdown while preserving private state.
+- Three regression cases failed before the fix and pass afterward: generic protocol
+  failure, invalid status line and incomplete response body. Independent review and
+  verification found no remaining implementation finding.
+- The first full gate was blocked by discovery-image findings, resolved separately in
+  PR #465 (`7a95c5d`). This branch was then rebased onto the corrected main; its final
+  exact-head qualification remains mandatory. Detailed evidence is in
+  `docs/architecture/review-local/2026-11-27-fix-459-stop-retrieval-protocol-error.md`.
+- No deployment or real retrieval. A disposable local development instance separately
+  passed sign-in, library scan and synthetic direct playback in Chrome.
+
+## 2026-11-27 — #464 discovery libxml2 correction (PR #465, `7a95c5d`)
 
 - Branch `fix/464-discovery-libxml2`: fixes six HIGH native-package findings that blocked
   PR #463 before discovery startup. Prowlarr gets a narrow derived image; rebuilt Radarr
@@ -19,8 +34,8 @@ context: merged PRs, decisions, tags, infra events. Not a release changelog — 
   SonarQube PASSED and application/discovery scans passed. Documentation presence is
   94.37%; discovery code coverage is 94.34%. Cached ImageSharp regression layers are not
   presented as a fresh execution. Evidence: `docs/architecture/qa/2026-11-27-issue-464-discovery-libxml2.md`.
-- No deployment or real retrieval. #459 remains separate and must be rebased and qualified
-  after this prerequisite; the final evidence-only head retains its own gate requirement.
+- Final published head `2fdb224` passed the complete gate and exact-SHA attestation
+  verification before merge. No deployment or real retrieval. #459 remains separate.
 
 ## 2026-11-26 — #328 VPN-only retrieval infrastructure
 

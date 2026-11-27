@@ -3,7 +3,7 @@
 HTTP protocol failures during startup verification now refuse readiness and stop the client before the gateway.
 
 - Date: 2026-11-27
-- Scope: issue #459, `c27c631...502a799`, two Python files.
+- Scope: issue #459, two Python files; original implementation `502a799`, rebased as `a568ae2` onto `7a95c5d` after PR #465.
 - Checks: independent correctness, architecture, documentation and test-quality reviews; security diff inspection; L1 execution.
 - Verdict: Must 0, Should 0, Nice 0 on the implementation diff.
 
@@ -45,7 +45,7 @@ HTTP protocol failures during startup verification now refuse readiness and stop
 - Reports: ignored `coverage/`, `packages/shared/coverage/`, `apps/server/coverage/` and `apps/web/coverage/`.
 - Manual diff inspection: no credentials or personal data; tracked environment examples contain placeholders.
 
-## Pre-merge gate
+## Historical gate before the prerequisite
 
 | Step | Status |
 |---|---|
@@ -57,7 +57,14 @@ HTTP protocol failures during startup verification now refuse readiness and stop
 | Signed attestation | Not created: L2 failed |
 | Deployment | Not performed |
 
-L1 passed; L2 is red and does not authorize a merge. The exact published head requires the signed gate before merge.
+These failed attempts predate the security prerequisite. They are retained as evidence, not the status of the resumed head.
+
+## Resumption after PR #465
+
+- PR #465 merged as `7a95c5d`, correcting the six native-package findings in Prowlarr and Radarr. The implementation in this branch is unchanged apart from its rebase.
+- Deterministic documentation presence on the resumed tree: 771/817 (94.37%), using the same TypeScript 5.9.3/Python AST method as the prerequisite. No new production public declaration was added by this fix.
+- Exact published-head L1/L2, SonarQube, production-browser smoke and signed attestation must be repeated on this resumed branch before merge.
+- No deployment or real retrieval is included.
 
 ## Pre-merge attempts on `69a8a82`
 
@@ -65,19 +72,20 @@ L1 passed; L2 is red and does not authorize a merge. The exact published head re
 - Licensed run: L1 passed; discovery images rebuilt with the existing BuildKit secret mechanism, using cached layers and cached ImageSharp regression results. The runtime test then refused startup when the Prowlarr image scan failed. Retained run: `20261127T104020Z-69a8a82ed6ab0c5cba4eccf10605c776a3ced94e-938941`.
 - Blocking findings: six HIGH libxml2 advisories, installed `2.13.9-r3`, all corrected by `2.13.9-r5`. The existing rebuilt Radarr image has the same findings. No scanner rule or waiver was changed.
 - The next official Prowlarr nightly image, `3.1.0.5797-ls32`, was also scanned and retains all six findings.
-- Non-deployed experiments upgrading only libxml2 to `2.13.9-r5` passed the same image scanner with zero HIGH/CRITICAL findings on both Prowlarr and Radarr. Radarr retains `USER 1000:1000`. These experiments are scan evidence only; runtime qualification and repository integration remain pending.
+- Non-deployed experiments upgrading only libxml2 to `2.13.9-r5` passed the same image scanner with zero HIGH/CRITICAL findings on both Prowlarr and Radarr. Radarr retains `USER 1000:1000`. Their later repository integration and runtime qualification are recorded under #464 / PR #465.
 - Local ignored scan records: `.trivy/459-prowlarr-candidate.json`, `.trivy/459-prowlarr-patched.json`, `.trivy/459-radarr-baseline.json`, `.trivy/459-radarr-patched.json`.
 
 ## Isolated local browser check
 
-- Real development frontend and API on loopback, separate disposable database and empty media root, no TMDB key, no discovery/retrieval integration.
+- Real development frontend and API on loopback, separate disposable database and media root, no TMDB key, no discovery/retrieval integration.
 - Chrome: owner setup through the API, sign-in through the UI, profile selection, empty catalog and administration entry passed with a fictional test account.
-- Observed API calls returned 200; no console errors or warnings were observed.
-- This is not production-build acceptance, a video playback test or Raspberry Pi validation. The L2 production-browser smoke was not reached.
+- A locally generated 8-second synthetic H.264/AAC clip was added through the library UI and scanned: 1 added, none skipped. Direct playback returned 206, reached its full duration with no video error, and its watched state persisted after reload.
+- Observed functional API calls succeeded; no console errors or warnings were observed.
+- This is development-instance smoke, not production-build or Raspberry Pi acceptance. The initial L2 production-browser smoke was not reached before the prerequisite.
 
 ## Must have
 
-Resolve the external discovery-image scan failure and re-run the complete signed gate before merging. No implementation-review finding remains in the HTTP protocol correction.
+The image prerequisite is resolved. Re-run and verify the exact-head signed gate before merging; no implementation-review finding remains in the HTTP protocol correction.
 
 ## Should have
 
