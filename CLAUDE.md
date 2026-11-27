@@ -76,7 +76,7 @@ spacing / typography, tests with every feature (Vitest unit, Playwright e2e late
   `make staging-logs` · `make staging-down` (keeps data) · `make staging-reset`.
 - Run product QA on the independent [Pi staging deployment](deploy/pi-staging/README.md).
   Use the [FULL staging checklist](docs/testing/qa-full-staging-checklist.md).
-- `make lint-docker` (the four Dockerfiles) · `make scan-docker-config` ·
+- `make lint-docker` · `make scan-docker-config` ·
   `make scan-docker-image IMAGE=…`.
 - `mise x -- just setup` — pinned tools, including the Python infra toolchain (uv, `uv.lock`,
   ruff, mypy strict, pytest). `mise x -- just fast | check | gate` — local signed gate

@@ -42,12 +42,15 @@ RUN corepack enable && corepack prepare yarn@1.22.22 --activate \
 # The base supplies only the init and OS packages; its own .NET app (and the HIGH findings in its
 # deps.json) is replaced below. Scan a base repin on the rebuilt image, never on the base alone.
 FROM lscr.io/linuxserver/radarr:nightly-7.1.0.10947-ls36@sha256:943aa63178b50eb7489f66a1e850fdb60601c35b644cc2e5b6186a493e046fd0 AS runtime
+# Keep the reviewed application/base; correct the vulnerable native parser package.
+RUN apk add --no-cache --upgrade libxml2=2.13.9-r5
 # Preserve the vendor's init/native OS packages, replace its complete published app.
 RUN rm -rf /app/radarr/bin && mkdir -p /app/radarr/bin
 COPY --from=backend /out/ /app/radarr/bin/
 COPY --from=frontend /src/_output/UI/ /app/radarr/bin/UI/
 COPY --from=source /src/LICENSE /app/radarr/bin/LICENSE
 LABEL org.opencontainers.image.source="https://github.com/Radarr/Radarr" \
+    io.popcorntv.libxml2="2.13.9-r5" \
     org.opencontainers.image.revision="af772b051ac27a0615c7f8b7f78622b6dc183be0" \
     io.popcorntv.radarr.imagesharp="3.2.0" \
     org.opencontainers.image.version="7.0.3.10912-popcorntv-local"

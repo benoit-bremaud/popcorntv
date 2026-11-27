@@ -286,7 +286,7 @@ invalid records and changed Caddy configuration without overwriting them. The
 controller verifies Docker's actual network labels, internal/IPv6 flags, subnets,
 fixed addresses and exact per-service attachments, not just requested YAML.
 
-All three images are scanned before startup. Rebuilt Radarr and Caddy are resolved
+All three images are scanned before startup. Locally patched Prowlarr, rebuilt Radarr and Caddy are resolved
 to validated immutable image IDs and started with those same IDs. Caddy 2.11.9's
 stock image failed on go-jose/v3 and x/net. The local proxy therefore rebuilds
 unmodified official Caddy commit `7ce9f0823762109fc67911f95f6af1a697345ab7` with
@@ -297,6 +297,14 @@ The compiler image is pinned at
 `sha256:0a5f7fe796599ff487605987432e7619ae45beeb2fba4c2ce0b907879932aebf`.
 The actual rebuilt artifact passes the existing HIGH/CRITICAL scan with no new
 suppression. This is an unreleased local snapshot, not an upstream stable release.
+
+The 2026-11-27 security correction (#464) adds a narrow Prowlarr image layer and
+updates the Radarr runtime layer to install `libxml2=2.13.9-r5`. The reviewed
+application revisions and base pins are unchanged. The controller requires the
+package-patch label on both applications and Prowlarr's exact base-digest label,
+in addition to the existing Radarr source/ImageSharp labels, before scanning and
+starting the same immutable IDs. All three Compose images use `pull_policy: never`.
+An unpatched, missing or unexpected image refuses startup through existing cleanup.
 
 Only Caddy gains the ingress attachment. Automatic HTTPS, its administration API
 and configuration persistence are disabled. Upstreams are fixed private IPs;
