@@ -40,6 +40,8 @@ Ignored local scan evidence is retained under `.trivy/discovery-{prowlarr,radarr
 
 ## Remaining qualification
 
-- Published-head complete L2 gate, SonarQube, production-browser smoke and signed attestation: pending.
+- Complete L2 on published `ac9f688`: passed, including fresh real-container acceptance (1 passed in 67.38 seconds), production build, 7 Chromium smoke cases with API doubles, SonarQube PASSED, image/config/source scans and SBOM. The signed attestation was published and verified with the full commit SHA.
+- Deterministic documentation presence: 771/817 (94.37%) using TypeScript 5.9.3 AST and Python AST across production public/exported declarations; tests, fixtures, generated/vendor code, private members and documented companion types excluded. Excluding experimental scripts: 730/775 (94.19%). This measures presence, not quality; the independent semantic review covers changed code.
+- Retained L2 run: `20261127T111552Z-ac9f688f584e2ab979fbbe60a8aa338013c7fce2-1247850` under the worktree's local gate evidence directory. This evidence-only follow-up requires its own exact-head gate before merge.
 - ARM64/Pi runtime and any deployment: not performed.
 - #459 remains a separate pending PR; these checks do not authorize its merge.

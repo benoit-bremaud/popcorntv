@@ -34,22 +34,25 @@ Full identities and limitations are recorded in [the QA record](../qa/2026-11-27
 
 Semgrep scanned 237 targets with 225 rules and zero findings; its existing worktree warning remains. The existing React `search` warning is unrelated. The build reused cached upstream ImageSharp regression layers; real-container acceptance ran afresh.
 
-## Pre-merge gate
+## Pre-merge gate on `ac9f688`
 
 | Step | Status |
 |---|---|
-| Tests and coverage | L1 passed on implementation commit; published-head L2 pending |
-| Whole-project documentation coverage | Pending pre-merge qualification |
-| SonarQube | Pending published-head L2 |
-| Production build and browser smoke | Pending published-head L2 |
-| Signed attestation | Not created; branch not published |
+| Tests and coverage | Full L2 passed: 2,025 L1 tests, 1 fresh real-container journey, 7 Chromium smoke cases |
+| Documentation presence | 771/817 (94.37%) across production public/exported declarations; deterministic AST count; quality/freshness review of changed code passed |
+| SonarQube | PASSED |
+| Production build and browser smoke | Passed; Chromium uses API doubles |
+| Image/config/source scans and SBOM | Passed |
+| Signed attestation | Published and verified on full SHA `ac9f688f584e2ab979fbbe60a8aa338013c7fce2` |
 | Deployment | Not performed |
 
-This record is not a green merge attestation. Exact-head qualification remains required before merge.
+The gate is green on the SHA above. The evidence/log-only follow-up must pass its own complete signed gate before merge; this document does not substitute for that exact-head attestation.
+
+Documentation counting used TypeScript 5.9.3 AST and Python AST, excluding tests, fixtures, generated/vendor code, private members, bare reexports and documented companion aliases. Operational tooling and experimental scripts were included conservatively; excluding experiments gives 730/775 (94.19%). Presence is distinct from the independent quality/freshness review. Counter scripts and symbol inventories are retained in the local `/tmp/popcorntv-464-doc-*` evidence files.
 
 ## Must have
 
-None in the implementation review. Complete the signed gate before merge.
+None in the implementation review. Verify the final published-head signed gate before merge.
 
 ## Should have
 
