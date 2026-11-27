@@ -13,8 +13,10 @@ context: merged PRs, decisions, tags, infra events. Not a release changelog — 
   failure, invalid status line and incomplete response body. Independent review and
   verification found no remaining implementation finding.
 - The first full gate was blocked by discovery-image findings, resolved separately in
-  PR #465 (`7a95c5d`). This branch was then rebased onto the corrected main; its final
-  exact-head qualification remains mandatory. Detailed evidence is in
+  PR #465 (`7a95c5d`). After rebasing, `64858db` passed the complete gate and verified
+  signed attestation: 2,028 L1 tests, real discovery containers, 7 API-stubbed Chromium
+  smoke cases, SonarQube and all scans. Documentation presence is 94.37%. The final
+  evidence-only head retains its exact-head gate requirement. Detailed evidence is in
   `docs/architecture/review-local/2026-11-27-fix-459-stop-retrieval-protocol-error.md`.
 - No deployment or real retrieval. A disposable local development instance separately
   passed sign-in, library scan and synthetic direct playback in Chrome.

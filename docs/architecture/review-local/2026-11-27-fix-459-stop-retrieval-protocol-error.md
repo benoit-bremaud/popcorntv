@@ -63,8 +63,24 @@ These failed attempts predate the security prerequisite. They are retained as ev
 
 - PR #465 merged as `7a95c5d`, correcting the six native-package findings in Prowlarr and Radarr. The implementation in this branch is unchanged apart from its rebase.
 - Deterministic documentation presence on the resumed tree: 771/817 (94.37%), using the same TypeScript 5.9.3/Python AST method as the prerequisite. No new production public declaration was added by this fix.
-- Exact published-head L1/L2, SonarQube, production-browser smoke and signed attestation must be repeated on this resumed branch before merge.
+- Fresh independent review on `64858db` found Must 0, Should 0 and Nice 0, and independently passed the 171-case retrieval module. The full retrieval suite also passed all 350 cases with 93.19% combined coverage.
 - No deployment or real retrieval is included.
+
+## Complete gate on resumed `64858db`
+
+| Step | Result |
+|---|---|
+| L1 | 2,028 tests passed; exit 0 |
+| Test coverage | Retrieval 93.19%, discovery 94.34%, shared 100%; server/web thresholds passed |
+| Documentation presence | 771/817 (94.37%) |
+| Real discovery containers | 1 passed in 68.41 seconds |
+| Production build and browser smoke | 7 Chromium cases passed with API doubles; zero skipped, unexpected or flaky cases |
+| SonarQube | PASSED |
+| Configuration, source and image scans; SBOM | Passed |
+| Secrets | Full scan and manual diff inspection passed |
+| Signed attestation | Published and verified on `64858db59495a1683ef02d40516a4581a2db816f` |
+
+All 31 retained gate steps exited 0. Evidence run: `20261127T153443Z-64858db59495a1683ef02d40516a4581a2db816f-3750163` in this worktree's gate records. The real-container case qualifies discovery services, not owner-run VPN failure acceptance. This evidence/log-only follow-up must pass its own exact-head signed gate before merge; these results do not transfer an attestation to a different SHA.
 
 ## Pre-merge attempts on `69a8a82`
 
@@ -85,7 +101,7 @@ These failed attempts predate the security prerequisite. They are retained as ev
 
 ## Must have
 
-The image prerequisite is resolved. Re-run and verify the exact-head signed gate before merging; no implementation-review finding remains in the HTTP protocol correction.
+None in the implementation review. The final published head must retain its own verified signed gate before merge.
 
 ## Should have
 
